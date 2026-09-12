@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { mockGrievances } from './mockData';
 import { TopHeader } from './components/TopHeader';
 import { MetricCardsComponent } from './components/MetricCardsComponent';
@@ -21,7 +21,9 @@ export default function AllGrievancesPage() {
     category: [] as string[],
     priority: [] as string[],
     regions: [] as string[],
-    dateRange: null as string | null
+    dateRange: null as string | null,
+    fromDate: '',
+    toDate: ''
   });
 
   const [tableFilters, setTableFilters] = useState({
@@ -52,16 +54,15 @@ export default function AllGrievancesPage() {
       
       // 3. Date match
       let matchesDate = true;
-      const filters = advancedFilters as any;
-      if (filters.fromDate || filters.toDate) {
+      if (advancedFilters.fromDate || advancedFilters.toDate) {
         const itemDate = new Date(g.submittedAt);
-        if (filters.fromDate) {
-          const from = new Date(filters.fromDate);
+        if (advancedFilters.fromDate) {
+          const from = new Date(advancedFilters.fromDate);
           from.setHours(0, 0, 0, 0);
           if (itemDate < from) matchesDate = false;
         }
-        if (filters.toDate) {
-          const to = new Date(filters.toDate);
+        if (advancedFilters.toDate) {
+          const to = new Date(advancedFilters.toDate);
           to.setHours(23, 59, 59, 999);
           if (itemDate > to) matchesDate = false;
         }
@@ -74,6 +75,12 @@ export default function AllGrievancesPage() {
 
       return matchesSearch && matchesStatus && matchesCategory && matchesPriority && matchesRegion && matchesDate && matchesTableCategory && matchesTableStatus && matchesTablePriority;
     });
+  }, [searchTerm, advancedFilters, tableFilters]);
+
+  // Reset to the first page whenever the result set is re-filtered, so
+  // pagination can't point past the end of a narrowed result set.
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchTerm, advancedFilters, tableFilters]);
 
   // Pagination

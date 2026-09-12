@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, SlidersHorizontal, ChevronDown, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const STATUS_OPTIONS = ['All', 'Submitted', 'Assigned', 'In Progress', 'More Info Needed', 'Pending Submitter', 'Resolved', 'Closed'];
-const CATEGORY_OPTIONS = ['All', 'Inputs', 'Schemes', 'Payments', 'Credit', 'Markets'];
+const STATUS_OPTIONS = ['All', 'Submitted', 'Assigned', 'In Progress', 'More Info Needed', 'Pending Submit', 'Under Review', 'Resolved', 'Rejected'];
+const CATEGORY_OPTIONS = ['All', 'Input', 'Schemes', 'Payments', 'Markets', 'Infrastructure', 'Other'];
 const PRIORITY_OPTIONS = ['All', 'Critical', 'High', 'Medium', 'Low'];
 const REGIONS_OPTIONS = ['All', 'Addis Ababa', 'Amhara', 'Oromia', 'Tigray', 'SNNPR', 'Sidama', 'Afar', 'Somali', 'Benishangul-Gumuz', 'Gambela', 'Harari', 'Dire Dawa'];
 

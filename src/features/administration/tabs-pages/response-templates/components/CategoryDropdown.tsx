@@ -9,7 +9,7 @@ const CATEGORIES = [
     'Markets'
 ];
 
-export function CategoryDropdown() {
+export function CategoryDropdown({ onChange }: { onChange?: (category: string) => void }) {
     const [isOpen, setIsOpen] = useState(false);
     const [selected, setSelected] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -52,6 +52,7 @@ export function CategoryDropdown() {
                                 onClick={() => {
                                     setSelected(category);
                                     setIsOpen(false);
+                                    onChange?.(category);
                                 }}
                                 className={`px-4 py-2.5 text-[15px] cursor-pointer hover:bg-gray-50 transition-colors ${selected === category ? 'bg-[#F0FDF4] text-[#16A34A] font-medium' : 'text-[#4B5563]'}`}
                             >

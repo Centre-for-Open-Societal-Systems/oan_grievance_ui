@@ -56,7 +56,7 @@ const AnimatedPaginationSelect = ({ value, onChange, options }: any) => {
 
 type UserStatus = 'Active' | 'Inactive';
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
@@ -72,7 +72,7 @@ interface User {
   status: UserStatus;
 }
 
-const users: User[] = [
+export const users: User[] = [
   { id: '1', name: 'Tigist Alemu', email: 'tigist.alemu@oan.gov.et', initials: 'TA', initialsBg: 'bg-[#d1fae5]', initialsColor: 'text-[#065f46]', role: 'Case Officer', roleColor: 'text-blue-600', roleBg: 'bg-blue-50', roleBorder: 'border-blue-200', region: 'Addis Ababa', casesHandled: 24, status: 'Active' },
   { id: '2', name: 'Dawit Haile', email: 'dawit.haile@oan.gov.et', initials: 'DH', initialsBg: 'bg-blue-100', initialsColor: 'text-blue-700', role: 'Senior Investigator', roleColor: 'text-yellow-700', roleBg: 'bg-yellow-50', roleBorder: 'border-yellow-200', region: 'Oromia', casesHandled: 18, status: 'Active' },
   { id: '3', name: 'Selam Bekele', email: 'selam.bekele@oan.gov.et', initials: 'SB', initialsBg: 'bg-orange-100', initialsColor: 'text-orange-700', role: 'Finance Officer', roleColor: 'text-purple-600', roleBg: 'bg-purple-50', roleBorder: 'border-purple-200', region: 'SNNPR', casesHandled: 12, status: 'Active' },
@@ -119,6 +119,12 @@ export function UserTable() {
       window.removeEventListener('updateUser', handleUpdateUser);
     };
   }, []);
+
+  // Let KPICard (a sibling with no prop access to this state) stay in sync
+  // with additions, edits, and status toggles.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('userListChanged', { detail: userList }));
+  }, [userList]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 

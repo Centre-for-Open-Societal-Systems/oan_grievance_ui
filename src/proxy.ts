@@ -1,4 +1,4 @@
-import { isProtectedRoute } from '@/features/auth/rbac';
+import { isProtectedRoute, isPublicRoute } from '@/features/auth/rbac';
 import { decodeAccessToken, isExpired } from '@/lib/jwt';
 import { AUTH_TOKEN_COOKIE, clearAuthTokenCookie, REFRESH_TOKEN_COOKIE } from '@/lib/session';
 import type { NextRequest } from 'next/server';
@@ -38,7 +38,11 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  if ((pathname === '/login' || pathname === '/register') && isAuthenticated) {
+  if ((isPublicRoute(pathname) || pathname === '/') && isAuthenticated) {
+    // `/` itself has no content of its own (`app/page.tsx` just redirects to
+    // /login) — without this, an authenticated visit to `/` would fall
+    // through to that redirect and only get bounced to /dashboard on the
+    // *next* pass through here, a visible extra hop through /login.
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
@@ -46,5 +50,15 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  // The trailing extension exclusion is load-bearing, not cosmetic: without it
+  // every file served straight out of `public/` (the login page's own logo
+  // and background images included) is treated as a protected route and
+  // redirected to /login — which breaks the very page that's supposed to
+  // show them. It's deliberately an explicit extension list, not `.*\..*` —
+  // a bare "any dot anywhere" pattern would also exempt protected app routes
+  // whose pathname happens to contain a dot (an email-shaped segment, a
+  // dotted ID), silently skipping the auth check for them.
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff|woff2|ttf|eot)$).*)',
+  ],
 };

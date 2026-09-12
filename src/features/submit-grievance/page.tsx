@@ -13,6 +13,32 @@ export default function SubmitGrievancePage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Step 1 — Submitter Identity
+  const [submitterType, setSubmitterType] = useState("");
+  const [submissionChannel, setSubmissionChannel] = useState("");
+  const [identityValues, setIdentityValues] = useState<Record<string, string>>({});
+
+  const handleSubmitterTypeChange = (value: string) => {
+    setSubmitterType(value);
+    // Switching type mid-form invalidates whatever was entered for the
+    // previous type's field set — carrying it over would show unrelated
+    // stale values (or, worse, silently submit them) after the switch.
+    setIdentityValues({});
+  };
+
+  const setIdentityValue = (key: string, value: string) => {
+    setIdentityValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Step 2 — Grievance Details
+  const [serviceCategory, setServiceCategory] = useState("");
+  const [grievanceType, setGrievanceType] = useState("");
+  const [region, setRegion] = useState("");
+  const [zone, setZone] = useState("");
+  const [woreda, setWoreda] = useState("");
+  const [description, setDescription] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
   const handleNext = () => {
     setCurrentStep((prev) => Math.min(prev + 1, 3));
   };
@@ -69,13 +95,51 @@ export default function SubmitGrievancePage() {
       {/* Main Content Area */}
       <div className="space-y-6">
         {currentStep === 1 && (
-          <SubmitterIdentityCard onNext={handleNext} />
+          <SubmitterIdentityCard
+            onNext={handleNext}
+            submitterType={submitterType}
+            setSubmitterType={handleSubmitterTypeChange}
+            submissionChannel={submissionChannel}
+            setSubmissionChannel={setSubmissionChannel}
+            identityValues={identityValues}
+            setIdentityValue={setIdentityValue}
+          />
         )}
         {currentStep === 2 && (
-          <GrievanceDetailsCard onNext={handleNext} onBack={handleBack} />
+          <GrievanceDetailsCard
+            onNext={handleNext}
+            onBack={handleBack}
+            serviceCategory={serviceCategory}
+            setServiceCategory={setServiceCategory}
+            grievanceType={grievanceType}
+            setGrievanceType={setGrievanceType}
+            region={region}
+            setRegion={setRegion}
+            zone={zone}
+            setZone={setZone}
+            woreda={woreda}
+            setWoreda={setWoreda}
+            description={description}
+            setDescription={setDescription}
+            uploadedFile={uploadedFile}
+            setUploadedFile={setUploadedFile}
+          />
         )}
         {currentStep === 3 && (
-          <ReviewAndSubmitCard onBack={handleBack} onSubmit={handleSubmit} />
+          <ReviewAndSubmitCard
+            onBack={handleBack}
+            onSubmit={handleSubmit}
+            submitterType={submitterType}
+            submissionChannel={submissionChannel}
+            identityValues={identityValues}
+            serviceCategory={serviceCategory}
+            grievanceType={grievanceType}
+            region={region}
+            zone={zone}
+            woreda={woreda}
+            description={description}
+            uploadedFile={uploadedFile}
+          />
         )}
       </div>
     </div>

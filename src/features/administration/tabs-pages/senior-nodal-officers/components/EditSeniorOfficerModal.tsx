@@ -178,6 +178,7 @@ export function EditSeniorOfficerModal({ isOpen, onClose, officer }: EditSeniorO
                 </label>
                 <CustomSelect
                   options={reportsToOptions}
+                  defaultValue={officer.reportsTo}
                   placeholder="Select L1 Officer"
                 />
               </div>

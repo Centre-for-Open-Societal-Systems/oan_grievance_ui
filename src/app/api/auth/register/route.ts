@@ -4,7 +4,14 @@ import { checkCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { BackendAuthError, callBackendAuth, type TokenPair } from '@/lib/oanAuthBackend';
 import { checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
+import { validatePassword } from '@/lib/validation/password';
 import { NextResponse } from 'next/server';
+
+// The form sends the number already combined with a country/dial code (e.g.
+// "+251911111111"), unlike `PHONE_NUMBER_REGEX` which validates the bare
+// 10-digit local part before that prefix is attached — so this route needs
+// its own, looser E.164-shaped check rather than reusing that regex directly.
+const E164_PHONE_REGEX = /^\+\d{8,15}$/;
 
 /**
  * Registration issues a token pair too, but this route deliberately discards
@@ -29,6 +36,17 @@ export async function POST(request: Request) {
 
   if (!email || !password || !full_name || !phone_number) {
     return NextResponse.json({ message: 'Missing required fields in request' }, { status: 400 });
+  }
+
+  // The client already enforces these, but a direct POST here (bypassing the
+  // form) must not get a free pass on password strength or phone shape —
+  // this must not rely solely on the upstream backend to catch it.
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return NextResponse.json({ message: passwordError }, { status: 400 });
+  }
+  if (typeof phone_number !== 'string' || !E164_PHONE_REGEX.test(phone_number)) {
+    return NextResponse.json({ message: 'Phone number must be a valid international number.' }, { status: 400 });
   }
 
   try {

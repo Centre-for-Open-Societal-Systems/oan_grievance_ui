@@ -74,7 +74,7 @@ export function LoginForm() {
               </div>
               <input
                 type={showPassword ? 'text' : 'password'}
-                autoComplete="new-password"
+                autoComplete="off"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"

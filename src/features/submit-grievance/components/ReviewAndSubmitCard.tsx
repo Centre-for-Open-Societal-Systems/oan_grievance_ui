@@ -1,13 +1,45 @@
 import React, { useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check } from "lucide-react";
+import { submitterTypeOptions, submissionChannelOptions, SI_FIELDS_BY_TYPE } from "./SubmitterIdentityCard";
+import { serviceCategoryOptions, grievanceTypeOptions, regionOptions } from "./GrievanceDetailsCard";
 
 interface ReviewAndSubmitCardProps {
   onBack: () => void;
   onSubmit: () => void;
+  submitterType: string;
+  submissionChannel: string;
+  identityValues: Record<string, string>;
+  serviceCategory: string;
+  grievanceType: string;
+  region: string;
+  zone: string;
+  woreda: string;
+  description: string;
+  uploadedFile: File | null;
 }
 
-export function ReviewAndSubmitCard({ onBack, onSubmit }: ReviewAndSubmitCardProps) {
+function labelFor(options: { value: string; label: string }[], value: string): string {
+  return options.find((o) => o.value === value)?.label || "";
+}
+
+export function ReviewAndSubmitCard({
+  onBack,
+  onSubmit,
+  submitterType,
+  submissionChannel,
+  identityValues,
+  serviceCategory,
+  grievanceType,
+  region,
+  zone,
+  woreda,
+  description,
+  uploadedFile,
+}: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
+
+  const location = [labelFor(regionOptions, region), zone, woreda].filter(Boolean).join(", ") || "Not provided";
+  const identityFields = SI_FIELDS_BY_TYPE[submitterType] || [];
 
   return (
     <div className="bg-white rounded-xl border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 ">
@@ -52,35 +84,46 @@ export function ReviewAndSubmitCard({ onBack, onSubmit }: ReviewAndSubmitCardPro
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Submitter Type</p>
-                <p className="text-[15px] font-semibold text-gray-900">Individual Farmer</p>
+                <p className="text-[15px] font-semibold text-gray-900">{labelFor(submitterTypeOptions, submitterType) || "Not provided"}</p>
               </div>
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Channel</p>
-                <p className="text-[15px] font-semibold text-gray-900">Mobile App</p>
+                <p className="text-[15px] font-semibold text-gray-900">{labelFor(submissionChannelOptions, submissionChannel) || "Not provided"}</p>
               </div>
-              <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Fayda ID</p>
-                <p className="text-[15px] font-semibold text-gray-900">3232</p>
-              </div>
+              {identityFields
+                .filter((field) => field.key !== "phoneCode")
+                .map((field) => {
+                  const value = field.key === "phoneNumber"
+                    ? (identityValues.phoneNumber ? `${identityValues.phoneCode || "+251"} ${identityValues.phoneNumber}` : "")
+                    : identityValues[field.key] || "";
+                  return (
+                    <div key={field.key}>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">{field.label}</p>
+                      <p className="text-[15px] font-semibold text-gray-900">{value || "Not provided"}</p>
+                    </div>
+                  );
+                })}
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Service Category</p>
-                <p className="text-[15px] font-semibold text-gray-900">Markets</p>
+                <p className="text-[15px] font-semibold text-gray-900">{labelFor(serviceCategoryOptions, serviceCategory) || "Not provided"}</p>
               </div>
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Grievance Type</p>
-                <p className="text-[15px] font-semibold text-gray-900">Export permit / certification delay</p>
+                <p className="text-[15px] font-semibold text-gray-900">{labelFor(grievanceTypeOptions, grievanceType) || "Not provided"}</p>
               </div>
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Location</p>
-                <p className="text-[15px] font-semibold text-gray-900">Amhara, sd, ds</p>
+                <p className="text-[15px] font-semibold text-gray-900">{location}</p>
               </div>
               <div className="md:col-span-2">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</p>
-                <p className="text-[15px] font-semibold text-gray-900">Test TestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTest</p>
+                <p className="text-[15px] font-semibold text-gray-900">{description || "Not provided"}</p>
               </div>
               <div className="md:col-span-2">
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Attachments (2)</p>
-                <p className="text-[15px] font-semibold text-gray-900">evidence_2.jpg, evidence_2.jpg</p>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Attachments {uploadedFile ? "(1)" : "(0)"}
+                </p>
+                <p className="text-[15px] font-semibold text-gray-900">{uploadedFile ? uploadedFile.name : "No file attached"}</p>
               </div>
             </div>
           </div>

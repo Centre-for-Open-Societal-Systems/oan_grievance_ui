@@ -112,6 +112,7 @@ export function EditRoleModal({ isOpen, onClose, user }: EditRoleModalProps) {
     const updatedUser = {
       ...user,
       name: fullName,
+      initials: fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'U',
       email: email || '',
       role: role,
       roleColor: rStyle.color,

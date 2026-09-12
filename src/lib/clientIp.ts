@@ -4,18 +4,28 @@ import { logger } from '@/lib/logger';
 // proxy. `X-Forwarded-For` is client-writable and each hop appends its own
 // view of the peer, so the trustworthy entries are the rightmost ones — one
 // per proxy this app actually sits behind.
-const DEFAULT_TRUSTED_PROXY_HOPS = 1;
+//
+// Trusting it is opt-in, not opt-out: with no `TRUSTED_PROXY_HOPS` configured,
+// we do not trust the header at all, rather than defaulting to "trust one
+// hop." A deployment with no reverse proxy in front of it (or one that
+// forwards the header as-is) would otherwise let any caller set their own
+// rate-limit identity by sending an arbitrary `X-Forwarded-For` value. Ops
+// must explicitly declare the real proxy topology before this app relies on
+// client-supplied forwarding headers for anything security-relevant.
 const MAX_TRUSTED_PROXY_HOPS = 4;
 
 export const UNKNOWN_CLIENT_IP = 'unknown';
 
 function trustedProxyHops(): number {
   const raw = Number.parseInt(process.env.TRUSTED_PROXY_HOPS ?? '', 10);
-  if (!Number.isInteger(raw) || raw < 1) return DEFAULT_TRUSTED_PROXY_HOPS;
+  if (!Number.isInteger(raw) || raw < 1) return 0;
   return Math.min(raw, MAX_TRUSTED_PROXY_HOPS);
 }
 
 export function getClientIp(request: Request): string {
+  const hops = trustedProxyHops();
+  if (hops === 0) return UNKNOWN_CLIENT_IP;
+
   const forwardedFor = request.headers.get('x-forwarded-for');
 
   if (forwardedFor) {
@@ -25,8 +35,6 @@ export function getClientIp(request: Request): string {
       .filter(Boolean);
 
     if (chain.length > 0) {
-      const hops = trustedProxyHops();
-
       if (chain.length < hops) {
         logger.security(
           `X-Forwarded-For has ${chain.length} entr${chain.length === 1 ? 'y' : 'ies'} but ` +

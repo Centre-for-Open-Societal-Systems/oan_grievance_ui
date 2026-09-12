@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X } from "lucide-react";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { AnimatedSelect } from "./SI-Dropdown";
 
-const serviceCategoryOptions = [
+export const serviceCategoryOptions = [
   { value: "inputs", label: "Inputs" },
   { value: "schemes", label: "Schemes" },
   { value: "payments", label: "Payments" },
@@ -12,7 +13,7 @@ const serviceCategoryOptions = [
   { value: "markets", label: "Markets" },
 ];
 
-const grievanceTypeOptions = [
+export const grievanceTypeOptions = [
   { value: "denied", label: "Market access denied" },
   { value: "manipulation", label: "Market price manipulation" },
   { value: "default", label: "Cooperative buyer default" },
@@ -21,7 +22,7 @@ const grievanceTypeOptions = [
   { value: "delay", label: "Export permit / certification delay" },
 ];
 
-const regionOptions = [
+export const regionOptions = [
   { value: "addis", label: "Addis Ababa" },
   { value: "amhara", label: "Amhara" },
   { value: "oromia", label: "Oromia" },
@@ -39,15 +40,65 @@ const regionOptions = [
 interface GrievanceDetailsCardProps {
   onNext: () => void;
   onBack: () => void;
+  serviceCategory: string;
+  setServiceCategory: (value: string) => void;
+  grievanceType: string;
+  setGrievanceType: (value: string) => void;
+  region: string;
+  setRegion: (value: string) => void;
+  zone: string;
+  setZone: (value: string) => void;
+  woreda: string;
+  setWoreda: (value: string) => void;
+  description: string;
+  setDescription: (value: string) => void;
+  uploadedFile: File | null;
+  setUploadedFile: (file: File | null) => void;
 }
 
-export function GrievanceDetailsCard({ onNext, onBack }: GrievanceDetailsCardProps) {
-  const [serviceCategory, setServiceCategory] = useState("");
-  const [grievanceType, setGrievanceType] = useState("");
-  const [region, setRegion] = useState("");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+export function GrievanceDetailsCard({
+  onNext,
+  onBack,
+  serviceCategory,
+  setServiceCategory,
+  grievanceType,
+  setGrievanceType,
+  region,
+  setRegion,
+  zone,
+  setZone,
+  woreda,
+  setWoreda,
+  description,
+  setDescription,
+  uploadedFile,
+  setUploadedFile,
+}: GrievanceDetailsCardProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // One object URL per uploaded file, created once and released — not
+  // regenerated (and leaked) on every unrelated re-render.
+  useEffect(() => {
+    if (!uploadedFile || !uploadedFile.type.startsWith("image/")) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(uploadedFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [uploadedFile]);
+
+  const handleNext = () => {
+    if (!serviceCategory || !grievanceType || !region || !zone.trim() || !woreda.trim() || !description.trim()) {
+      setError("Fill in all fields marked as required before continuing.");
+      return;
+    }
+    setError(null);
+    onNext();
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -133,6 +184,8 @@ export function GrievanceDetailsCard({ onNext, onBack }: GrievanceDetailsCardPro
               </label>
               <input
                 type="text"
+                value={zone}
+                onChange={(e) => setZone(e.target.value)}
                 placeholder="Enter Zone / Sub-city"
                 className="w-full bg-white border border-gray-300 text-gray-900 py-2.5 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm"
               />
@@ -145,6 +198,8 @@ export function GrievanceDetailsCard({ onNext, onBack }: GrievanceDetailsCardPro
               </label>
               <input
                 type="text"
+                value={woreda}
+                onChange={(e) => setWoreda(e.target.value)}
                 placeholder="Enter Woreda name"
                 className="w-full bg-white border border-gray-300 text-gray-900 py-2.5 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm"
               />
@@ -182,6 +237,8 @@ export function GrievanceDetailsCard({ onNext, onBack }: GrievanceDetailsCardPro
             </label>
             <textarea
               rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the issue clearly — what happened, when, where, and who was involved. Include dates, amounts, and reference numbers where available."
               className="w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y"
             />
@@ -272,31 +329,33 @@ export function GrievanceDetailsCard({ onNext, onBack }: GrievanceDetailsCardPro
         </div>
 
         {/* Card Footer */}
-        <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] flex items-center justify-between rounded-b-xl">
-          <div className="flex items-center text-sm text-gray-600">
-            <button
-              onClick={onBack}
-              className="flex items-center gap-2 px-5 py-3 mr-4 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
-            >
-              <ArrowLeft className="w-4 h-4 text-gray-600" />
-              Back
-            </button>
-            <Info className="w-4 h-4 text-blue-600 mr-1.5" />
-            <span>All fields marked <span className="text-red-500">*</span> are required</span>
-          </div>
-          <div className="flex items-center gap-3">
-
-            <button className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
-              <Save className="w-4 h-4 text-[#0b8535]" />
-              Save Draft
-            </button>
-            <button
-              onClick={onNext}
-              className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50"
-            >
-              Save & Continue
-              <ArrowRight className="w-4 h-4" />
-            </button>
+        <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] rounded-b-xl">
+          {error && <ErrorAlert className="mb-4">{error}</ErrorAlert>}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center text-sm text-gray-600">
+              <button
+                onClick={onBack}
+                className="flex items-center gap-2 px-5 py-3 mr-4 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
+              >
+                <ArrowLeft className="w-4 h-4 text-gray-600" />
+                Back
+              </button>
+              <Info className="w-4 h-4 text-blue-600 mr-1.5" />
+              <span>All fields marked <span className="text-red-500">*</span> are required</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                <Save className="w-4 h-4 text-[#0b8535]" />
+                Save Draft
+              </button>
+              <button
+                onClick={handleNext}
+                className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50"
+              >
+                Save & Continue
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -323,10 +382,10 @@ export function GrievanceDetailsCard({ onNext, onBack }: GrievanceDetailsCardPro
 
             {/* Modal Content - Image */}
             <div className="p-4 bg-gray-50/50 flex justify-center items-center overflow-auto max-h-[70vh]">
-              {uploadedFile.type.startsWith("image/") ? (
+              {previewUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={URL.createObjectURL(uploadedFile)}
+                  src={previewUrl}
                   alt="Preview"
                   className="max-w-full h-auto rounded-lg shadow-sm border border-gray-200"
                 />

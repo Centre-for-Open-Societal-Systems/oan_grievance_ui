@@ -41,7 +41,7 @@ export function SlaCategoryCard({ categoryData, isLast = false }: SlaCategoryCar
                             <div className="h-1.5 bg-gray-100 rounded-full flex-1 overflow-hidden">
                                 <div
                                     className="h-full bg-[#16A34A] rounded-full"
-                                    style={{ width: `${categoryData.progressPercentage || 80}%` }}
+                                    style={{ width: `${categoryData.progressPercentage ?? 0}%` }}
                                 ></div>
                             </div>
                         </div>
