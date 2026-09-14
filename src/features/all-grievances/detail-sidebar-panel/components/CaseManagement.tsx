@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { User, ChevronDown, Save } from 'lucide-react';
 
 const AnimatedDropdown = ({ label, options, placeholder }: { label: string, options: string[], placeholder: string }) => {

@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-import { X, MessageCircle, Clock, FileText, CheckCircle2, AlertCircle, Paperclip, ChevronUp, User, ChevronRight } from 'lucide-react';
 import { Grievance } from '../mockData';
 import { SidebarHeader } from './components/SidebarHeader';
 import { CommentsAndCommunication } from './components/CommentsAndCommunication';
@@ -16,8 +14,6 @@ export function GrievanceDetailSidebar({
   grievance: Grievance | null;
   onClose: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'response' | 'internal'>('response');
-
   if (!grievance) return null;
 
   return (

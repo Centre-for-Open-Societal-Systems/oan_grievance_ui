@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Zap, Bell, BellOff, Edit2, Save } from 'lucide-react';
 import { SlaCategory } from './types';
 

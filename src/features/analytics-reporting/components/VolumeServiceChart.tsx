@@ -1,4 +1,3 @@
-import React from "react";
 import {
   BarChart,
   Bar,
@@ -9,6 +8,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import type { TooltipContentProps } from "recharts";
 
 const serviceData = [
   { category: "Inputs", filed: 33, resolved: 22 },
@@ -18,13 +18,13 @@ const serviceData = [
   { category: "Markets", filed: 15, resolved: 11 },
 ];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: TooltipContentProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-[#F1F3F4] rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] min-w-[140px] z-50">
         <p className="text-gray-900 font-semibold text-[13px] mb-2 pb-2 border-b border-[#F1F3F4]">{label}</p>
         <div className="flex flex-col gap-2">
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index) => (
             <div key={index} className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
@@ -65,7 +65,7 @@ export function VolumeServiceChart() {
               ticks={[0, 25, 50, 75, 100]}
               dx={-10}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+            <Tooltip content={CustomTooltip} cursor={{ fill: '#f8fafc' }} />
             <Legend
               iconType="circle"
               wrapperStyle={{ bottom: '-10px', fontSize: '13px', fontWeight: 500, color: '#6B7280' }}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TopHeader } from './components/TopHeader';
 import { AdministrationTabs } from './components/AdministrationTabs';
 import { NodalOfficersL1 } from './tabs-pages/nodal-officers/page';

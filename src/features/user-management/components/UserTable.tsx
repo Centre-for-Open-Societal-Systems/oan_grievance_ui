@@ -1,10 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Pencil, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
 import { EditRoleModal } from './EditRoleModal';
 
-const AnimatedPaginationSelect = ({ value, onChange, options }: any) => {
+interface AnimatedPaginationSelectProps {
+  value: number;
+  onChange: (value: number) => void;
+  options: number[];
+}
+
+const AnimatedPaginationSelect = ({ value, onChange, options }: AnimatedPaginationSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -32,7 +38,7 @@ const AnimatedPaginationSelect = ({ value, onChange, options }: any) => {
       {isOpen && (
         <div className="absolute z-50 bottom-full mb-1 w-full left-0 bg-white border border-gray-100 rounded-md shadow-lg overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200 origin-bottom">
           <ul className="max-h-40 overflow-auto py-1">
-            {options.map((opt: number) => (
+            {options.map((opt) => (
               <li
                 key={opt}
                 onClick={() => {
@@ -106,11 +112,13 @@ export function UserTable() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
-    const handleAddUser = (e: any) => {
-      setUserList(prev => [e.detail, ...prev]);
+    const handleAddUser = (e: Event) => {
+      const { detail } = e as CustomEvent<User>;
+      setUserList(prev => [detail, ...prev]);
     };
-    const handleUpdateUser = (e: any) => {
-      setUserList(prev => prev.map(user => user.id === e.detail.id ? e.detail : user));
+    const handleUpdateUser = (e: Event) => {
+      const { detail } = e as CustomEvent<User>;
+      setUserList(prev => prev.map(user => user.id === detail.id ? detail : user));
     };
     window.addEventListener('addUser', handleAddUser);
     window.addEventListener('updateUser', handleUpdateUser);
@@ -302,6 +310,11 @@ export function UserTable() {
       </div>
 
       <EditRoleModal
+        // Forces a remount per edited user (and on close, back to null) so
+        // the form's initial state — derived from `user` once, at mount —
+        // always starts from the right record. See the component's own
+        // doc comment for why this replaces a prop-sync effect.
+        key={editingUser?.id ?? 'closed'}
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false);

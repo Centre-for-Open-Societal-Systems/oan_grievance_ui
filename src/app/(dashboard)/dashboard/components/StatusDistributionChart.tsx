@@ -7,8 +7,9 @@ import {
   ResponsiveContainer,
   Tooltip
 } from 'recharts';
+import type { StatusDistributionSlice } from "../data";
 
-export function StatusDistributionChart({ data }: { data: any[] }) {
+export function StatusDistributionChart({ data }: { data: StatusDistributionSlice[] }) {
   const totalStatus = data.reduce((acc, curr) => acc + curr.value, 0);
 
   return (

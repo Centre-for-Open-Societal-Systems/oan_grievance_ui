@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { FileEdit, Info, Save, ArrowRight } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { AnimatedSelect } from "./SI-Dropdown";

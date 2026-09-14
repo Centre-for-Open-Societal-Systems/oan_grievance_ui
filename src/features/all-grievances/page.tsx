@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { mockGrievances } from './mockData';
 import { TopHeader } from './components/TopHeader';
 import { MetricCardsComponent } from './components/MetricCardsComponent';
-import { GrievanceTable, FILTER_OPTIONS } from './components/GrievanceTable';
-import { AdvancedFiltersSidebar } from './components/AdvancedFiltersSidebar';
+import { GrievanceTable, FILTER_OPTIONS, type TableFilters } from './components/GrievanceTable';
+import { AdvancedFiltersSidebar, type GrievanceFilters } from './components/AdvancedFiltersSidebar';
 import { GrievanceDetailSidebar } from './detail-sidebar-panel/page';
 import { Grievance } from './mockData';
 
@@ -16,17 +16,17 @@ export default function AllGrievancesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
-  const [advancedFilters, setAdvancedFilters] = useState({
-    status: [] as string[],
-    category: [] as string[],
-    priority: [] as string[],
-    regions: [] as string[],
-    dateRange: null as string | null,
+  const [advancedFilters, setAdvancedFilters] = useState<GrievanceFilters>({
+    status: [],
+    category: [],
+    priority: [],
+    regions: [],
+    dateRange: null,
     fromDate: '',
     toDate: ''
   });
 
-  const [tableFilters, setTableFilters] = useState({
+  const [tableFilters, setTableFilters] = useState<TableFilters>({
     category: [...FILTER_OPTIONS.category],
     status: [...FILTER_OPTIONS.status],
     priority: [...FILTER_OPTIONS.priority]
@@ -69,7 +69,7 @@ export default function AllGrievancesPage() {
       }
       
       // 4. Table filters match
-      const matchesTableCategory = tableFilters.category.length === FILTER_OPTIONS.category.length || tableFilters.category.includes(g.category) || tableFilters.category.includes(g.type as any);
+      const matchesTableCategory = tableFilters.category.length === FILTER_OPTIONS.category.length || tableFilters.category.includes(g.category) || tableFilters.category.includes(g.type);
       const matchesTableStatus = tableFilters.status.length === FILTER_OPTIONS.status.length || tableFilters.status.includes(g.status);
       const matchesTablePriority = tableFilters.priority.length === FILTER_OPTIONS.priority.length || tableFilters.priority.includes(g.priority);
 
@@ -78,10 +78,19 @@ export default function AllGrievancesPage() {
   }, [searchTerm, advancedFilters, tableFilters]);
 
   // Reset to the first page whenever the result set is re-filtered, so
-  // pagination can't point past the end of a narrowed result set.
-  useEffect(() => {
+  // pagination can't point past the end of a narrowed result set. Adjusted
+  // directly during render (React's documented pattern for "reset this state
+  // when that one changes") rather than in an effect — it takes effect in
+  // the same render instead of triggering an extra one afterwards.
+  const [prevFilterState, setPrevFilterState] = useState({ searchTerm, advancedFilters, tableFilters });
+  if (
+    prevFilterState.searchTerm !== searchTerm ||
+    prevFilterState.advancedFilters !== advancedFilters ||
+    prevFilterState.tableFilters !== tableFilters
+  ) {
+    setPrevFilterState({ searchTerm, advancedFilters, tableFilters });
     setCurrentPage(1);
-  }, [searchTerm, advancedFilters, tableFilters]);
+  }
 
   // Pagination
   const totalItems = filteredGrievances.length;

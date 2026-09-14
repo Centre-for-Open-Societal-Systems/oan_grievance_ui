@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SidebarProvider } from "@/contexts/SidebarContext";
+import { IdleSessionGuard } from "@/features/auth/components/IdleSessionGuard";
 
 export default function DashboardLayout({
   children,
@@ -18,6 +19,7 @@ export default function DashboardLayout({
           </main>
         </div>
       </div>
+      <IdleSessionGuard />
     </SidebarProvider>
   );
 }

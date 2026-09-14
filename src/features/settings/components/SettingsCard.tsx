@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
 
 interface SettingsCardProps {
   title: string;
@@ -8,7 +7,10 @@ interface SettingsCardProps {
   onClick?: () => void;
 }
 
-export function SettingsCard({ title, description, icon, onClick }: SettingsCardProps) {
+// `title`/`description` are part of the public prop contract but this card
+// currently only renders the icon — kept as-is rather than removing them
+// from the interface, since callers already pass them.
+export function SettingsCard({ icon, onClick }: SettingsCardProps) {
   return (
     <div
       onClick={onClick}

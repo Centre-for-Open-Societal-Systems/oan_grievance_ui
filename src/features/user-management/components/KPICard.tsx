@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Users, ClipboardList, XCircle } from 'lucide-react';
 import { users as initialUsers, type User } from './UserTable';
 

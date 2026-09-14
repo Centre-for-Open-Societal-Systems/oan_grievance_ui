@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Search, Plus, Zap } from 'lucide-react';
 
 import { Officer, SeniorOfficerCard } from './components/SeniorOfficerCard';

@@ -80,7 +80,13 @@ export function GrievanceDetailsCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // One object URL per uploaded file, created once and released — not
-  // regenerated (and leaked) on every unrelated re-render.
+  // regenerated (and leaked) on every unrelated re-render. This has to be an
+  // effect, not state derived during render: `createObjectURL` allocates a
+  // real browser resource that must be paired with `revokeObjectURL` in
+  // cleanup, and render must stay side-effect-free (it can run more than
+  // once, or get thrown away, per render). The lint rule below can't tell
+  // this apart from the "derived state" anti-pattern it's guarding against.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!uploadedFile || !uploadedFile.type.startsWith("image/")) {
       setPreviewUrl(null);
@@ -90,6 +96,7 @@ export function GrievanceDetailsCard({
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [uploadedFile]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleNext = () => {
     if (!serviceCategory || !grievanceType || !region || !zone.trim() || !woreda.trim() || !description.trim()) {
@@ -102,7 +109,7 @@ export function GrievanceDetailsCard({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setUploadedFile(e.target.files[0]);
+      setUploadedFile(e.target.files[0]!);
     }
   };
 

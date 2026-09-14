@@ -1,9 +1,10 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
+import { isIdleExpired } from '@/lib/idleSession';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
-import { clearSessionCookies, setSessionCookies } from '@/lib/session';
+import { clearSessionCookies, REFRESH_TOKEN_COOKIE, setSessionCookies } from '@/lib/session';
 import { performRefresh } from '@/lib/sessionRefresh';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -26,6 +27,16 @@ export async function POST(request: NextRequest) {
   if (!limit.allowed) {
     logger.security(`Refresh rate limit exceeded for ${clientIp}`);
     return rateLimitedResponse(limit.retryAfterSeconds);
+  }
+
+  // A refresh token being technically valid doesn't mean the session is
+  // still active — idle timeout must end it too, even though nothing here
+  // would otherwise reject the refresh. See `isIdleExpired`'s doc comment for
+  // why every session-cookie entry point needs this, not just page loads.
+  const hasRefreshToken = !!request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
+  if (isIdleExpired(hasRefreshToken, request)) {
+    logger.security(`Refresh refused for ${clientIp}: session idle-expired`);
+    return endSession(AUTH_MESSAGES.sessionExpiredIdle);
   }
 
   try {

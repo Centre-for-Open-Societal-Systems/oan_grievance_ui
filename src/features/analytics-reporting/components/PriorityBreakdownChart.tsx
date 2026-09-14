@@ -1,4 +1,3 @@
-import React from "react";
 import {
   PieChart,
   Pie,
@@ -6,6 +5,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import type { TooltipContentProps } from "recharts";
 
 const pieData = [
   { name: "Critical", value: 15, color: "#ef4444" },
@@ -14,9 +14,11 @@ const pieData = [
   { name: "Low", value: 15, color: "#6b7280" },
 ];
 
-const CustomTooltip = ({ active, payload }: any) => {
+type PieDatum = (typeof pieData)[number];
+
+const CustomTooltip = ({ active, payload }: TooltipContentProps) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
+    const data = payload[0]!.payload as PieDatum;
     return (
       <div className="bg-white p-3 border border-[#F1F3F4] rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-50 min-w-[120px]">
         <div className="flex items-center justify-between gap-6">
@@ -59,7 +61,7 @@ export function PriorityBreakdownChart() {
                   <Cell key={`cell-${index}`} fill={entry.color} className="transition-all duration-150 hover:opacity-85 active:opacity-60 cursor-pointer outline-none" />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={CustomTooltip} />
             </PieChart>
           </ResponsiveContainer>
         </div>

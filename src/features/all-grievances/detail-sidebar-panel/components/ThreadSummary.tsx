@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link, FileText, EyeOff, Paperclip } from 'lucide-react';
 
 export function ThreadSummary() {

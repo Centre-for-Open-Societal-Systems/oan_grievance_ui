@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { MessageCircle, FileText, ChevronUp, ChevronDown, ChevronRight, AlertCircle, Paperclip } from 'lucide-react';
 import { DocumentViewerPopup } from './DocumentViewerPopup';
 
@@ -97,7 +97,7 @@ export function CommentsAndCommunication() {
                   </div>
                   <div>
                     <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Resolution Summary</h4>
-                    <p className="text-sm text-gray-800 font-medium">Investigation is ongoing. Lab results expected by 5 May 2026. Farmer's plot has been documented.</p>
+                    <p className="text-sm text-gray-800 font-medium">Investigation is ongoing. Lab results expected by 5 May 2026. Farmer&apos;s plot has been documented.</p>
                   </div>
                   <div className="mt-4 text-xs font-medium text-gray-400">
                     Proposed closure: 2026-05-10

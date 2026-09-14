@@ -1,6 +1,5 @@
 "use client";
 
-import React from 'react';
 import { GlobalSlaPolicyCard } from './components/GlobalSlaPolicyCard';
 import { SlaCategoryCard } from './components/SlaCategoryCard';
 import { MOCK_SLA_CATEGORIES } from './components/types';

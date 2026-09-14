@@ -20,6 +20,12 @@ export const FILTER_OPTIONS = {
   priority: ['Low', 'Medium', 'High', 'Critical'],
 };
 
+export interface TableFilters {
+  category: string[];
+  status: string[];
+  priority: string[];
+}
+
 const statusColors: Record<string, string> = {
   'Assigned': 'bg-blue-50 text-blue-600 border border-blue-200/60',
   'Submitted': 'bg-slate-50 text-slate-600 border border-slate-200/60',
@@ -52,7 +58,21 @@ export function GrievanceTable({
   selectedFilters,
   setSelectedFilters,
   onViewGrievance
-}: any) {
+}: {
+  searchTerm: string;
+  setSearchTerm: (value: string) => void;
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  rowsPerPage: number;
+  setRowsPerPage: (rows: number) => void;
+  totalItems: number;
+  totalPages: number;
+  paginatedGrievances: Grievance[];
+  onOpenAdvancedFilters: () => void;
+  selectedFilters: TableFilters;
+  setSelectedFilters: (filters: TableFilters) => void;
+  onViewGrievance: (grievance: Grievance) => void;
+}) {
   const [openFilter, setOpenFilter] = React.useState<string | null>(null);
 
   const handlePageChange = (page: number) => {
@@ -202,7 +222,7 @@ export function GrievanceTable({
                     </div>
                     <p className="text-lg font-semibold text-gray-900">No grievance records found</p>
                     <p className="text-sm text-gray-500 mt-2 max-w-md text-center leading-relaxed">
-                      We couldn't find any grievances matching your criteria right now. Try adjusting your filters or search query.
+                      We couldn&apos;t find any grievances matching your criteria right now. Try adjusting your filters or search query.
                     </p>
                     <button
                       onClick={() => { setSearchTerm(''); setSelectedFilters({ category: [...FILTER_OPTIONS.category], status: [...FILTER_OPTIONS.status], priority: [...FILTER_OPTIONS.priority] }); setOpenFilter(null); }}

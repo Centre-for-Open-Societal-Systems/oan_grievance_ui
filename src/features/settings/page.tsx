@@ -1,16 +1,6 @@
 "use client";
 
-import React from 'react';
 import { TopHeader } from './components/TopHeader';
-import { SettingsCard } from './components/SettingsCard';
-import {
-    User,
-    Bell,
-    ShieldCheck,
-    Globe,
-    Palette,
-    FileDown
-} from 'lucide-react';
 
 
 export default function SettingsPage() {

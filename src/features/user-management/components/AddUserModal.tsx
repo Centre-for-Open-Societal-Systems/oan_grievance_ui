@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Save, ChevronDown } from 'lucide-react';
 
-const AnimatedSelect = ({ options, value, onChange, placeholder }: any) => {
+interface AnimatedSelectProps {
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}
+
+const AnimatedSelect = ({ options, value, onChange, placeholder }: AnimatedSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +38,7 @@ const AnimatedSelect = ({ options, value, onChange, placeholder }: any) => {
       {isOpen && (
         <div className="absolute z-50 w-full top-full mt-2 bg-white border border-gray-100 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <ul className="max-h-60 overflow-auto py-1">
-            {options.map((opt: string) => (
+            {options.map((opt) => (
               <li
                 key={opt}
                 onClick={() => {
@@ -69,7 +76,7 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
   const handleAddMember = () => {
     if (!fullName || !role) return;
 
-    const roleColors: any = {
+    const roleColors: Record<string, { color: string; bg: string; border: string }> = {
       'Case Officer': { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
       'Senior Investigator': { color: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-200' },
       'Finance Officer': { color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
@@ -77,7 +84,7 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
       'HR Officer': { color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200' },
       'Administrator': { color: 'text-gray-900', bg: 'bg-gray-100', border: 'border-gray-300' }
     };
-    const rStyle = roleColors[role] || roleColors['Case Officer'];
+    const rStyle = roleColors[role] || roleColors['Case Officer']!;
 
     const newUser = {
       id: Math.random().toString(36).substr(2, 9),

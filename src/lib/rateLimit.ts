@@ -1,3 +1,4 @@
+import { envInt } from '@/lib/envInt';
 import { NextResponse } from 'next/server';
 
 // Fixed-window rate limiter for the authentication routes. State lives in
@@ -60,9 +61,29 @@ export function rateLimitedResponse(retryAfterSeconds: number): NextResponse {
   );
 }
 
+// Every limit is env-overridable so a deployment can retune throughput
+// (behind a CDN with a shared IP, say, or under a load test) without a
+// redeploy. Falling back to today's literals keeps default behavior
+// unchanged when nothing is set.
+function limitFromEnv(name: string, defaultLimit: number, defaultWindowMs: number) {
+  return {
+    limit: envInt(`RATE_LIMIT_${name}_MAX`, defaultLimit),
+    windowMs: envInt(`RATE_LIMIT_${name}_WINDOW_MS`, defaultWindowMs),
+  };
+}
+
 export const RATE_LIMITS = {
-  login: { limit: 5, windowMs: 60_000 },
-  register: { limit: 5, windowMs: 60_000 },
-  refresh: { limit: 20, windowMs: 60_000 },
-  logout: { limit: 10, windowMs: 60_000 },
+  login: limitFromEnv('LOGIN', 5, 60_000),
+  register: limitFromEnv('REGISTER', 5, 60_000),
+  refresh: limitFromEnv('REFRESH', 20, 60_000),
+  logout: limitFromEnv('LOGOUT', 10, 60_000),
+  // Fired on real user activity while a session is open (see
+  // `/api/auth/heartbeat`); throttled client-side to roughly once a minute
+  // per open tab. Unlike login/register, this is keyed by IP alone with no
+  // per-account scoping (a heartbeat carries no stable session identifier to
+  // scope by — tokens rotate), so the default has to comfortably cover many
+  // genuinely active users — and their multiple open tabs — sharing one
+  // office/NAT IP, not just one person. A heartbeat is a cheap cookie touch,
+  // so a generous budget here costs little.
+  heartbeat: limitFromEnv('HEARTBEAT', 120, 60_000),
 } as const;

@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { TimerIcon, CheckCircleIcon, TrendDotsIcon, StarIcon } from "./components/KPIIcons";
 import { KPICard } from "./components/KPICard";
 import { TopHeader } from "./components/TopHeader";

@@ -7,6 +7,7 @@
 export const AUTH_MESSAGES = {
   invalidCredentials: 'Incorrect email or password. Please check your credentials and try again.',
   sessionExpired: 'Your session has expired. Please sign in again.',
+  sessionExpiredIdle: 'You were signed out due to inactivity. Please sign in again.',
   signInUnavailable: 'We could not sign you in right now. Please try again shortly.',
   tooManyAttempts: 'Too many attempts. Please wait a moment and try again.',
   unexpected: 'Something went wrong. Please try again.',

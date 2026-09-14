@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Search, Plus, Mail, Phone, Globe, Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Plus } from 'lucide-react';
 
 import { Officer, OfficerCard } from './components/OfficerCard';
 import { AddOfficerModal } from './components/AddOfficerModal';

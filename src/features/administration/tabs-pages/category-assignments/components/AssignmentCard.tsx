@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Zap, Bell, BellOff, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { Zap, Bell, BellOff, ChevronDown, Save } from 'lucide-react';
 import { CustomSelect } from './CustomSelect';
 
 export interface Assignment {

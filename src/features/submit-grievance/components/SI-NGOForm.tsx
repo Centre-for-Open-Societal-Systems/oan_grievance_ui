@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { SIPhoneField } from "./SI-PhoneField";
 import type { SIFormProps } from "./SI-types";
 

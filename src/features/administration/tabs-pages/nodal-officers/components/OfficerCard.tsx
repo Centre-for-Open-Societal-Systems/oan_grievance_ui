@@ -1,4 +1,3 @@
-import React from 'react';
 import { Mail, Phone, Globe, Pencil } from 'lucide-react';
 
 export interface Officer {

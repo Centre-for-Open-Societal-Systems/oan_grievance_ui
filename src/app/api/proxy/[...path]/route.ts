@@ -1,9 +1,11 @@
+import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { checkCsrf } from '@/lib/csrf';
 import { getClientIp } from '@/lib/clientIp';
 import { env } from '@/lib/env';
+import { isIdleExpired } from '@/lib/idleSession';
 import { logger } from '@/lib/logger';
 import { buildClientResponse, buildUpstreamHeaders } from '@/lib/proxyHeaders';
-import { AUTH_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, setSessionCookies } from '@/lib/session';
+import { AUTH_TOKEN_COOKIE, clearSessionCookies, REFRESH_TOKEN_COOKIE, setSessionCookies } from '@/lib/session';
 import { performRefresh } from '@/lib/sessionRefresh';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -24,11 +26,24 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
     if (csrfError) return csrfError;
   }
 
+  const authToken = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
+  const hasRefreshToken = !!request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
+
+  // `proxy.ts` excludes `/api/*` from its matcher (a redirect response makes
+  // no sense for an XHR/fetch call), which makes this the only idle-expiry
+  // check every real data call in the app actually goes through. Skipping it
+  // here would mean the idle timeout only ever fired on a full page
+  // navigation — never on the fetches this SPA makes while sitting on one.
+  if (isIdleExpired(!!authToken || hasRefreshToken, request)) {
+    const response = NextResponse.json({ message: AUTH_MESSAGES.sessionExpiredIdle }, { status: 401 });
+    clearSessionCookies(response);
+    return response;
+  }
+
   const targetPath = pathArray.join('/');
   const search = request.nextUrl.search;
   const targetUrl = `${env.AUTH_API_BASE_URL}/${targetPath}${search}`;
 
-  const authToken = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
   // Read the body once — it can't be re-read from `request` a second time,
   // and a 401 retry below reuses this same payload against the backend.
   const requestBody = isMutating ? await request.blob() : undefined;
@@ -45,7 +60,7 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
     // access token is the common case (15-minute lifetime vs. a session-long
     // cookie), not a real sign-out, so every proxied call gets one silent
     // retry on a fresh token before the caller ever sees a 401.
-    if (response.status === 401 && request.cookies.get(REFRESH_TOKEN_COOKIE)?.value) {
+    if (response.status === 401 && hasRefreshToken) {
       const clientIp = getClientIp(request);
       const refreshed = await performRefresh(request, clientIp);
 

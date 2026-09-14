@@ -1,4 +1,3 @@
-import React from "react";
 import {
   AreaChart,
   Area,
@@ -9,6 +8,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import type { TooltipContentProps } from "recharts";
 
 const lineChartData = [
   { name: "W1\nMar 26", received: 18, resolved: 14 },
@@ -20,13 +20,13 @@ const lineChartData = [
   { name: "W3\nApr 26", received: 30, resolved: 27 },
 ];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: TooltipContentProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-[#F1F3F4] rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-200 min-w-[140px]">
         <p className="text-gray-900 font-semibold text-[13px] mb-2 pb-2 border-b border-[#F1F3F4]">{label}</p>
         <div className="flex flex-col gap-2">
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index) => (
             <div key={index} className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
@@ -67,7 +67,7 @@ export function WeeklySubmissionChart() {
               ticks={[0, 10, 20, 30]}
               dx={-10}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Tooltip content={CustomTooltip} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />
             <Legend
               iconType="circle"
               wrapperStyle={{ bottom: '-10px', fontSize: '13px', fontWeight: 500, color: '#475569' }}
