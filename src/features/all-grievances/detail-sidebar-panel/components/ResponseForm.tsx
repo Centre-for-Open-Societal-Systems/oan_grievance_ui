@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FileText, AlertCircle, ChevronDown, Calendar as CalendarIcon, ChevronLeft, ChevronRight, EyeOff, Send } from 'lucide-react';
 
 const AnimatedDropdown = ({ label, options, placeholder, required, value, onChange }: { label: string, options: string[], placeholder: string, required?: boolean, value: string, onChange: (val: string) => void }) => {
@@ -132,8 +132,6 @@ export function ResponseForm() {
 
   const isResponseValid = responseType !== '' && closureDate !== '' && actionTaken.trim() !== '' && resolutionSummary.trim() !== '';
   const isInternalValid = internalNoteTab.trim() !== '';
-
-  const isValid = activeTab === 'response' ? isResponseValid : isInternalValid;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col flex-1">

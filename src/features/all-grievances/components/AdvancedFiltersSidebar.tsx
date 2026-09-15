@@ -132,6 +132,16 @@ function ModernCalendar({ onSelect, selectedDate, onClose, align = 'left' }: { o
   );
 }
 
+export interface GrievanceFilters {
+  status: string[];
+  category: string[];
+  priority: string[];
+  regions: string[];
+  dateRange: string | null;
+  fromDate: string;
+  toDate: string;
+}
+
 export function AdvancedFiltersSidebar({
   isOpen,
   onClose,
@@ -140,16 +150,8 @@ export function AdvancedFiltersSidebar({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  filters: {
-    status: string[];
-    category: string[];
-    priority: string[];
-    regions: string[];
-    dateRange: string | null;
-    fromDate: string;
-    toDate: string;
-  };
-  setFilters: React.Dispatch<React.SetStateAction<any>>;
+  filters: GrievanceFilters;
+  setFilters: React.Dispatch<React.SetStateAction<GrievanceFilters>>;
 }) {
   const [isFromCalendarOpen, setIsFromCalendarOpen] = useState(false);
   const [isToCalendarOpen, setIsToCalendarOpen] = useState(false);
@@ -170,8 +172,8 @@ export function AdvancedFiltersSidebar({
 
   const setDateRangePreset = (range: string) => {
     const today = new Date();
-    let from = new Date();
-    let to = new Date();
+    const from = new Date();
+    const to = new Date();
 
     if (range === 'Today') {
       // from and to are both today
@@ -186,7 +188,7 @@ export function AdvancedFiltersSidebar({
 
     const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-    setFilters((f: any) => ({
+    setFilters((f) => ({
       ...f,
       dateRange: range,
       fromDate: formatDate(from),
@@ -219,10 +221,10 @@ export function AdvancedFiltersSidebar({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full relative">
-          <FilterDropdown label="Status" options={STATUS_OPTIONS} selected={filters.status} onChange={(val) => setFilters((f: any) => ({ ...f, status: val }))} />
-          <FilterDropdown label="Category" options={CATEGORY_OPTIONS} selected={filters.category} onChange={(val) => setFilters((f: any) => ({ ...f, category: val }))} />
-          <FilterDropdown label="Priority" options={PRIORITY_OPTIONS} selected={filters.priority} onChange={(val) => setFilters((f: any) => ({ ...f, priority: val }))} />
-          <FilterDropdown label="Regions" options={REGIONS_OPTIONS} selected={filters.regions} onChange={(val) => setFilters((f: any) => ({ ...f, regions: val }))} />
+          <FilterDropdown label="Status" options={STATUS_OPTIONS} selected={filters.status} onChange={(val) => setFilters((f) => ({ ...f, status: val }))} />
+          <FilterDropdown label="Category" options={CATEGORY_OPTIONS} selected={filters.category} onChange={(val) => setFilters((f) => ({ ...f, category: val }))} />
+          <FilterDropdown label="Priority" options={PRIORITY_OPTIONS} selected={filters.priority} onChange={(val) => setFilters((f) => ({ ...f, priority: val }))} />
+          <FilterDropdown label="Regions" options={REGIONS_OPTIONS} selected={filters.regions} onChange={(val) => setFilters((f) => ({ ...f, regions: val }))} />
 
           <div className="mt-2 mb-6 relative">
             <label className="text-sm font-semibold text-gray-700 block mb-3">Date Range</label>
@@ -237,7 +239,7 @@ export function AdvancedFiltersSidebar({
                   <input type="text" readOnly value={filters.fromDate} placeholder="Oct 1, 2026" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors hover:border-emerald-300" />
                 </div>
                 {isFromCalendarOpen && (
-                  <ModernCalendar onSelect={(date) => setFilters((f: any) => ({ ...f, fromDate: date, dateRange: null }))} selectedDate={filters.fromDate} onClose={() => setIsFromCalendarOpen(false)} />
+                  <ModernCalendar onSelect={(date) => setFilters((f) => ({ ...f, fromDate: date, dateRange: null }))} selectedDate={filters.fromDate} onClose={() => setIsFromCalendarOpen(false)} />
                 )}
               </div>
               <div className="flex-1 relative">
@@ -250,7 +252,7 @@ export function AdvancedFiltersSidebar({
                   <input type="text" readOnly value={filters.toDate} placeholder="Oct 31, 2026" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors hover:border-emerald-300" />
                 </div>
                 {isToCalendarOpen && (
-                  <ModernCalendar align="right" onSelect={(date) => setFilters((f: any) => ({ ...f, toDate: date, dateRange: null }))} selectedDate={filters.toDate} onClose={() => setIsToCalendarOpen(false)} />
+                  <ModernCalendar align="right" onSelect={(date) => setFilters((f) => ({ ...f, toDate: date, dateRange: null }))} selectedDate={filters.toDate} onClose={() => setIsToCalendarOpen(false)} />
                 )}
               </div>
             </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check } from "lucide-react";
 import { submitterTypeOptions, submissionChannelOptions, SI_FIELDS_BY_TYPE } from "./SubmitterIdentityCard";
 import { serviceCategoryOptions, grievanceTypeOptions, regionOptions } from "./GrievanceDetailsCard";

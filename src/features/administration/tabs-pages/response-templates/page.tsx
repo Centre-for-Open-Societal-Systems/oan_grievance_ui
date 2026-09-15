@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Search, Info } from 'lucide-react';
 import { MOCK_RESPONSE_TEMPLATES } from './components/types';
 import { ResponseTemplateRow } from './components/ResponseTemplateRow';

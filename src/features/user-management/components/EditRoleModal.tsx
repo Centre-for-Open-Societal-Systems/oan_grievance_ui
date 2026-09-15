@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Save, ChevronDown } from 'lucide-react';
 
-const AnimatedSelect = ({ options, value, onChange, placeholder }: any) => {
+interface AnimatedSelectProps {
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}
+
+const AnimatedSelect = ({ options, value, onChange, placeholder }: AnimatedSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +38,7 @@ const AnimatedSelect = ({ options, value, onChange, placeholder }: any) => {
       {isOpen && (
         <div className="absolute z-50 w-full top-full mt-2 bg-white border border-gray-100 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <ul className="max-h-60 overflow-auto py-1">
-            {options.map((opt: string) => (
+            {options.map((opt) => (
               <li
                 key={opt}
                 onClick={() => {
@@ -75,24 +82,22 @@ interface EditRoleModalProps {
   user: User | null;
 }
 
+/**
+ * Caller must remount this on `user` change (e.g. `key={user?.id}`) — the
+ * form fields below are seeded from `user` once, at mount, not kept in sync
+ * with it afterwards. That's deliberate: `UserTable` already tears the
+ * modal's `user` prop down to `null` on close and back up to a fresh object
+ * on the next "Edit" click, so a remount naturally happens on every open —
+ * no effect needed to reset the form, and no one-tick flash of empty fields
+ * before an effect would have run.
+ */
 export function EditRoleModal({ isOpen, onClose, user }: EditRoleModalProps) {
-  const [role, setRole] = useState('');
-  const [status, setStatus] = useState('Active');
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [region, setRegion] = useState('');
-  const [casesHandled, setCasesHandled] = useState('');
-
-  useEffect(() => {
-    if (user && isOpen) {
-      setFullName(user.name);
-      setEmail(user.email);
-      setRole(user.role);
-      setRegion(user.region);
-      setCasesHandled(user.casesHandled.toString());
-      setStatus(user.status);
-    }
-  }, [user, isOpen]);
+  const [role, setRole] = useState(user?.role ?? '');
+  const [status, setStatus] = useState(user?.status ?? 'Active');
+  const [fullName, setFullName] = useState(user?.name ?? '');
+  const [email, setEmail] = useState(user?.email ?? '');
+  const [region, setRegion] = useState(user?.region ?? '');
+  const [casesHandled, setCasesHandled] = useState(user?.casesHandled.toString() ?? '');
 
   const handleUpdateMember = () => {
     if (!fullName || !role || !user) return;
@@ -107,7 +112,7 @@ export function EditRoleModal({ isOpen, onClose, user }: EditRoleModalProps) {
       'IT Support': { color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' },
       'Legal Advisor': { color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' }
     };
-    const rStyle = roleColors[role] || roleColors['Case Officer'];
+    const rStyle = roleColors[role] || roleColors['Case Officer']!;
 
     const updatedUser = {
       ...user,

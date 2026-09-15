@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
 const LANGUAGES = [
@@ -27,7 +27,7 @@ export function LanguageSelector() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const currentLang = LANGUAGES.find(l => l.code === selectedLang) || LANGUAGES[0];
+  const currentLang = LANGUAGES.find(l => l.code === selectedLang) || LANGUAGES[0]!;
 
   return (
     <div className="relative" ref={dropdownRef}>

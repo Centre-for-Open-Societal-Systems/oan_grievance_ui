@@ -1,4 +1,3 @@
-import React from 'react';
 import { X, Save, ChevronDown } from 'lucide-react';
 import { Officer } from './OfficerCard';
 import { CustomSelect } from './CustomSelect';

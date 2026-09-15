@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Settings, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { performLogout } from '@/features/auth/logout';

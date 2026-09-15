@@ -1,3 +1,4 @@
+import { clearActivityCookie, touchActivityCookie } from '@/lib/idleSession';
 import { NextResponse } from 'next/server';
 
 // Single source of truth for the session cookies. Every route that opens,
@@ -63,6 +64,9 @@ export function setSessionCookies(
     ...sessionCookieOptions,
     maxAge,
   });
+  // Every fresh session cookie write resets the idle clock, whether it's a
+  // login or a silent refresh — both are proof the session is genuinely live.
+  touchActivityCookie(response);
 }
 
 interface CookieReader {
@@ -80,6 +84,7 @@ export function clearSessionCookies(response: NextResponse): void {
   response.cookies.set(AUTH_TOKEN_COOKIE, '', expired);
   response.cookies.set(REFRESH_TOKEN_COOKIE, '', expired);
   response.cookies.set(SESSION_REMEMBER_COOKIE, '', expired);
+  clearActivityCookie(response);
 }
 
 /**

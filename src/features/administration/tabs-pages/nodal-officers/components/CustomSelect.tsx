@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 interface Option {
@@ -21,9 +21,15 @@ export function CustomSelect({ options, defaultValue, onChange, placeholder }: C
 
   const selectedOption = options.find(opt => opt.value === value);
 
-  useEffect(() => {
+  // Resets the internal selection when `defaultValue` changes (e.g. the
+  // parent loads a different record into this same mounted dropdown).
+  // Adjusted during render, not in an effect: it takes effect in the same
+  // render instead of flashing the old value for one extra render first.
+  const [prevDefaultValue, setPrevDefaultValue] = useState(defaultValue);
+  if (defaultValue !== prevDefaultValue) {
+    setPrevDefaultValue(defaultValue);
     setValue(defaultValue || '');
-  }, [defaultValue]);
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

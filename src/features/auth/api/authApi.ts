@@ -70,6 +70,22 @@ export async function logoutUser(): Promise<boolean> {
   }
 }
 
+/**
+ * Slides the idle-session window forward. Best-effort, like `logoutUser` —
+ * a dropped heartbeat should never surface as a user-facing error, it just
+ * means the idle clock keeps ticking until the next one lands.
+ */
+export async function sendHeartbeat(): Promise<void> {
+  try {
+    const res = await fetch('/api/auth/heartbeat', { method: 'POST', credentials: 'include' });
+    if (!res.ok) {
+      logger.security(`Heartbeat refused by the server with status ${res.status}`);
+    }
+  } catch (error) {
+    logger.error('Heartbeat request failed:', error);
+  }
+}
+
 /** Restores the session from the httpOnly cookie. Throws if there is none. */
 export async function getMe(): Promise<User> {
   const res = await fetch('/api/auth/me', { method: 'GET', credentials: 'include' });

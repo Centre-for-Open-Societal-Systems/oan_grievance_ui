@@ -4,12 +4,12 @@ import { Layers, Hourglass, Loader2, Search, CheckCircle, XCircle } from 'lucide
 export function MetricCardsComponent({ metrics }: { metrics: Record<string, number> }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      <MetricCard title="All" count={metrics.all} icon={<Layers className="text-blue-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />} bgColor="bg-blue-50" />
-      <MetricCard title="Pending" count={metrics.pending} icon={<Hourglass className="text-orange-600 w-10 h-10 transition-transform duration-500 ease-in-out group-hover:rotate-[180deg]" />} bgColor="bg-orange-50" />
-      <MetricCard title="In Progress" count={metrics.inProgress} icon={<Loader2 className="text-indigo-600 w-10 h-10 transition-transform duration-500 ease-in-out group-hover:rotate-[180deg]" />} bgColor="bg-indigo-50" />
-      <MetricCard title="Under Review" count={metrics.underReview} icon={<Search className="text-purple-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />} bgColor="bg-purple-50" />
-      <MetricCard title="Resolved" count={metrics.resolved} icon={<CheckCircle className="text-green-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />} bgColor="bg-green-50" />
-      <MetricCard title="Rejected" count={metrics.rejected} icon={<XCircle className="text-red-600 w-10 h-10 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1" />} bgColor="bg-red-50" />
+      <MetricCard title="All" count={metrics.all ?? 0} icon={<Layers className="text-blue-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />} bgColor="bg-blue-50" />
+      <MetricCard title="Pending" count={metrics.pending ?? 0} icon={<Hourglass className="text-orange-600 w-10 h-10 transition-transform duration-500 ease-in-out group-hover:rotate-[180deg]" />} bgColor="bg-orange-50" />
+      <MetricCard title="In Progress" count={metrics.inProgress ?? 0} icon={<Loader2 className="text-indigo-600 w-10 h-10 transition-transform duration-500 ease-in-out group-hover:rotate-[180deg]" />} bgColor="bg-indigo-50" />
+      <MetricCard title="Under Review" count={metrics.underReview ?? 0} icon={<Search className="text-purple-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />} bgColor="bg-purple-50" />
+      <MetricCard title="Resolved" count={metrics.resolved ?? 0} icon={<CheckCircle className="text-green-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />} bgColor="bg-green-50" />
+      <MetricCard title="Rejected" count={metrics.rejected ?? 0} icon={<XCircle className="text-red-600 w-10 h-10 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1" />} bgColor="bg-red-50" />
     </div>
   );
 }

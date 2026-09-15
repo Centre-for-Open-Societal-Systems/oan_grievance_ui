@@ -131,3 +131,13 @@ export const dashboardData = {
     }
   ],
 };
+
+// Derived from the mock data itself rather than redeclared per-component —
+// once this is fetched from a real backend, these move to wherever that
+// response type lives, but every chart/card component below can keep
+// importing from here.
+export type KpiCard = (typeof dashboardData)['kpis'][number];
+export type MonthlyTrendPoint = (typeof dashboardData)['monthlyTrend'][number];
+export type StatusDistributionSlice = (typeof dashboardData)['statusDistribution'][number];
+export type ServiceCategoryStat = (typeof dashboardData)['serviceCategories'][number];
+export type RecentGrievanceSummary = (typeof dashboardData)['recentGrievances'][number];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, CalendarClock, ChevronDown, AlertTriangle, Send } from 'lucide-react';
 
 interface DeferSLAPopupProps {
@@ -27,8 +27,13 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
     { name: 'Fikadu Negash', role: 'State Minister for Agricultural Services', email: 'fikadu.negash@moa.gov.et', org: 'Ministry of Agriculture (MoA)', initials: 'FN' },
   ];
 
-  // Trigger open animation on mount
+  // Trigger open animation on mount. Has to be an effect, not the initial
+  // `useState` value: the CSS transition above only animates when `isOpen`
+  // flips from false to true on a *later* render — starting it already
+  // `true` would render the "open" state on the very first paint with
+  // nothing to transition from.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOpen(true);
   }, []);
 

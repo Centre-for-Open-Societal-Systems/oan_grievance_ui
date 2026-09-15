@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Pencil, Copy } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, ChevronDown, Pencil, Copy } from 'lucide-react';
 import { ResponseTemplate } from './types';
 
 interface ResponseTemplateRowProps {

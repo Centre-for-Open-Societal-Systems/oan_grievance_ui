@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Pencil, FileText, X } from 'lucide-react';
 import { NotificationConfig } from './types';
 import { TemplateBody } from './TemplateBody';

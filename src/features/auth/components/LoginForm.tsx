@@ -3,11 +3,12 @@
 import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { loginThunk } from '@/features/auth/store/authSlice';
+import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { useAppDispatch } from '@/store/hooks';
 import { ArrowRight, Eye, EyeOff, Lock, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export function LoginForm() {
   const router = useRouter();
@@ -20,6 +21,20 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showForgotNotice, setShowForgotNotice] = useState(false);
+
+  // Read via `window.location` rather than `useSearchParams()` — this page is
+  // otherwise fully static, and `useSearchParams()` would force it (and
+  // everything above it) into a Suspense-gated client render just to notice a
+  // query param that's only ever present after `proxy.ts` redirects here.
+  // Has to be an effect: `window` doesn't exist during this client
+  // component's server render, so it can't be read in a `useState`
+  // initializer or during render itself.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('reason') === 'idle') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setErrorMessage(AUTH_MESSAGES.sessionExpiredIdle);
+    }
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

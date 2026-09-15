@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Clock, AlertCircle, CalendarClock, Timer } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle, CalendarClock, Timer } from 'lucide-react';
 import { DeferSLAPopup } from './DeferSLAPopup';
 
 export function SLATracker() {

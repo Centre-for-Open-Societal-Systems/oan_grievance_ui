@@ -1,6 +1,5 @@
 "use client";
 
-import React from 'react';
 import { Info } from 'lucide-react';
 import { NotificationCard } from './components/NotificationCard';
 import { MOCK_CORE_NOTIFICATIONS, MOCK_ESCALATION_NOTIFICATIONS } from './components/types';

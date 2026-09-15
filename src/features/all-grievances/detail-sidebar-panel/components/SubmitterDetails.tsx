@@ -1,5 +1,5 @@
-import React from 'react';
 import { User, Tag, Info, MapPin, Building, Calendar } from 'lucide-react';
+import Image from 'next/image';
 import { Grievance } from '../../mockData';
 
 interface SubmitterDetailsProps {
@@ -21,7 +21,13 @@ export function SubmitterDetails({ grievance }: SubmitterDetailsProps) {
       <div className="p-5 flex flex-col">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-full overflow-hidden shrink-0 shadow-sm border border-gray-100 ring-2 ring-gray-50/50">
-            <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Profile" className="w-full h-full object-cover" />
+            <Image
+              src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
+              alt="Profile"
+              width={64}
+              height={64}
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-gray-900 text-xl tracking-tight">Abebe Bekele</span>

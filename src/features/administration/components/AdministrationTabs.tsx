@@ -1,4 +1,3 @@
-import React from 'react';
 import { UserCog, Shield, GitBranch, History, Mail, FileText } from 'lucide-react';
 
 interface AdministrationTabsProps {

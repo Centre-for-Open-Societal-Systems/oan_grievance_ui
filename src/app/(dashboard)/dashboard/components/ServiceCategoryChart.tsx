@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ServiceCategoryStat } from "../data";
 
-export function ServiceCategoryChart({ data }: { data: any[] }) {
+export function ServiceCategoryChart({ data }: { data: ServiceCategoryStat[] }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

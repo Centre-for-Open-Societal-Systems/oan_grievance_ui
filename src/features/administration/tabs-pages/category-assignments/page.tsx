@@ -1,6 +1,5 @@
 "use client";
 
-import React from 'react';
 import { Plus } from 'lucide-react';
 import { AssignmentCard, Assignment } from './components/AssignmentCard';
 

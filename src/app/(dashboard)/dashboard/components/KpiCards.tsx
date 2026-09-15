@@ -1,7 +1,7 @@
 import { FileText, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
-import { dashboardData } from '../data';
+import type { KpiCard } from "../data";
 
-export function KpiCards({ data: kpis }: { data: any[] }) {
+export function KpiCards({ data: kpis }: { data: KpiCard[] }) {
 
   const iconMap: Record<string, React.ReactNode> = {
     "Total Grievances": <FileText className="w-8 h-8 text-blue-600 stroke-[2] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />,

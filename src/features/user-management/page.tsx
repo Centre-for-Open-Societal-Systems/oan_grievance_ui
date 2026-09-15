@@ -1,4 +1,3 @@
-import React from 'react';
 import { TopHeader } from '@/features/user-management/components/TopHeader';
 import { KPICard } from '@/features/user-management/components/KPICard';
 import { UserTable } from '@/features/user-management/components/UserTable';
