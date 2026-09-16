@@ -1,10 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, SlidersHorizontal, ChevronDown, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  fetchGrievanceOptionsThunk,
+  fetchRegionsThunk,
+  selectCategoryFilterOptions,
+  selectRegionFilterOptions,
+  selectStatusFilterOptions,
+  FALLBACK_STATUSES,
+  FALLBACK_REGIONS,
+} from '@/features/metadata';
 
-const STATUS_OPTIONS = ['All', 'Submitted', 'Assigned', 'In Progress', 'More Info Needed', 'Pending Submit', 'Under Review', 'Resolved', 'Rejected'];
-const CATEGORY_OPTIONS = ['All', 'Input', 'Schemes', 'Payments', 'Markets', 'Infrastructure', 'Other'];
-const PRIORITY_OPTIONS = ['All', 'Critical', 'High', 'Medium', 'Low'];
-const REGIONS_OPTIONS = ['All', 'Addis Ababa', 'Amhara', 'Oromia', 'Tigray', 'SNNPR', 'Sidama', 'Afar', 'Somali', 'Benishangul-Gumuz', 'Gambela', 'Harari', 'Dire Dawa'];
+export const STATUS_OPTIONS = ['All', ...FALLBACK_STATUSES];
+export const CATEGORY_OPTIONS = ['All', 'Inputs', 'Schemes', 'Payments', 'Credit', 'Markets'];
+export const PRIORITY_OPTIONS = ['All', 'Critical', 'High', 'Medium', 'Low'];
+export const REGIONS_OPTIONS = ['All', ...FALLBACK_REGIONS.map((r) => r.label)];
 
 function FilterDropdown({ label, options, selected, onChange }: { label: string, options: string[], selected: string[], onChange: (val: string[]) => void }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -153,6 +163,22 @@ export function AdvancedFiltersSidebar({
   filters: GrievanceFilters;
   setFilters: React.Dispatch<React.SetStateAction<GrievanceFilters>>;
 }) {
+  const dispatch = useAppDispatch();
+  const dynamicStatusOptions = useAppSelector(selectStatusFilterOptions);
+  const dynamicCategoryOptions = useAppSelector(selectCategoryFilterOptions);
+  const dynamicRegionOptions = useAppSelector(selectRegionFilterOptions);
+  const grievanceStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
+  const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
+
+  useEffect(() => {
+    if (grievanceStatus === "idle") {
+      void dispatch(fetchGrievanceOptionsThunk());
+    }
+    if (regionsStatus === "idle") {
+      void dispatch(fetchRegionsThunk());
+    }
+  }, [dispatch, grievanceStatus, regionsStatus]);
+
   const [isFromCalendarOpen, setIsFromCalendarOpen] = useState(false);
   const [isToCalendarOpen, setIsToCalendarOpen] = useState(false);
 
@@ -221,10 +247,10 @@ export function AdvancedFiltersSidebar({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full relative">
-          <FilterDropdown label="Status" options={STATUS_OPTIONS} selected={filters.status} onChange={(val) => setFilters((f) => ({ ...f, status: val }))} />
-          <FilterDropdown label="Category" options={CATEGORY_OPTIONS} selected={filters.category} onChange={(val) => setFilters((f) => ({ ...f, category: val }))} />
+          <FilterDropdown label="Status" options={dynamicStatusOptions} selected={filters.status} onChange={(val) => setFilters((f) => ({ ...f, status: val }))} />
+          <FilterDropdown label="Category" options={dynamicCategoryOptions} selected={filters.category} onChange={(val) => setFilters((f) => ({ ...f, category: val }))} />
           <FilterDropdown label="Priority" options={PRIORITY_OPTIONS} selected={filters.priority} onChange={(val) => setFilters((f) => ({ ...f, priority: val }))} />
-          <FilterDropdown label="Regions" options={REGIONS_OPTIONS} selected={filters.regions} onChange={(val) => setFilters((f) => ({ ...f, regions: val }))} />
+          <FilterDropdown label="Regions" options={dynamicRegionOptions} selected={filters.regions} onChange={(val) => setFilters((f) => ({ ...f, regions: val }))} />
 
           <div className="mt-2 mb-6 relative">
             <label className="text-sm font-semibold text-gray-700 block mb-3">Date Range</label>

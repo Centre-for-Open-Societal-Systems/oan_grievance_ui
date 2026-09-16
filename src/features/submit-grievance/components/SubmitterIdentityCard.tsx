@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FileEdit, Info, Save, ArrowRight } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  fetchSubmitterOptionsThunk,
+  selectSubmitterTypeOptions,
+  selectSubmissionChannelOptions,
+  FALLBACK_SUBMITTER_TYPES,
+  FALLBACK_SUBMISSION_CHANNELS,
+} from "@/features/metadata";
 import { AnimatedSelect } from "./SI-Dropdown";
 import { IndividualFarmerForm, FIELDS as INDIVIDUAL_FIELDS } from "./SI-IndividualFarmerForm";
 import { CooperativeFPOForm, FIELDS as COOPERATIVE_FIELDS } from "./SI-CooperativeFPOForm";
@@ -20,20 +28,8 @@ export const SI_FIELDS_BY_TYPE: Record<string, SIFieldMeta[]> = {
   development_agent: DEVELOPMENT_AGENT_FIELDS,
 };
 
-export const submitterTypeOptions = [
-  { value: "individual", label: "Individual Farmer" },
-  { value: "cooperative", label: "Cooperative / FPO" },
-  { value: "ngo", label: "NGO" },
-  { value: "woreda_kebele", label: "Woreda/Kebele Body" },
-  { value: "development_agent", label: "Development Agent (on behalf)" },
-];
-
-export const submissionChannelOptions = [
-  { value: "web", label: "Web Portal" },
-  { value: "mobile", label: "Mobile App" },
-  { value: "ivr", label: "IVR / Call Centre" },
-  { value: "field_officer", label: "Field Officer Assisted" },
-];
+export const submitterTypeOptions = FALLBACK_SUBMITTER_TYPES;
+export const submissionChannelOptions = FALLBACK_SUBMISSION_CHANNELS;
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
@@ -54,6 +50,17 @@ export function SubmitterIdentityCard({
   identityValues,
   setIdentityValue,
 }: SubmitterIdentityCardProps) {
+  const dispatch = useAppDispatch();
+  const dynamicSubmitterTypes = useAppSelector(selectSubmitterTypeOptions);
+  const dynamicSubmissionChannels = useAppSelector(selectSubmissionChannelOptions);
+  const submitterStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
+
+  useEffect(() => {
+    if (submitterStatus === "idle") {
+      void dispatch(fetchSubmitterOptionsThunk());
+    }
+  }, [dispatch, submitterStatus]);
+
   const [error, setError] = useState<string | null>(null);
 
   const handleNext = () => {
@@ -100,7 +107,7 @@ export function SubmitterIdentityCard({
               Submitter Type <span className="text-red-500">*</span>
             </label>
             <AnimatedSelect
-              options={submitterTypeOptions}
+              options={dynamicSubmitterTypes}
               placeholder="Select Submitter Type"
               value={submitterType}
               onChange={setSubmitterType}
@@ -113,7 +120,7 @@ export function SubmitterIdentityCard({
               Submission Channel <span className="text-red-500">*</span>
             </label>
             <AnimatedSelect
-              options={submissionChannelOptions}
+              options={dynamicSubmissionChannels}
               placeholder="Select Submission Channel"
               value={submissionChannel}
               onChange={setSubmissionChannel}

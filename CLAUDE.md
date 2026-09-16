@@ -28,5 +28,5 @@ Sessions are three httpOnly cookies (access token, refresh token, remember-me fl
 
 ## Commands
 
-- `npm run dev` / `npm run build` / `npm run start` / `npm run lint`
+- `pnpm dev` / `pnpm build` / `pnpm start` / `pnpm lint`
 - Node version is pinned in `.nvmrc`; `package.json`'s `engines.node` matches Next 16's own floor (`>=20.9.0`).

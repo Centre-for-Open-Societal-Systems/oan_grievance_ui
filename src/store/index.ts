@@ -1,5 +1,6 @@
 import { isProtectedRoute } from '@/features/auth/rbac';
 import { authReducer, getMeThunk, logout } from '@/features/auth/store/authSlice';
+import { metadataReducer } from '@/features/metadata/store/metadataSlice';
 import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/toolkit';
 
 /**
@@ -31,6 +32,7 @@ const sessionExpiryMiddleware: Middleware = (api) => (next) => (action) => {
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    metadata: metadataReducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sessionExpiryMiddleware),
 });

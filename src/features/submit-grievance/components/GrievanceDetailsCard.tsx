@@ -3,39 +3,22 @@
 import React, { useEffect, useState, useRef } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  fetchRegionsThunk,
+  fetchSubmitterOptionsThunk,
+  selectGrievanceTypeOptions,
+  selectRegionOptions,
+  selectServiceCategoryOptions,
+  FALLBACK_SERVICE_CATEGORIES,
+  FALLBACK_GRIEVANCE_TYPES,
+  FALLBACK_REGIONS,
+} from "@/features/metadata";
 import { AnimatedSelect } from "./SI-Dropdown";
 
-export const serviceCategoryOptions = [
-  { value: "inputs", label: "Inputs" },
-  { value: "schemes", label: "Schemes" },
-  { value: "payments", label: "Payments" },
-  { value: "credit", label: "Credit" },
-  { value: "markets", label: "Markets" },
-];
-
-export const grievanceTypeOptions = [
-  { value: "denied", label: "Market access denied" },
-  { value: "manipulation", label: "Market price manipulation" },
-  { value: "default", label: "Cooperative buyer default" },
-  { value: "dispute", label: "Weighing / measurement dispute" },
-  { value: "failure", label: "Market infrastructure failure" },
-  { value: "delay", label: "Export permit / certification delay" },
-];
-
-export const regionOptions = [
-  { value: "addis", label: "Addis Ababa" },
-  { value: "amhara", label: "Amhara" },
-  { value: "oromia", label: "Oromia" },
-  { value: "tigray", label: "Tigray" },
-  { value: "snnpr", label: "SNNPR" },
-  { value: "sidama", label: "Sidama" },
-  { value: "afar", label: "Afar" },
-  { value: "somali", label: "Somali" },
-  { value: "benishangul", label: "Benishangul-Gumuz" },
-  { value: "gambela", label: "Gambela" },
-  { value: "harrari", label: "Harari" },
-  { value: "dire", label: "Dire Dawa" },
-];
+export const serviceCategoryOptions = FALLBACK_SERVICE_CATEGORIES;
+export const grievanceTypeOptions = FALLBACK_GRIEVANCE_TYPES.map((t) => ({ value: t.value, label: t.label }));
+export const regionOptions = FALLBACK_REGIONS;
 
 interface GrievanceDetailsCardProps {
   onNext: () => void;
@@ -74,6 +57,24 @@ export function GrievanceDetailsCard({
   uploadedFile,
   setUploadedFile,
 }: GrievanceDetailsCardProps) {
+  const dispatch = useAppDispatch();
+  const dynamicServiceCategories = useAppSelector(selectServiceCategoryOptions);
+  const dynamicGrievanceTypes = useAppSelector((state) =>
+    selectGrievanceTypeOptions(state, serviceCategory)
+  );
+  const dynamicRegions = useAppSelector(selectRegionOptions);
+  const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
+  const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
+
+  useEffect(() => {
+    if (metadataStatus === "idle") {
+      void dispatch(fetchSubmitterOptionsThunk());
+    }
+    if (regionsStatus === "idle") {
+      void dispatch(fetchRegionsThunk());
+    }
+  }, [dispatch, metadataStatus, regionsStatus]);
+
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -151,10 +152,13 @@ export function GrievanceDetailsCard({
                 Service Category <span className="text-red-500">*</span>
               </label>
               <AnimatedSelect
-                options={serviceCategoryOptions}
+                options={dynamicServiceCategories}
                 placeholder="Select category"
                 value={serviceCategory}
-                onChange={setServiceCategory}
+                onChange={(cat) => {
+                  setServiceCategory(cat);
+                  setGrievanceType("");
+                }}
               />
             </div>
 
@@ -164,8 +168,8 @@ export function GrievanceDetailsCard({
                 Grievance Type <span className="text-red-500">*</span>
               </label>
               <AnimatedSelect
-                options={grievanceTypeOptions}
-                placeholder="Select service category first"
+                options={dynamicGrievanceTypes}
+                placeholder="Select grievance type"
                 value={grievanceType}
                 onChange={setGrievanceType}
               />
@@ -177,7 +181,7 @@ export function GrievanceDetailsCard({
                 Region <span className="text-red-500">*</span>
               </label>
               <AnimatedSelect
-                options={regionOptions}
+                options={dynamicRegions}
                 placeholder="Select region"
                 value={region}
                 onChange={setRegion}
