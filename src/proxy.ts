@@ -1,4 +1,4 @@
-import { isProtectedRoute, isPublicRoute } from '@/features/auth/rbac';
+import { canAccessRoute, homeRouteForRoles, isProtectedRoute, isPublicRoute } from '@/features/auth/rbac';
 import { hasRecentActivity } from '@/lib/idleSession';
 import { decodeAccessToken, isExpired } from '@/lib/jwt';
 import {
@@ -104,12 +104,24 @@ export function proxy(request: NextRequest) {
     return withCsp(response);
   }
 
-  if ((isPublicRoute(pathname) || pathname === '/') && isAuthenticated) {
-    // `/` itself has no content of its own (`app/page.tsx` just redirects to
-    // /login) — without this, an authenticated visit to `/` would fall
-    // through to that redirect and only get bounced to /dashboard on the
-    // *next* pass through here, a visible extra hop through /login.
-    return withCsp(NextResponse.redirect(new URL('/dashboard', request.url)));
+  // `isAuthenticated` implies `claims` is set (it requires `hasValidSession`,
+  // which requires `!!claims`) — reconfirmed here so the checks below don't
+  // need a non-null assertion on `claims`.
+  if (isAuthenticated && claims) {
+    if (isPublicRoute(pathname) || pathname === '/') {
+      // `/` itself has no content of its own (`app/page.tsx` just redirects
+      // to /login) — without this, an authenticated visit to `/` would fall
+      // through to that redirect and only get bounced to /dashboard on the
+      // *next* pass through here, a visible extra hop through /login.
+      return withCsp(NextResponse.redirect(new URL(homeRouteForRoles(claims.roles), request.url)));
+    }
+
+    // Role check, same unverified-claim caveat as the rest of this function —
+    // a route outside the caller's role bounces to their own home route
+    // rather than /login (they *are* authenticated, just not for this screen).
+    if (!canAccessRoute(pathname, claims.roles)) {
+      return withCsp(NextResponse.redirect(new URL(homeRouteForRoles(claims.roles), request.url)));
+    }
   }
 
   return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));

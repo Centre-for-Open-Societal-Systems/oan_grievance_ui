@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { AlertCircle, CalendarClock, Timer } from 'lucide-react';
 import { DeferSLAPopup } from './DeferSLAPopup';
+import { useIsOfficerOrAdmin } from '@/features/auth/hooks/useIsOfficerOrAdmin';
 
 export function SLATracker() {
   const [showPopup, setShowPopup] = useState(false);
+  // Deferring the SLA deadline is a case-management action — a submitter can
+  // see how their case is tracking but shouldn't be able to push the deadline.
+  const canDefer = useIsOfficerOrAdmin();
 
   return (
     <>
@@ -34,16 +38,18 @@ export function SLATracker() {
               <div className="text-base font-bold text-red-500">14 Jul 2026</div>
             </div>
           </div>
-          <button
-            onClick={() => setShowPopup(true)}
-            className="w-full py-3 bg-[#1ca848] hover:bg-[#1a9c42] text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm text-base"
-          >
-            <CalendarClock className="h-5 w-5" /> Defer SLA
-          </button>
+          {canDefer && (
+            <button
+              onClick={() => setShowPopup(true)}
+              className="w-full py-3 bg-[#1ca848] hover:bg-[#1a9c42] text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm text-base"
+            >
+              <CalendarClock className="h-5 w-5" /> Defer SLA
+            </button>
+          )}
         </div>
       </div>
 
-      {showPopup && <DeferSLAPopup onClose={() => setShowPopup(false)} />}
+      {canDefer && showPopup && <DeferSLAPopup onClose={() => setShowPopup(false)} />}
     </>
   );
 }

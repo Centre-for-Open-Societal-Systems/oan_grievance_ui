@@ -23,7 +23,7 @@ export function UserProfile() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    await performLogout(dispatch);
+    await performLogout(dispatch, user?.email ?? null);
     router.push('/login');
   };
 

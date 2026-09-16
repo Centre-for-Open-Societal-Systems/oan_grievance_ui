@@ -18,6 +18,7 @@ export function Header() {
     if (path.startsWith("/analytics-reporting")) return "Analytics & Reporting";
     if (path.startsWith("/user-management")) return "User Management";
     if (path.startsWith("/settings")) return "Settings";
+    if (path.startsWith("/no-access")) return "No Access";
     return "Dashboard";
   };
 

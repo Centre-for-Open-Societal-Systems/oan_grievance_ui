@@ -2,8 +2,9 @@
 
 import { sendHeartbeat } from '@/features/auth/api/authApi';
 import { performLogout } from '@/features/auth/logout';
+import { selectUser } from '@/features/auth/store/authSlice';
 import { CLIENT_IDLE_TIMEOUT_MS, CLIENT_IDLE_WARNING_LEAD_MS } from '@/lib/idleTimeoutConfig';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -34,6 +35,7 @@ export interface IdleTimerState {
 export function useIdleTimer(): IdleTimerState {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const userEmail = useAppSelector(selectUser)?.email ?? null;
 
   const [warning, setWarning] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(Math.ceil(CLIENT_IDLE_WARNING_LEAD_MS / 1000));
@@ -53,10 +55,10 @@ export function useIdleTimer(): IdleTimerState {
     // "logged out" user's session silently restored by `AuthBootstrapGate`
     // on the very page meant to end it.
     void (async () => {
-      await performLogout(dispatch);
+      await performLogout(dispatch, userEmail);
       router.push('/login?reason=idle');
     })();
-  }, [dispatch, router]);
+  }, [dispatch, router, userEmail]);
 
   const recordActivity = useCallback(() => {
     const now = Date.now();

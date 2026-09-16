@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { canAccessRoute } from "@/features/auth/rbac";
+import { selectUser } from "@/features/auth/store/authSlice";
+import { useAppSelector } from "@/store/hooks";
 import {
   LayoutDashboard,
   FileText,
@@ -26,6 +29,11 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { isSidebarCollapsed } = useSidebar();
+  const user = useAppSelector(selectUser);
+  // `canAccessRoute` treats a route absent from its map as open to everyone,
+  // so this reuses the same allow-list `proxy.ts` enforces server-side —
+  // links a role can't open are hidden rather than left to 404/redirect.
+  const visibleNavItems = navItems.filter((item) => canAccessRoute(item.href, user?.roles ?? []));
 
   return (
     <div className={`h-screen bg-[#0e3b25] flex flex-col flex-shrink-0 font-sans shadow-xl z-20 relative transition-all duration-300 ${isSidebarCollapsed ? 'w-[88px]' : 'w-[280px]'}`}>
@@ -50,7 +58,7 @@ export function Sidebar() {
       {/* Navigation Section */}
       <nav className="flex-1 py-3">
         <ul className="space-y-2 px-4">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             // Determine active state (matching dashboard route for visual demonstration)
             const isActive = pathname === item.href || (item.name === "Dashboard" && pathname?.includes("dashboard"));

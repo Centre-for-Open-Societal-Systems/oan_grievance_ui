@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { User, ChevronDown, Save } from 'lucide-react';
+import { useIsOfficerOrAdmin } from '@/features/auth/hooks/useIsOfficerOrAdmin';
 
 const AnimatedDropdown = ({ label, options, placeholder }: { label: string, options: string[], placeholder: string }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -41,6 +42,11 @@ const AnimatedDropdown = ({ label, options, placeholder }: { label: string, opti
 
 export function CaseManagement() {
   const [escalated, setEscalated] = useState(false);
+  const isOfficerOrAdmin = useIsOfficerOrAdmin();
+
+  // Case assignment/status/escalation is an officer/admin action — a
+  // submitter viewing their own grievance has no business reassigning it.
+  if (!isOfficerOrAdmin) return null;
 
   return (
     <div className="bg-white rounded-xl border border-[#F1F3F4] shadow-sm overflow-hidden flex flex-col">

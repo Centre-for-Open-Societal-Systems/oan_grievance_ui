@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { selectUser } from "@/features/auth/store/authSlice";
+import { loadSubmitterProfile } from "@/lib/submitterProfile";
+import { useAppSelector } from "@/store/hooks";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
@@ -13,10 +16,20 @@ export default function SubmitGrievancePage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Pre-fills Step 1 from whatever submitter-identity info this user already
+  // gave at registration (see RegisterForm.tsx / submitterProfile.ts), so
+  // they aren't asked for the same details twice.
+  const user = useAppSelector(selectUser);
+  const userEmail = user?.email;
+  // Only recomputed when the signed-in email changes, not on every keystroke
+  // this page's own step-wizard state causes — its result feeds nothing but
+  // the two useState initializers just below.
+  const savedProfile = useMemo(() => (userEmail ? loadSubmitterProfile(userEmail) : null), [userEmail]);
+
   // Step 1 — Submitter Identity
-  const [submitterType, setSubmitterType] = useState("");
+  const [submitterType, setSubmitterType] = useState(savedProfile?.submitterType ?? "");
   const [submissionChannel, setSubmissionChannel] = useState("");
-  const [identityValues, setIdentityValues] = useState<Record<string, string>>({});
+  const [identityValues, setIdentityValues] = useState<Record<string, string>>(savedProfile?.identityValues ?? {});
 
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
