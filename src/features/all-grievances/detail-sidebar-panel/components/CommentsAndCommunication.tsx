@@ -1,12 +1,27 @@
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { MessageCircle, FileText, ChevronUp, ChevronDown, ChevronRight, AlertCircle, Paperclip } from 'lucide-react';
 import { DocumentViewerPopup } from './DocumentViewerPopup';
-import { useIsOfficerOrAdmin } from '@/features/auth/hooks/useIsOfficerOrAdmin';
 
-export function CommentsAndCommunication() {
+/**
+ * One entry per message rendered below — the single source of truth for
+ * "how many messages are in this thread" and "which of them are internal".
+ * A hardcoded count string next to hardcoded JSX drifts the moment either
+ * changes without the other; deriving the count from this list instead
+ * can't drift, since it's counting the same messages the JSX below renders.
+ */
+const THREAD_MESSAGES = [
+  { id: 'msg1', internal: false },
+  { id: 'msg2', internal: false },
+  { id: 'msg3', internal: true },
+] as const;
+
+export function CommentsAndCommunication({ canManageCase }: { canManageCase: boolean }) {
   // Internal Note messages are officer/admin-only — a submitter must never
   // see their content, not even that one exists in the thread.
-  const canSeeInternal = useIsOfficerOrAdmin();
+  const canSeeInternal = canManageCase;
+  const visibleMessageCount = THREAD_MESSAGES.filter((m) => !m.internal || canSeeInternal).length;
+  const t = useTranslations('commentsAndCommunication');
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const [expandedMsgs, setExpandedMsgs] = useState<Record<string, boolean>>({
     msg1: true,
@@ -27,7 +42,7 @@ export function CommentsAndCommunication() {
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900 inline-block">Comments & Communication</h3>
-            <p className="text-sm text-gray-500">{canSeeInternal ? '3 messages' : '2 messages'} in this thread</p>
+            <p className="text-sm text-gray-500">{t('messageCount', { count: visibleMessageCount })}</p>
           </div>
         </div>
 

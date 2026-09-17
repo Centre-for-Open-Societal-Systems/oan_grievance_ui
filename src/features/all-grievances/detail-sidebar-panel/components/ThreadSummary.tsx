@@ -1,8 +1,7 @@
 import { Link, FileText, EyeOff, Paperclip } from 'lucide-react';
-import { useIsOfficerOrAdmin } from '@/features/auth/hooks/useIsOfficerOrAdmin';
 
-export function ThreadSummary() {
-  const canSeeInternal = useIsOfficerOrAdmin();
+export function ThreadSummary({ canManageCase }: { canManageCase: boolean }) {
+  const canSeeInternal = canManageCase;
 
   return (
     <div className="bg-white rounded-xl border border-[#F1F3F4] shadow-sm overflow-hidden flex flex-col">

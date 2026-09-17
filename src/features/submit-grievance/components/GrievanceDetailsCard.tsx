@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
-import { AnimatedSelect } from "./SI-Dropdown";
+import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 
 export const serviceCategoryOptions = [
   { value: "inputs", label: "Inputs" },
@@ -99,8 +99,16 @@ export function GrievanceDetailsCard({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleNext = () => {
-    if (!serviceCategory || !grievanceType || !region || !zone.trim() || !woreda.trim() || !description.trim()) {
-      setError("Fill in all fields marked as required before continuing.");
+    const missing: string[] = [];
+    if (!serviceCategory) missing.push("Service Category");
+    if (!grievanceType) missing.push("Grievance Type");
+    if (!region) missing.push("Region");
+    if (!zone.trim()) missing.push("Zone / Sub-city");
+    if (!woreda.trim()) missing.push("Woreda");
+    if (!description.trim()) missing.push("Description");
+
+    if (missing.length > 0) {
+      setError(`Missing required field${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.`);
       return;
     }
     setError(null);
@@ -147,49 +155,59 @@ export function GrievanceDetailsCard({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Service Category */}
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label htmlFor="service-category" className="block text-sm font-semibold text-gray-800 mb-2">
                 Service Category <span className="text-red-500">*</span>
               </label>
               <AnimatedSelect
+                id="service-category"
                 options={serviceCategoryOptions}
                 placeholder="Select category"
                 value={serviceCategory}
                 onChange={setServiceCategory}
+                invalid={!!error}
+                describedBy={error ? "grievance-details-error" : undefined}
               />
             </div>
 
             {/* Grievance Type */}
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label htmlFor="grievance-type" className="block text-sm font-semibold text-gray-800 mb-2">
                 Grievance Type <span className="text-red-500">*</span>
               </label>
               <AnimatedSelect
+                id="grievance-type"
                 options={grievanceTypeOptions}
                 placeholder="Select service category first"
                 value={grievanceType}
                 onChange={setGrievanceType}
+                invalid={!!error}
+                describedBy={error ? "grievance-details-error" : undefined}
               />
             </div>
 
             {/* Region */}
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label htmlFor="grievance-region" className="block text-sm font-semibold text-gray-800 mb-2">
                 Region <span className="text-red-500">*</span>
               </label>
               <AnimatedSelect
+                id="grievance-region"
                 options={regionOptions}
                 placeholder="Select region"
                 value={region}
                 onChange={setRegion}
+                invalid={!!error}
+                describedBy={error ? "grievance-details-error" : undefined}
               />
             </div>
 
             {/* Zone / Sub-city */}
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label htmlFor="grievance-zone" className="block text-sm font-semibold text-gray-800 mb-2">
                 Zone / Sub-city <span className="text-red-500">*</span>
               </label>
               <input
+                id="grievance-zone"
                 type="text"
                 value={zone}
                 onChange={(e) => setZone(e.target.value)}
@@ -200,10 +218,11 @@ export function GrievanceDetailsCard({
 
             {/* Woreda */}
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label htmlFor="grievance-woreda" className="block text-sm font-semibold text-gray-800 mb-2">
                 Woreda <span className="text-red-500">*</span>
               </label>
               <input
+                id="grievance-woreda"
                 type="text"
                 value={woreda}
                 onChange={(e) => setWoreda(e.target.value)}
@@ -239,10 +258,11 @@ export function GrievanceDetailsCard({
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
+            <label htmlFor="grievance-description" className="block text-sm font-semibold text-gray-800 mb-2">
               Description <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="grievance-description"
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -337,7 +357,7 @@ export function GrievanceDetailsCard({
 
         {/* Card Footer */}
         <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] rounded-b-xl">
-          {error && <ErrorAlert className="mb-4">{error}</ErrorAlert>}
+          {error && <ErrorAlert id="grievance-details-error" className="mb-4">{error}</ErrorAlert>}
           <div className="flex items-center justify-between">
             <div className="flex items-center text-sm text-gray-600">
               <button

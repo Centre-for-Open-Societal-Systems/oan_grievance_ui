@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import { ChevronDown, Check } from 'lucide-react';
+import { LOCALES } from '@/i18n/locales';
 
+// Only the locales `src/i18n/request.ts` actually has a message catalog for
+// are switchable — the rest are listed but disabled, rather than silently
+// no-op-switching to a language that still renders English everywhere. See
+// messages/README.md for translation status.
 const LANGUAGES = [
   { code: 'en', label: 'English', flag: '🇺🇸' },
   { code: 'am', label: 'Amharic', flag: '🇪🇹' },
@@ -10,12 +17,33 @@ const LANGUAGES = [
   { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
   { code: 'ti', label: 'Tigrinya', flag: '🇪🇹' },
   { code: 'so', label: 'Somali', flag: '🇸🇴' },
-];
+] as const;
 
 export function LanguageSelector() {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedLang, setSelectedLang] = useState('en');
+  const [isSaving, setIsSaving] = useState(false);
+  const selectedLang = useLocale();
+  const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const changeLocale = async (code: string) => {
+    if (!(LOCALES as readonly string[]).includes(code) || code === selectedLang) {
+      setIsOpen(false);
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await fetch('/api/locale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale: code }),
+      });
+      router.refresh();
+    } finally {
+      setIsSaving(false);
+      setIsOpen(false);
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -48,24 +76,26 @@ export function LanguageSelector() {
           }`}
       >
         <div className="py-2">
-          {LANGUAGES.map((lang) => (
-            <button
-              key={lang.code}
-              onClick={() => {
-                setSelectedLang(lang.code);
-                setIsOpen(false);
-              }}
-              className="w-full flex items-center px-6 py-4 hover:bg-slate-50 transition-colors text-left"
-            >
-              <span className="text-[22px] mr-4 leading-none">{lang.flag}</span>
-              <span className={`text-[16px] flex-1 tracking-wide ${selectedLang === lang.code ? 'font-bold text-[#1e293b]' : 'font-medium text-[#334155]'}`}>
-                {lang.label}
-              </span>
-              {selectedLang === lang.code && (
-                <Check className="w-6 h-6 text-[#10b981] stroke-[2]" />
-              )}
-            </button>
-          ))}
+          {LANGUAGES.map((lang) => {
+            const isAvailable = (LOCALES as readonly string[]).includes(lang.code);
+            return (
+              <button
+                key={lang.code}
+                onClick={() => changeLocale(lang.code)}
+                disabled={!isAvailable || isSaving}
+                title={isAvailable ? undefined : 'Translation not available yet'}
+                className={`w-full flex items-center px-6 py-4 transition-colors text-left ${isAvailable ? 'hover:bg-slate-50' : 'opacity-40 cursor-not-allowed'}`}
+              >
+                <span className="text-[22px] mr-4 leading-none">{lang.flag}</span>
+                <span className={`text-[16px] flex-1 tracking-wide ${selectedLang === lang.code ? 'font-bold text-[#1e293b]' : 'font-medium text-[#334155]'}`}>
+                  {lang.label}
+                </span>
+                {selectedLang === lang.code && (
+                  <Check className="w-6 h-6 text-[#10b981] stroke-[2]" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

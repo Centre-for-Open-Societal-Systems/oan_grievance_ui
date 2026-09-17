@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { FileText, AlertCircle, ChevronDown, Calendar as CalendarIcon, ChevronLeft, ChevronRight, EyeOff, Send } from 'lucide-react';
-import { useIsOfficerOrAdmin } from '@/features/auth/hooks/useIsOfficerOrAdmin';
 
 const AnimatedDropdown = ({ label, options, placeholder, required, value, onChange }: { label: string, options: string[], placeholder: string, required?: boolean, value: string, onChange: (val: string) => void }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -120,8 +119,7 @@ const AnimatedDatePicker = ({ label, required, value, onChange, placeholder = 'd
   );
 };
 
-export function ResponseForm() {
-  const isOfficerOrAdmin = useIsOfficerOrAdmin();
+export function ResponseForm({ canManageCase }: { canManageCase: boolean }) {
 
   const [activeTab, setActiveTab] = useState<'response' | 'internal'>('response');
 
@@ -138,7 +136,7 @@ export function ResponseForm() {
 
   // Drafting a department response — and internal notes — is an officer/admin
   // action; a submitter reads responses via CommentsAndCommunication instead.
-  if (!isOfficerOrAdmin) return null;
+  if (!canManageCase) return null;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col flex-1">

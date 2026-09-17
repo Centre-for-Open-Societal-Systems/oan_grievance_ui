@@ -3,12 +3,17 @@
 import { Bell, Search, Menu } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { UserProfile } from "./UserProfile";
 import { LanguageSelector } from "./LanguageSelector";
 
 export function Header() {
   const { toggleSidebar } = useSidebar();
   const pathname = usePathname();
+  // Only "No Access" is translated so far — the rest of these titles predate
+  // this PR's i18n setup and still need their own translation pass (see
+  // messages/README.md).
+  const tNoAccess = useTranslations("noAccess");
 
   const getPageTitle = (path: string) => {
     if (path === "/") return "Dashboard";
@@ -18,7 +23,7 @@ export function Header() {
     if (path.startsWith("/analytics-reporting")) return "Analytics & Reporting";
     if (path.startsWith("/user-management")) return "User Management";
     if (path.startsWith("/settings")) return "Settings";
-    if (path.startsWith("/no-access")) return "No Access";
+    if (path.startsWith("/no-access")) return tNoAccess("pageTitle");
     return "Dashboard";
   };
 

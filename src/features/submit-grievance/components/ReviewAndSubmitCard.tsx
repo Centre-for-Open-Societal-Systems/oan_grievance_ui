@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check } from "lucide-react";
-import { submitterTypeOptions, submissionChannelOptions, SI_FIELDS_BY_TYPE } from "./SubmitterIdentityCard";
+import { submitterTypeOptions, submissionChannelOptions, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import { serviceCategoryOptions, grievanceTypeOptions, regionOptions } from "./GrievanceDetailsCard";
 
 interface ReviewAndSubmitCardProps {

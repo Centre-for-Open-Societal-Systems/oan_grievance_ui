@@ -1,73 +1,72 @@
 "use client";
 
 import { SIPhoneField } from "./SI-PhoneField";
+import { SIMaskedIdField } from "./SIMaskedIdField";
 import type { SIFormProps } from "./SI-types";
 
 export const FIELDS = [
-  { key: "officeName", label: "Woreda / Kebele Office Name", required: true },
-  { key: "adminZone", label: "Administrative Zone", required: true },
-  { key: "responsibleOfficial", label: "Responsible Official", required: true },
-  { key: "officialFaydaId", label: "Official's Fayda ID", required: true },
+  { key: "orgName", label: "Organisation Name", required: true },
+  { key: "registrationNumber", label: "Registration Number", required: true },
+  { key: "representativeName", label: "Authorised Representative", required: true },
+  { key: "representativeFaydaId", label: "Representative Fayda ID", required: true },
   { key: "phoneNumber", label: "Contact Mobile", required: true },
   { key: "email", label: "Contact Email ID", required: false },
 ];
 
-export function WoredaKebeleForm({ values, setValue, hiddenFields = [] }: SIFormProps) {
+export function NGOForm({ values, setValue, hiddenFields = [] }: SIFormProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-      {/* Office Name */}
+      {/* Organisation Name */}
       <div>
         <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Woreda / Kebele Office Name <span className="text-red-500">*</span>
+          Organisation Name <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
-          value={values.officeName || ""}
-          onChange={(e) => setValue("officeName", e.target.value)}
-          placeholder="Enter Woreda or Kebele office name"
+          value={values.orgName || ""}
+          onChange={(e) => setValue("orgName", e.target.value)}
+          placeholder="Enter Full registered organisation name"
           className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
         />
       </div>
 
-      {/* Administrative Zone */}
+      {/* Registration Number */}
       <div>
         <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Administrative Zone <span className="text-red-500">*</span>
+          Registration Number <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
-          value={values.adminZone || ""}
-          onChange={(e) => setValue("adminZone", e.target.value)}
-          placeholder="Enter the zone this office administers"
+          value={values.registrationNumber || ""}
+          onChange={(e) => setValue("registrationNumber", e.target.value)}
+          placeholder="Enter COOP-XX-2024-XXXX"
           className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
         />
       </div>
 
-      {/* Responsible Official */}
+      {/* Authorised Representative */}
       <div>
         <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Responsible Official <span className="text-red-500">*</span>
+          Authorised Representative <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
-          value={values.responsibleOfficial || ""}
-          onChange={(e) => setValue("responsibleOfficial", e.target.value)}
-          placeholder="Enter official's full name"
+          value={values.representativeName || ""}
+          onChange={(e) => setValue("representativeName", e.target.value)}
+          placeholder="Enter Rep's full name"
           className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
         />
       </div>
 
-      {/* Official's Fayda ID */}
+      {/* Representative Fayda ID */}
       <div>
         <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Official&apos;s Fayda ID <span className="text-red-500">*</span>
+          Representative Fayda ID <span className="text-red-500">*</span>
         </label>
-        <input
-          type="text"
-          value={values.officialFaydaId || ""}
-          onChange={(e) => setValue("officialFaydaId", e.target.value)}
+        <SIMaskedIdField
+          value={values.representativeFaydaId || ""}
+          onChange={(value) => setValue("representativeFaydaId", value)}
           placeholder="Enter Fayda ID"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
         />
       </div>
 

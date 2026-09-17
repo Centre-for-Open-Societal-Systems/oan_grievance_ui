@@ -1,6 +1,7 @@
 "use client";
 
 import { SIPhoneField } from "./SI-PhoneField";
+import { SIMaskedIdField } from "./SIMaskedIdField";
 import type { SIFormProps } from "./SI-types";
 
 export const FIELDS = [
@@ -34,12 +35,10 @@ export function IndividualFarmerForm({ values, setValue, hiddenFields = [] }: SI
         <label className="block text-sm font-semibold text-gray-800 mb-2">
           Fayda ID <span className="text-red-500">*</span>
         </label>
-        <input
-          type="text"
+        <SIMaskedIdField
           value={values.faydaId || ""}
-          onChange={(e) => setValue("faydaId", e.target.value)}
+          onChange={(value) => setValue("faydaId", value)}
           placeholder="Enter Fayda ID"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
         />
       </div>
 

@@ -31,12 +31,27 @@ export const ROLES = {
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 /**
+ * Routes open to any authenticated role, whatever it is — deliberately, not
+ * by omission. `canAccessRoute` denies anything absent from both this list
+ * and `ROUTE_ROLES`, so a route added later without an entry in either is
+ * blocked (and visibly so, since it redirects) rather than silently open.
+ * `/no-access` must stay here: it's `DEFAULT_HOME_ROUTE` below, the landing
+ * page for a role that matches nothing in `ROUTE_ROLES` — if it required a
+ * role itself, that user would bounce off it straight back to itself.
+ */
+const UNRESTRICTED_ROUTES = ['/no-access'];
+
+function isUnrestrictedRoute(pathname: string): boolean {
+  return UNRESTRICTED_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
+/**
  * Which roles may open each dashboard route (checked against the JWT's
  * unverified `roles` claim, like the rest of this file). A route absent from
- * this map is open to any authenticated role. This is a UX-layer guard only:
- * the backend re-checks every real API call regardless (see
- * `oan_grievance_service`), so this cannot be the only place access is
- * enforced.
+ * both this map and `UNRESTRICTED_ROUTES` is denied to everyone — see
+ * `canAccessRoute`. This is a UX-layer guard only: the backend re-checks
+ * every real API call regardless (see `oan_grievance_service`), so this
+ * cannot be the only place access is enforced.
  */
 const ROUTE_ROLES: Record<string, Role[]> = {
   '/dashboard': [ROLES.OFFICER, ROLES.ADMIN],
@@ -85,10 +100,15 @@ function effectiveRoles(roles: string[]): string[] {
   return roles.length > 0 ? roles : [ROLES.SUBMITTER];
 }
 
-/** True if the route is unrestricted, or at least one of `roles` is on its allow-list. */
+/**
+ * True if the route is explicitly unrestricted, or at least one of `roles`
+ * is on its `ROUTE_ROLES` allow-list. Deny-by-default: a route in neither
+ * place is blocked, not open — see `UNRESTRICTED_ROUTES`.
+ */
 export function canAccessRoute(pathname: string, roles: string[]): boolean {
+  if (isUnrestrictedRoute(pathname)) return true;
   const allowed = matchedRouteRoles(pathname);
-  if (!allowed) return true;
+  if (!allowed) return false;
   return effectiveRoles(roles).some((role) => allowed.includes(role as Role));
 }
 

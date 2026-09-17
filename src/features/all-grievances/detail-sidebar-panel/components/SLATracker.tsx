@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { AlertCircle, CalendarClock, Timer } from 'lucide-react';
 import { DeferSLAPopup } from './DeferSLAPopup';
-import { useIsOfficerOrAdmin } from '@/features/auth/hooks/useIsOfficerOrAdmin';
 
-export function SLATracker() {
+export function SLATracker({ canManageCase }: { canManageCase: boolean }) {
   const [showPopup, setShowPopup] = useState(false);
   // Deferring the SLA deadline is a case-management action — a submitter can
   // see how their case is tracking but shouldn't be able to push the deadline.
-  const canDefer = useIsOfficerOrAdmin();
+  const canDefer = canManageCase;
 
   return (
     <>

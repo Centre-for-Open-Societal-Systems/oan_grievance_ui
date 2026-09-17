@@ -1,0 +1,33 @@
+{
+  "noAccess": {
+    "pageTitle": "Mirgi Hin Jiru",
+    "heading": "Mirgi hanga ammaatti hin ramadamne",
+    "body": "Baankiin keessan gita (role) beekamaa pilaatfoormii komii keessatti hin ramadamne. Maaloo bulchaa keessan qunnamaatii mirgi akka isiniif ramadamu gaafadhaa."
+  },
+  "register": {
+    "profile": {
+      "accountCreatedTitle": "Akkaawuntiin Uumameera!",
+      "subtitle": "Wanti tokko hafe — akkaataa komii itti dhiheessitan nu beeksisaa, kanaafuu ammas isin hin gaafannu.",
+      "submitterTypeLabel": "Gosa Dhiheessituu",
+      "submitterTypePlaceholder": "Gosa Dhiheessituu Filadhu",
+      "skipForNow": "Yeroo ammaa darbi",
+      "continue": "Itti fufi",
+      "consentNotice": "Lakkoofsi ID Fayda armaan olii yeroo komiin ilaalamu eenyummaa keessan mirkaneessa. Bifa dhoksaan skiriinii irratti argama, meeshaan kunis gonkumaa hin kuusu — gabateewwan armaan gadii (maqaa, odeeffannoo qunnamtii) qofa yeroo itti aanu Komii Galchuu (Submit Grievance) dursanii guutuuf as kuufama.",
+      "consentCheckboxLabel": "Lakkoofsa ID biyyaalessaa koo mirkaneessa eenyummaaf kennuuf nan waliigala.",
+      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}. Yookaan yeroo ammaa darbi."
+    },
+    "success": {
+      "title": "Akkaawuntiin Uumameera!",
+      "body": "Akkaawuntiin keessan milkaa'inaan uumameera. Amma imeelii fi jecha darbii keessaniin seenuu ni dandeessu.",
+      "proceedToLogin": "Gara Seensaatti Itti Fufi"
+    }
+  },
+  "submitGrievance": {
+    "identityStep": {
+      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}."
+    }
+  },
+  "commentsAndCommunication": {
+    "messageCount": "{count, plural, one {ergaa #} other {ergaawwan #}} guca kana keessatti"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "noAccess": {
+    "pageTitle": "መዳረሻ የለም",
+    "heading": "እስካሁን ምንም መዳረሻ አልተመደበም",
+    "body": "የእርስዎ መለያ በቅሬታ መድረክ ውስጥ የታወቀ ሚና አልተመደበለትም። ሚና እንዲመደብልዎ አስተዳዳሪዎን ያነጋግሩ።"
+  },
+  "register": {
+    "profile": {
+      "accountCreatedTitle": "መለያ ተፈጥሯል!",
+      "subtitle": "አንድ ተጨማሪ ነገር — ቅሬታዎችን እንዴት እንደሚያቀርቡ ይንገሩን፣ ስለዚህ በኋላ እንደገና አንጠይቅም።",
+      "submitterTypeLabel": "የአቅራቢ ዓይነት",
+      "submitterTypePlaceholder": "የአቅራቢ ዓይነት ይምረጡ",
+      "skipForNow": "ለአሁን ዝለል",
+      "continue": "ቀጥል",
+      "consentNotice": "ከላይ ያለው የፋይዳ መታወቂያ ቅሬታው ሲገመገም ማንነትዎን ያረጋግጣል። በነባሪነት በስክሪኑ ላይ የተደበቀ ሲሆን፣ ይህ መሣሪያ በጭራሽ አያስቀምጠውም — ከስሩ ያሉት መስኮች (ስም፣ የመገናኛ ዝርዝሮች) ብቻ ለቀጣዩ ጊዜ ቅሬታ ለማቅረብ አስቀድሞ ለመሙላት እዚህ ይቀመጣሉ።",
+      "consentCheckboxLabel": "ብሔራዊ መታወቂያ ቁጥሬን ለማንነት ማረጋገጫ ለመስጠት እስማማለሁ።",
+      "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}። ወይም ለአሁን ዝለል።"
+    },
+    "success": {
+      "title": "መለያ ተፈጥሯል!",
+      "body": "የእርስዎ መለያ በተሳካ ሁኔታ ተፈጥሯል። አሁን በኢሜይልዎ እና የይለፍ ቃልዎ መግባት ይችላሉ።",
+      "proceedToLogin": "ወደ መግቢያ ይቀጥሉ"
+    }
+  },
+  "submitGrievance": {
+    "identityStep": {
+      "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።"
+    }
+  },
+  "commentsAndCommunication": {
+    "messageCount": "{count, plural, one {# መልእክት} other {# መልእክቶች}} በዚህ ክር ውስጥ"
+  }
+}
