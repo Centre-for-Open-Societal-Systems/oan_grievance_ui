@@ -21,6 +21,7 @@ const sessionExpiryMiddleware: Middleware = (api) => (next) => (action) => {
       fetch('/api/auth/logout', { method: 'POST' })
         .catch(() => {})
         .finally(() => {
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Redux middleware runs outside React component tree
           window.location.href = '/login';
         });
     }
