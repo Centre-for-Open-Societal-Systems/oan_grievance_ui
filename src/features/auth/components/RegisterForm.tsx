@@ -1,19 +1,15 @@
 'use client';
 
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
-import { CountryCodeSelect, type CountryCodeOption } from '@/components/ui/CountryCodeSelect';
+import { PhoneField } from '@/components/ui/PhoneField';
 import { Spinner } from '@/components/ui/Spinner';
 import { PasswordRequirements } from '@/components/ui/PasswordRequirements';
 import { registerUser } from '@/features/auth/api/authApi';
 import { validatePassword } from '@/lib/validation/password';
-import { PHONE_NUMBER_REGEX, stripLeadingZero, toDigitsOnly } from '@/lib/validation/phone';
+import { PHONE_NUMBER_REGEX, stripLeadingZero } from '@/lib/validation/phone';
 import { Lock, Mail, User } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
-
-const COUNTRY_CODES: CountryCodeOption[] = [
-  { code: '+251', flagUrl: '/images/flags/et.svg', country: 'Ethiopia' },
-];
 
 export function RegisterForm() {
   const [fullName, setFullName] = useState('');
@@ -132,24 +128,14 @@ export function RegisterForm() {
           <label className="text-[14px] font-bold text-gray-700 flex items-center">
             Phone Number <span className="text-red-500 ml-1">*</span>
           </label>
-          <div className="flex shadow-sm">
-            <CountryCodeSelect
-              value={countryCode}
-              onChange={(val) => setCountryCode(val)}
-              options={COUNTRY_CODES}
-              triggerClassName="flex items-center gap-2 px-3 py-3 bg-gray-50 border border-r-0 border-[#D1D5DB] rounded-l-xl text-[14px] text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] font-medium cursor-pointer hover:bg-gray-100 min-w-[90px]"
-            />
-            <input
-              type="tel"
-              inputMode="numeric"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(toDigitsOnly(e.target.value))}
-              maxLength={10}
-              placeholder="Enter phone number"
-              required
-              className="w-full px-4 py-3 bg-white border border-[#D1D5DB] rounded-r-xl text-[14px] text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all placeholder:text-[#9CA3AF] font-medium"
-            />
-          </div>
+          <PhoneField
+            countryCode={countryCode}
+            setCountryCode={setCountryCode}
+            phoneNumber={phoneNumber}
+            setPhoneNumber={setPhoneNumber}
+            placeholder="Enter phone number"
+            required
+          />
         </div>
 
         <div className="flex flex-col gap-2">

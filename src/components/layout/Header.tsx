@@ -4,7 +4,7 @@ import { Bell, Search, Menu } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { usePathname } from "next/navigation";
 import { UserProfile } from "./UserProfile";
-import { LanguageSelector } from "./LanguageSelector";
+import { LanguageSelector } from "@/components/ui/LanguageSelector";
 
 export function Header() {
   const { toggleSidebar } = useSidebar();
