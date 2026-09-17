@@ -8,13 +8,29 @@ import {
   selectRegionFilterOptions,
   selectStatusFilterOptions,
 } from '@/features/metadata';
+import { EMPTY_GRIEVANCE_FILTERS, type GrievanceFilters } from '../types';
 
-export const STATUS_OPTIONS = ['All'];
-export const CATEGORY_OPTIONS = ['All', 'Inputs', 'Schemes', 'Payments', 'Credit', 'Markets'];
-export const PRIORITY_OPTIONS = ['All', 'Critical', 'High', 'Medium', 'Low'];
-export const REGIONS_OPTIONS = ['All'];
+export type { GrievanceFilters };
 
-function FilterDropdown({ label, options, selected, onChange }: { label: string, options: string[], selected: string[], onChange: (val: string[]) => void }) {
+/** A selectable filter value: `value` goes to the API, `label` is shown to the user. */
+export interface FilterOption {
+  value: string;
+  label: string;
+}
+
+export function FilterDropdown({
+  label,
+  options,
+  selected,
+  onChange,
+  isLoading = false,
+}: {
+  label: string;
+  options: FilterOption[];
+  selected: string[];
+  onChange: (val: string[]) => void;
+  isLoading?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -28,20 +44,27 @@ function FilterDropdown({ label, options, selected, onChange }: { label: string,
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleToggle = (option: string, checked: boolean) => {
-    if (option === 'All') {
-      onChange(checked ? [...options.filter(o => o !== 'All')] : []);
-      return;
-    }
+  // Filtering happens server-side, where "no values" means "no constraint" — so an
+  // empty selection is exactly what "All" means, and ticking All just clears it.
+  const isAllSelected = selected.length === 0;
 
+  const handleToggleAll = () => {
+    onChange([]);
+  };
+
+  const handleToggle = (value: string, checked: boolean) => {
     if (checked) {
-      onChange([...selected, option]);
+      onChange([...selected, value]);
     } else {
-      onChange(selected.filter(o => o !== option));
+      onChange(selected.filter((v) => v !== value));
     }
   };
 
-  const isAllSelected = selected.length === options.length - 1;
+  const summary = isLoading
+    ? 'Loading…'
+    : selected.length > 0
+      ? `${selected.length} selected`
+      : `Select ${label}`;
 
   return (
     <div className="flex flex-col gap-1.5 mb-4 relative" ref={dropdownRef}>
@@ -50,43 +73,84 @@ function FilterDropdown({ label, options, selected, onChange }: { label: string,
         className="flex items-center justify-between px-3 py-2.5 border border-gray-200 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="text-sm text-gray-500 line-clamp-1">
-          {selected.length > 0 ? `${selected.length} selected` : `Select ${label}`}
-        </span>
+        <span className="text-sm text-gray-500 line-clamp-1">{summary}</span>
         <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && (
         <div className="absolute top-full left-0 right-0 z-20 mt-1 border border-gray-100 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white overflow-hidden max-h-60 overflow-y-auto transform origin-top transition-all duration-200 opacity-100 scale-100">
-          {options.map(option => {
-            const isChecked = option === 'All' ? isAllSelected : selected.includes(option);
-            return (
-              <label key={option} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0">
-                <div className="relative flex items-center justify-center">
-                  <input
-                    type="checkbox"
-                    className="peer appearance-none w-[18px] h-[18px] border border-gray-300 rounded-[3px] bg-white checked:bg-[#1E8E3E] checked:border-[#1E8E3E] transition-all duration-200 cursor-pointer"
-                    checked={isChecked}
-                    onChange={(e) => handleToggle(option, e.target.checked)}
-                  />
-                  <svg
-                    className={`absolute w-3 h-3 text-white pointer-events-none transition-transform duration-300 ${isChecked ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <span className="text-sm text-gray-600">{option}</span>
-              </label>
-            );
-          })}
+          {options.length === 0 ? (
+            <div className="px-3 py-3 text-sm text-gray-400">
+              {isLoading ? 'Loading options…' : 'No options available'}
+            </div>
+          ) : (
+            [{ value: '__all__', label: 'All' }, ...options].map((option) => {
+              const isAllRow = option.value === '__all__';
+              const isChecked = isAllRow ? isAllSelected : selected.includes(option.value);
+              return (
+                <label key={option.value} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0">
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      className="peer appearance-none w-[18px] h-[18px] border border-gray-300 rounded-[3px] bg-white checked:bg-[#1E8E3E] checked:border-[#1E8E3E] transition-all duration-200 cursor-pointer"
+                      checked={isChecked}
+                      onChange={(e) =>
+                        isAllRow ? handleToggleAll() : handleToggle(option.value, e.target.checked)
+                      }
+                    />
+                    <svg
+                      className={`absolute w-3 h-3 text-white pointer-events-none transition-transform duration-300 ${isChecked ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-gray-600">{option.label}</span>
+                </label>
+              );
+            })
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function ModernCalendar({ onSelect, selectedDate, onClose, align = 'left' }: { onSelect: (date: string) => void, selectedDate: string, onClose: () => void, align?: 'left' | 'right' }) {
+/** `YYYY-MM-DD` in local time — the format the list API's date filters expect. */
+function toIsoDate(date: Date): string {
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function formatIsoForDisplay(iso: string): string {
+  if (!iso) return '';
+  const [year, month, day] = iso.split('-').map(Number);
+  if (!year || !month || !day) return iso;
+  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function ModernCalendar({
+  onSelect,
+  selectedDate,
+  onClose,
+  align = 'left',
+}: {
+  /** Receives a `YYYY-MM-DD` date. */
+  onSelect: (date: string) => void;
+  /** `YYYY-MM-DD`, or empty. */
+  selectedDate: string;
+  onClose: () => void;
+  align?: 'left' | 'right';
+}) {
   const calRef = useRef<HTMLDivElement>(null);
+  const [viewDate, setViewDate] = useState(() => {
+    const [year, month] = selectedDate.split('-').map(Number);
+    return year && month ? new Date(year, month - 1, 1) : new Date();
+  });
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -98,20 +162,20 @@ function ModernCalendar({ onSelect, selectedDate, onClose, align = 'left' }: { o
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  const today = new Date();
-  const currentMonth = today.toLocaleString('default', { month: 'long' });
-  const currentYear = today.getFullYear();
-  const currentMonthShort = today.toLocaleString('default', { month: 'short' });
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const monthLabel = viewDate.toLocaleString('en-US', { month: 'long' });
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const leadingBlanks = new Date(year, month, 1).getDay();
 
-  // Get number of days in current month
-  const daysInMonth = new Date(currentYear, today.getMonth() + 1, 0).getDate();
+  const shiftMonth = (delta: number) => setViewDate(new Date(year, month + delta, 1));
 
   return (
     <div ref={calRef} className={`absolute bottom-[calc(100%+8px)] ${align === 'right' ? 'right-0 origin-bottom-right' : 'left-0 origin-bottom-left'} p-4 bg-white border border-gray-100 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-[60] w-[260px] transform transition-all duration-200 scale-100 opacity-100`}>
       <div className="flex items-center justify-between mb-4">
-        <button className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"><ChevronLeft className="h-4 w-4" /></button>
-        <span className="text-sm font-bold text-gray-800">{currentMonth} {currentYear}</span>
-        <button className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"><ChevronRight className="h-4 w-4" /></button>
+        <button onClick={() => shiftMonth(-1)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"><ChevronLeft className="h-4 w-4" /></button>
+        <span className="text-sm font-bold text-gray-800">{monthLabel} {year}</span>
+        <button onClick={() => shiftMonth(1)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"><ChevronRight className="h-4 w-4" /></button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center mb-2">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
@@ -119,13 +183,14 @@ function ModernCalendar({ onSelect, selectedDate, onClose, align = 'left' }: { o
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
+        {Array.from({ length: leadingBlanks }).map((_, i) => <div key={`blank-${i}`} />)}
         {Array.from({ length: daysInMonth }).map((_, i) => {
-          const dayDate = `${currentMonthShort} ${i + 1}, ${currentYear}`;
-          const isSelected = selectedDate === dayDate;
+          const iso = toIsoDate(new Date(year, month, i + 1));
+          const isSelected = selectedDate === iso;
           return (
             <button
-              key={i}
-              onClick={() => { onSelect(dayDate); onClose(); }}
+              key={iso}
+              onClick={() => { onSelect(iso); onClose(); }}
               className={`w-7 h-7 mx-auto text-xs font-medium flex items-center justify-center rounded-full transition-all ${isSelected
                 ? 'bg-[#1E8E3E] text-white shadow-md transform scale-110'
                 : 'text-gray-700 hover:bg-emerald-50 hover:text-[#1E8E3E]'
@@ -140,16 +205,6 @@ function ModernCalendar({ onSelect, selectedDate, onClose, align = 'left' }: { o
   );
 }
 
-export interface GrievanceFilters {
-  status: string[];
-  category: string[];
-  priority: string[];
-  regions: string[];
-  dateRange: string | null;
-  fromDate: string;
-  toDate: string;
-}
-
 export function AdvancedFiltersSidebar({
   isOpen,
   onClose,
@@ -162,9 +217,9 @@ export function AdvancedFiltersSidebar({
   setFilters: React.Dispatch<React.SetStateAction<GrievanceFilters>>;
 }) {
   const dispatch = useAppDispatch();
-  const dynamicStatusOptions = useAppSelector(selectStatusFilterOptions);
-  const dynamicCategoryOptions = useAppSelector(selectCategoryFilterOptions);
-  const dynamicRegionOptions = useAppSelector(selectRegionFilterOptions);
+  const statusOptions = useAppSelector(selectStatusFilterOptions);
+  const categoryOptions = useAppSelector(selectCategoryFilterOptions);
+  const regionOptions = useAppSelector(selectRegionFilterOptions);
   const grievanceStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
 
@@ -180,18 +235,10 @@ export function AdvancedFiltersSidebar({
   const [isFromCalendarOpen, setIsFromCalendarOpen] = useState(false);
   const [isToCalendarOpen, setIsToCalendarOpen] = useState(false);
 
-  const totalFilters = filters.status.length + filters.category.length + filters.priority.length + filters.regions.length + (filters.fromDate || filters.toDate || filters.dateRange ? 1 : 0);
+  const totalFilters = filters.status.length + filters.category.length + filters.regions.length + (filters.fromDate || filters.toDate || filters.dateRange ? 1 : 0);
 
   const handleReset = () => {
-    setFilters({
-      status: [],
-      category: [],
-      priority: [],
-      regions: [],
-      dateRange: null,
-      fromDate: '',
-      toDate: ''
-    });
+    setFilters({ ...EMPTY_GRIEVANCE_FILTERS });
   };
 
   const setDateRangePreset = (range: string) => {
@@ -210,13 +257,11 @@ export function AdvancedFiltersSidebar({
       from.setDate(today.getDate() - 30);
     }
 
-    const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
     setFilters((f) => ({
       ...f,
       dateRange: range,
-      fromDate: formatDate(from),
-      toDate: formatDate(to)
+      fromDate: toIsoDate(from),
+      toDate: toIsoDate(to)
     }));
   };
 
@@ -245,10 +290,27 @@ export function AdvancedFiltersSidebar({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full relative">
-          <FilterDropdown label="Status" options={dynamicStatusOptions} selected={filters.status} onChange={(val) => setFilters((f) => ({ ...f, status: val }))} />
-          <FilterDropdown label="Category" options={dynamicCategoryOptions} selected={filters.category} onChange={(val) => setFilters((f) => ({ ...f, category: val }))} />
-          <FilterDropdown label="Priority" options={PRIORITY_OPTIONS} selected={filters.priority} onChange={(val) => setFilters((f) => ({ ...f, priority: val }))} />
-          <FilterDropdown label="Regions" options={dynamicRegionOptions} selected={filters.regions} onChange={(val) => setFilters((f) => ({ ...f, regions: val }))} />
+          <FilterDropdown
+            label="Status"
+            options={statusOptions}
+            selected={filters.status}
+            onChange={(val) => setFilters((f) => ({ ...f, status: val }))}
+            isLoading={grievanceStatus === 'loading'}
+          />
+          <FilterDropdown
+            label="Category"
+            options={categoryOptions}
+            selected={filters.category}
+            onChange={(val) => setFilters((f) => ({ ...f, category: val }))}
+            isLoading={grievanceStatus === 'loading'}
+          />
+          <FilterDropdown
+            label="Regions"
+            options={regionOptions}
+            selected={filters.regions}
+            onChange={(val) => setFilters((f) => ({ ...f, regions: val }))}
+            isLoading={regionsStatus === 'loading'}
+          />
 
           <div className="mt-2 mb-6 relative">
             <label className="text-sm font-semibold text-gray-700 block mb-3">Date Range</label>
@@ -260,7 +322,7 @@ export function AdvancedFiltersSidebar({
                   onClick={(e) => { e.stopPropagation(); setIsFromCalendarOpen(!isFromCalendarOpen); setIsToCalendarOpen(false); }}
                 >
                   <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input type="text" readOnly value={filters.fromDate} placeholder="Oct 1, 2026" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors hover:border-emerald-300" />
+                  <input type="text" readOnly value={formatIsoForDisplay(filters.fromDate)} placeholder="Oct 1, 2026" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors hover:border-emerald-300" />
                 </div>
                 {isFromCalendarOpen && (
                   <ModernCalendar onSelect={(date) => setFilters((f) => ({ ...f, fromDate: date, dateRange: null }))} selectedDate={filters.fromDate} onClose={() => setIsFromCalendarOpen(false)} />
@@ -273,7 +335,7 @@ export function AdvancedFiltersSidebar({
                   onClick={(e) => { e.stopPropagation(); setIsToCalendarOpen(!isToCalendarOpen); setIsFromCalendarOpen(false); }}
                 >
                   <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input type="text" readOnly value={filters.toDate} placeholder="Oct 31, 2026" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors hover:border-emerald-300" />
+                  <input type="text" readOnly value={formatIsoForDisplay(filters.toDate)} placeholder="Oct 31, 2026" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors hover:border-emerald-300" />
                 </div>
                 {isToCalendarOpen && (
                   <ModernCalendar align="right" onSelect={(date) => setFilters((f) => ({ ...f, toDate: date, dateRange: null }))} selectedDate={filters.toDate} onClose={() => setIsToCalendarOpen(false)} />

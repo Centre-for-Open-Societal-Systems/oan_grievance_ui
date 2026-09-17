@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/store';
 import {
   fetchAdministrativeAreas,
@@ -648,20 +648,34 @@ export const selectKebeleStatus = (
   );
 };
 
-export const selectStatusFilterOptions = (state: RootState): string[] => {
-  const backendStatuses = state.metadata.grievanceOptions?.statuses;
-  if (backendStatuses && backendStatuses.length > 0) {
-    return ['All', ...backendStatuses.map((s) => s.label)];
-  }
-  return ['All'];
-};
+/**
+ * Filter option lists for the grievance list screen.
+ *
+ * `value` is what the list API (`GET /api/v1/grievances`) expects for the matching query
+ * parameter; `label` is what the user sees. The two differ for statuses, whose display
+ * labels are translated server-side. The "All" pseudo-option is added by the dropdown
+ * itself rather than living in the data.
+ *
+ * Memoized with `createSelector` so the array identity stays stable across renders.
+ */
+export const selectStatusFilterOptions = createSelector(
+  [(state: RootState) => state.metadata.grievanceOptions?.statuses],
+  (statuses): Array<{ value: string; label: string }> =>
+    (statuses ?? []).map((s) => ({ value: s.status, label: s.label || s.status }))
+);
 
-export const selectCategoryFilterOptions = (state: RootState): string[] => {
-  const categories = selectServiceCategoryOptions(state);
-  return ['All', ...categories.map((c) => c.label)];
-};
+export const selectCategoryFilterOptions = createSelector(
+  [
+    (state: RootState) =>
+      state.metadata.submitterOptions?.service_categories ??
+      state.metadata.grievanceOptions?.service_categories,
+  ],
+  (categories): Array<{ value: string; label: string }> =>
+    (categories ?? []).map((c) => ({ value: c.category_name, label: c.category_name }))
+);
 
-export const selectRegionFilterOptions = (state: RootState): string[] => {
-  const regions = selectRegionOptions(state);
-  return ['All', ...regions.map((r) => r.label)];
-};
+export const selectRegionFilterOptions = createSelector(
+  [(state: RootState) => state.metadata.regions],
+  (regions): Array<{ value: string; label: string }> =>
+    regions.map((r) => ({ value: r.area_name, label: r.area_name }))
+);

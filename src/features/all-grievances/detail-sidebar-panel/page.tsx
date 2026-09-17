@@ -1,4 +1,4 @@
-import { Grievance } from '../mockData';
+import type { Grievance } from '../types';
 import { SidebarHeader } from './components/SidebarHeader';
 import { CommentsAndCommunication } from './components/CommentsAndCommunication';
 import { SLATracker } from './components/SLATracker';
