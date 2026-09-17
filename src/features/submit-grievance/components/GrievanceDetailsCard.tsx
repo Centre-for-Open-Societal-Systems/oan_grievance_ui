@@ -5,20 +5,23 @@ import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
+  fetchChildAreasThunk,
+  fetchGrievanceOptionsThunk,
   fetchRegionsThunk,
   fetchSubmitterOptionsThunk,
   selectGrievanceTypeOptions,
   selectRegionOptions,
   selectServiceCategoryOptions,
-  FALLBACK_SERVICE_CATEGORIES,
-  FALLBACK_GRIEVANCE_TYPES,
-  FALLBACK_REGIONS,
+  selectZoneOptions,
+  selectZoneStatus,
+  selectWoredaOptions,
+  selectWoredaStatus,
+  selectKebeleOptions,
+  selectKebeleStatus,
+  findZoneNode,
+  findWoredaNode,
 } from "@/features/metadata";
 import { AnimatedSelect } from "./SI-Dropdown";
-
-export const serviceCategoryOptions = FALLBACK_SERVICE_CATEGORIES;
-export const grievanceTypeOptions = FALLBACK_GRIEVANCE_TYPES.map((t) => ({ value: t.value, label: t.label }));
-export const regionOptions = FALLBACK_REGIONS;
 
 interface GrievanceDetailsCardProps {
   onNext: () => void;
@@ -33,6 +36,8 @@ interface GrievanceDetailsCardProps {
   setZone: (value: string) => void;
   woreda: string;
   setWoreda: (value: string) => void;
+  kebele: string;
+  setKebele: (value: string) => void;
   description: string;
   setDescription: (value: string) => void;
   uploadedFile: File | null;
@@ -52,6 +57,8 @@ export function GrievanceDetailsCard({
   setZone,
   woreda,
   setWoreda,
+  kebele,
+  setKebele,
   description,
   setDescription,
   uploadedFile,
@@ -63,17 +70,78 @@ export function GrievanceDetailsCard({
     selectGrievanceTypeOptions(state, serviceCategory)
   );
   const dynamicRegions = useAppSelector(selectRegionOptions);
+  const dynamicZones = useAppSelector((state) => selectZoneOptions(state, region));
+  const zoneStatus = useAppSelector((state) => selectZoneStatus(state, region));
+  const dynamicWoredas = useAppSelector((state) => selectWoredaOptions(state, zone, region));
+  const woredaStatus = useAppSelector((state) => selectWoredaStatus(state, zone, region));
+  const dynamicKebeles = useAppSelector((state) => selectKebeleOptions(state, woreda, zone, region));
+  const kebeleStatus = useAppSelector((state) => selectKebeleStatus(state, woreda, zone, region));
+  const rawRegions = useAppSelector((state) => state.metadata.regions);
+  const zoneNode = useAppSelector((state) => findZoneNode(state, zone, region));
+  const woredaNode = useAppSelector((state) => findWoredaNode(state, woreda, zone, region));
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
+  const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
+
+  const fetchedKeysRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (metadataStatus === "idle") {
       void dispatch(fetchSubmitterOptionsThunk());
     }
+    if (grievanceOptionsStatus === "idle") {
+      void dispatch(fetchGrievanceOptionsThunk());
+    }
     if (regionsStatus === "idle") {
       void dispatch(fetchRegionsThunk());
     }
-  }, [dispatch, metadataStatus, regionsStatus]);
+  }, [dispatch, metadataStatus, grievanceOptionsStatus, regionsStatus]);
+
+  // Fetch Zones and Woredas when Region changes (called at most once per region parent)
+  useEffect(() => {
+    if (!region) return;
+    const selectedRegionNode = rawRegions.find(
+      (r) =>
+        r.area_name.toLowerCase() === region.toLowerCase() ||
+        r.area_id.toLowerCase() === region.toLowerCase() ||
+        (r.code && r.code.toLowerCase() === region.toLowerCase())
+    );
+    const parentId = selectedRegionNode?.area_id || selectedRegionNode?.path_code || region;
+
+    const zoneKey = `${parentId}_Zone`;
+    if (!fetchedKeysRef.current.has(zoneKey)) {
+      fetchedKeysRef.current.add(zoneKey);
+      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Zone" }));
+    }
+
+    const woredaKey = `${parentId}_Woreda`;
+    if (!fetchedKeysRef.current.has(woredaKey)) {
+      fetchedKeysRef.current.add(woredaKey);
+      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Woreda" }));
+    }
+  }, [dispatch, region, rawRegions]);
+
+  // Fetch Woredas when Zone changes (called at most once per zone parent)
+  useEffect(() => {
+    if (!zone) return;
+    const parentId = zoneNode?.area_id || zoneNode?.path_code || zone;
+    const woredaKey = `${parentId}_Woreda`;
+    if (!fetchedKeysRef.current.has(woredaKey)) {
+      fetchedKeysRef.current.add(woredaKey);
+      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Woreda" }));
+    }
+  }, [dispatch, zone, zoneNode]);
+
+  // Fetch Kebeles when Woreda changes (called at most once per woreda parent)
+  useEffect(() => {
+    if (!woreda) return;
+    const parentId = woredaNode?.area_id || woredaNode?.path_code || woreda;
+    const kebeleKey = `${parentId}_Kebele`;
+    if (!fetchedKeysRef.current.has(kebeleKey)) {
+      fetchedKeysRef.current.add(kebeleKey);
+      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Kebele" }));
+    }
+  }, [dispatch, woreda, woredaNode]);
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -184,7 +252,12 @@ export function GrievanceDetailsCard({
                 options={dynamicRegions}
                 placeholder="Select region"
                 value={region}
-                onChange={setRegion}
+                onChange={(newRegion) => {
+                  setRegion(newRegion);
+                  setZone("");
+                  setWoreda("");
+                  setKebele("");
+                }}
               />
             </div>
 
@@ -193,12 +266,24 @@ export function GrievanceDetailsCard({
               <label className="block text-sm font-semibold text-gray-800 mb-2">
                 Zone / Sub-city <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <AnimatedSelect
+                options={dynamicZones}
+                placeholder={
+                  !region
+                    ? "Select region first"
+                    : zoneStatus === "loading"
+                    ? "Loading zones..."
+                    : dynamicZones.length === 0
+                    ? "No zones available"
+                    : "Select Zone / Sub-city"
+                }
                 value={zone}
-                onChange={(e) => setZone(e.target.value)}
-                placeholder="Enter Zone / Sub-city"
-                className="w-full bg-white border border-gray-300 text-gray-900 py-2.5 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm"
+                onChange={(newZone) => {
+                  setZone(newZone);
+                  setWoreda("");
+                  setKebele("");
+                }}
+                disabled={!region || zoneStatus === "loading"}
               />
             </div>
 
@@ -207,12 +292,23 @@ export function GrievanceDetailsCard({
               <label className="block text-sm font-semibold text-gray-800 mb-2">
                 Woreda <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <AnimatedSelect
+                options={dynamicWoredas}
+                placeholder={
+                  !region
+                    ? "Select region first"
+                    : woredaStatus === "loading"
+                    ? "Loading woredas..."
+                    : dynamicWoredas.length === 0
+                    ? (zone ? "No woredas available" : "Select zone or region first")
+                    : "Select Woreda"
+                }
                 value={woreda}
-                onChange={(e) => setWoreda(e.target.value)}
-                placeholder="Enter Woreda name"
-                className="w-full bg-white border border-gray-300 text-gray-900 py-2.5 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm"
+                onChange={(newWoreda) => {
+                  setWoreda(newWoreda);
+                  setKebele("");
+                }}
+                disabled={!region || woredaStatus === "loading"}
               />
             </div>
 
@@ -221,10 +317,20 @@ export function GrievanceDetailsCard({
               <label className="block text-sm font-semibold text-gray-800 mb-2">
                 Kebele / Village
               </label>
-              <input
-                type="text"
-                placeholder="Enter kebele or village name"
-                className="w-full bg-white border border-gray-300 text-gray-900 py-2.5 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm"
+              <AnimatedSelect
+                options={dynamicKebeles}
+                placeholder={
+                  !woreda
+                    ? "Select woreda first"
+                    : kebeleStatus === "loading"
+                    ? "Loading kebeles..."
+                    : dynamicKebeles.length === 0
+                    ? "No kebeles available"
+                    : "Select Kebele / Village"
+                }
+                value={kebele}
+                onChange={setKebele}
+                disabled={!woreda || kebeleStatus === "loading"}
               />
             </div>
           </div>

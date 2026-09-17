@@ -21,6 +21,7 @@ interface ReviewAndSubmitCardProps {
   region: string;
   zone: string;
   woreda: string;
+  kebele?: string;
   description: string;
   uploadedFile: File | null;
 }
@@ -44,6 +45,7 @@ export function ReviewAndSubmitCard({
   region,
   zone,
   woreda,
+  kebele,
   description,
   uploadedFile,
 }: ReviewAndSubmitCardProps) {
@@ -57,7 +59,7 @@ export function ReviewAndSubmitCard({
   );
   const regions = useAppSelector(selectRegionOptions);
 
-  const location = [labelFor(regions, region), zone, woreda].filter(Boolean).join(", ") || "Not provided";
+  const location = [labelFor(regions, region), zone, woreda, kebele].filter(Boolean).join(", ") || "Not provided";
   const identityFields = SI_FIELDS_BY_TYPE[submitterType] || [];
 
   return (

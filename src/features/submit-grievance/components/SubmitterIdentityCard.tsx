@@ -8,8 +8,6 @@ import {
   fetchSubmitterOptionsThunk,
   selectSubmitterTypeOptions,
   selectSubmissionChannelOptions,
-  FALLBACK_SUBMITTER_TYPES,
-  FALLBACK_SUBMISSION_CHANNELS,
 } from "@/features/metadata";
 import { AnimatedSelect } from "./SI-Dropdown";
 import { IndividualFarmerForm, FIELDS as INDIVIDUAL_FIELDS } from "./SI-IndividualFarmerForm";
@@ -27,9 +25,6 @@ export const SI_FIELDS_BY_TYPE: Record<string, SIFieldMeta[]> = {
   woreda_kebele: WOREDA_KEBELE_FIELDS,
   development_agent: DEVELOPMENT_AGENT_FIELDS,
 };
-
-export const submitterTypeOptions = FALLBACK_SUBMITTER_TYPES;
-export const submissionChannelOptions = FALLBACK_SUBMISSION_CHANNELS;
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;

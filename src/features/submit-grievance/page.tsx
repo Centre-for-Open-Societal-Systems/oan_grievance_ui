@@ -36,6 +36,7 @@ export default function SubmitGrievancePage() {
   const [region, setRegion] = useState("");
   const [zone, setZone] = useState("");
   const [woreda, setWoreda] = useState("");
+  const [kebele, setKebele] = useState("");
   const [description, setDescription] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
@@ -56,6 +57,17 @@ export default function SubmitGrievancePage() {
   const handleReset = () => {
     setIsSubmitted(false);
     setCurrentStep(1);
+    setSubmitterType("");
+    setSubmissionChannel("");
+    setIdentityValues({});
+    setServiceCategory("");
+    setGrievanceType("");
+    setRegion("");
+    setZone("");
+    setWoreda("");
+    setKebele("");
+    setDescription("");
+    setUploadedFile(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -119,6 +131,8 @@ export default function SubmitGrievancePage() {
             setZone={setZone}
             woreda={woreda}
             setWoreda={setWoreda}
+            kebele={kebele}
+            setKebele={setKebele}
             description={description}
             setDescription={setDescription}
             uploadedFile={uploadedFile}
@@ -137,6 +151,7 @@ export default function SubmitGrievancePage() {
             region={region}
             zone={zone}
             woreda={woreda}
+            kebele={kebele}
             description={description}
             uploadedFile={uploadedFile}
           />

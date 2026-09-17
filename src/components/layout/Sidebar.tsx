@@ -28,7 +28,7 @@ export function Sidebar() {
   const { isSidebarCollapsed } = useSidebar();
 
   return (
-    <div className={`h-screen bg-[#0e3b25] flex flex-col flex-shrink-0 font-sans shadow-xl z-20 relative transition-all duration-300 ${isSidebarCollapsed ? 'w-[88px]' : 'w-[280px]'}`}>
+    <div className={`h-screen bg-[#0e3b25] flex flex-col flex-shrink-0 font-sans shadow-xl z-40 relative transition-all duration-300 ${isSidebarCollapsed ? 'w-[88px]' : 'w-[280px]'}`}>
 
       {/* Logo Section */}
       <div className={`pt-6 pb-6 flex items-center border-b border-[#184d31] transition-all duration-300 ${isSidebarCollapsed ? 'px-4 justify-center' : 'px-6 gap-3.5'}`}>

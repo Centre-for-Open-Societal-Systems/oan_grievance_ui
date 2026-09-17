@@ -15,74 +15,6 @@ import type {
   SubmitterOptionsQueryParams,
 } from '../types';
 
-// Fallback defaults matching design system and seeded masters
-export const FALLBACK_SUBMITTER_TYPES = [
-  { value: 'individual', label: 'Individual Farmer' },
-  { value: 'cooperative', label: 'Cooperative / FPO' },
-  { value: 'ngo', label: 'NGO' },
-  { value: 'woreda_kebele', label: 'Woreda/Kebele Body' },
-  { value: 'development_agent', label: 'Development Agent (on behalf)' },
-];
-
-export const FALLBACK_SUBMISSION_CHANNELS = [
-  { value: 'web', label: 'Web Portal' },
-  { value: 'mobile', label: 'Mobile App' },
-  { value: 'ivr', label: 'IVR / Call Centre' },
-  { value: 'field_officer', label: 'Field Officer Assisted' },
-];
-
-export const FALLBACK_SERVICE_CATEGORIES = [
-  { value: 'inputs', label: 'Inputs' },
-  { value: 'schemes', label: 'Schemes' },
-  { value: 'payments', label: 'Payments' },
-  { value: 'credit', label: 'Credit' },
-  { value: 'markets', label: 'Markets' },
-];
-
-export const FALLBACK_GRIEVANCE_TYPES = [
-  { value: 'Fertilizer Shortage', label: 'Fertilizer Shortage', category: 'inputs' },
-  { value: 'Seed Quality Issue', label: 'Seed Quality Issue', category: 'inputs' },
-  { value: 'Pesticide Availability', label: 'Pesticide Availability', category: 'inputs' },
-  { value: 'Direct Benefit Transfer Delay', label: 'Direct Benefit Transfer Delay', category: 'schemes' },
-  { value: 'Subsidy Allocation Issue', label: 'Subsidy Allocation Issue', category: 'schemes' },
-  { value: 'Payment Failure', label: 'Payment Failure', category: 'payments' },
-  { value: 'Delayed Payment Settlement', label: 'Delayed Payment Settlement', category: 'payments' },
-  { value: 'Loan Disbursement Delay', label: 'Loan Disbursement Delay', category: 'credit' },
-  { value: 'Interest Rate Discrepancy', label: 'Interest Rate Discrepancy', category: 'credit' },
-  { value: 'Market access denied', label: 'Market access denied', category: 'markets' },
-  { value: 'Market price manipulation', label: 'Market price manipulation', category: 'markets' },
-  { value: 'Cooperative buyer default', label: 'Cooperative buyer default', category: 'markets' },
-  { value: 'Weighing / measurement dispute', label: 'Weighing / measurement dispute', category: 'markets' },
-  { value: 'Market infrastructure failure', label: 'Market infrastructure failure', category: 'markets' },
-  { value: 'Export permit / certification delay', label: 'Export permit / certification delay', category: 'markets' },
-];
-
-export const FALLBACK_REGIONS = [
-  { value: 'Addis Ababa', label: 'Addis Ababa' },
-  { value: 'Amhara', label: 'Amhara' },
-  { value: 'Oromia', label: 'Oromia' },
-  { value: 'Tigray', label: 'Tigray' },
-  { value: 'SNNPR', label: 'SNNPR' },
-  { value: 'Sidama', label: 'Sidama' },
-  { value: 'Afar', label: 'Afar' },
-  { value: 'Somali', label: 'Somali' },
-  { value: 'Benishangul-Gumuz', label: 'Benishangul-Gumuz' },
-  { value: 'Gambela', label: 'Gambela' },
-  { value: 'Harari', label: 'Harari' },
-  { value: 'Dire Dawa', label: 'Dire Dawa' },
-];
-
-export const FALLBACK_STATUSES = [
-  'Submitted',
-  'Assigned',
-  'In Progress',
-  'More Info Needed',
-  'Pending Submitter',
-  'Resolved',
-  'Closed',
-  'Rejected',
-];
-
 export interface MetadataState {
   submitterOptions: SubmitterOptionsData | null;
   submitterOptionsStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
@@ -144,13 +76,14 @@ export const fetchRegionsThunk = createAsyncThunk<
 });
 
 export const fetchChildAreasThunk = createAsyncThunk<
-  { parent: string; data: AdministrativeAreasData },
+  { key: string; parent: string; level_name?: string; data: AdministrativeAreasData },
   AdministrativeAreasQueryParams & { parent: string },
   { rejectValue: string }
 >('metadata/fetchChildAreas', async (params, { rejectWithValue }) => {
   try {
     const data = await fetchAdministrativeAreas(params);
-    return { parent: params.parent, data };
+    const key = params.level_name ? `${params.parent}_${params.level_name}` : params.parent;
+    return { key, parent: params.parent, level_name: params.level_name, data };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch child areas';
     return rejectWithValue(msg);
@@ -218,16 +151,24 @@ const metadataSlice = createSlice({
     // Child Areas
     builder.addCase(fetchChildAreasThunk.pending, (state, action) => {
       const parent = action.meta.arg.parent;
+      const key = action.meta.arg.level_name ? `${parent}_${action.meta.arg.level_name}` : parent;
       state.childAreasStatus[parent] = 'loading';
+      state.childAreasStatus[key] = 'loading';
     });
     builder.addCase(fetchChildAreasThunk.fulfilled, (state, action) => {
-      const { parent, data } = action.payload;
+      const { key, parent, data } = action.payload;
       state.childAreasStatus[parent] = 'succeeded';
-      state.childAreasByParent[parent] = data.areas;
+      state.childAreasStatus[key] = 'succeeded';
+      state.childAreasByParent[key] = data.areas;
+      if (!state.childAreasByParent[parent] || state.childAreasByParent[parent].length === 0) {
+        state.childAreasByParent[parent] = data.areas;
+      }
     });
     builder.addCase(fetchChildAreasThunk.rejected, (state, action) => {
       const parent = action.meta.arg.parent;
+      const key = action.meta.arg.level_name ? `${parent}_${action.meta.arg.level_name}` : parent;
       state.childAreasStatus[parent] = 'failed';
+      state.childAreasStatus[key] = 'failed';
     });
 
     // Grievance Options
@@ -252,7 +193,7 @@ const metadataSlice = createSlice({
 export const { clearMetadataErrors } = metadataSlice.actions;
 export const metadataReducer = metadataSlice.reducer;
 
-// --- Selectors with Seamless Fallbacks ---
+// --- Selectors ---
 
 /** Normalizes backend submitter type string to internal key if needed */
 export function normalizeSubmitterType(raw: string): string {
@@ -268,11 +209,12 @@ export function normalizeSubmitterType(raw: string): string {
 /** Normalizes backend submission channel string to internal key if needed */
 export function normalizeSubmissionChannel(raw: string): string {
   const lower = raw.toLowerCase().trim();
-  if (lower.includes('web')) return 'web';
-  if (lower.includes('app') || lower.includes('mobile app')) return 'mobile';
-  if (lower.includes('ivr') || lower.includes('call')) return 'ivr';
-  if (lower.includes('officer') || lower.includes('assisted') || lower.includes('da')) return 'field_officer';
-  return raw;
+  if (lower === 'web' || lower.includes('web')) return 'web';
+  if (lower === 'app' || lower.includes('mobile app') || lower === 'mobile') return 'mobile';
+  if (lower.includes('mobile call') || lower === 'call' || (lower.includes('call') && !lower.includes('ivr'))) return 'call';
+  if (lower.includes('ivr') || lower.includes('helpline')) return 'ivr';
+  if (lower.includes('officer') || lower.includes('assisted') || lower.includes('da') || lower.includes('development')) return 'field_officer';
+  return lower.replace(/\s+/g, '_');
 }
 
 export const selectSubmitterTypeOptions = (state: RootState): Array<{ value: string; label: string }> => {
@@ -283,7 +225,41 @@ export const selectSubmitterTypeOptions = (state: RootState): Array<{ value: str
       label: t.type_name,
     }));
   }
-  return FALLBACK_SUBMITTER_TYPES;
+  return [];
+};
+
+export const selectPreferredLanguageOptions = (
+  state: RootState
+): Array<{ code: string; label: string; flag: string; flagUrl: string }> => {
+  const backendLangs = state.metadata.submitterOptions?.preferred_languages;
+  if (backendLangs && backendLangs.length > 0) {
+    const flagMap: Record<string, string> = {
+      en: '🇺🇸',
+      am: '🇪🇹',
+      om: '🇪🇹',
+      ti: '🇪🇹',
+      so: '🇸🇴',
+      ar: '🇸🇦',
+    };
+    const flagUrlMap: Record<string, string> = {
+      en: '/images/flags/us.svg',
+      am: '/images/flags/et.svg',
+      om: '/images/flags/et.svg',
+      ti: '/images/flags/et.svg',
+      so: '/images/flags/et.svg',
+      ar: '/images/flags/et.svg',
+    };
+    return backendLangs.map((lang) => {
+      const codeLower = lang.code.toLowerCase();
+      return {
+        code: lang.code,
+        label: lang.label,
+        flag: flagMap[codeLower] || '🌐',
+        flagUrl: flagUrlMap[codeLower] || '/images/flags/et.svg',
+      };
+    });
+  }
+  return [];
 };
 
 export const selectSubmissionChannelOptions = (state: RootState): Array<{ value: string; label: string }> => {
@@ -292,15 +268,27 @@ export const selectSubmissionChannelOptions = (state: RootState): Array<{ value:
     state.metadata.grievanceOptions?.submission_channels;
 
   if (backendChannels && backendChannels.length > 0) {
-    return backendChannels.map((c) => {
+    const seen = new Set<string>();
+    const options: Array<{ value: string; label: string }> = [];
+
+    for (const c of backendChannels) {
       const name = typeof c === 'string' ? c : c.type_name;
-      return {
-        value: normalizeSubmissionChannel(name),
+      const code = typeof c === 'object' && c.code ? c.code : undefined;
+      const baseVal = normalizeSubmissionChannel(code || name);
+      let val = baseVal;
+      let counter = 1;
+      while (seen.has(val)) {
+        val = `${baseVal}_${counter++}`;
+      }
+      seen.add(val);
+      options.push({
+        value: val,
         label: name,
-      };
-    });
+      });
+    }
+    return options;
   }
-  return FALLBACK_SUBMISSION_CHANNELS;
+  return [];
 };
 
 export const selectServiceCategoryOptions = (state: RootState): Array<{ value: string; label: string }> => {
@@ -314,7 +302,7 @@ export const selectServiceCategoryOptions = (state: RootState): Array<{ value: s
       label: c.category_name,
     }));
   }
-  return FALLBACK_SERVICE_CATEGORIES;
+  return [];
 };
 
 export const selectGrievanceTypeOptions = (
@@ -339,17 +327,7 @@ export const selectGrievanceTypeOptions = (
     }));
   }
 
-  if (selectedCategory) {
-    const matchCat = selectedCategory.toLowerCase();
-    const filtered = FALLBACK_GRIEVANCE_TYPES.filter(
-      (t) => t.category.toLowerCase() === matchCat
-    );
-    if (filtered.length > 0) {
-      return filtered.map((t) => ({ value: t.value, label: t.label }));
-    }
-  }
-
-  return FALLBACK_GRIEVANCE_TYPES.map((t) => ({ value: t.value, label: t.label }));
+  return [];
 };
 
 export const selectRegionOptions = (state: RootState): Array<{ value: string; label: string }> => {
@@ -359,7 +337,7 @@ export const selectRegionOptions = (state: RootState): Array<{ value: string; la
       label: r.area_name,
     }));
   }
-  return FALLBACK_REGIONS;
+  return [];
 };
 
 export const selectChildAreaOptions = (
@@ -377,12 +355,283 @@ export const selectChildAreaOptions = (
   return [];
 };
 
+export const selectZoneOptions = (
+  state: RootState,
+  regionValue?: string
+): Array<{ value: string; label: string }> => {
+  if (!regionValue) return [];
+
+  const normalizedRegion = regionValue.toLowerCase().trim();
+  const regionNode = state.metadata.regions.find(
+    (r) =>
+      r.area_id.toLowerCase() === normalizedRegion ||
+      r.area_name.toLowerCase() === normalizedRegion ||
+      (r.code && r.code.toLowerCase() === normalizedRegion) ||
+      (r.path_code && r.path_code.toLowerCase() === normalizedRegion)
+  );
+
+  const parentKey = regionNode?.area_id || regionValue;
+  const childAreas =
+    state.metadata.childAreasByParent[`${parentKey}_Zone`] ||
+    state.metadata.childAreasByParent[parentKey] ||
+    (regionNode?.path_code ? state.metadata.childAreasByParent[`${regionNode.path_code}_Zone`] : undefined) ||
+    (regionNode?.path_code ? state.metadata.childAreasByParent[regionNode.path_code] : undefined);
+
+  if (childAreas && childAreas.length > 0) {
+    return childAreas
+      .filter((a) => !a.level_name || a.level_name === 'Zone')
+      .map((a) => ({
+        value: a.area_name,
+        label: a.area_name,
+      }));
+  }
+
+  return [];
+};
+
+export const selectZoneStatus = (
+  state: RootState,
+  regionValue?: string
+): 'idle' | 'loading' | 'succeeded' | 'failed' => {
+  if (!regionValue) return 'idle';
+  const regionNode = state.metadata.regions.find(
+    (r) =>
+      r.area_id.toLowerCase() === regionValue.toLowerCase() ||
+      r.area_name.toLowerCase() === regionValue.toLowerCase()
+  );
+  const parentKey = regionNode?.area_id || regionValue;
+  return (
+    state.metadata.childAreasStatus[`${parentKey}_Zone`] ||
+    state.metadata.childAreasStatus[parentKey] ||
+    'idle'
+  );
+};
+
+export function findZoneNode(
+  state: RootState,
+  zoneValue?: string,
+  regionValue?: string
+): AdministrativeArea | undefined {
+  if (!zoneValue) return undefined;
+  const normZone = zoneValue.toLowerCase().trim();
+
+  if (regionValue) {
+    const normRegion = regionValue.toLowerCase().trim();
+    const regionNode = state.metadata.regions.find(
+      (r) =>
+        r.area_id.toLowerCase() === normRegion ||
+        r.area_name.toLowerCase() === normRegion ||
+        (r.code && r.code.toLowerCase() === normRegion) ||
+        (r.path_code && r.path_code.toLowerCase() === normRegion)
+    );
+    const parentKey = regionNode?.area_id || regionValue;
+    const regionChildren =
+      state.metadata.childAreasByParent[`${parentKey}_Zone`] ||
+      state.metadata.childAreasByParent[parentKey] ||
+      (regionNode?.path_code ? state.metadata.childAreasByParent[regionNode.path_code] : undefined);
+    const found = regionChildren?.find(
+      (a) =>
+        a.area_name.toLowerCase() === normZone ||
+        a.area_id.toLowerCase() === normZone ||
+        (a.code && a.code.toLowerCase() === normZone)
+    );
+    if (found) return found;
+  }
+
+  for (const childList of Object.values(state.metadata.childAreasByParent)) {
+    const found = childList.find(
+      (a) =>
+        a.area_name.toLowerCase() === normZone ||
+        a.area_id.toLowerCase() === normZone ||
+        (a.code && a.code.toLowerCase() === normZone)
+    );
+    if (found) return found;
+  }
+
+  return undefined;
+}
+
+export const selectWoredaOptions = (
+  state: RootState,
+  zoneValue?: string,
+  regionValue?: string
+): Array<{ value: string; label: string }> => {
+  let childAreas: AdministrativeArea[] | undefined;
+
+  if (zoneValue) {
+    const zoneNode = findZoneNode(state, zoneValue, regionValue);
+    const parentKey = zoneNode?.area_id || zoneValue;
+    childAreas =
+      state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
+      state.metadata.childAreasByParent[parentKey] ||
+      (zoneNode?.path_code ? state.metadata.childAreasByParent[`${zoneNode.path_code}_Woreda`] : undefined) ||
+      (zoneNode?.path_code ? state.metadata.childAreasByParent[zoneNode.path_code] : undefined);
+  }
+
+  if ((!childAreas || childAreas.length === 0) && regionValue) {
+    const normalizedRegion = regionValue.toLowerCase().trim();
+    const regionNode = state.metadata.regions.find(
+      (r) =>
+        r.area_id.toLowerCase() === normalizedRegion ||
+        r.area_name.toLowerCase() === normalizedRegion ||
+        (r.code && r.code.toLowerCase() === normalizedRegion) ||
+        (r.path_code && r.path_code.toLowerCase() === normalizedRegion)
+    );
+    const parentKey = regionNode?.area_id || regionValue;
+    childAreas =
+      state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
+      state.metadata.childAreasByParent[parentKey];
+  }
+
+  if (childAreas && childAreas.length > 0) {
+    return childAreas
+      .filter((a) => !a.level_name || a.level_name === 'Woreda')
+      .map((a) => ({
+        value: a.area_name,
+        label: a.area_name,
+      }));
+  }
+
+  return [];
+};
+
+export const selectWoredaStatus = (
+  state: RootState,
+  zoneValue?: string,
+  regionValue?: string
+): 'idle' | 'loading' | 'succeeded' | 'failed' => {
+  if (zoneValue) {
+    const zoneNode = findZoneNode(state, zoneValue, regionValue);
+    const parentKey = zoneNode?.area_id || zoneValue;
+    return (
+      state.metadata.childAreasStatus[`${parentKey}_Woreda`] ||
+      state.metadata.childAreasStatus[parentKey] ||
+      'idle'
+    );
+  }
+  if (regionValue) {
+    const regionNode = state.metadata.regions.find(
+      (r) =>
+        r.area_id.toLowerCase() === regionValue.toLowerCase() ||
+        r.area_name.toLowerCase() === regionValue.toLowerCase()
+    );
+    const parentKey = regionNode?.area_id || regionValue;
+    return (
+      state.metadata.childAreasStatus[`${parentKey}_Woreda`] ||
+      state.metadata.childAreasStatus[parentKey] ||
+      'idle'
+    );
+  }
+  return 'idle';
+};
+
+export function findWoredaNode(
+  state: RootState,
+  woredaValue?: string,
+  zoneValue?: string,
+  regionValue?: string
+): AdministrativeArea | undefined {
+  if (!woredaValue) return undefined;
+  const normWoreda = woredaValue.toLowerCase().trim();
+
+  if (zoneValue) {
+    const zoneNode = findZoneNode(state, zoneValue, regionValue);
+    const parentKey = zoneNode?.area_id || zoneValue;
+    const zoneChildren =
+      state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
+      state.metadata.childAreasByParent[parentKey];
+    const found = zoneChildren?.find(
+      (a) =>
+        a.area_name.toLowerCase() === normWoreda ||
+        a.area_id.toLowerCase() === normWoreda ||
+        (a.code && a.code.toLowerCase() === normWoreda)
+    );
+    if (found) return found;
+  }
+
+  if (regionValue) {
+    const normalizedRegion = regionValue.toLowerCase().trim();
+    const regionNode = state.metadata.regions.find(
+      (r) =>
+        r.area_id.toLowerCase() === normalizedRegion ||
+        r.area_name.toLowerCase() === normalizedRegion
+    );
+    const parentKey = regionNode?.area_id || regionValue;
+    const regionChildren =
+      state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
+      state.metadata.childAreasByParent[parentKey];
+    const found = regionChildren?.find(
+      (a) =>
+        a.area_name.toLowerCase() === normWoreda ||
+        a.area_id.toLowerCase() === normWoreda ||
+        (a.code && a.code.toLowerCase() === normWoreda)
+    );
+    if (found) return found;
+  }
+
+  for (const childList of Object.values(state.metadata.childAreasByParent)) {
+    const found = childList.find(
+      (a) =>
+        a.area_name.toLowerCase() === normWoreda ||
+        a.area_id.toLowerCase() === normWoreda ||
+        (a.code && a.code.toLowerCase() === normWoreda)
+    );
+    if (found) return found;
+  }
+
+  return undefined;
+}
+
+export const selectKebeleOptions = (
+  state: RootState,
+  woredaValue?: string,
+  zoneValue?: string,
+  regionValue?: string
+): Array<{ value: string; label: string }> => {
+  if (!woredaValue) return [];
+
+  const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
+  const parentKey = woredaNode?.area_id || woredaValue;
+  const childAreas =
+    state.metadata.childAreasByParent[`${parentKey}_Kebele`] ||
+    state.metadata.childAreasByParent[parentKey] ||
+    (woredaNode?.path_code ? state.metadata.childAreasByParent[`${woredaNode.path_code}_Kebele`] : undefined) ||
+    (woredaNode?.path_code ? state.metadata.childAreasByParent[woredaNode.path_code] : undefined);
+
+  if (childAreas && childAreas.length > 0) {
+    return childAreas
+      .filter((a) => !a.level_name || a.level_name === 'Kebele')
+      .map((a) => ({
+        value: a.area_name,
+        label: a.area_name,
+      }));
+  }
+
+  return [];
+};
+
+export const selectKebeleStatus = (
+  state: RootState,
+  woredaValue?: string,
+  zoneValue?: string,
+  regionValue?: string
+): 'idle' | 'loading' | 'succeeded' | 'failed' => {
+  if (!woredaValue) return 'idle';
+  const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
+  const parentKey = woredaNode?.area_id || woredaValue;
+  return (
+    state.metadata.childAreasStatus[`${parentKey}_Kebele`] ||
+    state.metadata.childAreasStatus[parentKey] ||
+    'idle'
+  );
+};
+
 export const selectStatusFilterOptions = (state: RootState): string[] => {
   const backendStatuses = state.metadata.grievanceOptions?.statuses;
   if (backendStatuses && backendStatuses.length > 0) {
     return ['All', ...backendStatuses.map((s) => s.label)];
   }
-  return ['All', ...FALLBACK_STATUSES];
+  return ['All'];
 };
 
 export const selectCategoryFilterOptions = (state: RootState): string[] => {

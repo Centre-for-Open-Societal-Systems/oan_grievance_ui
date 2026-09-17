@@ -2,16 +2,31 @@
 
 import { Check } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-
-const languages = [
-  { code: 'en', label: 'English', flagUrl: '/images/flags/us.svg' },
-  { code: 'am', label: 'Amharic', flagUrl: '/images/flags/et.svg' },
-  { code: 'om', label: 'Afaan Oromo', flagUrl: '/images/flags/et.svg' },
-];
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  fetchSubmitterOptionsThunk,
+  selectPreferredLanguageOptions,
+} from '@/features/metadata';
 
 /** The flag-and-label language picker on the auth card, distinct from the emoji-based one in the dashboard header. */
 export function LanguageSelector() {
-  const [activeLanguage, setActiveLanguage] = useState(languages[0]!);
+  const dispatch = useAppDispatch();
+  const dynamicLanguages = useAppSelector(selectPreferredLanguageOptions);
+  const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
+
+  useEffect(() => {
+    if (metadataStatus === 'idle') {
+      void dispatch(fetchSubmitterOptionsThunk());
+    }
+  }, [dispatch, metadataStatus]);
+
+  const languages = dynamicLanguages;
+  const [selectedCode, setSelectedCode] = useState('en');
+  const activeLanguage =
+    languages.find((l) => l.code === selectedCode) ||
+    languages[0] ||
+    { code: 'en', label: 'English', flagUrl: '/images/flags/us.svg' };
+
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,9 +46,10 @@ export function LanguageSelector() {
         type="button"
         aria-haspopup="menu"
         aria-expanded={isOpen}
+        disabled={languages.length === 0}
         aria-label={`Language, ${activeLanguage.label}`}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 text-sm font-bold transition-all duration-300 group border rounded-full px-3.5 py-1.5 hover:shadow-sm cursor-pointer ${isOpen ? 'border-[#16A34A] bg-[#16A34A]/5 text-[#16A34A] shadow-sm' : 'border-gray-300 bg-white text-gray-700 hover:border-[#16A34A] hover:bg-gray-50'}`}
+        className={`flex items-center gap-2 text-sm font-bold transition-all duration-300 group border rounded-full px-3.5 py-1.5 hover:shadow-sm cursor-pointer disabled:opacity-60 ${isOpen ? 'border-[#16A34A] bg-[#16A34A]/5 text-[#16A34A] shadow-sm' : 'border-gray-300 bg-white text-gray-700 hover:border-[#16A34A] hover:bg-gray-50'}`}
       >
         <span className="flex items-center justify-center w-4 h-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -41,7 +57,7 @@ export function LanguageSelector() {
         </span>
         <span>{activeLanguage.label}</span>
       </button>
-      {isOpen && (
+      {isOpen && languages.length > 0 && (
         <div role="menu" aria-label="Language" className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden z-50">
           {languages.map((lang) => (
             <button
@@ -50,7 +66,7 @@ export function LanguageSelector() {
               role="menuitemradio"
               aria-checked={activeLanguage.code === lang.code}
               onClick={() => {
-                setActiveLanguage(lang);
+                setSelectedCode(lang.code);
                 setIsOpen(false);
               }}
               className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 flex items-center justify-between cursor-pointer"

@@ -7,14 +7,12 @@ import {
   selectCategoryFilterOptions,
   selectRegionFilterOptions,
   selectStatusFilterOptions,
-  FALLBACK_STATUSES,
-  FALLBACK_REGIONS,
 } from '@/features/metadata';
 
-export const STATUS_OPTIONS = ['All', ...FALLBACK_STATUSES];
+export const STATUS_OPTIONS = ['All'];
 export const CATEGORY_OPTIONS = ['All', 'Inputs', 'Schemes', 'Payments', 'Credit', 'Markets'];
 export const PRIORITY_OPTIONS = ['All', 'Critical', 'High', 'Medium', 'Low'];
-export const REGIONS_OPTIONS = ['All', ...FALLBACK_REGIONS.map((r) => r.label)];
+export const REGIONS_OPTIONS = ['All'];
 
 function FilterDropdown({ label, options, selected, onChange }: { label: string, options: string[], selected: string[], onChange: (val: string[]) => void }) {
   const [isOpen, setIsOpen] = useState(false);
