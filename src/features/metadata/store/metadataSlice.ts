@@ -30,6 +30,8 @@ export interface MetadataState {
   grievanceOptions: GrievanceOptionsData | null;
   grievanceOptionsStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
   grievanceOptionsError: string | null;
+
+  selectedLanguage?: string;
 }
 
 const initialState: MetadataState = {
@@ -47,6 +49,8 @@ const initialState: MetadataState = {
   grievanceOptions: null,
   grievanceOptionsStatus: 'idle',
   grievanceOptionsError: null,
+
+  selectedLanguage: 'en',
 };
 
 export const fetchSubmitterOptionsThunk = createAsyncThunk<
@@ -111,6 +115,9 @@ const metadataSlice = createSlice({
       state.submitterOptionsError = null;
       state.regionsError = null;
       state.grievanceOptionsError = null;
+    },
+    setSelectedLanguage(state, action: PayloadAction<string>) {
+      state.selectedLanguage = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -187,13 +194,28 @@ const metadataSlice = createSlice({
       state.grievanceOptionsStatus = 'failed';
       state.grievanceOptionsError = action.payload ?? 'Error loading grievance options';
     });
+
+    // Matchers must be added AFTER all addCase calls in Redux Toolkit
+    // User Preferred Language from auth/me or login (matched by action type to preserve feature isolation)
+    builder.addMatcher(
+      (action): action is PayloadAction<{ preferred_language?: string }> =>
+        action.type === 'auth/getMe/fulfilled' || action.type === 'auth/login/fulfilled',
+      (state, action) => {
+        if (action.payload?.preferred_language) {
+          state.selectedLanguage = action.payload.preferred_language;
+        }
+      }
+    );
   },
 });
 
-export const { clearMetadataErrors } = metadataSlice.actions;
+export const { clearMetadataErrors, setSelectedLanguage } = metadataSlice.actions;
 export const metadataReducer = metadataSlice.reducer;
 
 // --- Selectors ---
+
+export const selectSelectedLanguage = (state: RootState): string =>
+  state.metadata.selectedLanguage || 'en';
 
 /** Normalizes backend submitter type string to internal key if needed */
 export function normalizeSubmitterType(raw: string): string {

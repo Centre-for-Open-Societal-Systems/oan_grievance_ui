@@ -7,10 +7,20 @@ import { performLogout } from '@/features/auth/logout';
 import { selectUser } from '@/features/auth/store/authSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
-/** First 1-2 letters of the email's local part, e.g. "testuser@x.com" -> "TE". */
-function initialsFor(email: string): string {
-  const local = email.split('@')[0] ?? email;
-  return local.slice(0, 2).toUpperCase();
+/** Generates 1-2 letter initials from full name, falling back to email local part. */
+function initialsFor(fullName?: string, email?: string): string {
+  if (fullName && fullName.trim()) {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length >= 2 && parts[0] && parts[1]) {
+      return (parts[0][0]! + parts[1][0]!).toUpperCase();
+    }
+    return fullName.trim().slice(0, 2).toUpperCase();
+  }
+  if (email && email.trim()) {
+    const local = email.split('@')[0] ?? email;
+    return local.slice(0, 2).toUpperCase();
+  }
+  return '?';
 }
 
 export function UserProfile() {
@@ -37,8 +47,8 @@ export function UserProfile() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const displayName = user?.email ?? 'Not signed in';
-  const roleLabel = user ? (user.roles.length > 0 ? user.roles.join(', ') : 'No role assigned') : '';
+  const displayName = user?.full_name || user?.email || 'Not signed in';
+  const userType = user?.type || (user && user.roles.length > 0 ? user.roles.join(', ') : '');
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -47,12 +57,12 @@ export function UserProfile() {
         className="group flex items-center gap-3 focus:outline-none hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 active:scale-95 transition-all duration-300 ml-2 border border-gray-200 rounded-full pl-1.5 pr-4 py-1.5 bg-white"
       >
         <div className="flex items-center justify-center h-9 w-9 rounded-full bg-[#10b981] overflow-hidden shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-sm text-white text-[13px] font-bold">
-          {user ? initialsFor(user.email) : '?'}
+          {user ? initialsFor(user.full_name, user.email) : '?'}
         </div>
         <div className="flex flex-col items-start text-left -mt-0.5">
           <span className="text-[14px] font-bold text-gray-900 leading-tight">{displayName}</span>
-          {user && (
-            <span className="text-[13px] font-medium text-[#4b5563] leading-tight mt-0.5">{roleLabel}</span>
+          {user && userType && (
+            <span className="text-[13px] font-medium text-[#4b5563] leading-tight mt-0.5">{userType}</span>
           )}
         </div>
         <ChevronDown className={`w-4 h-4 text-slate-700 stroke-[2.5] ml-1 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -65,6 +75,14 @@ export function UserProfile() {
       >
         <div className="px-5 py-4 border-b border-gray-100">
           <p className="text-base font-bold text-gray-900 break-all">{displayName}</p>
+          {user?.email && user.email !== displayName && (
+            <p className="text-xs text-gray-500 mt-0.5 break-all">{user.email}</p>
+          )}
+          {userType && (
+            <span className="inline-block mt-1.5 px-2.5 py-0.5 bg-emerald-50 text-[#0b8535] text-xs font-semibold rounded-full border border-emerald-100">
+              {userType}
+            </span>
+          )}
         </div>
 
         <div className="py-2">

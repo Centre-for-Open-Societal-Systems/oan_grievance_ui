@@ -6,12 +6,15 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchSubmitterOptionsThunk,
   selectPreferredLanguageOptions,
+  selectSelectedLanguage,
+  setSelectedLanguage,
 } from '@/features/metadata';
 
 export function LanguageSelector() {
   const dispatch = useAppDispatch();
   const dynamicLanguages = useAppSelector(selectPreferredLanguageOptions);
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
+  const selectedLang = useAppSelector(selectSelectedLanguage);
 
   useEffect(() => {
     if (metadataStatus === "idle") {
@@ -20,7 +23,6 @@ export function LanguageSelector() {
   }, [dispatch, metadataStatus]);
 
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedLang, setSelectedLang] = useState('en');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,9 +44,13 @@ export function LanguageSelector() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={languages.length === 0}
-        className="group flex items-center justify-between w-[200px] border border-gray-200 rounded-lg px-4 py-2 text-[18px] font-medium text-[#475569] hover:bg-gray-50 hover:shadow-sm hover:border-gray-300 active:scale-95 focus:outline-none transition-all duration-300 disabled:opacity-60"
+        type="button"
+        onClick={() => {
+          if (languages.length > 0) {
+            setIsOpen(!isOpen);
+          }
+        }}
+        className="group flex items-center justify-between w-[200px] border border-gray-200 rounded-lg px-4 py-2 text-[18px] font-medium text-[#475569] hover:bg-gray-50 hover:shadow-sm hover:border-gray-300 active:scale-95 focus:outline-none transition-all duration-300"
       >
         <div className="flex items-center gap-2.5">
           <span className="text-[22px] leading-none inline-block origin-bottom-right group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-300">{currentLang.flag}</span>
@@ -64,7 +70,7 @@ export function LanguageSelector() {
               <button
                 key={lang.code}
                 onClick={() => {
-                  setSelectedLang(lang.code);
+                  dispatch(setSelectedLanguage(lang.code));
                   setIsOpen(false);
                 }}
                 className="w-full flex items-center px-6 py-4 hover:bg-slate-50 transition-colors text-left"

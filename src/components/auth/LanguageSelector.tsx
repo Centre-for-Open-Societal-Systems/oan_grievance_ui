@@ -6,6 +6,8 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchSubmitterOptionsThunk,
   selectPreferredLanguageOptions,
+  selectSelectedLanguage,
+  setSelectedLanguage,
 } from '@/features/metadata';
 
 /** The flag-and-label language picker on the auth card, distinct from the emoji-based one in the dashboard header. */
@@ -13,6 +15,7 @@ export function LanguageSelector() {
   const dispatch = useAppDispatch();
   const dynamicLanguages = useAppSelector(selectPreferredLanguageOptions);
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
+  const selectedCode = useAppSelector(selectSelectedLanguage);
 
   useEffect(() => {
     if (metadataStatus === 'idle') {
@@ -21,7 +24,6 @@ export function LanguageSelector() {
   }, [dispatch, metadataStatus]);
 
   const languages = dynamicLanguages;
-  const [selectedCode, setSelectedCode] = useState('en');
   const activeLanguage =
     languages.find((l) => l.code === selectedCode) ||
     languages[0] ||
@@ -46,10 +48,13 @@ export function LanguageSelector() {
         type="button"
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        disabled={languages.length === 0}
         aria-label={`Language, ${activeLanguage.label}`}
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 text-sm font-bold transition-all duration-300 group border rounded-full px-3.5 py-1.5 hover:shadow-sm cursor-pointer disabled:opacity-60 ${isOpen ? 'border-[#16A34A] bg-[#16A34A]/5 text-[#16A34A] shadow-sm' : 'border-gray-300 bg-white text-gray-700 hover:border-[#16A34A] hover:bg-gray-50'}`}
+        onClick={() => {
+          if (languages.length > 0) {
+            setIsOpen(!isOpen);
+          }
+        }}
+        className={`flex items-center gap-2 text-sm font-bold transition-all duration-300 group border rounded-full px-3.5 py-1.5 hover:shadow-sm cursor-pointer ${isOpen ? 'border-[#16A34A] bg-[#16A34A]/5 text-[#16A34A] shadow-sm' : 'border-gray-300 bg-white text-gray-700 hover:border-[#16A34A] hover:bg-gray-50'}`}
       >
         <span className="flex items-center justify-center w-4 h-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -66,7 +71,7 @@ export function LanguageSelector() {
               role="menuitemradio"
               aria-checked={activeLanguage.code === lang.code}
               onClick={() => {
-                setSelectedCode(lang.code);
+                dispatch(setSelectedLanguage(lang.code));
                 setIsOpen(false);
               }}
               className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 flex items-center justify-between cursor-pointer"

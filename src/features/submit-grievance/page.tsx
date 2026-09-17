@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { useAppSelector } from "@/store/hooks";
+import { selectUser } from "@/features/auth/store/authSlice";
+import { normalizeSubmitterType } from "@/features/metadata";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
@@ -10,13 +13,46 @@ import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
 
 export default function SubmitGrievancePage() {
+  const user = useAppSelector(selectUser);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // Step 1 — Submitter Identity
-  const [submitterType, setSubmitterType] = useState("");
-  const [submissionChannel, setSubmissionChannel] = useState("");
-  const [identityValues, setIdentityValues] = useState<Record<string, string>>({});
+  // Step 1 — Submitter Identity (auto-filled from logged-in user if available)
+  const [submitterType, setSubmitterType] = useState(() =>
+    user?.type ? normalizeSubmitterType(user.type) : ""
+  );
+  const [submissionChannel, setSubmissionChannel] = useState(() =>
+    user ? "web" : ""
+  );
+  const [identityValues, setIdentityValues] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    if (user) {
+      if (user.full_name) initial.fullName = user.full_name;
+      if (user.fayda_id) initial.faydaId = user.fayda_id;
+      if (user.mobile_no) initial.phoneNumber = user.mobile_no;
+      if (user.email) initial.email = user.email;
+    }
+    return initial;
+  });
+
+  // If user profile finishes loading asynchronously after initial mount, sync once during render
+  const [syncedUser, setSyncedUser] = useState(user);
+  if (user && user !== syncedUser) {
+    setSyncedUser(user);
+    if (!submitterType && user.type) {
+      setSubmitterType(normalizeSubmitterType(user.type));
+    }
+    if (!submissionChannel) {
+      setSubmissionChannel("web");
+    }
+    setIdentityValues((prev) => ({
+      fullName: prev.fullName || user.full_name || "",
+      faydaId: prev.faydaId || user.fayda_id || "",
+      phoneNumber: prev.phoneNumber || user.mobile_no || "",
+      email: prev.email || user.email || "",
+    }));
+  }
 
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
