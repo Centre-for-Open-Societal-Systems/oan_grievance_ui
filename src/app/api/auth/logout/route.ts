@@ -2,7 +2,7 @@ import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { callBackendAuth } from '@/lib/oanAuthBackend';
-import { checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
+import { checkRateLimit, hashForRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { clearSessionCookies, REFRESH_TOKEN_COOKIE } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -12,7 +12,15 @@ export async function POST(request: NextRequest) {
   if (csrfError) return csrfError;
 
   const clientIp = getClientIp(request);
-  const limit = checkRateLimit(`logout:${clientIp}`, RATE_LIMITS.logout.limit, RATE_LIMITS.logout.windowMs);
+  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
+
+  // Keyed by IP *and* a hash of the session's own refresh token when one is
+  // present — same reasoning as login/refresh: when clientIp can't be
+  // trusted, every caller collapses to the same "unknown" bucket, and one
+  // session hammering this endpoint would otherwise exhaust the budget for
+  // every other active session site-wide.
+  const limitKey = `logout:${clientIp}:${refreshToken ? hashForRateLimit(refreshToken) : 'none'}`;
+  const limit = checkRateLimit(limitKey, RATE_LIMITS.logout.limit, RATE_LIMITS.logout.windowMs);
 
   // A tripped limit must never leave someone signed in — clearing our own
   // cookies costs nothing and needs no upstream call, so it happens either way.
@@ -22,8 +30,6 @@ export async function POST(request: NextRequest) {
     clearSessionCookies(limited);
     return limited;
   }
-
-  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 
   // Revoke server-side before dropping the cookies. Clearing cookies alone
   // leaves the refresh token valid until it expires, so anyone who captured

@@ -1,3 +1,4 @@
+import { envInt } from '@/lib/envInt';
 import { logger } from '@/lib/logger';
 
 // Derives the caller's IP from a request that reached us through a reverse
@@ -17,9 +18,11 @@ const MAX_TRUSTED_PROXY_HOPS = 4;
 export const UNKNOWN_CLIENT_IP = 'unknown';
 
 function trustedProxyHops(): number {
-  const raw = Number.parseInt(process.env.TRUSTED_PROXY_HOPS ?? '', 10);
-  if (!Number.isInteger(raw) || raw < 1) return 0;
-  return Math.min(raw, MAX_TRUSTED_PROXY_HOPS);
+  // envInt's own fallback rule (non-positive-integer input -> fallback) is
+  // exactly "don't trust anything" here, so 0 is both the fallback and the
+  // safe default — same parse/validate rule every other tunable in this app
+  // uses, instead of a second hand-rolled copy of it.
+  return Math.min(envInt('TRUSTED_PROXY_HOPS', 0), MAX_TRUSTED_PROXY_HOPS);
 }
 
 export function getClientIp(request: Request): string {

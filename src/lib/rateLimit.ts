@@ -1,4 +1,5 @@
 import { envInt } from '@/lib/envInt';
+import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 // Fixed-window rate limiter for the authentication routes. State lives in
@@ -53,6 +54,28 @@ export function checkRateLimit(key: string, limit: number, windowMs: number): Ra
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
+/**
+ * A stable-enough, non-reversible fragment of a genuine secret (a refresh
+ * token) to fold into a rate-limit key without storing the secret itself —
+ * even truncated — in this process's in-memory map or its logs. Truncated:
+ * this only needs to distinguish concurrent callers from each other, not
+ * resist a targeted collision search against a rate-limit bucket. Not used
+ * for identifiers that aren't secrets (an attempted email, a username) —
+ * those are folded into the key directly, same as `login/route.ts` already
+ * does.
+ *
+ * Exists because `getClientIp` (clientIp.ts) returns the constant
+ * `'unknown'` for every caller when `TRUSTED_PROXY_HOPS` is unset (the
+ * documented default) — a route keyed by IP alone would then collapse every
+ * user on the site into one shared bucket. `login/route.ts` already avoids
+ * this by also keying on the attempted username; this same pattern needs to
+ * extend to every other rate-limited route that has *some* per-caller
+ * identifier available, even though none of them can trust the IP.
+ */
+export function hashForRateLimit(value: string): string {
+  return createHash('sha256').update(value).digest('hex').slice(0, 16);
+}
+
 /** The 429 every rate-limited route returns, worded identically regardless of which limit was hit. */
 export function rateLimitedResponse(retryAfterSeconds: number): NextResponse {
   return NextResponse.json(
@@ -79,11 +102,9 @@ export const RATE_LIMITS = {
   logout: limitFromEnv('LOGOUT', 10, 60_000),
   // Fired on real user activity while a session is open (see
   // `/api/auth/heartbeat`); throttled client-side to roughly once a minute
-  // per open tab. Unlike login/register, this is keyed by IP alone with no
-  // per-account scoping (a heartbeat carries no stable session identifier to
-  // scope by — tokens rotate), so the default has to comfortably cover many
-  // genuinely active users — and their multiple open tabs — sharing one
-  // office/NAT IP, not just one person. A heartbeat is a cheap cookie touch,
-  // so a generous budget here costs little.
+  // per open tab. Scoped by a hash of the session's refresh-token cookie
+  // (see `hashForRateLimit`) in addition to IP, same as every other route
+  // here — the default is still generous since a heartbeat is a cheap
+  // cookie touch and several tabs on one session share the same token.
   heartbeat: limitFromEnv('HEARTBEAT', 120, 60_000),
 } as const;

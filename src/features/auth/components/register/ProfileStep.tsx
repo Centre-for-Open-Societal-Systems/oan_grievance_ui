@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ComponentType } from 'react';
+import { type ComponentType } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, ShieldCheck } from 'lucide-react';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
@@ -28,6 +28,8 @@ export interface ProfileStepProps {
   setIdentityValue: (key: string, value: string) => void;
   hiddenFields: string[];
   profileError: string | null;
+  consentChecked: boolean;
+  onConsentChange: (checked: boolean) => void;
   onSkip: () => void;
   onSubmit: () => void;
 }
@@ -38,6 +40,11 @@ export interface ProfileStepProps {
  * or a per-type variant) is government identity data, so continuing past
  * this step requires an explicit checked box, not just filling the fields —
  * "Skip for now" bypasses both, since skipping means none of it is collected.
+ *
+ * `consentChecked` is owned by the parent (RegisterForm), not local state
+ * here — so that switching submitter type can reset it alongside
+ * identityValues. Consent given for one national-ID field must not silently
+ * carry over to a different one after a mid-step type change.
  */
 export function ProfileStep({
   submitterType,
@@ -46,10 +53,11 @@ export function ProfileStep({
   setIdentityValue,
   hiddenFields,
   profileError,
+  consentChecked,
+  onConsentChange,
   onSkip,
   onSubmit,
 }: ProfileStepProps) {
-  const [consentChecked, setConsentChecked] = useState(false);
   const IdentityForm = SUBMITTER_TYPE_FORMS[submitterType];
   const collectsNationalId = Boolean(IdentityForm);
   const t = useTranslations('register.profile');
@@ -101,7 +109,7 @@ export function ProfileStep({
                 <input
                   type="checkbox"
                   checked={consentChecked}
-                  onChange={(e) => setConsentChecked(e.target.checked)}
+                  onChange={(e) => onConsentChange(e.target.checked)}
                   className="sr-only"
                   aria-label={t('consentCheckboxLabel')}
                 />

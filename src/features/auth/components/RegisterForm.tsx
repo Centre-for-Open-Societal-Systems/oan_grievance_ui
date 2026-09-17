@@ -54,11 +54,18 @@ export function RegisterForm() {
   const [submitterType, setSubmitterType] = useState('');
   const [identityValues, setIdentityValues] = useState<Record<string, string>>({});
   const [profileError, setProfileError] = useState<string | null>(null);
+  // Lifted out of ProfileStep (rather than local state there) specifically
+  // so switching submitter type can reset it here alongside identityValues —
+  // consent given for one national-ID field (e.g. Fayda ID) must not carry
+  // over silently to a different one after a mid-step type change (e.g.
+  // Individual -> Cooperative swaps in representativeFaydaId).
+  const [consentChecked, setConsentChecked] = useState(false);
 
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
     setIdentityValues({});
     setProfileError(null);
+    setConsentChecked(false);
   };
 
   const setIdentityValue = (key: string, value: string) => {
@@ -149,6 +156,8 @@ export function RegisterForm() {
         setIdentityValue={setIdentityValue}
         hiddenFields={ALREADY_COLLECTED_FIELDS_BY_TYPE[submitterType] ?? []}
         profileError={profileError}
+        consentChecked={consentChecked}
+        onConsentChange={setConsentChecked}
         onSkip={() => setStep('success')}
         onSubmit={handleProfileSubmit}
       />

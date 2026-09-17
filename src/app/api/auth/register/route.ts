@@ -25,17 +25,22 @@ export async function POST(request: Request) {
   if (csrfError) return csrfError;
 
   const clientIp = getClientIp(request);
-  const limit = checkRateLimit(`register:${clientIp}`, RATE_LIMITS.register.limit, RATE_LIMITS.register.windowMs);
-  if (!limit.allowed) {
-    logger.security(`Register rate limit exceeded for ${clientIp}`);
-    return rateLimitedResponse(limit.retryAfterSeconds);
-  }
-
   const body = await request.json().catch(() => ({}));
   const { email, password, full_name, phone_number } = body ?? {};
 
   if (!email || !password || !full_name || !phone_number) {
     return NextResponse.json({ message: 'Missing required fields in request' }, { status: 400 });
+  }
+
+  // Keyed by IP *and* the attempted email — same reasoning as login/route.ts:
+  // when clientIp can't be trusted (no reverse proxy configured), every
+  // caller collapses to the same "unknown" bucket, and a flood of signups
+  // would otherwise lock every prospective user out of registering at once.
+  const limitKey = `register:${clientIp}:${String(email).toLowerCase()}`;
+  const limit = checkRateLimit(limitKey, RATE_LIMITS.register.limit, RATE_LIMITS.register.windowMs);
+  if (!limit.allowed) {
+    logger.security(`Register rate limit exceeded for ${clientIp}`);
+    return rateLimitedResponse(limit.retryAfterSeconds);
   }
 
   // The client already enforces these, but a direct POST here (bypassing the

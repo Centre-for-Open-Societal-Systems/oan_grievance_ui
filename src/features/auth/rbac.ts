@@ -1,11 +1,22 @@
+// Exact-or-segment match, not a bare prefix: `/login` matches `/login` and
+// `/login/whatever`, but never a route that merely starts with the same
+// characters, like a future `/login-history`. The one route-matching rule in
+// this file — PUBLIC_ROUTES, UNRESTRICTED_ROUTES, and ROUTE_ROLES's keys are
+// all matched through this, rather than each keeping its own copy of the
+// same `pathname === route || pathname.startsWith(route + '/')` check.
+function matchesRoute(pathname: string, route: string): boolean {
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
+function findMatchingRoute(pathname: string, routes: readonly string[]): string | undefined {
+  return routes.find((route) => matchesRoute(pathname, route));
+}
+
 /** The only public routes. Everything else is a dashboard screen that needs a session. */
 export const PUBLIC_ROUTES = ['/login', '/register'];
 
-// Exact-or-segment match, not a bare prefix: `/login` must match `/login` and
-// `/login/whatever`, but never a route that merely starts with the same
-// characters, like a future `/login-history`.
 export function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  return findMatchingRoute(pathname, PUBLIC_ROUTES) !== undefined;
 }
 
 export function isProtectedRoute(pathname: string): boolean {
@@ -43,7 +54,7 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
 const UNRESTRICTED_ROUTES = ['/no-access'];
 
 function isUnrestrictedRoute(pathname: string): boolean {
-  return UNRESTRICTED_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  return findMatchingRoute(pathname, UNRESTRICTED_ROUTES) !== undefined;
 }
 
 /**
@@ -84,7 +95,7 @@ const ROLE_HOME_ROUTE: Record<Role, string> = {
 const DEFAULT_HOME_ROUTE = '/no-access';
 
 function matchedRouteRoles(pathname: string): Role[] | null {
-  const route = Object.keys(ROUTE_ROLES).find((r) => pathname === r || pathname.startsWith(`${r}/`));
+  const route = findMatchingRoute(pathname, Object.keys(ROUTE_ROLES));
   return route ? ROUTE_ROLES[route]! : null;
 }
 
@@ -115,7 +126,8 @@ export function canAccessRoute(pathname: string, roles: string[]): boolean {
 
 /** The most-privileged role in `roles` (by `ROLE_PRIORITY`) picks the landing route; falls back to the dashboard. */
 export function homeRouteForRoles(roles: string[]): string {
-  const primary = ROLE_PRIORITY.find((role) => effectiveRoles(roles).includes(role));
+  const held = effectiveRoles(roles);
+  const primary = ROLE_PRIORITY.find((role) => held.includes(role));
   return primary ? ROLE_HOME_ROUTE[primary] : DEFAULT_HOME_ROUTE;
 }
 

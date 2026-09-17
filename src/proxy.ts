@@ -1,4 +1,4 @@
-import { canAccessRoute, homeRouteForRoles, isProtectedRoute, isPublicRoute } from '@/features/auth/rbac';
+import { canAccessRoute, homeRouteForRoles, isProtectedRoute } from '@/features/auth/rbac';
 import { hasRecentActivity } from '@/lib/idleSession';
 import { decodeAccessToken, isExpired } from '@/lib/jwt';
 import {
@@ -60,9 +60,6 @@ export function proxy(request: NextRequest) {
 
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const csp = buildCsp(nonce);
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-nonce', nonce);
-  requestHeaders.set('Content-Security-Policy', csp);
 
   function withCsp(response: NextResponse): NextResponse {
     response.headers.set('Content-Security-Policy', csp);
@@ -72,6 +69,10 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
   const hasRefreshToken = !!request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
   const claims = token ? decodeAccessToken(token) : null;
+  // Classified once — `isProtectedRoute` is just `!isPublicRoute`, so
+  // computing both separately below would run the same PUBLIC_ROUTES scan
+  // twice per request on this route guard that runs on nearly every page load.
+  const protectedRoute = isProtectedRoute(pathname);
 
   // `expired` is accepted for routing only while a refresh token is present:
   // the access token is meant to expire every 15 minutes and be rotated by
@@ -85,10 +86,17 @@ export function proxy(request: NextRequest) {
   // it naturally expires on its own once nothing has touched it for
   // `IDLE_TIMEOUT_MS`. Its absence on an otherwise-valid session means idle
   // timeout, not "never signed in" — hence the separate reason on redirect.
-  const idleExpired = hasValidSession && isProtectedRoute(pathname) && !hasRecentActivity(request);
+  //
+  // Computed for every route, not just protected ones: an idle-expired
+  // session must not count as authenticated on /login either, or a user who
+  // navigates there directly gets silently bounced back into the app by the
+  // isPublicRoute redirect below instead of seeing the login form — they'd
+  // only actually get idle-kicked (with the cookie clearing and ?reason=idle
+  // messaging below) on whatever protected route they hit *after* that.
+  const idleExpired = hasValidSession && !hasRecentActivity(request);
   const isAuthenticated = hasValidSession && !idleExpired;
 
-  if (isProtectedRoute(pathname) && !isAuthenticated) {
+  if (protectedRoute && !isAuthenticated) {
     const response = NextResponse.redirect(new URL(idleExpired ? '/login?reason=idle' : '/login', request.url));
     if (idleExpired) {
       // Idle timeout ends the session for real, not just this one cookie —
@@ -108,7 +116,7 @@ export function proxy(request: NextRequest) {
   // which requires `!!claims`) — reconfirmed here so the checks below don't
   // need a non-null assertion on `claims`.
   if (isAuthenticated && claims) {
-    if (isPublicRoute(pathname) || pathname === '/') {
+    if (!protectedRoute || pathname === '/') {
       // `/` itself has no content of its own (`app/page.tsx` just redirects
       // to /login) — without this, an authenticated visit to `/` would fall
       // through to that redirect and only get bounced to /dashboard on the
@@ -123,6 +131,14 @@ export function proxy(request: NextRequest) {
       return withCsp(NextResponse.redirect(new URL(homeRouteForRoles(claims.roles), request.url)));
     }
   }
+
+  // Built here, not at the top of this function: every branch above this
+  // point returns a redirect and never touches request.headers, so cloning
+  // and stamping them would be wasted work on any of those paths — this is
+  // the only line that consumes it.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', csp);
 
   return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
 }
