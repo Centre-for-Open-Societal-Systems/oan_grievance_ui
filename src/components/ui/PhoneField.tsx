@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { toDigitsOnly } from '@/lib/validation/phone';
 
 export interface CountryCodeOption {
   code: string;
@@ -20,10 +21,6 @@ export const DEFAULT_COUNTRY_CODES: CountryCodeOption[] = [
   { code: '+258', country: 'Mozambique' },
   { code: '+1', country: 'United States', flagUrl: '/images/flags/us.svg' },
 ];
-
-function toDigitsOnly(val: string): string {
-  return val.replace(/\D/g, '');
-}
 
 export interface PhoneFieldProps {
   countryCode: string;

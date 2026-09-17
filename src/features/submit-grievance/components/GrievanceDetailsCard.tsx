@@ -106,7 +106,8 @@ export function GrievanceDetailsCard({
         r.area_id.toLowerCase() === region.toLowerCase() ||
         (r.code && r.code.toLowerCase() === region.toLowerCase())
     );
-    const parentId = selectedRegionNode?.area_id || selectedRegionNode?.path_code || region;
+    const parentId = selectedRegionNode?.area_id || selectedRegionNode?.path_code;
+    if (!parentId) return;
 
     const zoneKey = `${parentId}_Zone`;
     if (!fetchedKeysRef.current.has(zoneKey)) {
@@ -124,7 +125,8 @@ export function GrievanceDetailsCard({
   // Fetch Woredas when Zone changes (called at most once per zone parent)
   useEffect(() => {
     if (!zone) return;
-    const parentId = zoneNode?.area_id || zoneNode?.path_code || zone;
+    const parentId = zoneNode?.area_id || zoneNode?.path_code;
+    if (!parentId) return;
     const woredaKey = `${parentId}_Woreda`;
     if (!fetchedKeysRef.current.has(woredaKey)) {
       fetchedKeysRef.current.add(woredaKey);
@@ -135,7 +137,8 @@ export function GrievanceDetailsCard({
   // Fetch Kebeles when Woreda changes (called at most once per woreda parent)
   useEffect(() => {
     if (!woreda) return;
-    const parentId = woredaNode?.area_id || woredaNode?.path_code || woreda;
+    const parentId = woredaNode?.area_id || woredaNode?.path_code;
+    if (!parentId) return;
     const kebeleKey = `${parentId}_Kebele`;
     if (!fetchedKeysRef.current.has(kebeleKey)) {
       fetchedKeysRef.current.add(kebeleKey);
@@ -297,7 +300,7 @@ export function GrievanceDetailsCard({
                 placeholder={
                   !region
                     ? "Select region first"
-                    : woredaStatus === "loading"
+                    : woredaStatus === "loading" || Boolean(zone && !zoneNode)
                     ? "Loading woredas..."
                     : dynamicWoredas.length === 0
                     ? (zone ? "No woredas available" : "Select zone or region first")
@@ -308,7 +311,7 @@ export function GrievanceDetailsCard({
                   setWoreda(newWoreda);
                   setKebele("");
                 }}
-                disabled={!region || woredaStatus === "loading"}
+                disabled={!region || woredaStatus === "loading" || Boolean(zone && !zoneNode)}
               />
             </div>
 
@@ -322,7 +325,7 @@ export function GrievanceDetailsCard({
                 placeholder={
                   !woreda
                     ? "Select woreda first"
-                    : kebeleStatus === "loading"
+                    : kebeleStatus === "loading" || Boolean(woreda && !woredaNode)
                     ? "Loading kebeles..."
                     : dynamicKebeles.length === 0
                     ? "No kebeles available"
@@ -330,7 +333,7 @@ export function GrievanceDetailsCard({
                 }
                 value={kebele}
                 onChange={setKebele}
-                disabled={!woreda || kebeleStatus === "loading"}
+                disabled={!woreda || kebeleStatus === "loading" || Boolean(woreda && !woredaNode)}
               />
             </div>
           </div>

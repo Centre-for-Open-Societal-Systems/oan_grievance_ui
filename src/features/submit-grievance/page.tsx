@@ -47,6 +47,7 @@ export default function SubmitGrievancePage() {
       setSubmissionChannel("web");
     }
     setIdentityValues((prev) => ({
+      ...prev,
       fullName: prev.fullName || user.full_name || "",
       faydaId: prev.faydaId || user.fayda_id || "",
       phoneNumber: prev.phoneNumber || user.mobile_no || "",
