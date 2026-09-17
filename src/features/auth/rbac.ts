@@ -13,14 +13,15 @@ export function isProtectedRoute(pathname: string): boolean {
 }
 
 /**
- * The three generic roles this app routes by. These strings are STILL A
- * GUESS, now confirmed unverifiable rather than just unverified: checked
- * directly against a live `oan_auth_service` + fresh self-registration
- * round-trip (2026-09-15), no Frappe Role record named anything like
- * "Grievance *" exists in that database yet, and self-registration currently
- * assigns no role at all (`jwt_default_registration_role` isn't set in that
- * site's config) — a real self-registered user's JWT `roles` claim is `[]`.
- * Update this file once the backend actually defines these roles.
+ * The three role strings this app routes by, confirmed against a live
+ * `oan_auth_service` (2026-09-16): Frappe Role records named exactly these
+ * three exist (via `oan_grievance_service`'s fixtures), and a role assigned
+ * through Frappe Desk round-trips correctly through login into this claim.
+ *
+ * The one confirmed gap: self-registration still assigns no role at all
+ * (`jwt_default_registration_role` isn't set on that site's config) — a
+ * self-registered user's JWT `roles` claim is `[]`, handled by
+ * `effectiveRoles` below as submitter-equivalent until that's configured.
  */
 export const ROLES = {
   SUBMITTER: 'Grievance Submitter',
