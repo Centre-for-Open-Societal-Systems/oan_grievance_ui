@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { ChevronDown, Check } from 'lucide-react';
-import { LOCALES } from '@/i18n/locales';
+import { isLocale } from '@/i18n/locales';
 
 // Only the locales `src/i18n/request.ts` actually has a message catalog for
 // are switchable — the rest are listed but disabled, rather than silently
@@ -27,7 +27,7 @@ export function LanguageSelector() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const changeLocale = async (code: string) => {
-    if (!(LOCALES as readonly string[]).includes(code) || code === selectedLang) {
+    if (!isLocale(code) || code === selectedLang) {
       setIsOpen(false);
       return;
     }
@@ -77,7 +77,7 @@ export function LanguageSelector() {
       >
         <div className="py-2">
           {LANGUAGES.map((lang) => {
-            const isAvailable = (LOCALES as readonly string[]).includes(lang.code);
+            const isAvailable = isLocale(lang.code);
             return (
               <button
                 key={lang.code}

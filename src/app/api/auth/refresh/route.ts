@@ -3,7 +3,7 @@ import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { isIdleExpired } from '@/lib/idleSession';
 import { logger } from '@/lib/logger';
-import { checkRateLimit, hashForRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
+import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { clearSessionCookies, REFRESH_TOKEN_COOKIE, setSessionCookies } from '@/lib/session';
 import { performRefresh } from '@/lib/sessionRefresh';
 import type { NextRequest } from 'next/server';
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   // A caller with no refresh token at all has no session to scope by and
   // gets a 401 immediately below regardless, so a shared bucket for that
   // case costs little.
-  const limitKey = `refresh:${clientIp}:${refreshToken ? hashForRateLimit(refreshToken) : 'none'}`;
+  const limitKey = buildRateLimitKey('refresh', clientIp, { secret: refreshToken });
   const limit = checkRateLimit(limitKey, RATE_LIMITS.refresh.limit, RATE_LIMITS.refresh.windowMs);
   if (!limit.allowed) {
     logger.security(`Refresh rate limit exceeded for ${clientIp}`);

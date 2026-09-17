@@ -10,7 +10,7 @@ import { CooperativeFPOForm } from "@/components/submitter-identity/SI-Cooperati
 import { NGOForm } from "@/components/submitter-identity/SI-NGOForm";
 import { WoredaKebeleForm } from "@/components/submitter-identity/SI-WoredaKebeleForm";
 import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-DevelopmentAgentForm";
-import { SI_FIELDS_BY_TYPE, submitterTypeOptions, submissionChannelOptions } from "@/components/submitter-identity/fields";
+import { getMissingRequiredFields, submitterTypeOptions, submissionChannelOptions } from "@/components/submitter-identity/fields";
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
@@ -39,12 +39,7 @@ export function SubmitterIdentityCard({
     if (!submitterType) missingTopLevel.push("Submitter Type");
     if (!submissionChannel) missingTopLevel.push("Submission Channel");
 
-    const requiredFields = SI_FIELDS_BY_TYPE[submitterType] || [];
-    const missingIdentityFields = requiredFields
-      .filter((field) => field.required && !identityValues[field.key]?.trim())
-      .map((field) => field.label);
-
-    const missing = [...missingTopLevel, ...missingIdentityFields];
+    const missing = [...missingTopLevel, ...getMissingRequiredFields(submitterType, identityValues)];
     if (missing.length > 0) {
       setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
       return;

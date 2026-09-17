@@ -3,7 +3,7 @@ import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { BackendAuthError, callBackendAuth, type TokenPair } from '@/lib/oanAuthBackend';
-import { checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
+import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { validatePassword } from '@/lib/validation/password';
 import { NextResponse } from 'next/server';
 
@@ -25,6 +25,28 @@ export async function POST(request: Request) {
   if (csrfError) return csrfError;
 
   const clientIp = getClientIp(request);
+
+  // Pure per-IP limit, checked before the body is even parsed — unlike
+  // login (where a fake username achieves nothing for an attacker), a fake
+  // *registration* email is exactly what a spam-account flood wants to
+  // submit, so scoping the limit by email alone (or IP+email) lets an
+  // attacker mint a fresh rate-limit budget on every request just by
+  // varying the email — the account-scoped key that's the right call for
+  // login would quietly disable flood protection here. This IP-only check
+  // is what actually bounds total registration attempts from one source,
+  // and running it first also means a flood of malformed/empty bodies still
+  // counts against the caller's budget instead of skipping rate-limiting
+  // entirely by never reaching a body-shaped check.
+  const ipLimit = checkRateLimit(
+    buildRateLimitKey('register', clientIp),
+    RATE_LIMITS.register.limit,
+    RATE_LIMITS.register.windowMs
+  );
+  if (!ipLimit.allowed) {
+    logger.security(`Register rate limit exceeded for ${clientIp}`);
+    return rateLimitedResponse(ipLimit.retryAfterSeconds);
+  }
+
   const body = await request.json().catch(() => ({}));
   const { email, password, full_name, phone_number } = body ?? {};
 
@@ -32,15 +54,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'Missing required fields in request' }, { status: 400 });
   }
 
-  // Keyed by IP *and* the attempted email — same reasoning as login/route.ts:
-  // when clientIp can't be trusted (no reverse proxy configured), every
-  // caller collapses to the same "unknown" bucket, and a flood of signups
-  // would otherwise lock every prospective user out of registering at once.
-  const limitKey = `register:${clientIp}:${String(email).toLowerCase()}`;
-  const limit = checkRateLimit(limitKey, RATE_LIMITS.register.limit, RATE_LIMITS.register.windowMs);
-  if (!limit.allowed) {
-    logger.security(`Register rate limit exceeded for ${clientIp}`);
-    return rateLimitedResponse(limit.retryAfterSeconds);
+  // Secondary, tighter limit on IP+email — defense in depth against one
+  // specific email being hammered repeatedly (e.g. probing whether it's
+  // already registered), on top of the IP-wide flood cap above. When
+  // clientIp can't be trusted (no reverse proxy configured), this key
+  // collapses toward the IP-only one above rather than replacing it, so the
+  // site-wide protection doesn't depend on email uniqueness.
+  const emailLimitKey = buildRateLimitKey('register-email', clientIp, { identity: String(email) });
+  const emailLimit = checkRateLimit(emailLimitKey, RATE_LIMITS.register.limit, RATE_LIMITS.register.windowMs);
+  if (!emailLimit.allowed) {
+    logger.security(`Register rate limit exceeded for ${clientIp} (email-scoped)`);
+    return rateLimitedResponse(emailLimit.retryAfterSeconds);
   }
 
   // The client already enforces these, but a direct POST here (bypassing the

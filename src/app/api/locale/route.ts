@@ -1,4 +1,4 @@
-import { LOCALE_COOKIE, LOCALES } from '@/i18n/locales';
+import { isLocale, LOCALE_COOKIE } from '@/i18n/locales';
 import { NextResponse } from 'next/server';
 
 /**
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const locale = body?.locale;
 
-  if (typeof locale !== 'string' || !(LOCALES as readonly string[]).includes(locale)) {
+  if (typeof locale !== 'string' || !isLocale(locale)) {
     return NextResponse.json({ message: 'Unsupported locale' }, { status: 400 });
   }
 

@@ -35,3 +35,23 @@ export const submissionChannelOptions = [
   { value: "ivr", label: "IVR / Call Centre" },
   { value: "field_officer", label: "Field Officer Assisted" },
 ];
+
+/**
+ * Labels of the required `SI_FIELDS_BY_TYPE[type]` fields `values` is still
+ * missing, skipping anything in `hiddenFields`. The one place this check is
+ * made — RegisterForm.tsx (which excludes the fields it already collected on
+ * its account step) and SubmitterIdentityCard.tsx (which excludes nothing)
+ * both call this instead of each keeping their own copy of "empty" ("" or
+ * whitespace-only). A field considered required-and-missing by one but not
+ * the other would let registration accept a submitter profile that Submit
+ * Grievance's own identity step would reject, or vice versa.
+ */
+export function getMissingRequiredFields(
+  submitterType: string,
+  values: Record<string, string>,
+  hiddenFields: readonly string[] = []
+): string[] {
+  return (SI_FIELDS_BY_TYPE[submitterType] ?? [])
+    .filter((field) => field.required && !hiddenFields.includes(field.key) && !values[field.key]?.trim())
+    .map((field) => field.label);
+}

@@ -76,6 +76,27 @@ export function hashForRateLimit(value: string): string {
   return createHash('sha256').update(value).digest('hex').slice(0, 16);
 }
 
+/**
+ * The `${route}:${clientIp}:${scope}` key shape every rate-limited route
+ * builds, in one place instead of five independently-typed-out copies of the
+ * same template (with the same risk that a sixth route gets the format
+ * slightly wrong and silently doesn't get the "unknown"-collapse protection
+ * the others do). `secret`, when present, is hashed via `hashForRateLimit`
+ * (a refresh token); `identity`, when present, is folded in as-is, lowercased
+ * (an email or username — not a secret, so no need to hash it). Passing
+ * neither falls back to `'none'`, same as every route already did by hand for
+ * "no per-caller identifier available for this request."
+ */
+export function buildRateLimitKey(
+  route: string,
+  clientIp: string,
+  scope: { secret?: string | null; identity?: string | null } = {}
+): string {
+  const { secret, identity } = scope;
+  const scopeValue = secret ? hashForRateLimit(secret) : identity ? identity.toLowerCase() : 'none';
+  return `${route}:${clientIp}:${scopeValue}`;
+}
+
 /** The 429 every rate-limited route returns, worded identically regardless of which limit was hit. */
 export function rateLimitedResponse(retryAfterSeconds: number): NextResponse {
   return NextResponse.json(

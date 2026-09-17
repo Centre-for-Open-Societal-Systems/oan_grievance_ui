@@ -2,7 +2,7 @@ import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { isIdleExpired, touchActivityCookie } from '@/lib/idleSession';
 import { decodeAccessToken } from '@/lib/jwt';
-import { checkRateLimit, hashForRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
+import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { AUTH_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   // trusted, every caller collapses to the same "unknown" bucket, and one
   // session's tabs firing heartbeats would otherwise exhaust the shared
   // budget for every other active session site-wide.
-  const limitKey = `heartbeat:${clientIp}:${refreshToken ? hashForRateLimit(refreshToken) : 'none'}`;
+  const limitKey = buildRateLimitKey('heartbeat', clientIp, { secret: refreshToken });
   const limit = checkRateLimit(limitKey, RATE_LIMITS.heartbeat.limit, RATE_LIMITS.heartbeat.windowMs);
   if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds);
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { registerUser } from '@/features/auth/api/authApi';
-import { SI_FIELDS_BY_TYPE } from '@/components/submitter-identity/fields';
+import { getMissingRequiredFields } from '@/components/submitter-identity/fields';
 import { saveSubmitterProfile } from '@/lib/submitterProfile';
 import { validatePassword } from '@/lib/validation/password';
 import { PHONE_NUMBER_REGEX, stripLeadingZero } from '@/lib/validation/phone';
@@ -116,10 +116,7 @@ export function RegisterForm() {
       return;
     }
     const hiddenFields = ALREADY_COLLECTED_FIELDS_BY_TYPE[submitterType] ?? [];
-    const requiredFields = (SI_FIELDS_BY_TYPE[submitterType] || []).filter(
-      (field) => field.required && !hiddenFields.includes(field.key)
-    );
-    const missing = requiredFields.filter((field) => !identityValues[field.key]?.trim()).map((field) => field.label);
+    const missing = getMissingRequiredFields(submitterType, identityValues, hiddenFields);
     if (missing.length > 0) {
       setProfileError(t('missingFields', { count: missing.length, fields: missing.join(', ') }));
       return;

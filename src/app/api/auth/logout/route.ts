@@ -2,7 +2,7 @@ import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { callBackendAuth } from '@/lib/oanAuthBackend';
-import { checkRateLimit, hashForRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
+import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { clearSessionCookies, REFRESH_TOKEN_COOKIE } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   // trusted, every caller collapses to the same "unknown" bucket, and one
   // session hammering this endpoint would otherwise exhaust the budget for
   // every other active session site-wide.
-  const limitKey = `logout:${clientIp}:${refreshToken ? hashForRateLimit(refreshToken) : 'none'}`;
+  const limitKey = buildRateLimitKey('logout', clientIp, { secret: refreshToken });
   const limit = checkRateLimit(limitKey, RATE_LIMITS.logout.limit, RATE_LIMITS.logout.windowMs);
 
   // A tripped limit must never leave someone signed in — clearing our own

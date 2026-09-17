@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { canAccessRoute } from "@/features/auth/rbac";
 import { selectUser } from "@/features/auth/store/authSlice";
@@ -30,10 +31,19 @@ export function Sidebar() {
   const pathname = usePathname();
   const { isSidebarCollapsed } = useSidebar();
   const user = useAppSelector(selectUser);
-  // `canAccessRoute` treats a route absent from its map as open to everyone,
-  // so this reuses the same allow-list `proxy.ts` enforces server-side —
-  // links a role can't open are hidden rather than left to 404/redirect.
-  const visibleNavItems = navItems.filter((item) => canAccessRoute(item.href, user?.roles ?? []));
+  // Reuses the same deny-by-default allow-list `proxy.ts` enforces
+  // server-side — links a role can't open are hidden rather than left to a
+  // 404/redirect. (`canAccessRoute` denies anything absent from both
+  // ROUTE_ROLES and UNRESTRICTED_ROUTES in rbac.ts — adding a nav item here
+  // for a route with no entry in either hides it for every role, including
+  // Admin, until that entry is added.)
+  // Memoized on the role set, not recomputed on every pathname change this
+  // component re-renders for (usePathname changes on every navigation, but
+  // the role set is stable for the whole session).
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => canAccessRoute(item.href, user?.roles ?? [])),
+    [user?.roles]
+  );
 
   return (
     <div className={`h-screen bg-[#0e3b25] flex flex-col flex-shrink-0 font-sans shadow-xl z-20 relative transition-all duration-300 ${isSidebarCollapsed ? 'w-[88px]' : 'w-[280px]'}`}>
