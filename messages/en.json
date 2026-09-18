@@ -13,7 +13,8 @@
       "continue": "Continue",
       "consentNotice": "The Fayda ID above confirms your identity when a grievance is reviewed. It's masked on screen by default, and it's kept on this device to prefill Submit Grievance next time.",
       "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
-      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}."
+      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
+      "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}."
     },
     "success": {
       "title": "Account Created!",
@@ -23,10 +24,12 @@
   },
   "submitGrievance": {
     "identityStep": {
-      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}."
+      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
+      "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}."
     },
     "detailsStep": {
-      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}."
+      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
+      "descriptionTooShort": "Description must be at least {min} characters (currently {count})."
     }
   },
   "commentsAndCommunication": {

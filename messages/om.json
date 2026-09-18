@@ -13,7 +13,8 @@
       "continue": "Itti fufi",
       "consentNotice": "Lakkoofsi ID Fayda armaan olii yeroo komiin ilaalamu eenyummaa keessan mirkaneessa. Bifa dhoksaan skiriinii irratti argama, yeroo itti aanu Komii Galchuu (Submit Grievance) dursanii guutuuf meeshaa kana irratti ni kuufama.",
       "consentCheckboxLabel": "Lakkoofsa ID biyyaalessaa koo mirkaneessa eenyummaaf kennuuf nan waliigala.",
-      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}."
+      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
+      "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}."
     },
     "success": {
       "title": "Akkaawuntiin Uumameera!",
@@ -23,10 +24,12 @@
   },
   "submitGrievance": {
     "identityStep": {
-      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}."
+      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
+      "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}."
     },
     "detailsStep": {
-      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}."
+      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
+      "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count})."
     }
   },
   "commentsAndCommunication": {

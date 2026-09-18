@@ -260,6 +260,16 @@ export function GrievanceDetailsCard({
       setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
       return;
     }
+    // Matches oan_grievance_service/services/identity.py's
+    // MIN_DESCRIPTION_LENGTH — the backend will reject anything shorter
+    // once grievance.submit is actually wired up; catching it here first
+    // means the user gets a clear reason now rather than a mystery
+    // rejection later.
+    const MIN_DESCRIPTION_LENGTH = 20;
+    if (description.trim().length < MIN_DESCRIPTION_LENGTH) {
+      setError(t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count: description.trim().length }));
+      return;
+    }
     if (scanStatus === "Infected") {
       setError("Remove the attachment that failed the malware scan before continuing.");
       return;

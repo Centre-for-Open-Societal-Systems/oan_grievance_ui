@@ -12,7 +12,7 @@ import { CooperativeFPOForm } from "@/components/submitter-identity/SI-Cooperati
 import { NGOForm } from "@/components/submitter-identity/SI-NGOForm";
 import { WoredaKebeleForm } from "@/components/submitter-identity/SI-WoredaKebeleForm";
 import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-DevelopmentAgentForm";
-import { getMissingRequiredFields } from "@/components/submitter-identity/fields";
+import { getMissingRequiredFields, getFieldFormatErrors } from "@/components/submitter-identity/fields";
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
@@ -55,6 +55,11 @@ export function SubmitterIdentityCard({
     const missing = [...missingTopLevel, ...getMissingRequiredFields(submitterType, identityValues)];
     if (missing.length > 0) {
       setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
+      return;
+    }
+    const invalid = getFieldFormatErrors(submitterType, identityValues);
+    if (invalid.length > 0) {
+      setError(t("invalidFields", { count: invalid.length, fields: invalid.join(", ") }));
       return;
     }
     setError(null);
