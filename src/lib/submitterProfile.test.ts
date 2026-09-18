@@ -22,7 +22,7 @@ describe('saveSubmitterProfile / loadSubmitterProfile', () => {
     });
   });
 
-  it('never persists national-ID field variants, whichever one is present', () => {
+  it('persists national-ID field variants along with the rest of identityValues', () => {
     for (const idKey of ['faydaId', 'representativeFaydaId', 'officialFaydaId']) {
       localStorage.clear();
       saveSubmitterProfile(EMAIL, {
@@ -30,12 +30,8 @@ describe('saveSubmitterProfile / loadSubmitterProfile', () => {
         identityValues: { fullName: 'A Farmer', [idKey]: '1234-5678-9012' },
       });
 
-      const rawStored = localStorage.getItem(STORAGE_KEY);
-      expect(rawStored).not.toContain('1234-5678-9012');
-      expect(rawStored).not.toContain(idKey);
-
       const loaded = loadSubmitterProfile(EMAIL);
-      expect(loaded?.identityValues[idKey]).toBeUndefined();
+      expect(loaded?.identityValues[idKey]).toBe('1234-5678-9012');
       expect(loaded?.identityValues.fullName).toBe('A Farmer');
     }
   });

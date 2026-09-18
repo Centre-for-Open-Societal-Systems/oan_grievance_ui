@@ -10,11 +10,10 @@
       "subtitle": "Wanti tokko hafe — akkaataa komii itti dhiheessitan nu beeksisaa, kanaafuu ammas isin hin gaafannu.",
       "submitterTypeLabel": "Gosa Dhiheessituu",
       "submitterTypePlaceholder": "Gosa Dhiheessituu Filadhu",
-      "skipForNow": "Yeroo ammaa darbi",
       "continue": "Itti fufi",
-      "consentNotice": "Lakkoofsi ID Fayda armaan olii yeroo komiin ilaalamu eenyummaa keessan mirkaneessa. Bifa dhoksaan skiriinii irratti argama, meeshaan kunis gonkumaa hin kuusu — gabateewwan armaan gadii (maqaa, odeeffannoo qunnamtii) qofa yeroo itti aanu Komii Galchuu (Submit Grievance) dursanii guutuuf as kuufama.",
+      "consentNotice": "Lakkoofsi ID Fayda armaan olii yeroo komiin ilaalamu eenyummaa keessan mirkaneessa. Bifa dhoksaan skiriinii irratti argama, yeroo itti aanu Komii Galchuu (Submit Grievance) dursanii guutuuf meeshaa kana irratti ni kuufama.",
       "consentCheckboxLabel": "Lakkoofsa ID biyyaalessaa koo mirkaneessa eenyummaaf kennuuf nan waliigala.",
-      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}. Yookaan yeroo ammaa darbi."
+      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}."
     },
     "success": {
       "title": "Akkaawuntiin Uumameera!",

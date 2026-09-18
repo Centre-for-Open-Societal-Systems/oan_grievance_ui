@@ -1,18 +1,17 @@
 // Bridges the submitter-identity info collected at registration into Submit
 // Grievance's own "Submitter Identity" step, so a returning user isn't asked
-// to retype it. This is a frontend-only stand-in: `oan_grievance_service` has
-// no endpoint yet to persist this server-side (see the register route, which
-// only ever forwards email/password/full_name/phone_number to the auth
-// backend) — swap this for a real API call once one exists.
-//
-// Deliberately NOT a general-purpose store for `identityValues`: national ID
-// fields (Fayda ID and its per-type variants) are stripped before anything
-// touches localStorage, never round-tripped, and never written in the first
-// place — see `stripSensitiveFields`. Everything that IS stored expires on
-// its own (`PROFILE_TTL_MS`) so it doesn't outlive every exit path that isn't
-// an explicit logout (closing the tab, a cookie expiring, registering and
-// never signing in) — `clearSubmitterProfile` on logout is defence in depth,
-// not the only thing standing between this and indefinite retention.
+// to retype it — including the national-ID field (Fayda ID or its per-type
+// variant), by explicit product decision: the whole point of asking for it
+// at registration is that it carries over. This is a frontend-only stand-in:
+// `oan_grievance_service` has no endpoint yet to persist this server-side
+// (see the register route, which only ever forwards
+// email/password/full_name/phone_number to the auth backend) — swap this for
+// a real API call once one exists, at which point this becomes a much
+// smaller cache in front of that instead of the only copy. Expires on its
+// own (`PROFILE_TTL_MS`) so it doesn't outlive every exit path that isn't an
+// explicit logout (closing the tab, a cookie expiring, registering and never
+// signing in) — `clearSubmitterProfile` on logout is defence in depth, not
+// the only thing standing between this and indefinite retention.
 
 import { z } from 'zod';
 
@@ -22,18 +21,6 @@ const STORAGE_KEY_PREFIX = 'oan_submitter_profile:';
 // same afternoon still gets the prefill; short enough that a shared/kiosk
 // device isn't carrying someone's data around for weeks.
 const PROFILE_TTL_MS = 24 * 60 * 60 * 1000;
-
-/**
- * Keys that must never reach localStorage, whatever submitter type they came
- * from — every national-ID-variant field across the SI-*Form components.
- * Listed explicitly (not inferred) so a future SI-*Form adding another ID
- * field is invisible to this list, not silently trusted by it.
- */
-const SENSITIVE_FIELD_KEYS = ['faydaId', 'representativeFaydaId', 'officialFaydaId'];
-
-function stripSensitiveFields(identityValues: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(Object.entries(identityValues).filter(([key]) => !SENSITIVE_FIELD_KEYS.includes(key)));
-}
 
 const storedProfileSchema = z.object({
   submitterType: z.string(),
@@ -52,17 +39,14 @@ function storageKey(email: string): string {
 
 /**
  * Best-effort: a private window or blocked storage just means no prefill
- * later, not a hard failure. `identityValues` is expected to still include
- * whatever sensitive fields the caller collected — stripping happens here,
- * once, so every caller gets the same guarantee regardless of whether it
- * remembered to filter first.
+ * later, not a hard failure.
  */
 export function saveSubmitterProfile(email: string, profile: SubmitterProfile): void {
   if (typeof window === 'undefined') return;
   try {
     const toStore: z.infer<typeof storedProfileSchema> = {
       submitterType: profile.submitterType,
-      identityValues: stripSensitiveFields(profile.identityValues),
+      identityValues: profile.identityValues,
       savedAt: Date.now(),
     };
     localStorage.setItem(storageKey(email), JSON.stringify(toStore));
