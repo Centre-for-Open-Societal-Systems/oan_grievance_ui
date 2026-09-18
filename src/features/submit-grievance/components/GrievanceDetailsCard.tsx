@@ -307,6 +307,8 @@ export function GrievanceDetailsCard({
                   setKebele("");
                 }}
                 disabled={!region || zoneStatus === "loading"}
+                invalid={!!error}
+                describedBy={error ? "grievance-details-error" : undefined}
               />
             </div>
 
@@ -333,15 +335,18 @@ export function GrievanceDetailsCard({
                   setKebele("");
                 }}
                 disabled={!region || woredaStatus === "loading" || Boolean(zone && !zoneNode)}
+                invalid={!!error}
+                describedBy={error ? "grievance-details-error" : undefined}
               />
             </div>
 
             {/* Kebele / Village */}
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label htmlFor="grievance-kebele" className="block text-sm font-semibold text-gray-800 mb-2">
                 Kebele / Village
               </label>
               <AnimatedSelect
+                id="grievance-kebele"
                 options={dynamicKebeles}
                 placeholder={
                   !woreda
