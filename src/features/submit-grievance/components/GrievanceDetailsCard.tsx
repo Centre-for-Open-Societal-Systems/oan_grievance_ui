@@ -23,7 +23,7 @@ import {
   findWoredaNode,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
-import { uploadAttachment, deleteAttachment } from "@/lib/attachments";
+import { uploadAttachment } from "@/lib/attachments";
 import { saveDraft } from "@/lib/drafts";
 import { logger } from "@/lib/logger";
 
@@ -47,16 +47,21 @@ interface GrievanceDetailsCardProps {
   setDescription: (value: string) => void;
   uploadedFile: File | null;
   setUploadedFile: (file: File | null) => void;
-  /**
-   * An attachment already on the resumed draft — the backend has no way to
-   * report this itself (`draft.load`'s own attachment list can't see it:
-   * uploaded files are attached to the Grievance Attachment doc, not
-   * directly to the Grievance Draft, so its query never matches), so
-   * page.tsx recovers it from the same `payload` this component saves its
-   * own fields into. There's no local `File` blob for it (nothing survives
-   * a reload), so it can't be previewed — only shown and removed.
-   */
-  initialAttachment?: { attachmentId: string; fileName: string; scanStatus: string } | null;
+  // The attachment's backend identity — owned by page.tsx, not local state
+  // here, so it survives this component unmounting on every Step 1<->2
+  // navigation and so Step 3's review card can see it too. See page.tsx's
+  // doc comment on its `attachmentId` state for why: `draft.load`'s own
+  // attachment list can't see an attachment uploaded through this wizard
+  // (files attach to the Grievance Attachment doc, not directly to the
+  // Grievance Draft), so a resumed draft's attachment comes back through
+  // this same `payload`-persisted metadata instead, with no local `File`
+  // blob to read a name off or preview.
+  attachmentId: string | null;
+  setAttachmentId: (id: string | null) => void;
+  scanStatus: string | null;
+  setScanStatus: (status: string | null) => void;
+  attachmentFileName: string | null;
+  setAttachmentFileName: (name: string | null) => void;
 }
 
 export function GrievanceDetailsCard({
@@ -79,7 +84,12 @@ export function GrievanceDetailsCard({
   setDescription,
   uploadedFile,
   setUploadedFile,
-  initialAttachment,
+  attachmentId,
+  setAttachmentId,
+  scanStatus,
+  setScanStatus,
+  attachmentFileName,
+  setAttachmentFileName,
 }: GrievanceDetailsCardProps) {
   const t = useTranslations("submitGrievance.detailsStep");
   const dispatch = useAppDispatch();
@@ -169,20 +179,11 @@ export function GrievanceDetailsCard({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // The uploaded document's backend identity, once `submit_document` has
-  // accepted it — null while nothing has been uploaded (or while an upload
-  // is in flight / failed). `scanStatus` mirrors the backend's verdict
-  // (Pending/Clean/Infected) rather than the earlier hardcoded placeholder
-  // text, since the file isn't actually servable until it comes back Clean.
-  // Seeded from `initialAttachment` when resuming a draft that already had
-  // one — see that prop's doc comment for why the backend can't tell us
-  // this itself.
-  const [attachmentId, setAttachmentId] = useState<string | null>(initialAttachment?.attachmentId ?? null);
-  const [scanStatus, setScanStatus] = useState<string | null>(initialAttachment?.scanStatus ?? null);
-  // Only set for a resumed attachment with no local `File` blob to read a
-  // name off of (see `displayFileName` below, where this loses to
-  // `uploadedFile.name` the moment a real file is picked).
-  const [resumedFileName, setResumedFileName] = useState<string | null>(initialAttachment?.fileName ?? null);
+  // attachmentId/scanStatus/attachmentFileName are owned by page.tsx now —
+  // see this component's props doc comment. `scanStatus` mirrors the
+  // backend's verdict (Pending/Clean/Infected) rather than the earlier
+  // hardcoded placeholder text, since the file isn't actually servable
+  // until it comes back Clean.
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "error">("idle");
   // `submit_document` with a `client_uuid` requires the Grievance Draft to
   // already exist server-side — this fires once, right before the first
@@ -230,7 +231,7 @@ export function GrievanceDetailsCard({
     kebele,
     description,
     attachmentId: attachmentOverride ? attachmentOverride.attachmentId : attachmentId,
-    attachmentFileName: attachmentOverride ? attachmentOverride.fileName : (uploadedFile?.name ?? resumedFileName),
+    attachmentFileName: attachmentOverride ? attachmentOverride.fileName : (uploadedFile?.name ?? attachmentFileName),
     scanStatus: attachmentOverride ? attachmentOverride.scanStatus : scanStatus,
   });
 
@@ -274,7 +275,7 @@ export function GrievanceDetailsCard({
     setUploadedFile(file);
     setAttachmentId(null);
     setScanStatus(null);
-    setResumedFileName(null);
+    setAttachmentFileName(file.name);
     setUploadState("uploading");
     setError(null);
 
@@ -304,6 +305,7 @@ export function GrievanceDetailsCard({
     } catch (uploadError) {
       setUploadState("error");
       setUploadedFile(null);
+      setAttachmentFileName(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setError(
         uploadError instanceof Error
@@ -315,30 +317,45 @@ export function GrievanceDetailsCard({
 
   const handleRemoveFile = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const idToDelete = attachmentId;
+    const hadAttachment = attachmentId !== null;
     setUploadedFile(null);
     setAttachmentId(null);
     setScanStatus(null);
-    setResumedFileName(null);
+    setAttachmentFileName(null);
     setUploadState("idle");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    // Best-effort: the submitter has already removed it from their view, so a
-    // failed cleanup call here shouldn't block them — it's logged, not shown.
-    if (idToDelete) {
-      deleteAttachment(idToDelete).catch((deleteError) => {
-        logger.error("Failed to delete attachment on the backend:", deleteError);
-      });
-    }
+    if (!hadAttachment) return;
+
+    // NOT calling deleteAttachment here: every attachment this wizard
+    // uploads is draft-stage (has a client_uuid, no grievance yet — final
+    // submission isn't wired to the real API at all today), and
+    // attachment.delete()'s backend implementation only ever checks
+    // doc.grievance, never doc.draft — it 404s "No such grievance" on a
+    // draft-stage attachment unconditionally. That's not a transient
+    // failure worth a best-effort try; it's a backend gap (out of scope
+    // here, not something to fix from the frontend) that would fire on
+    // literally every removal. The file itself is orphaned server-side
+    // until the draft expires and gets purged — acceptable for now, same
+    // as any other abandoned draft.
+    //
+    // What we DO still need: clear the draft's own record of this
+    // attachment, so a later resume doesn't seed initialAttachment from
+    // something the user already removed.
+    saveDraft(clientUuid, currentDraftPayload({ attachmentId: null, fileName: null, scanStatus: null }), 2).catch(
+      (saveError) => {
+        logger.error("Failed to clear the removed attachment from the draft:", saveError);
+      }
+    );
   };
 
-  // What to show in the "already uploaded" card — the real file for a
-  // just-picked upload, or the resumed draft's remembered name once there's
-  // no local blob to read one off. `uploadedFile` wins on overlap: it's
-  // only ever set by picking a fresh file, which `handleFileChange` already
-  // clears `resumedFileName` for.
-  const displayFileName = uploadedFile?.name ?? resumedFileName;
+  // `attachmentFileName` (page.tsx's lifted state) is kept in sync with
+  // `uploadedFile` by this component at every point that changes either —
+  // pick, upload, remove — so it alone is what the "already uploaded" card
+  // needs, whether the name came from a just-picked file or a resumed
+  // draft with no local blob to read one off.
+  const displayFileName = attachmentFileName;
   const hasLocalPreview = uploadedFile !== null;
 
   return (

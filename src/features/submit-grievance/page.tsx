@@ -106,15 +106,24 @@ export default function SubmitGrievancePage() {
   const [kebele, setKebele] = useState("");
   const [description, setDescription] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  // An attachment the resumed draft already had, if any — see
-  // GrievanceDetailsCard's `initialAttachment` prop for why this has to
-  // come from our own saved `payload` rather than the draft response's own
-  // (structurally broken) attachment list.
-  const [initialAttachment, setInitialAttachment] = useState<{
-    attachmentId: string;
-    fileName: string;
-    scanStatus: string;
-  } | null>(null);
+  // The attachment's backend identity — lifted up here (not kept local to
+  // GrievanceDetailsCard) for two reasons: page.tsx conditionally unmounts
+  // that component on every Step 1<->2 navigation (`{currentStep === 2 &&
+  // <GrievanceDetailsCard .../>}`), which would otherwise reset this on
+  // every Back/Next; and Step 3's review card needs to know about it too,
+  // including for a resumed draft's attachment, which has no local `File`
+  // blob to read a name off.
+  const [attachmentId, setAttachmentId] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState<string | null>(null);
+  const [attachmentFileName, setAttachmentFileName] = useState<string | null>(null);
+
+  // Guards every draft-dependent action (uploading, saving) until the
+  // initial resume check below has settled. Without this, a fast typist on
+  // a slow connection (the app's explicit target) could pick a file before
+  // `loadDraft()` resolves — that upload would close over the original
+  // throwaway `clientUuid`, then get orphaned the moment the resumed
+  // draft's real one swaps in underneath it.
+  const [draftCheckDone, setDraftCheckDone] = useState(false);
 
   // Resume the caller's saved draft, if one exists, once on mount. Only
   // `payload` (Step 2's fields, plus whichever attachment was last
@@ -141,11 +150,9 @@ export default function SubmitGrievancePage() {
           typeof payload.attachmentFileName === "string" &&
           typeof payload.scanStatus === "string"
         ) {
-          setInitialAttachment({
-            attachmentId: payload.attachmentId,
-            fileName: payload.attachmentFileName,
-            scanStatus: payload.scanStatus,
-          });
+          setAttachmentId(payload.attachmentId);
+          setAttachmentFileName(payload.attachmentFileName);
+          setScanStatus(payload.scanStatus);
         }
         if (draft.step_reached >= 2) setCurrentStep(2);
         setResumedDraft(true);
@@ -154,6 +161,9 @@ export default function SubmitGrievancePage() {
         if (cancelled) return;
         if (error instanceof ApiError && error.status === 404) return; // no saved draft — the normal case
         logger.error("Failed to load saved draft:", error);
+      })
+      .finally(() => {
+        if (!cancelled) setDraftCheckDone(true);
       });
     return () => {
       cancelled = true;
@@ -188,6 +198,14 @@ export default function SubmitGrievancePage() {
     setKebele("");
     setDescription("");
     setUploadedFile(null);
+    setAttachmentId(null);
+    setScanStatus(null);
+    setAttachmentFileName(null);
+    // A fresh draft for the next grievance — reusing the old clientUuid
+    // would let the new, supposedly-empty wizard resume the previous
+    // grievance's already-submitted draft.
+    setClientUuid(crypto.randomUUID());
+    setResumedDraft(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -195,6 +213,18 @@ export default function SubmitGrievancePage() {
     return (
       <div className="font-sans pb-2">
         <GrievanceSubmittedCard onReset={handleReset} />
+      </div>
+    );
+  }
+
+  // Held back until the resume check above settles — see `draftCheckDone`'s
+  // doc comment for the race this closes. One fast API call, so this is
+  // never more than a brief flash in practice.
+  if (!draftCheckDone) {
+    return (
+      <div className="flex flex-col gap-6 font-sans pb-2">
+        <SubmitGrievanceHeader />
+        <div className="flex items-center justify-center py-24 text-gray-400 text-sm">Loading…</div>
       </div>
     );
   }
@@ -271,7 +301,12 @@ export default function SubmitGrievancePage() {
             setDescription={setDescription}
             uploadedFile={uploadedFile}
             setUploadedFile={setUploadedFile}
-            initialAttachment={initialAttachment}
+            attachmentId={attachmentId}
+            setAttachmentId={setAttachmentId}
+            scanStatus={scanStatus}
+            setScanStatus={setScanStatus}
+            attachmentFileName={attachmentFileName}
+            setAttachmentFileName={setAttachmentFileName}
           />
         )}
         {currentStep === 3 && (
@@ -289,6 +324,7 @@ export default function SubmitGrievancePage() {
             kebele={kebele}
             description={description}
             uploadedFile={uploadedFile}
+            attachmentFileName={attachmentFileName}
           />
         )}
       </div>

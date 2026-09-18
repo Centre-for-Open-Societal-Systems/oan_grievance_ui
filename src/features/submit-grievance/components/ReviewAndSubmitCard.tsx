@@ -24,6 +24,8 @@ interface ReviewAndSubmitCardProps {
   kebele?: string;
   description: string;
   uploadedFile: File | null;
+  /** A resumed draft's attachment has no local `File` blob to read a name off — see page.tsx's lifted attachment state. */
+  attachmentFileName?: string | null;
 }
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
@@ -48,8 +50,10 @@ export function ReviewAndSubmitCard({
   kebele,
   description,
   uploadedFile,
+  attachmentFileName,
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
+  const displayFileName = uploadedFile?.name ?? attachmentFileName;
 
   const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
   const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
@@ -142,9 +146,9 @@ export function ReviewAndSubmitCard({
               </div>
               <div className="md:col-span-2">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Attachments {uploadedFile ? "(1)" : "(0)"}
+                  Attachments {displayFileName ? "(1)" : "(0)"}
                 </p>
-                <p className="text-[15px] font-semibold text-gray-900">{uploadedFile ? uploadedFile.name : "No file attached"}</p>
+                <p className="text-[15px] font-semibold text-gray-900">{displayFileName ?? "No file attached"}</p>
               </div>
             </div>
           </div>
