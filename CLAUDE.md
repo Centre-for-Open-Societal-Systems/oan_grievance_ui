@@ -22,7 +22,7 @@ Sessions are three httpOnly cookies (access token, refresh token, remember-me fl
 | --- | --- | --- | --- |
 | `AUTH_API_BASE_URL` | Yes | — | Base URL of `oan_auth_service` (see `src/lib/env.ts`) |
 | `TRUSTED_PROXY_HOPS` | No | `0` (don't trust `X-Forwarded-For`) | Reverse-proxy hop count for client-IP resolution |
-| `RATE_LIMIT_<LOGIN\|REGISTER\|REFRESH\|LOGOUT\|HEARTBEAT>_MAX` / `_WINDOW_MS` | No | see `rateLimit.ts` | Per-route rate-limit overrides |
+| `RATE_LIMIT_<LOGIN\|REGISTER\|REGISTER_SHARED\|REFRESH\|LOGOUT\|HEARTBEAT>_MAX` / `_WINDOW_MS` | No | see `rateLimit.ts` | Per-route rate-limit overrides. `REGISTER_SHARED` is the effective ceiling for `/api/auth/register` whenever `TRUSTED_PROXY_HOPS` is unset — see that route's own comments |
 | `IDLE_TIMEOUT_MS` / `IDLE_WARNING_LEAD_MS` | No | 15 min / 60 s | Server-enforced idle-session cutoff and warning lead |
 | `NEXT_PUBLIC_IDLE_TIMEOUT_MS` / `NEXT_PUBLIC_IDLE_WARNING_LEAD_MS` | No | same as above | Client copies — set alongside the two above if you override them, or the warning modal drifts from the actual cutoff |
 

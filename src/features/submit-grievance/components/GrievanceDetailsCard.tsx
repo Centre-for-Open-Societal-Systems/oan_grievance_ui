@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
@@ -74,6 +75,7 @@ export function GrievanceDetailsCard({
   uploadedFile,
   setUploadedFile,
 }: GrievanceDetailsCardProps) {
+  const t = useTranslations("submitGrievance.detailsStep");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -108,7 +110,7 @@ export function GrievanceDetailsCard({
     if (!description.trim()) missing.push("Description");
 
     if (missing.length > 0) {
-      setError(`Missing required field${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.`);
+      setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
       return;
     }
     setError(null);

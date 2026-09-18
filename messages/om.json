@@ -25,6 +25,9 @@
   "submitGrievance": {
     "identityStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}."
+    },
+    "detailsStep": {
+      "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}."
     }
   },
   "commentsAndCommunication": {

@@ -25,6 +25,25 @@ function trustedProxyHops(): number {
   return Math.min(envInt('TRUSTED_PROXY_HOPS', 0), MAX_TRUSTED_PROXY_HOPS);
 }
 
+/**
+ * Whether this deployment trusts *any* proxy hop at all — a static,
+ * deployment-wide fact, unlike `getClientIp`'s return value. That
+ * distinction matters for a caller deciding how much to trust a given
+ * `UNKNOWN_CLIENT_IP` result: on a deployment with no trusted proxy
+ * configured, *every* request resolves to unknown, so a rate limit keyed on
+ * it is really a site-wide bucket and needs sizing for aggregate traffic. On
+ * a deployment that *does* trust a proxy, a request still resolving to
+ * unknown means only that one anomalous request (a missing or malformed
+ * forwarding header) couldn't be attributed — that's the request layer
+ * failing on a case the deployment doesn't expect, not the deployment's
+ * normal state, and treating it with the same widened, site-wide-sized
+ * budget would hand anyone who can make their request look anomalous a much
+ * larger flood budget than the deployment intended.
+ */
+export function hasTrustedProxyConfigured(): boolean {
+  return trustedProxyHops() > 0;
+}
+
 export function getClientIp(request: Request): string {
   const hops = trustedProxyHops();
   if (hops === 0) return UNKNOWN_CLIENT_IP;

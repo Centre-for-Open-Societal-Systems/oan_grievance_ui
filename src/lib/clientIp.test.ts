@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { getClientIp, UNKNOWN_CLIENT_IP } from './clientIp';
+import { getClientIp, hasTrustedProxyConfigured, UNKNOWN_CLIENT_IP } from './clientIp';
 
 const ORIGINAL_HOPS = process.env.TRUSTED_PROXY_HOPS;
 
@@ -68,5 +68,27 @@ describe('getClientIp — TRUSTED_PROXY_HOPS configured', () => {
   it('returns "unknown" when neither header is present, even with hops configured', () => {
     process.env.TRUSTED_PROXY_HOPS = '1';
     expect(getClientIp(requestWith({}))).toBe(UNKNOWN_CLIENT_IP);
+  });
+});
+
+describe('hasTrustedProxyConfigured', () => {
+  it('is false when TRUSTED_PROXY_HOPS is unset, 0, or invalid — same cases getClientIp treats as untrusted', () => {
+    for (const value of [undefined, '0', '-1', 'not-a-number', '']) {
+      if (value === undefined) delete process.env.TRUSTED_PROXY_HOPS;
+      else process.env.TRUSTED_PROXY_HOPS = value;
+      expect(hasTrustedProxyConfigured()).toBe(false);
+    }
+  });
+
+  it('is true whenever TRUSTED_PROXY_HOPS is a positive integer, regardless of any given request', () => {
+    process.env.TRUSTED_PROXY_HOPS = '2';
+    expect(hasTrustedProxyConfigured()).toBe(true);
+    // Deployment-wide, not request-shaped — stays true even for a request
+    // that itself resolves to UNKNOWN_CLIENT_IP (a missing header on one
+    // particular request doesn't mean the deployment stopped trusting its
+    // proxy). This is exactly the distinction register/route.ts relies on to
+    // avoid widening its rate limit for a request like this one.
+    expect(getClientIp(requestWith({}))).toBe(UNKNOWN_CLIENT_IP);
+    expect(hasTrustedProxyConfigured()).toBe(true);
   });
 });

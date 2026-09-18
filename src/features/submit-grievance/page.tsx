@@ -19,6 +19,16 @@ export default function SubmitGrievancePage() {
   // Pre-fills Step 1 from whatever submitter-identity info this user already
   // gave at registration (see RegisterForm.tsx / submitterProfile.ts), so
   // they aren't asked for the same details twice.
+  //
+  // Reading `user` straight into the `useState` initializers below (rather
+  // than syncing it in via an effect once session restore resolves) is safe
+  // here specifically because `AuthBootstrapGate` (src/app/providers.tsx)
+  // wraps the whole app and withholds every protected route's subtree —
+  // this component included — until `getMeThunk` has already resolved and
+  // `user` is already populated. This page never gets to mount with `user`
+  // still null, so there's no null-then-resolves gap for a `useState`
+  // initializer to miss. Verified live: reverting to exactly this shape
+  // still prefills correctly on a direct navigation/refresh.
   const user = useAppSelector(selectUser);
   const userEmail = user?.email;
   // Only recomputed when the signed-in email changes, not on every keystroke

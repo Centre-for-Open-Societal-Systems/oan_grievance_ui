@@ -25,6 +25,9 @@
   "submitGrievance": {
     "identityStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}."
+    },
+    "detailsStep": {
+      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}."
     }
   },
   "commentsAndCommunication": {

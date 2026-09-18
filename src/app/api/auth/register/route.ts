@@ -1,5 +1,5 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
-import { getClientIp } from '@/lib/clientIp';
+import { getClientIp, hasTrustedProxyConfigured } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { BackendAuthError, callBackendAuth, type TokenPair } from '@/lib/oanAuthBackend';
@@ -37,10 +37,26 @@ export async function POST(request: Request) {
   // and running it first also means a flood of malformed/empty bodies still
   // counts against the caller's budget instead of skipping rate-limiting
   // entirely by never reaching a body-shaped check.
+  //
+  // Widened to `registerShared` on a deployment with no trusted proxy
+  // configured — see that config's own comment in rateLimit.ts for why.
+  //
+  // Gated on whether the *deployment* trusts a proxy at all
+  // (`hasTrustedProxyConfigured`), not on whether *this* request happened to
+  // resolve to `UNKNOWN_CLIENT_IP` — those aren't the same thing. A
+  // deployment that does trust a proxy can still see an individual request
+  // resolve to unknown (a missing or malformed forwarding header on just
+  // that request); keying the widened limit off the per-request result
+  // would hand anyone who can make one request look anomalous a 10x larger
+  // flood budget than the deployment intended. Picked as a whole config
+  // (limit *and* window) rather than mixing fields, so a deployment
+  // overriding RATE_LIMIT_REGISTER_SHARED_WINDOW_MS actually takes effect
+  // instead of silently keeping `register`'s window.
+  const ipRateLimitConfig = hasTrustedProxyConfigured() ? RATE_LIMITS.register : RATE_LIMITS.registerShared;
   const ipLimit = checkRateLimit(
     buildRateLimitKey('register', clientIp),
-    RATE_LIMITS.register.limit,
-    RATE_LIMITS.register.windowMs
+    ipRateLimitConfig.limit,
+    ipRateLimitConfig.windowMs
   );
   if (!ipLimit.allowed) {
     logger.security(`Register rate limit exceeded for ${clientIp}`);

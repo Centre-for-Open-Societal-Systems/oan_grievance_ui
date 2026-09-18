@@ -25,6 +25,9 @@
   "submitGrievance": {
     "identityStep": {
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።"
+    },
+    "detailsStep": {
+      "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።"
     }
   },
   "commentsAndCommunication": {

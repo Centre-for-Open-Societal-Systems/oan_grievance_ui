@@ -20,11 +20,19 @@ type AuthState = ReturnType<typeof authReducer>;
  * leave that PII behind while every other sign-out path cleared it.
  */
 const sessionExpiryMiddleware: Middleware<object, { auth: AuthState }> = (api) => (next) => (action) => {
+  // Read before `next(action)`, not after: `getMeThunk.rejected`'s own
+  // reducer case (authSlice.ts) already sets `state.user = null` — by the
+  // time control returns from `next`, the email this middleware exists to
+  // pass to `performLogout` (so it can clear that user's `submitterProfile`
+  // localStorage entry) is already gone. Reading state post-`next` looked
+  // right (state seems "not yet cleared" until you trace exactly which
+  // reducer runs inside `next`) but always yielded null in practice.
+  const isSessionExpiry = (action as UnknownAction).type === getMeThunk.rejected.type;
+  const email = isSessionExpiry ? (api.getState().auth.user?.email ?? null) : null;
+
   const result = next(action);
 
-  if ((action as UnknownAction).type === getMeThunk.rejected.type) {
-    // Read before performLogout's dispatch(logout()) clears it.
-    const email = api.getState().auth.user?.email ?? null;
+  if (isSessionExpiry) {
     const onProtectedRoute = typeof window !== 'undefined' && isProtectedRoute(window.location.pathname);
 
     // Fire-and-forget: redirect regardless of whether the server-side revoke succeeds.
