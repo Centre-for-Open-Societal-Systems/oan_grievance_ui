@@ -112,7 +112,7 @@ export function RegisterForm() {
 
   const handleProfileSubmit = () => {
     if (!submitterType) {
-      setProfileError('Select a submitter type to continue, or skip for now.');
+      setProfileError('Select a submitter type to continue.');
       return;
     }
     const hiddenFields = ALREADY_COLLECTED_FIELDS_BY_TYPE[submitterType] ?? [];

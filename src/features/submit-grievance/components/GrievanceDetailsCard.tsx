@@ -203,6 +203,10 @@ export function GrievanceDetailsCard({
       setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
       return;
     }
+    if (scanStatus === "Infected") {
+      setError("Remove the attachment that failed the malware scan before continuing.");
+      return;
+    }
     setError(null);
     onNext();
   };
@@ -541,7 +545,9 @@ export function GrievanceDetailsCard({
                   </button>
                   <button
                     onClick={handleRemoveFile}
-                    className="p-2.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                    disabled={uploadState === "uploading"}
+                    title={uploadState === "uploading" ? "Wait for the upload to finish before removing it" : undefined}
+                    className="p-2.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-5 h-5 text-red-500" />
                   </button>
@@ -573,7 +579,7 @@ export function GrievanceDetailsCard({
               </button>
               <button
                 onClick={handleNext}
-                disabled={uploadState === "uploading"}
+                disabled={uploadState === "uploading" || scanStatus === "Infected"}
                 className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save & Continue
