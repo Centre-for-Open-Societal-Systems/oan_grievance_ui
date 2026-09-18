@@ -88,6 +88,12 @@ export async function deleteAttachment(attachment: string): Promise<void> {
  * blocked. Fixing this needs a backend change (e.g. a whitelisted streaming
  * endpoint in `oan_grievance_service` that serves the bytes through the
  * already-protected `/api/method/*` path) — out of scope for this PR.
+ *
+ * Re-checked after pulling oan_grievance_service 611aee2→185a508 (2026-09-19):
+ * still open. That pull's `has_permission` hook on Grievance Attachment closes
+ * a different bug (an unscanned/infected file being servable to anyone with a
+ * valid Frappe session) — it doesn't register `/private/files` under the JWT
+ * middleware, so this app still can't authenticate against it at all.
  */
 export async function fetchAttachmentBlobUrl(fileUrl: string): Promise<string> {
   const response = await fetch(`/api/proxy${fileUrl}`);
