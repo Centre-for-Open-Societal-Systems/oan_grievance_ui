@@ -341,8 +341,8 @@ export function GrievanceDetailsCard({
     // as any other abandoned draft.
     //
     // What we DO still need: clear the draft's own record of this
-    // attachment, so a later resume doesn't seed initialAttachment from
-    // something the user already removed.
+    // attachment, so a later resume doesn't seed attachmentId/scanStatus/
+    // attachmentFileName from something the user already removed.
     saveDraft(clientUuid, currentDraftPayload({ attachmentId: null, fileName: null, scanStatus: null }), 2).catch(
       (saveError) => {
         logger.error("Failed to clear the removed attachment from the draft:", saveError);
