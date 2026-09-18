@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { selectUser } from "@/features/auth/store/authSlice";
-import { getMe, type MeResponse } from "@/lib/authProfile";
+import { getFullProfile, type BackendAuthMeData } from "@/features/auth/api/authApi";
 import { logger } from "@/lib/logger";
 import { UserCircle, Loader2, AlertTriangle, Info } from "lucide-react";
 
@@ -31,12 +31,12 @@ function Field({ label, value }: { label: string; value: string | null | undefin
 
 export default function ProfilePage() {
   const user = useAppSelector(selectUser);
-  const [profile, setProfile] = useState<MeResponse | null>(null);
+  const [profile, setProfile] = useState<BackendAuthMeData | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     let cancelled = false;
-    getMe()
+    getFullProfile()
       .then((data) => {
         if (cancelled) return;
         setProfile(data);

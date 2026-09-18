@@ -1,4 +1,5 @@
-import { callGrievanceApi, GrievanceApiError } from '@/lib/grievanceApi';
+import { callGrievanceApi } from '@/lib/grievanceApi';
+import { ApiError } from '@/lib/api/fetchApi';
 
 // Client for `oan_grievance_service.api.v1.attachment` — supporting-document
 // upload, listing, download, and deletion for a grievance or an open draft.
@@ -91,7 +92,7 @@ export async function deleteAttachment(attachment: string): Promise<void> {
 export async function fetchAttachmentBlobUrl(fileUrl: string): Promise<string> {
   const response = await fetch(`/api/proxy${fileUrl}`);
   if (!response.ok) {
-    throw new GrievanceApiError('Failed to download the file.', response.status);
+    throw new ApiError('Failed to download the file.', null, response.status);
   }
   const blob = await response.blob();
   return URL.createObjectURL(blob);

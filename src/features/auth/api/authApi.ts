@@ -24,6 +24,7 @@ export interface BackendAuthMeData {
       administrative_unit?: string | null;
       contact_email?: string | null;
       contact_mobile?: string | null;
+      department?: string | null;
       fayda_id?: string | null;
       full_name?: string | null;
       identity_scheme?: string | null;
@@ -33,6 +34,7 @@ export interface BackendAuthMeData {
       profile_id?: string | null;
       registration_number?: string | null;
       role?: string | null;
+      role_level?: string | null;
       type?: string | null;
     };
     [key: string]: unknown;
@@ -151,4 +153,22 @@ export async function getMe(): Promise<User> {
     administrative_unit: grievanceProfile?.administrative_unit || undefined,
     preferred_language: grievanceProfile?.preferred_language || undefined,
   };
+}
+
+/**
+ * The full, unmapped /api/v1/auth/me response — for the Profile page only.
+ * `getMe()` above deliberately narrows this down to the slim `User` shape
+ * Redux carries everywhere else (header, prefill, etc.); this is for the one
+ * screen that needs the rest (role, department, registration number, and so
+ * on) and would rather read it straight from the backend than grow `User`
+ * with fields nothing else uses.
+ */
+export async function getFullProfile(): Promise<BackendAuthMeData> {
+  const res = await fetchApi<BackendAuthMeResponse>('/api/v1/auth/me', { method: 'GET' });
+  const d: BackendAuthMeData | undefined = (res as { data?: BackendAuthMeData })?.data ?? (res as BackendAuthMeData);
+
+  if (!d || (!d.user && !d.login_email && !d.full_name)) {
+    throw new Error(AUTH_MESSAGES.sessionExpired);
+  }
+  return d;
 }
