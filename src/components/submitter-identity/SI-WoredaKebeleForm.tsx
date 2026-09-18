@@ -1,6 +1,7 @@
 "use client";
 
 import { SIPhoneField } from "./SI-PhoneField";
+import { SIMaskedIdField } from "./SIMaskedIdField";
 import type { SIFormProps } from "./SI-types";
 
 export const FIELDS = [
@@ -12,7 +13,7 @@ export const FIELDS = [
   { key: "email", label: "Contact Email ID", required: false },
 ];
 
-export function WoredaKebeleForm({ values, setValue }: SIFormProps) {
+export function WoredaKebeleForm({ values, setValue, hiddenFields = [] }: SIFormProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
       {/* Office Name */}
@@ -62,41 +63,43 @@ export function WoredaKebeleForm({ values, setValue }: SIFormProps) {
         <label className="block text-sm font-semibold text-gray-800 mb-2">
           Official&apos;s Fayda ID <span className="text-red-500">*</span>
         </label>
-        <input
-          type="text"
+        <SIMaskedIdField
           value={values.officialFaydaId || ""}
-          onChange={(e) => setValue("officialFaydaId", e.target.value)}
+          onChange={(value) => setValue("officialFaydaId", value)}
           placeholder="Enter Fayda ID"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
         />
       </div>
 
       {/* Contact Mobile */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Contact Mobile <span className="text-red-500">*</span>
-        </label>
-        <SIPhoneField
-          countryCode={values.phoneCode || "+251"}
-          setCountryCode={(code) => setValue("phoneCode", code)}
-          phoneNumber={values.phoneNumber || ""}
-          setPhoneNumber={(value) => setValue("phoneNumber", value)}
-        />
-      </div>
+      {!hiddenFields.includes("phoneNumber") && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-2">
+            Contact Mobile <span className="text-red-500">*</span>
+          </label>
+          <SIPhoneField
+            countryCode={values.phoneCode || "+251"}
+            setCountryCode={(code) => setValue("phoneCode", code)}
+            phoneNumber={values.phoneNumber || ""}
+            setPhoneNumber={(value) => setValue("phoneNumber", value)}
+          />
+        </div>
+      )}
 
       {/* Contact Email ID */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Contact Email ID
-        </label>
-        <input
-          type="email"
-          value={values.email || ""}
-          onChange={(e) => setValue("email", e.target.value)}
-          placeholder="Enter Contact Email ID"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-        />
-      </div>
+      {!hiddenFields.includes("email") && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-2">
+            Contact Email ID
+          </label>
+          <input
+            type="email"
+            value={values.email || ""}
+            onChange={(e) => setValue("email", e.target.value)}
+            placeholder="Enter Contact Email ID"
+            className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
+          />
+        </div>
+      )}
     </div>
   );
 }

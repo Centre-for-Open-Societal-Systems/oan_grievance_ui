@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check } from "lucide-react";
+import { SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import { useAppSelector } from "@/store/hooks";
 import {
   selectGrievanceTypeOptions,
@@ -8,7 +9,6 @@ import {
   selectSubmissionChannelOptions,
   selectSubmitterTypeOptions,
 } from "@/features/metadata";
-import { SI_FIELDS_BY_TYPE } from "./SubmitterIdentityCard";
 
 interface ReviewAndSubmitCardProps {
   onBack: () => void;

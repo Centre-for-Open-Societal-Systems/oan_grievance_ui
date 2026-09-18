@@ -3,7 +3,7 @@ import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { isIdleExpired } from '@/lib/idleSession';
 import { logger } from '@/lib/logger';
-import { checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
+import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { clearSessionCookies, REFRESH_TOKEN_COOKIE, setSessionCookies } from '@/lib/session';
 import { performRefresh } from '@/lib/sessionRefresh';
 import type { NextRequest } from 'next/server';
@@ -23,7 +23,19 @@ export async function POST(request: NextRequest) {
   if (csrfError) return csrfError;
 
   const clientIp = getClientIp(request);
-  const limit = checkRateLimit(`refresh:${clientIp}`, RATE_LIMITS.refresh.limit, RATE_LIMITS.refresh.windowMs);
+  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
+  const hasRefreshToken = !!refreshToken;
+
+  // Keyed by IP *and* a hash of the session's own refresh token when one is
+  // present — same reasoning as login/route.ts: when clientIp can't be
+  // trusted (no reverse proxy configured), every caller collapses to the
+  // same "unknown" bucket, and one session hammering this endpoint would
+  // otherwise exhaust the budget for every other active session site-wide.
+  // A caller with no refresh token at all has no session to scope by and
+  // gets a 401 immediately below regardless, so a shared bucket for that
+  // case costs little.
+  const limitKey = buildRateLimitKey('refresh', clientIp, { secret: refreshToken });
+  const limit = checkRateLimit(limitKey, RATE_LIMITS.refresh.limit, RATE_LIMITS.refresh.windowMs);
   if (!limit.allowed) {
     logger.security(`Refresh rate limit exceeded for ${clientIp}`);
     return rateLimitedResponse(limit.retryAfterSeconds);
@@ -33,7 +45,6 @@ export async function POST(request: NextRequest) {
   // still active — idle timeout must end it too, even though nothing here
   // would otherwise reject the refresh. See `isIdleExpired`'s doc comment for
   // why every session-cookie entry point needs this, not just page loads.
-  const hasRefreshToken = !!request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
   if (isIdleExpired(hasRefreshToken, request)) {
     logger.security(`Refresh refused for ${clientIp}: session idle-expired`);
     return endSession(AUTH_MESSAGES.sessionExpiredIdle);

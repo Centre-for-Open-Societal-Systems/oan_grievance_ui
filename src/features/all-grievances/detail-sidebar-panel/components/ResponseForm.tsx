@@ -119,7 +119,8 @@ const AnimatedDatePicker = ({ label, required, value, onChange, placeholder = 'd
   );
 };
 
-export function ResponseForm() {
+export function ResponseForm({ canManageCase }: { canManageCase: boolean }) {
+
   const [activeTab, setActiveTab] = useState<'response' | 'internal'>('response');
 
   const [responseType, setResponseType] = useState('');
@@ -132,6 +133,10 @@ export function ResponseForm() {
 
   const isResponseValid = responseType !== '' && closureDate !== '' && actionTaken.trim() !== '' && resolutionSummary.trim() !== '';
   const isInternalValid = internalNoteTab.trim() !== '';
+
+  // Drafting a department response — and internal notes — is an officer/admin
+  // action; a submitter reads responses via CommentsAndCommunication instead.
+  if (!canManageCase) return null;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col flex-1">

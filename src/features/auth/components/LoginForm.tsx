@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { homeRouteForRoles } from '@/features/auth/rbac';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { useAppDispatch } from '@/store/hooks';
@@ -44,7 +45,7 @@ export function LoginForm() {
     const result = await dispatch(loginThunk({ usr: email.trim(), pwd: password, rememberMe }));
 
     if (loginThunk.fulfilled.match(result)) {
-      router.push('/dashboard');
+      router.push(homeRouteForRoles(result.payload.roles ?? []));
       return;
     }
 

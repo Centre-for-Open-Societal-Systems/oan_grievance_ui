@@ -3,7 +3,7 @@ import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { BackendAuthError, callBackendAuth, type TokenPair } from '@/lib/oanAuthBackend';
-import { checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
+import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { setSessionCookies } from '@/lib/session';
 import { NextResponse } from 'next/server';
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   // user out of login at once. Scoping by account too means an attacker can
   // still exhaust one account's own budget, but can no longer take down
   // everyone else's in the process.
-  const limitKey = `login:${clientIp}:${String(usr).toLowerCase()}`;
+  const limitKey = buildRateLimitKey('login', clientIp, { identity: String(usr) });
   const limit = checkRateLimit(limitKey, RATE_LIMITS.login.limit, RATE_LIMITS.login.windowMs);
   if (!limit.allowed) {
     logger.security(`Login rate limit exceeded for ${clientIp}`);

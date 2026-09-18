@@ -1,8 +1,27 @@
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { MessageCircle, FileText, ChevronUp, ChevronDown, ChevronRight, AlertCircle, Paperclip } from 'lucide-react';
 import { DocumentViewerPopup } from './DocumentViewerPopup';
 
-export function CommentsAndCommunication() {
+/**
+ * One entry per message rendered below — the single source of truth for
+ * "how many messages are in this thread" and "which of them are internal".
+ * A hardcoded count string next to hardcoded JSX drifts the moment either
+ * changes without the other; deriving the count from this list instead
+ * can't drift, since it's counting the same messages the JSX below renders.
+ */
+const THREAD_MESSAGES = [
+  { id: 'msg1', internal: false },
+  { id: 'msg2', internal: false },
+  { id: 'msg3', internal: true },
+] as const;
+
+export function CommentsAndCommunication({ canManageCase }: { canManageCase: boolean }) {
+  // Internal Note messages are officer/admin-only — a submitter must never
+  // see their content, not even that one exists in the thread.
+  const canSeeInternal = canManageCase;
+  const visibleMessageCount = THREAD_MESSAGES.filter((m) => !m.internal || canSeeInternal).length;
+  const t = useTranslations('commentsAndCommunication');
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const [expandedMsgs, setExpandedMsgs] = useState<Record<string, boolean>>({
     msg1: true,
@@ -23,7 +42,7 @@ export function CommentsAndCommunication() {
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900 inline-block">Comments & Communication</h3>
-            <p className="text-sm text-gray-500">3 messages in this thread</p>
+            <p className="text-sm text-gray-500">{t('messageCount', { count: visibleMessageCount })}</p>
           </div>
         </div>
 
@@ -114,36 +133,38 @@ export function CommentsAndCommunication() {
               </div>
             </div>
 
-            {/* Message 3 */}
-            <div className="relative z-10 w-full min-w-0">
-              <div
-                className="flex items-center justify-between mb-3 cursor-pointer group w-full min-w-0"
-                onClick={() => toggleMsg('msg3')}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm shrink-0">TA</div>
-                  <div className="flex items-center gap-2 flex-nowrap min-w-0 overflow-hidden">
-                    <span className="font-bold text-gray-900 whitespace-nowrap truncate shrink-0">Tigist Alemu</span>
-                    <span className="text-xs text-gray-500 font-medium whitespace-nowrap truncate">Inputs Officer</span>
-                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full flex items-center gap-1 uppercase tracking-wider whitespace-nowrap shrink-0"><AlertCircle className="h-3 w-3 shrink-0" /> Internal Note</span>
+            {/* Message 3 — Internal Note, officer/admin only */}
+            {canSeeInternal && (
+              <div className="relative z-10 w-full min-w-0">
+                <div
+                  className="flex items-center justify-between mb-3 cursor-pointer group w-full min-w-0"
+                  onClick={() => toggleMsg('msg3')}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm shrink-0">TA</div>
+                    <div className="flex items-center gap-2 flex-nowrap min-w-0 overflow-hidden">
+                      <span className="font-bold text-gray-900 whitespace-nowrap truncate shrink-0">Tigist Alemu</span>
+                      <span className="text-xs text-gray-500 font-medium whitespace-nowrap truncate">Inputs Officer</span>
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full flex items-center gap-1 uppercase tracking-wider whitespace-nowrap shrink-0"><AlertCircle className="h-3 w-3 shrink-0" /> Internal Note</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-gray-500 font-medium shrink-0 ml-4">
+                    <span className="whitespace-nowrap">28 Apr 2026, 19:40</span>
+                    <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+                      {expandedMsgs['msg3'] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-gray-500 font-medium shrink-0 ml-4">
-                  <span className="whitespace-nowrap">28 Apr 2026, 19:40</span>
-                  <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-                    {expandedMsgs['msg3'] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
 
-              <div className={`transition-all duration-300 overflow-hidden ${expandedMsgs['msg3'] ? 'opacity-100 max-h-[1000px]' : 'opacity-0 max-h-0'}`}>
-                <div className="ml-[60px] p-4 bg-[#FFF9E5] border border-amber-200/60 rounded-xl rounded-tl-none">
-                  <p className="text-sm text-amber-900 font-medium leading-relaxed">
-                    Batch number recorded. Coordinating with quality lab — results in 7 days.
-                  </p>
+                <div className={`transition-all duration-300 overflow-hidden ${expandedMsgs['msg3'] ? 'opacity-100 max-h-[1000px]' : 'opacity-0 max-h-0'}`}>
+                  <div className="ml-[60px] p-4 bg-[#FFF9E5] border border-amber-200/60 rounded-xl rounded-tl-none">
+                    <p className="text-sm text-amber-900 font-medium leading-relaxed">
+                      Batch number recorded. Coordinating with quality lab — results in 7 days.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>
