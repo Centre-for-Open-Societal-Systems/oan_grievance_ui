@@ -30,7 +30,6 @@ export interface ProfileStepProps {
   profileError: string | null;
   consentChecked: boolean;
   onConsentChange: (checked: boolean) => void;
-  onSkip: () => void;
   onSubmit: () => void;
 }
 
@@ -38,8 +37,7 @@ export interface ProfileStepProps {
  * Step 2 of registration — submitter identity, including the consent
  * gate for collecting a national ID number. The ID asked for here (Fayda ID
  * or a per-type variant) is government identity data, so continuing past
- * this step requires an explicit checked box, not just filling the fields —
- * "Skip for now" bypasses both, since skipping means none of it is collected.
+ * this step requires an explicit checked box, not just filling the fields.
  *
  * `consentChecked` is owned by the parent (RegisterForm), not local state
  * here — so that switching submitter type can reset it alongside
@@ -55,7 +53,6 @@ export function ProfileStep({
   profileError,
   consentChecked,
   onConsentChange,
-  onSkip,
   onSubmit,
 }: ProfileStepProps) {
   const IdentityForm = SUBMITTER_TYPE_FORMS[submitterType];
@@ -122,14 +119,7 @@ export function ProfileStep({
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-2">
-        <button
-          type="button"
-          onClick={onSkip}
-          className="text-[14px] font-bold text-gray-500 hover:text-gray-700"
-        >
-          {t('skipForNow')}
-        </button>
+      <div className="flex items-center justify-end pt-2">
         <button
           type="button"
           onClick={onSubmit}

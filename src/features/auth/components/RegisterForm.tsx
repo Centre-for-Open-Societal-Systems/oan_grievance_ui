@@ -155,7 +155,6 @@ export function RegisterForm() {
         profileError={profileError}
         consentChecked={consentChecked}
         onConsentChange={setConsentChecked}
-        onSkip={() => setStep('success')}
         onSubmit={handleProfileSubmit}
       />
     );
