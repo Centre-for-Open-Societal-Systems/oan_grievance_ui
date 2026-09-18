@@ -1,0 +1,36 @@
+{
+  "noAccess": {
+    "pageTitle": "No Access",
+    "heading": "No access assigned yet",
+    "body": "Your account isn't assigned a recognized role in the grievance portal. Please contact your administrator to get one assigned."
+  },
+  "register": {
+    "profile": {
+      "accountCreatedTitle": "Account Created!",
+      "subtitle": "One more thing — tell us how you'll be submitting grievances, so we don't ask again later.",
+      "submitterTypeLabel": "Submitter Type",
+      "submitterTypePlaceholder": "Select Submitter Type",
+      "skipForNow": "Skip for now",
+      "continue": "Continue",
+      "consentNotice": "The Fayda ID above confirms your identity when a grievance is reviewed. It's masked on screen by default, and this device never stores it — only the fields below it (name, contact details) are kept here to prefill Submit Grievance next time.",
+      "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
+      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}. Or skip for now."
+    },
+    "success": {
+      "title": "Account Created!",
+      "body": "Your account has been created successfully. You can now log in using your email and password.",
+      "proceedToLogin": "Proceed to Login"
+    }
+  },
+  "submitGrievance": {
+    "identityStep": {
+      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}."
+    },
+    "detailsStep": {
+      "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}."
+    }
+  },
+  "commentsAndCommunication": {
+    "messageCount": "{count, plural, one {# message} other {# messages}} in this thread"
+  }
+}

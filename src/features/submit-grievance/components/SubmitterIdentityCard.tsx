@@ -1,30 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { FileEdit, Info, Save, ArrowRight } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  fetchSubmitterOptionsThunk,
-  selectSubmitterTypeOptions,
-  selectSubmissionChannelOptions,
-} from "@/features/metadata";
-import { AnimatedSelect } from "./SI-Dropdown";
-import { IndividualFarmerForm, FIELDS as INDIVIDUAL_FIELDS } from "./SI-IndividualFarmerForm";
-import { CooperativeFPOForm, FIELDS as COOPERATIVE_FIELDS } from "./SI-CooperativeFPOForm";
-import { NGOForm, FIELDS as NGO_FIELDS } from "./SI-NGOForm";
-import { WoredaKebeleForm, FIELDS as WOREDA_KEBELE_FIELDS } from "./SI-WoredaKebeleForm";
-import { DevelopmentAgentForm, FIELDS as DEVELOPMENT_AGENT_FIELDS } from "./SI-DevelopmentAgentForm";
-import type { SIFieldMeta } from "./SI-types";
-
-/** Which field set applies to each submitter type — shared with ReviewAndSubmitCard for display and validation. */
-export const SI_FIELDS_BY_TYPE: Record<string, SIFieldMeta[]> = {
-  individual: INDIVIDUAL_FIELDS,
-  cooperative: COOPERATIVE_FIELDS,
-  ngo: NGO_FIELDS,
-  woreda_kebele: WOREDA_KEBELE_FIELDS,
-  development_agent: DEVELOPMENT_AGENT_FIELDS,
-};
+import { fetchSubmitterOptionsThunk, selectSubmitterTypeOptions, selectSubmissionChannelOptions } from "@/features/metadata";
+import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
+import { IndividualFarmerForm } from "@/components/submitter-identity/SI-IndividualFarmerForm";
+import { CooperativeFPOForm } from "@/components/submitter-identity/SI-CooperativeFPOForm";
+import { NGOForm } from "@/components/submitter-identity/SI-NGOForm";
+import { WoredaKebeleForm } from "@/components/submitter-identity/SI-WoredaKebeleForm";
+import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-DevelopmentAgentForm";
+import { getMissingRequiredFields } from "@/components/submitter-identity/fields";
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
@@ -57,16 +45,16 @@ export function SubmitterIdentityCard({
   }, [dispatch, submitterStatus]);
 
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("submitGrievance.identityStep");
 
   const handleNext = () => {
-    if (!submitterType || !submissionChannel) {
-      setError("Select a Submitter Type and Submission Channel before continuing.");
-      return;
-    }
-    const requiredFields = SI_FIELDS_BY_TYPE[submitterType] || [];
-    const missing = requiredFields.some((field) => field.required && !identityValues[field.key]?.trim());
-    if (missing) {
-      setError("Fill in all fields marked as required before continuing.");
+    const missingTopLevel: string[] = [];
+    if (!submitterType) missingTopLevel.push("Submitter Type");
+    if (!submissionChannel) missingTopLevel.push("Submission Channel");
+
+    const missing = [...missingTopLevel, ...getMissingRequiredFields(submitterType, identityValues)];
+    if (missing.length > 0) {
+      setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
       return;
     }
     setError(null);
@@ -98,27 +86,33 @@ export function SubmitterIdentityCard({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Submitter Type */}
           <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
+            <label htmlFor="submitter-type" className="block text-sm font-semibold text-gray-800 mb-2">
               Submitter Type <span className="text-red-500">*</span>
             </label>
             <AnimatedSelect
+              id="submitter-type"
               options={dynamicSubmitterTypes}
               placeholder="Select Submitter Type"
               value={submitterType}
               onChange={setSubmitterType}
+              invalid={!!error}
+              describedBy={error ? "submitter-identity-error" : undefined}
             />
           </div>
 
           {/* Submission Channel */}
           <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
+            <label htmlFor="submission-channel" className="block text-sm font-semibold text-gray-800 mb-2">
               Submission Channel <span className="text-red-500">*</span>
             </label>
             <AnimatedSelect
+              id="submission-channel"
               options={dynamicSubmissionChannels}
               placeholder="Select Submission Channel"
               value={submissionChannel}
               onChange={setSubmissionChannel}
+              invalid={!!error}
+              describedBy={error ? "submitter-identity-error" : undefined}
             />
           </div>
         </div>
@@ -131,7 +125,7 @@ export function SubmitterIdentityCard({
 
       {/* Card Footer */}
       <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] rounded-b-xl">
-        {error && <ErrorAlert className="mb-4">{error}</ErrorAlert>}
+        {error && <ErrorAlert id="submitter-identity-error" className="mb-4">{error}</ErrorAlert>}
         <div className="flex items-center justify-between">
           <div className="flex items-center text-sm text-gray-600">
             <Info className="w-4 h-4 text-blue-600 mr-1.5" />

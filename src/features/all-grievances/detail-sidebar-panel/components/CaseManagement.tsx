@@ -39,8 +39,12 @@ const AnimatedDropdown = ({ label, options, placeholder }: { label: string, opti
   );
 };
 
-export function CaseManagement() {
+export function CaseManagement({ canManageCase }: { canManageCase: boolean }) {
   const [escalated, setEscalated] = useState(false);
+
+  // Case assignment/status/escalation is an officer/admin action — a
+  // submitter viewing their own grievance has no business reassigning it.
+  if (!canManageCase) return null;
 
   return (
     <div className="bg-white rounded-xl border border-[#F1F3F4] shadow-sm overflow-hidden flex flex-col">

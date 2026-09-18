@@ -1,17 +1,47 @@
 'use client';
 
-import { ErrorAlert } from '@/components/ui/ErrorAlert';
-import { PhoneField } from '@/components/ui/PhoneField';
-import { Spinner } from '@/components/ui/Spinner';
-import { PasswordRequirements } from '@/components/ui/PasswordRequirements';
 import { registerUser } from '@/features/auth/api/authApi';
+import { getMissingRequiredFields } from '@/components/submitter-identity/fields';
+import { saveSubmitterProfile } from '@/lib/submitterProfile';
 import { validatePassword } from '@/lib/validation/password';
 import { PHONE_NUMBER_REGEX, stripLeadingZero } from '@/lib/validation/phone';
-import { Lock, Mail, User } from 'lucide-react';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { AccountStep } from './register/AccountStep';
+import { ProfileStep } from './register/ProfileStep';
+import { SuccessStep } from './register/SuccessStep';
 
+// Full Name, Phone and Email are already collected on the account step above
+// — the per-type identity forms below (reused as-is from Submit Grievance)
+// skip these via `hiddenFields` rather than asking for them twice.
+//
+// Development Agent is the one type this doesn't hold for: its "Contact
+// Mobile"/"Contact Email ID" fields are the case's follow-up contact for the
+// farmer being filed on behalf of ("The farmer remains the primary
+// grievance owner" — see SI-DevelopmentAgentForm.tsx), not the agent's own.
+// Hiding them and silently prefilling the registrant's own phone/email under
+// those keys would record the agent's contact as if it were the farmer's.
+const ALREADY_COLLECTED_FIELDS_BY_TYPE: Record<string, string[]> = {
+  individual: ['fullName', 'phoneNumber', 'email'],
+  cooperative: ['fullName', 'phoneNumber', 'email'],
+  ngo: ['fullName', 'phoneNumber', 'email'],
+  woreda_kebele: ['fullName', 'phoneNumber', 'email'],
+  development_agent: ['fullName'],
+};
+
+type RegisterStep = 'account' | 'profile' | 'success';
+
+/**
+ * Three-step registration: account credentials, then submitter identity
+ * (so Submit Grievance's own Step 1 can be pre-filled later — see
+ * submitterProfile.ts), then confirmation. This component owns the flow's
+ * state and step transitions; each step's own form markup lives in
+ * ./register/*Step.tsx.
+ */
 export function RegisterForm() {
+  const t = useTranslations('register.profile');
+  const [step, setStep] = useState<RegisterStep>('account');
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+251');
@@ -20,9 +50,29 @@ export function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const [submitterType, setSubmitterType] = useState('');
+  const [identityValues, setIdentityValues] = useState<Record<string, string>>({});
+  const [profileError, setProfileError] = useState<string | null>(null);
+  // Lifted out of ProfileStep (rather than local state there) specifically
+  // so switching submitter type can reset it here alongside identityValues —
+  // consent given for one national-ID field (e.g. Fayda ID) must not carry
+  // over silently to a different one after a mid-step type change (e.g.
+  // Individual -> Cooperative swaps in representativeFaydaId).
+  const [consentChecked, setConsentChecked] = useState(false);
+
+  const handleSubmitterTypeChange = (value: string) => {
+    setSubmitterType(value);
+    setIdentityValues({});
+    setProfileError(null);
+    setConsentChecked(false);
+  };
+
+  const setIdentityValue = (key: string, value: string) => {
+    setIdentityValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleAccountSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!PHONE_NUMBER_REGEX.test(phoneNumber)) {
@@ -52,7 +102,7 @@ export function RegisterForm() {
         full_name: fullName.trim(),
         phone_number: fullPhone,
       });
-      setIsSuccess(true);
+      setStep('profile');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -60,137 +110,78 @@ export function RegisterForm() {
     }
   };
 
-  if (isSuccess) {
+  const handleProfileSubmit = () => {
+    if (!submitterType) {
+      setProfileError('Select a submitter type to continue, or skip for now.');
+      return;
+    }
+    const hiddenFields = ALREADY_COLLECTED_FIELDS_BY_TYPE[submitterType] ?? [];
+    const missing = getMissingRequiredFields(submitterType, identityValues, hiddenFields);
+    if (missing.length > 0) {
+      setProfileError(t('missingFields', { count: missing.length, fields: missing.join(', ') }));
+      return;
+    }
+    setProfileError(null);
+    // Submit Grievance's own Step 1 isn't pre-filterable to just the "new"
+    // fields the way this page is — it always shows the full per-type form.
+    // Folding the account-step fields in here too (under the same keys those
+    // forms already use) means that page comes back genuinely pre-filled
+    // rather than just missing a few fields, since name/phone aren't
+    // otherwise available after login (the JWT only carries email + roles).
+    // Only for the fields this type actually treats as "the registrant's
+    // own" — see ALREADY_COLLECTED_FIELDS_BY_TYPE.
+    saveSubmitterProfile(email, {
+      submitterType,
+      identityValues: {
+        ...identityValues,
+        ...(hiddenFields.includes('fullName') ? { fullName: fullName.trim() } : {}),
+        ...(hiddenFields.includes('phoneNumber')
+          ? { phoneCode: countryCode, phoneNumber: stripLeadingZero(phoneNumber) }
+          : {}),
+        ...(hiddenFields.includes('email') ? { email: email.trim() } : {}),
+      },
+    });
+    setStep('success');
+  };
+
+  if (step === 'profile') {
     return (
-      <div className="flex flex-col items-center justify-center py-8 px-4 text-center space-y-6">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 shadow-sm border border-green-200 mb-2">
-          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">Account Created!</h3>
-          <p className="text-gray-500 font-medium">Your account has been created successfully. You can now log in using your email and password.</p>
-        </div>
-        <Link
-          href="/login"
-          className="w-full bg-[#16A34A] hover:bg-[#15803d] text-white py-4 rounded-2xl font-extrabold text-[15px] transition-all transform active:scale-[0.98] shadow-sm flex items-center justify-center"
-        >
-          Proceed to Login
-        </Link>
-      </div>
+      <ProfileStep
+        submitterType={submitterType}
+        onSubmitterTypeChange={handleSubmitterTypeChange}
+        identityValues={identityValues}
+        setIdentityValue={setIdentityValue}
+        hiddenFields={ALREADY_COLLECTED_FIELDS_BY_TYPE[submitterType] ?? []}
+        profileError={profileError}
+        consentChecked={consentChecked}
+        onConsentChange={setConsentChecked}
+        onSkip={() => setStep('success')}
+        onSubmit={handleProfileSubmit}
+      />
     );
   }
 
+  if (step === 'success') {
+    return <SuccessStep />;
+  }
+
   return (
-    <>
-      {error && <ErrorAlert className="mb-6">{error}</ErrorAlert>}
-
-      <form className="space-y-5 mb-8" onSubmit={handleSubmit}>
-        <div className="flex flex-col gap-2">
-          <label className="text-[14px] font-bold text-gray-700 flex items-center">
-            Full Name <span className="text-red-500 ml-1">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><User className="w-5 h-5" /></span>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Full Name"
-              required
-              className="w-full pl-10 pr-4 py-3 bg-white border border-[#D1D5DB] rounded-xl text-[14px] text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all placeholder:text-[#9CA3AF] font-medium shadow-sm"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="text-[14px] font-bold text-gray-700 flex items-center">
-            Email <span className="text-red-500 ml-1">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Mail className="w-5 h-5" /></span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              className="w-full pl-10 pr-4 py-3 bg-white border border-[#D1D5DB] rounded-xl text-[14px] text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all placeholder:text-[#9CA3AF] font-medium shadow-sm"
-            />
-          </div>
-          <p className="text-[12px] text-gray-500 font-medium">
-            You will sign in with this address.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="text-[14px] font-bold text-gray-700 flex items-center">
-            Phone Number <span className="text-red-500 ml-1">*</span>
-          </label>
-          <PhoneField
-            countryCode={countryCode}
-            setCountryCode={setCountryCode}
-            phoneNumber={phoneNumber}
-            setPhoneNumber={setPhoneNumber}
-            placeholder="Enter phone number"
-            required
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="text-[14px] font-bold text-gray-700 flex items-center">
-            Password <span className="text-red-500 ml-1">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Lock className="w-5 h-5" /></span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full pl-10 pr-4 py-3 bg-white border border-[#D1D5DB] rounded-xl text-[14px] text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all placeholder:text-[#9CA3AF] font-medium shadow-sm"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="text-[14px] font-bold text-gray-700 flex items-center">
-            Confirm Password <span className="text-red-500 ml-1">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Lock className="w-5 h-5" /></span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full pl-10 pr-4 py-3 bg-white border border-[#D1D5DB] rounded-xl text-[14px] text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all placeholder:text-[#9CA3AF] font-medium shadow-sm"
-            />
-          </div>
-        </div>
-
-        <PasswordRequirements password={password} />
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-[#16A34A] hover:bg-[#15803d] text-white py-4 rounded-2xl font-extrabold text-[15px] transition-all transform active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100 flex justify-center items-center mt-4 shadow-sm"
-        >
-          {isLoading ? <Spinner size="sm" /> : 'Create Account'}
-        </button>
-      </form>
-
-      <p className="text-center text-gray-600 font-medium">
-        Already have an account?{' '}
-        <Link href="/login" className="text-[#16A34A] hover:text-[#15803d] font-bold">
-          Log in
-        </Link>
-      </p>
-    </>
+    <AccountStep
+      fullName={fullName}
+      setFullName={setFullName}
+      email={email}
+      setEmail={setEmail}
+      countryCode={countryCode}
+      setCountryCode={setCountryCode}
+      phoneNumber={phoneNumber}
+      setPhoneNumber={setPhoneNumber}
+      password={password}
+      setPassword={setPassword}
+      confirmPassword={confirmPassword}
+      setConfirmPassword={setConfirmPassword}
+      isLoading={isLoading}
+      error={error}
+      onSubmit={handleAccountSubmit}
+    />
   );
 }

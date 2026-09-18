@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { ChevronDown, X } from "lucide-react";
 
 export interface Option {
@@ -15,8 +15,20 @@ export interface AnimatedSelectProps {
   onChange: (val: string) => void;
   disabled?: boolean;
   searchable?: boolean;
+  /** Associates an external `<label htmlFor={id}>` with this control. Falls back to an internally generated id if omitted. */
+  id?: string;
+  /** Set when an error is showing for this field — points the control at the error's id via aria-describedby. */
+  describedBy?: string;
+  /** Set when this field has a validation error — surfaces as aria-invalid so assistive tech announces it. */
+  invalid?: boolean;
 }
 
+/**
+ * A searchable combobox, not a native `<select>` — built to the WAI-ARIA
+ * combobox pattern (role, aria-expanded/aria-activedescendant, arrow-key +
+ * Enter/Escape handling) since a plain input with an onClick is invisible to
+ * a screen reader and unusable from a keyboard.
+ */
 export function AnimatedSelect({
   options,
   placeholder,
@@ -24,7 +36,14 @@ export function AnimatedSelect({
   onChange,
   disabled = false,
   searchable = true,
+  id,
+  describedBy,
+  invalid,
 }: AnimatedSelectProps) {
+  const generatedId = useId();
+  const controlId = id ?? generatedId;
+  const listboxId = `${controlId}-listbox`;
+
   const [isOpen, setIsOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typedQuery, setTypedQuery] = useState("");
@@ -223,7 +242,17 @@ export function AnimatedSelect({
       >
         <input
           ref={inputRef}
+          id={controlId}
           type="text"
+          role="combobox"
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          aria-controls={listboxId}
+          aria-activedescendant={
+            isOpen && highlightedIndex >= 0 ? `${listboxId}-option-${highlightedIndex}` : undefined
+          }
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
           disabled={disabled}
           readOnly={!searchable}
           value={displayValue}
@@ -282,10 +311,12 @@ export function AnimatedSelect({
               : "opacity-0 scale-y-95 pointer-events-none"
           }`}
         >
-          <ul ref={listRef} className="max-h-60 overflow-y-auto py-1">
+          <ul id={listboxId} role="listbox" aria-label={placeholder} ref={listRef} className="max-h-60 overflow-y-auto py-1">
             {/* Show reset to placeholder option when not typing */}
             {!isTyping && (
               <li
+                role="option"
+                aria-selected={!value}
                 className={`px-4 py-2.5 cursor-pointer text-[#4B5563] hover:bg-gray-50 transition-colors border-b border-gray-100 ${
                   !value ? "bg-[#f4f8f5] text-[#0b8535] font-semibold" : ""
                 }`}
@@ -306,6 +337,9 @@ export function AnimatedSelect({
                 return (
                   <li
                     key={`${option.value}-${idx}`}
+                    id={`${listboxId}-option-${idx}`}
+                    role="option"
+                    aria-selected={isSelected}
                     data-index={idx}
                     className={`px-4 py-2.5 cursor-pointer text-[#4B5563] hover:bg-gray-50 transition-colors ${
                       idx !== filteredOptions.length - 1 ? "border-b border-gray-100" : ""

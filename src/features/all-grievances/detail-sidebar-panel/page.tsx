@@ -7,6 +7,7 @@ import { SubmitterDetails } from './components/SubmitterDetails';
 import { ThreadSummary } from './components/ThreadSummary';
 import { ResponseForm } from './components/ResponseForm';
 import { AttachmentsList } from './components/AttachmentsList';
+import { useIsOfficerOrAdmin } from '@/features/auth/hooks/useIsOfficerOrAdmin';
 
 export function GrievanceDetailSidebar({
   grievance,
@@ -15,6 +16,12 @@ export function GrievanceDetailSidebar({
   grievance: Grievance | null;
   onClose: () => void;
 }) {
+  // Decided once, at the boundary that composes the panel, rather than by
+  // each of the five child components independently calling the same hook —
+  // this is the one place that states who may see officer/admin-only
+  // content in this panel, instead of five separate memories of the rule.
+  const canManageCase = useIsOfficerOrAdmin();
+
   if (!grievance) return null;
 
   return (
@@ -34,16 +41,16 @@ export function GrievanceDetailSidebar({
 
             {/* Left Column */}
             <div className="col-span-2 flex flex-col gap-6">
-              <CommentsAndCommunication />
-              <ResponseForm />
+              <CommentsAndCommunication canManageCase={canManageCase} />
+              <ResponseForm canManageCase={canManageCase} />
             </div>
 
             {/* Right Column */}
             <div className="col-span-1 flex flex-col gap-6">
-              <SLATracker />
-              <CaseManagement />
+              <SLATracker canManageCase={canManageCase} />
+              <CaseManagement canManageCase={canManageCase} />
               <SubmitterDetails grievance={grievance} />
-              <ThreadSummary />
+              <ThreadSummary canManageCase={canManageCase} />
               <AttachmentsList grievance={grievance.id} />
             </div>
           </div>

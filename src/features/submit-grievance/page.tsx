@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { useAppSelector } from "@/store/hooks";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { normalizeSubmitterType } from "@/features/metadata";
+import { loadSubmitterProfile } from "@/lib/submitterProfile";
+import { useAppSelector } from "@/store/hooks";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
@@ -13,7 +14,42 @@ import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
 
 export default function SubmitGrievancePage() {
+  // Pre-fills Step 1 from the signed-in user's profile (name, Fayda ID,
+  // phone, submitter type), so they aren't asked for the same details
+  // twice. Reading `user` straight into the `useState` initializers below
+  // (rather than syncing it in via an effect once session restore resolves)
+  // is safe for the case this guards against — `AuthBootstrapGate`
+  // (src/app/providers.tsx) wraps the whole app and withholds every
+  // protected route's subtree, this component included, while
+  // `getMeThunk` is still in flight (`status` idle/loading), so this page
+  // never mounts with `user` merely-not-yet-resolved. Verified live: this
+  // shape prefills correctly on a direct navigation/refresh, no extra
+  // re-sync-on-later-update effect needed. It does *not* cover a
+  // `getMeThunk` that resolves to rejected (revoked session, invalid
+  // refresh token) — `isRestoring` in AuthBootstrapGate only checks for
+  // idle/loading, not failed, so this page can still mount with `user`
+  // null in that case. Harmless here (every read below is optional-
+  // chained, so it just renders unprefilled), and `store/index.ts`'s
+  // `sessionExpiryMiddleware` redirects to /login shortly after — but
+  // worth knowing this isn't an absolute guarantee against `user` being
+  // null on mount, only against the ordinary restore-in-progress race.
   const user = useAppSelector(selectUser);
+
+  // `user` only carries the fields the backend's own profile has (name,
+  // Fayda ID, phone, email, type) — it has nothing for submitter-type-
+  // specific fields RegisterForm.tsx's Profile step collects and persists
+  // via `saveSubmitterProfile` (org name, registration number,
+  // representative identity for cooperative/NGO/woreda_kebele/
+  // development_agent types — see SI-CooperativeFPOForm.tsx etc.). Those
+  // never reach the backend at all, so `loadSubmitterProfile` is the only
+  // place they can come back from. `user`'s fields still win on overlap
+  // (it's live/authoritative; this is a same-browser snapshot from
+  // registration time that can go stale), this only fills in what `user`
+  // doesn't have.
+  const savedProfile = useMemo(
+    () => (user?.email ? loadSubmitterProfile(user.email) : null),
+    [user]
+  );
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -25,20 +61,16 @@ export default function SubmitGrievancePage() {
   // reload is a separate, larger feature this doesn't attempt.
   const [clientUuid] = useState(() => crypto.randomUUID());
 
-  // Step 1 — Submitter Identity (auto-filled from logged-in user if
-  // available). Reading `user` straight into these initializers is safe:
-  // `AuthBootstrapGate` (src/app/providers.tsx) withholds every protected
-  // route's subtree, this component included, until `getMeThunk` leaves
-  // idle/loading, so this page doesn't mount with `user` merely-not-yet-
-  // resolved — no extra sync-on-later-update effect needed.
-  const KNOWN_SUBMITTER_TYPES = ["individual", "cooperative", "ngo", "woreda_kebele", "development_agent"];
+  // Step 1 — Submitter Identity
   const [submitterType, setSubmitterType] = useState(() => {
     const normalized = user?.type ? normalizeSubmitterType(user.type) : "";
-    return KNOWN_SUBMITTER_TYPES.includes(normalized) ? normalized : "";
+    const KNOWN_TYPES = ["individual", "cooperative", "ngo", "woreda_kebele", "development_agent"];
+    if (KNOWN_TYPES.includes(normalized)) return normalized;
+    return savedProfile?.submitterType ?? "";
   });
   const [submissionChannel, setSubmissionChannel] = useState(() => (user ? "web" : ""));
   const [identityValues, setIdentityValues] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
+    const initial: Record<string, string> = { ...savedProfile?.identityValues };
     if (user) {
       if (user.full_name) initial.fullName = user.full_name;
       if (user.fayda_id) initial.faydaId = user.fayda_id;
