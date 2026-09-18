@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X } from "lucide-react";
+import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -22,10 +22,14 @@ import {
   findWoredaNode,
 } from "@/features/metadata";
 import { AnimatedSelect } from "./SI-Dropdown";
+import { uploadAttachment, deleteAttachment } from "@/lib/attachments";
+import { saveDraft } from "@/lib/drafts";
+import { logger } from "@/lib/logger";
 
 interface GrievanceDetailsCardProps {
   onNext: () => void;
   onBack: () => void;
+  clientUuid: string;
   serviceCategory: string;
   setServiceCategory: (value: string) => void;
   grievanceType: string;
@@ -47,6 +51,7 @@ interface GrievanceDetailsCardProps {
 export function GrievanceDetailsCard({
   onNext,
   onBack,
+  clientUuid,
   serviceCategory,
   setServiceCategory,
   grievanceType,
@@ -151,6 +156,19 @@ export function GrievanceDetailsCard({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // The uploaded document's backend identity, once `submit_document` has
+  // accepted it — null while nothing has been uploaded (or while an upload
+  // is in flight / failed). `scanStatus` mirrors the backend's verdict
+  // (Pending/Clean/Infected) rather than the earlier hardcoded placeholder
+  // text, since the file isn't actually servable until it comes back Clean.
+  const [attachmentId, setAttachmentId] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState<string | null>(null);
+  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "error">("idle");
+  // `submit_document` with a `client_uuid` requires the Grievance Draft to
+  // already exist server-side — this fires once, right before the first
+  // upload, rather than on every file selection.
+  const draftEnsuredRef = useRef(false);
+
   // One object URL per uploaded file, created once and released — not
   // regenerated (and leaked) on every unrelated re-render. This has to be an
   // effect, not state derived during render: `createObjectURL` allocates a
@@ -179,17 +197,54 @@ export function GrievanceDetailsCard({
     onNext();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setUploadedFile(e.target.files[0]!);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadedFile(file);
+    setAttachmentId(null);
+    setScanStatus(null);
+    setUploadState("uploading");
+    setError(null);
+
+    try {
+      if (!draftEnsuredRef.current) {
+        await saveDraft(clientUuid, {}, 2);
+        draftEnsuredRef.current = true;
+      }
+
+      const result = await uploadAttachment({ file, clientUuid });
+      setAttachmentId(result.attachment);
+      setScanStatus(result.scan_status);
+      setUploadState("idle");
+    } catch (uploadError) {
+      setUploadState("error");
+      setUploadedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Could not upload the file. Please try again."
+      );
     }
   };
 
   const handleRemoveFile = (e: React.MouseEvent) => {
     e.stopPropagation();
+    const idToDelete = attachmentId;
     setUploadedFile(null);
+    setAttachmentId(null);
+    setScanStatus(null);
+    setUploadState("idle");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+    // Best-effort: the submitter has already removed it from their view, so a
+    // failed cleanup call here shouldn't block them — it's logged, not shown.
+    if (idToDelete) {
+      deleteAttachment(idToDelete).catch((deleteError) => {
+        logger.error("Failed to delete attachment on the backend:", deleteError);
+      });
     }
   };
 
@@ -414,15 +469,35 @@ export function GrievanceDetailsCard({
               <div className="flex items-center justify-between bg-[#F0FDF4] hover:bg-[#e5fbeb] border border-green-300 p-4 rounded-xl mt-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-[#D1FAE5] rounded-xl flex items-center justify-center">
-                    <IdCard className="w-6 h-6 text-[#16A34A]" />
+                    {uploadState === "uploading" ? (
+                      <Loader2 className="w-6 h-6 text-[#16A34A] animate-spin" />
+                    ) : (
+                      <IdCard className="w-6 h-6 text-[#16A34A]" />
+                    )}
                   </div>
                   <div>
                     <p className="text-[15px] font-bold text-gray-900 leading-snug">
                       {uploadedFile.name}
                     </p>
-                    <div className="flex items-center gap-1.5 mt-0.5 text-[#16A34A] text-[13px] font-medium">
-                      <div className="w-2 h-2 rounded-full bg-[#16A34A]"></div>
-                      Uploaded · pending registry verification
+                    <div className="flex items-center gap-1.5 mt-0.5 text-[13px] font-medium">
+                      {uploadState === "uploading" ? (
+                        <span className="text-gray-500">Uploading…</span>
+                      ) : scanStatus === "Clean" ? (
+                        <>
+                          <div className="w-2 h-2 rounded-full bg-[#16A34A]"></div>
+                          <span className="text-[#16A34A]">Uploaded · scan clean</span>
+                        </>
+                      ) : scanStatus === "Infected" ? (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                          <span className="text-red-600">Failed malware scan · not usable as evidence</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                          <span className="text-amber-600">Uploaded · pending scan</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -432,7 +507,8 @@ export function GrievanceDetailsCard({
                       e.stopPropagation();
                       setIsPreviewOpen(true);
                     }}
-                    className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                    disabled={uploadState === "uploading"}
+                    className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Eye className="w-5 h-5 text-blue-500" />
                   </button>
@@ -470,7 +546,8 @@ export function GrievanceDetailsCard({
               </button>
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50"
+                disabled={uploadState === "uploading"}
+                className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save & Continue
                 <ArrowRight className="w-4 h-4" />

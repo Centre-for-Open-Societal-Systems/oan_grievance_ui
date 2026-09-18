@@ -6,6 +6,7 @@ import { CaseManagement } from './components/CaseManagement';
 import { SubmitterDetails } from './components/SubmitterDetails';
 import { ThreadSummary } from './components/ThreadSummary';
 import { ResponseForm } from './components/ResponseForm';
+import { AttachmentsList } from './components/AttachmentsList';
 
 export function GrievanceDetailSidebar({
   grievance,
@@ -43,6 +44,7 @@ export function GrievanceDetailSidebar({
               <CaseManagement />
               <SubmitterDetails grievance={grievance} />
               <ThreadSummary />
+              <AttachmentsList grievance={grievance.id} />
             </div>
           </div>
         </div>

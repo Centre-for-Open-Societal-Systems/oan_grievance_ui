@@ -50,7 +50,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    await callBackendAuth<TokenPair>('register_user', { email, password, full_name, phone_number }, clientIp);
+    await callBackendAuth<TokenPair>(
+      '/api/v1/auth/register',
+      { email, password, full_name, phone_number },
+      clientIp
+    );
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof BackendAuthError) {

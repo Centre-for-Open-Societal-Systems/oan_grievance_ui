@@ -18,13 +18,25 @@ export default function SubmitGrievancePage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // Step 1 — Submitter Identity (auto-filled from logged-in user if available)
-  const [submitterType, setSubmitterType] = useState(() =>
-    user?.type ? normalizeSubmitterType(user.type) : ""
-  );
-  const [submissionChannel, setSubmissionChannel] = useState(() =>
-    user ? "web" : ""
-  );
+  // Identifies this wizard session's Grievance Draft on the backend — needed
+  // before any attachment can be uploaded, since `submit_document` requires
+  // the draft to already exist for whichever `client_uuid` it's given. One
+  // per page load, not persisted: resuming an in-progress draft across a
+  // reload is a separate, larger feature this doesn't attempt.
+  const [clientUuid] = useState(() => crypto.randomUUID());
+
+  // Step 1 — Submitter Identity (auto-filled from logged-in user if
+  // available). Reading `user` straight into these initializers is safe:
+  // `AuthBootstrapGate` (src/app/providers.tsx) withholds every protected
+  // route's subtree, this component included, until `getMeThunk` leaves
+  // idle/loading, so this page doesn't mount with `user` merely-not-yet-
+  // resolved — no extra sync-on-later-update effect needed.
+  const KNOWN_SUBMITTER_TYPES = ["individual", "cooperative", "ngo", "woreda_kebele", "development_agent"];
+  const [submitterType, setSubmitterType] = useState(() => {
+    const normalized = user?.type ? normalizeSubmitterType(user.type) : "";
+    return KNOWN_SUBMITTER_TYPES.includes(normalized) ? normalized : "";
+  });
+  const [submissionChannel, setSubmissionChannel] = useState(() => (user ? "web" : ""));
   const [identityValues, setIdentityValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     if (user) {
@@ -35,25 +47,6 @@ export default function SubmitGrievancePage() {
     }
     return initial;
   });
-
-  // If user profile finishes loading asynchronously after initial mount, sync once during render
-  const [syncedUser, setSyncedUser] = useState(user);
-  if (user && user !== syncedUser) {
-    setSyncedUser(user);
-    if (!submitterType && user.type) {
-      setSubmitterType(normalizeSubmitterType(user.type));
-    }
-    if (!submissionChannel) {
-      setSubmissionChannel("web");
-    }
-    setIdentityValues((prev) => ({
-      ...prev,
-      fullName: prev.fullName || user.full_name || "",
-      faydaId: prev.faydaId || user.fayda_id || "",
-      phoneNumber: prev.phoneNumber || user.mobile_no || "",
-      email: prev.email || user.email || "",
-    }));
-  }
 
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
@@ -158,6 +151,7 @@ export default function SubmitGrievancePage() {
           <GrievanceDetailsCard
             onNext={handleNext}
             onBack={handleBack}
+            clientUuid={clientUuid}
             serviceCategory={serviceCategory}
             setServiceCategory={setServiceCategory}
             grievanceType={grievanceType}

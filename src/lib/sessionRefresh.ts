@@ -24,7 +24,7 @@ export async function performRefresh(
   if (!refreshToken) return null;
 
   try {
-    const pair = await callBackendAuth<TokenPair>('refresh', { refresh_token: refreshToken }, clientIp);
+    const pair = await callBackendAuth<TokenPair>('/api/v1/auth/refresh', { refresh_token: refreshToken }, clientIp);
     return { pair, rememberMe: readRememberMe(request) };
   } catch {
     return null;
