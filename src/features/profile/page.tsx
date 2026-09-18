@@ -55,6 +55,10 @@ export default function ProfilePage() {
   const grievanceProfile = profile?.profiles?.grievance;
   const displayName = profile?.full_name || user?.email || "User";
   const initials = initialsFor(displayName);
+  // Same fallback authApi.ts's getMe() uses for Redux's `user.mobile_no` —
+  // kept in sync so this page doesn't show "Not provided" for a value the
+  // header/rest of the app already displays correctly for the same account.
+  const mobileNo = profile?.mobile_no || grievanceProfile?.contact_mobile;
 
   return (
     <div className="flex flex-col gap-6 font-sans pb-2">
@@ -106,7 +110,7 @@ export default function ProfilePage() {
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <Field label="Full Name" value={profile?.full_name} />
                 <Field label="Email" value={profile?.login_email} />
-                <Field label="Phone Number" value={profile?.mobile_no} />
+                <Field label="Phone Number" value={mobileNo} />
                 <Field label="Preferred Language" value={grievanceProfile?.preferred_language} />
               </div>
             </div>

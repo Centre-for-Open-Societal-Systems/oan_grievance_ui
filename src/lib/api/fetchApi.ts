@@ -90,8 +90,14 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
 /**
  * Standardized API client for all backend communication via `/api/proxy/*`.
  * Accepts absolute proxy path (e.g. `/api/v1/submitters/options`) or relative path.
+ * `timeoutMs` overrides the default 15s — a `FormData` file upload can
+ * legitimately take longer than a JSON call on a slow connection.
  */
-export async function fetchApi<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+export async function fetchApi<T = unknown>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs?: number
+): Promise<T> {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   const proxyPath = cleanPath.startsWith('api/proxy/') ? cleanPath : `api/proxy/${cleanPath}`;
   const url = new URL(proxyPath, BASE_URL);
@@ -104,11 +110,15 @@ export async function fetchApi<T = unknown>(path: string, options: RequestInit =
     headers.set('Accept', 'application/json');
   }
 
-  let response = await fetchWithTimeout(url.toString(), {
-    ...options,
-    credentials: 'include',
-    headers,
-  });
+  let response = await fetchWithTimeout(
+    url.toString(),
+    {
+      ...options,
+      credentials: 'include',
+      headers,
+    },
+    timeoutMs
+  );
 
   if (response.status === 401 && typeof window !== 'undefined') {
     if (!activeRefresh) {
@@ -125,11 +135,15 @@ export async function fetchApi<T = unknown>(path: string, options: RequestInit =
     }
     const success = await activeRefresh;
     if (success) {
-      response = await fetchWithTimeout(url.toString(), {
-        ...options,
-        credentials: 'include',
-        headers,
-      });
+      response = await fetchWithTimeout(
+        url.toString(),
+        {
+          ...options,
+          credentials: 'include',
+          headers,
+        },
+        timeoutMs
+      );
     }
   }
 

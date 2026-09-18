@@ -170,6 +170,7 @@ export function GrievanceDetailsCard({
   // already exist server-side — this fires once, right before the first
   // upload, rather than on every file selection.
   const draftEnsuredRef = useRef(false);
+  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   // One object URL per uploaded file, created once and released — not
   // regenerated (and leaked) on every unrelated re-render. This has to be an
@@ -189,6 +190,22 @@ export function GrievanceDetailsCard({
     return () => URL.revokeObjectURL(url);
   }, [uploadedFile]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  const handleSaveDraft = async () => {
+    setDraftSaveState("saving");
+    try {
+      await saveDraft(
+        clientUuid,
+        { serviceCategory, grievanceType, region, zone, woreda, kebele, description },
+        2
+      );
+      draftEnsuredRef.current = true;
+      setDraftSaveState("saved");
+    } catch (saveError) {
+      setDraftSaveState("error");
+      logger.error("Failed to save draft:", saveError);
+    }
+  };
 
   const handleNext = () => {
     const missing: string[] = [];
@@ -573,9 +590,17 @@ export function GrievanceDetailsCard({
               <span>All fields marked <span className="text-red-500">*</span> are required</span>
             </div>
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
-                <Save className="w-4 h-4 text-[#0b8535]" />
-                Save Draft
+              <button
+                onClick={handleSaveDraft}
+                disabled={draftSaveState === "saving"}
+                className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {draftSaveState === "saving" ? (
+                  <Loader2 className="w-4 h-4 text-[#0b8535] animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 text-[#0b8535]" />
+                )}
+                {draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Retry Save" : "Save Draft"}
               </button>
               <button
                 onClick={handleNext}

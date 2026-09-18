@@ -42,8 +42,6 @@ export interface BackendAuthMeData {
   [key: string]: unknown;
 }
 
-export type BackendAuthMeResponse = BackendAuthMeData | { data?: BackendAuthMeData; message?: string; status?: string };
-
 export async function loginUser({ usr, pwd, rememberMe = false }: LoginCredentials): Promise<User> {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
@@ -123,17 +121,24 @@ export async function sendHeartbeat(): Promise<void> {
 }
 
 /**
+ * Fetches and validates /api/v1/auth/me. `fetchApi` already flattens the
+ * response envelope (`.data`/`.message.data`) before returning, so what
+ * comes back here is already the flat shape — no further unwrapping needed.
+ */
+async function fetchAndValidateMe(): Promise<BackendAuthMeData> {
+  const d = await fetchApi<BackendAuthMeData>('/api/v1/auth/me', { method: 'GET' });
+  if (!d || (!d.user && !d.login_email && !d.full_name)) {
+    throw new Error(AUTH_MESSAGES.sessionExpired);
+  }
+  return d;
+}
+
+/**
  * Restores the user session from the backend /api/v1/auth/me endpoint via proxy.
  * Only extracts needed profile and identity fields; discards unnecessary backend metadata/claims.
  */
 export async function getMe(): Promise<User> {
-  const res = await fetchApi<BackendAuthMeResponse>('/api/v1/auth/me', { method: 'GET' });
-  const d: BackendAuthMeData | undefined = (res as { data?: BackendAuthMeData })?.data ?? (res as BackendAuthMeData);
-
-  if (!d || (!d.user && !d.login_email && !d.full_name)) {
-    throw new Error(AUTH_MESSAGES.sessionExpired);
-  }
-
+  const d = await fetchAndValidateMe();
   const grievanceProfile = d.profiles?.grievance;
   const fullName = d.full_name || grievanceProfile?.full_name || d.login_email || d.user || 'User';
   const email = d.login_email || d.user || '';
@@ -164,11 +169,5 @@ export async function getMe(): Promise<User> {
  * with fields nothing else uses.
  */
 export async function getFullProfile(): Promise<BackendAuthMeData> {
-  const res = await fetchApi<BackendAuthMeResponse>('/api/v1/auth/me', { method: 'GET' });
-  const d: BackendAuthMeData | undefined = (res as { data?: BackendAuthMeData })?.data ?? (res as BackendAuthMeData);
-
-  if (!d || (!d.user && !d.login_email && !d.full_name)) {
-    throw new Error(AUTH_MESSAGES.sessionExpired);
-  }
-  return d;
+  return fetchAndValidateMe();
 }
