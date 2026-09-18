@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { ChevronDown, Check } from 'lucide-react';
 import { isLocale } from '@/i18n/locales';
+import { logger } from '@/lib/logger';
 
 // Only the locales `src/i18n/request.ts` actually has a message catalog for
 // are switchable — the rest are listed but disabled, rather than silently
@@ -33,11 +34,20 @@ export function LanguageSelector() {
     }
     setIsSaving(true);
     try {
-      await fetch('/api/locale', {
+      const response = await fetch('/api/locale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locale: code }),
       });
+      if (!response.ok) {
+        // The route now has a CSRF check and a rate limit (like every other
+        // mutating route in this app) — either can reject this. Not calling
+        // refresh() on failure means the checkmark stays on the actual
+        // current locale instead of visually confirming a switch that never
+        // reached the server.
+        logger.error(`Locale switch to "${code}" failed with status ${response.status}`);
+        return;
+      }
       router.refresh();
     } finally {
       setIsSaving(false);
