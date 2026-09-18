@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, X } from "lucide-react";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { normalizeSubmitterType } from "@/features/metadata";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
+import { loadDraft } from "@/lib/drafts";
+import { ApiError } from "@/lib/api/fetchApi";
+import { logger } from "@/lib/logger";
 import { useAppSelector } from "@/store/hooks";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
@@ -56,10 +59,12 @@ export default function SubmitGrievancePage() {
 
   // Identifies this wizard session's Grievance Draft on the backend — needed
   // before any attachment can be uploaded, since `submit_document` requires
-  // the draft to already exist for whichever `client_uuid` it's given. One
-  // per page load, not persisted: resuming an in-progress draft across a
-  // reload is a separate, larger feature this doesn't attempt.
-  const [clientUuid] = useState(() => crypto.randomUUID());
+  // the draft to already exist for whichever `client_uuid` it's given.
+  // Starts as a fresh id for a brand-new wizard; the effect below swaps it
+  // for a resumed draft's real `client_uuid` if one comes back, so later
+  // saves/uploads keep landing on the SAME draft rather than orphaning it.
+  const [clientUuid, setClientUuid] = useState(() => crypto.randomUUID());
+  const [resumedDraft, setResumedDraft] = useState(false);
 
   // Step 1 — Submitter Identity
   const [submitterType, setSubmitterType] = useState(() => {
@@ -101,6 +106,38 @@ export default function SubmitGrievancePage() {
   const [kebele, setKebele] = useState("");
   const [description, setDescription] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
+  // Resume the caller's saved draft, if one exists, once on mount. Only
+  // `payload` (Step 2's fields) round-trips through the draft today —
+  // Step 1 stays prefilled from the live user profile above, same as
+  // always. A 404 here just means there's no draft yet, the ordinary case
+  // for anyone starting fresh; only unexpected failures are logged.
+  useEffect(() => {
+    let cancelled = false;
+    loadDraft()
+      .then((draft) => {
+        if (cancelled) return;
+        setClientUuid(draft.client_uuid);
+        const payload = draft.payload ?? {};
+        if (typeof payload.serviceCategory === "string") setServiceCategory(payload.serviceCategory);
+        if (typeof payload.grievanceType === "string") setGrievanceType(payload.grievanceType);
+        if (typeof payload.region === "string") setRegion(payload.region);
+        if (typeof payload.zone === "string") setZone(payload.zone);
+        if (typeof payload.woreda === "string") setWoreda(payload.woreda);
+        if (typeof payload.kebele === "string") setKebele(payload.kebele);
+        if (typeof payload.description === "string") setDescription(payload.description);
+        if (draft.step_reached >= 2) setCurrentStep(2);
+        setResumedDraft(true);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 404) return; // no saved draft — the normal case
+        logger.error("Failed to load saved draft:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleNext = () => {
     setCurrentStep((prev) => Math.min(prev + 1, 3));
@@ -162,6 +199,19 @@ export default function SubmitGrievancePage() {
 
       {/* Page Header */}
       <SubmitGrievanceHeader />
+
+      {resumedDraft && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-[#0b8535]">
+          <span>Resumed your saved draft — your grievance details are filled back in.</span>
+          <button
+            onClick={() => setResumedDraft(false)}
+            aria-label="Dismiss"
+            className="shrink-0 rounded-lg p-1 hover:bg-green-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Stepper */}
       <Stepper currentStep={currentStep} />

@@ -191,14 +191,24 @@ export function GrievanceDetailsCard({
   }, [uploadedFile]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Shared by the explicit Save Draft button and the implicit ensure-before-
+  // first-upload save below — both need the same current-field snapshot, so
+  // whichever fires first doesn't overwrite the other's (or a resumed
+  // draft's) data with an empty payload.
+  const currentDraftPayload = () => ({
+    serviceCategory,
+    grievanceType,
+    region,
+    zone,
+    woreda,
+    kebele,
+    description,
+  });
+
   const handleSaveDraft = async () => {
     setDraftSaveState("saving");
     try {
-      await saveDraft(
-        clientUuid,
-        { serviceCategory, grievanceType, region, zone, woreda, kebele, description },
-        2
-      );
+      await saveDraft(clientUuid, currentDraftPayload(), 2);
       draftEnsuredRef.current = true;
       setDraftSaveState("saved");
     } catch (saveError) {
@@ -240,7 +250,7 @@ export function GrievanceDetailsCard({
 
     try {
       if (!draftEnsuredRef.current) {
-        await saveDraft(clientUuid, {}, 2);
+        await saveDraft(clientUuid, currentDraftPayload(), 2);
         draftEnsuredRef.current = true;
       }
 
