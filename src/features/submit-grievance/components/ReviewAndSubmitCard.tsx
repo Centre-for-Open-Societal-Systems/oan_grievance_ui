@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check } from "lucide-react";
-import { submitterTypeOptions, submissionChannelOptions, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
-import { serviceCategoryOptions, grievanceTypeOptions, regionOptions } from "./GrievanceDetailsCard";
+import { SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
+import { useAppSelector } from "@/store/hooks";
+import {
+  selectGrievanceTypeOptions,
+  selectRegionOptions,
+  selectServiceCategoryOptions,
+  selectSubmissionChannelOptions,
+  selectSubmitterTypeOptions,
+} from "@/features/metadata";
 
 interface ReviewAndSubmitCardProps {
   onBack: () => void;
@@ -14,12 +21,17 @@ interface ReviewAndSubmitCardProps {
   region: string;
   zone: string;
   woreda: string;
+  kebele?: string;
   description: string;
   uploadedFile: File | null;
 }
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
-  return options.find((o) => o.value === value)?.label || "";
+  return (
+    options.find((o) => o.value.toLowerCase() === value.toLowerCase())?.label ||
+    options.find((o) => o.value === value)?.label ||
+    value
+  );
 }
 
 export function ReviewAndSubmitCard({
@@ -33,12 +45,21 @@ export function ReviewAndSubmitCard({
   region,
   zone,
   woreda,
+  kebele,
   description,
   uploadedFile,
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
 
-  const location = [labelFor(regionOptions, region), zone, woreda].filter(Boolean).join(", ") || "Not provided";
+  const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
+  const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
+  const serviceCategories = useAppSelector(selectServiceCategoryOptions);
+  const grievanceTypes = useAppSelector((state) =>
+    selectGrievanceTypeOptions(state, serviceCategory)
+  );
+  const regions = useAppSelector(selectRegionOptions);
+
+  const location = [labelFor(regions, region), zone, woreda, kebele].filter(Boolean).join(", ") || "Not provided";
   const identityFields = SI_FIELDS_BY_TYPE[submitterType] || [];
 
   return (
@@ -84,11 +105,11 @@ export function ReviewAndSubmitCard({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Submitter Type</p>
-                <p className="text-[15px] font-semibold text-gray-900">{labelFor(submitterTypeOptions, submitterType) || "Not provided"}</p>
+                <p className="text-[15px] font-semibold text-gray-900">{labelFor(submitterTypes, submitterType) || "Not provided"}</p>
               </div>
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Channel</p>
-                <p className="text-[15px] font-semibold text-gray-900">{labelFor(submissionChannelOptions, submissionChannel) || "Not provided"}</p>
+                <p className="text-[15px] font-semibold text-gray-900">{labelFor(submissionChannels, submissionChannel) || "Not provided"}</p>
               </div>
               {identityFields
                 .filter((field) => field.key !== "phoneCode")
@@ -105,11 +126,11 @@ export function ReviewAndSubmitCard({
                 })}
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Service Category</p>
-                <p className="text-[15px] font-semibold text-gray-900">{labelFor(serviceCategoryOptions, serviceCategory) || "Not provided"}</p>
+                <p className="text-[15px] font-semibold text-gray-900">{labelFor(serviceCategories, serviceCategory) || "Not provided"}</p>
               </div>
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Grievance Type</p>
-                <p className="text-[15px] font-semibold text-gray-900">{labelFor(grievanceTypeOptions, grievanceType) || "Not provided"}</p>
+                <p className="text-[15px] font-semibold text-gray-900">{labelFor(grievanceTypes, grievanceType) || "Not provided"}</p>
               </div>
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Location</p>

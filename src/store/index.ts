@@ -1,6 +1,7 @@
 import { performLogout } from '@/features/auth/logout';
 import { isProtectedRoute } from '@/features/auth/rbac';
 import { authReducer, getMeThunk } from '@/features/auth/store/authSlice';
+import { metadataReducer } from '@/features/metadata/store/metadataSlice';
 import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/toolkit';
 
 type AuthState = ReturnType<typeof authReducer>;
@@ -37,6 +38,7 @@ const sessionExpiryMiddleware: Middleware<object, { auth: AuthState }> = (api) =
 
     // Fire-and-forget: redirect regardless of whether the server-side revoke succeeds.
     void performLogout(api.dispatch, email).finally(() => {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Redux middleware runs outside React component tree, no router to call
       if (onProtectedRoute) window.location.href = '/login';
     });
   }
@@ -47,6 +49,7 @@ const sessionExpiryMiddleware: Middleware<object, { auth: AuthState }> = (api) =
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    metadata: metadataReducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sessionExpiryMiddleware),
 });

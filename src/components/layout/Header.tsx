@@ -5,7 +5,7 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { UserProfile } from "./UserProfile";
-import { LanguageSelector } from "./LanguageSelector";
+import { LanguageSelector } from "@/components/ui/LanguageSelector";
 
 export function Header() {
   const { toggleSidebar } = useSidebar();
@@ -30,7 +30,7 @@ export function Header() {
   const title = getPageTitle(pathname);
 
   return (
-    <header className="h-16 bg-white shadow-md flex items-center justify-between px-6 sticky top-0 z-10 w-full">
+    <header className="h-16 bg-white shadow-md flex items-center justify-between px-6 sticky top-0 z-30 w-full">
 
       {/* Left Section: Menu + Title */}
       <div className="flex items-center gap-4">

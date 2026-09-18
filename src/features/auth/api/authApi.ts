@@ -1,4 +1,5 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
+import { fetchApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import type { User } from '@/features/auth/store/authSlice';
 
@@ -7,6 +8,39 @@ interface LoginCredentials {
   pwd: string;
   rememberMe?: boolean;
 }
+
+export interface BackendAuthMeData {
+  user?: string;
+  login_email?: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  mobile_no?: string;
+  roles?: string[];
+  profiles?: {
+    grievance?: {
+      active?: number;
+      administrative_area?: string | null;
+      administrative_unit?: string | null;
+      contact_email?: string | null;
+      contact_mobile?: string | null;
+      fayda_id?: string | null;
+      full_name?: string | null;
+      identity_scheme?: string | null;
+      identity_value?: string | null;
+      is_blocked?: number;
+      preferred_language?: string | null;
+      profile_id?: string | null;
+      registration_number?: string | null;
+      role?: string | null;
+      type?: string | null;
+    };
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export type BackendAuthMeResponse = BackendAuthMeData | { data?: BackendAuthMeData; message?: string; status?: string };
 
 export async function loginUser({ usr, pwd, rememberMe = false }: LoginCredentials): Promise<User> {
   const res = await fetch('/api/auth/login', {
@@ -86,14 +120,35 @@ export async function sendHeartbeat(): Promise<void> {
   }
 }
 
-/** Restores the session from the httpOnly cookie. Throws if there is none. */
+/**
+ * Restores the user session from the backend /api/v1/auth/me endpoint via proxy.
+ * Only extracts needed profile and identity fields; discards unnecessary backend metadata/claims.
+ */
 export async function getMe(): Promise<User> {
-  const res = await fetch('/api/auth/me', { method: 'GET', credentials: 'include' });
-  const data = (await res.json().catch(() => ({}))) as { email?: string; roles?: string[]; message?: string };
+  const res = await fetchApi<BackendAuthMeResponse>('/api/v1/auth/me', { method: 'GET' });
+  const d: BackendAuthMeData | undefined = (res as { data?: BackendAuthMeData })?.data ?? (res as BackendAuthMeData);
 
-  if (!res.ok || !data.email || !data.roles) {
-    throw new Error(data.message || AUTH_MESSAGES.sessionExpired);
+  if (!d || (!d.user && !d.login_email && !d.full_name)) {
+    throw new Error(AUTH_MESSAGES.sessionExpired);
   }
 
-  return { email: data.email, roles: data.roles };
+  const grievanceProfile = d.profiles?.grievance;
+  const fullName = d.full_name || grievanceProfile?.full_name || d.login_email || d.user || 'User';
+  const email = d.login_email || d.user || '';
+  const type = grievanceProfile?.type || d.roles?.[0] || 'Grievance Submitter';
+
+  return {
+    email,
+    roles: d.roles || [],
+    full_name: fullName,
+    first_name: d.first_name || undefined,
+    last_name: d.last_name || undefined,
+    mobile_no: d.mobile_no || grievanceProfile?.contact_mobile || undefined,
+    type,
+    profile_id: grievanceProfile?.profile_id || undefined,
+    fayda_id: grievanceProfile?.fayda_id || undefined,
+    administrative_area: grievanceProfile?.administrative_area || undefined,
+    administrative_unit: grievanceProfile?.administrative_unit || undefined,
+    preferred_language: grievanceProfile?.preferred_language || undefined,
+  };
 }

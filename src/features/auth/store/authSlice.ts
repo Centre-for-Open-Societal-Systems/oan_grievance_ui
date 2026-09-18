@@ -4,9 +4,18 @@ import type { RootState } from '@/store';
 import { getMe, loginUser } from '@/features/auth/api/authApi';
 
 export interface User {
-  /** This backend's identifier — there is no separate display name. */
   email: string;
   roles: string[];
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  mobile_no?: string;
+  type?: string;
+  profile_id?: string;
+  fayda_id?: string;
+  administrative_area?: string;
+  administrative_unit?: string;
+  preferred_language?: string;
 }
 
 export type AuthStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
@@ -23,7 +32,12 @@ export const loginThunk = createAsyncThunk<
   { rejectValue: string }
 >('auth/login', async ({ usr, pwd, rememberMe = false }, { rejectWithValue }) => {
   try {
-    return await loginUser({ usr, pwd, rememberMe });
+    const basicUser = await loginUser({ usr, pwd, rememberMe });
+    try {
+      return await getMe();
+    } catch {
+      return basicUser;
+    }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : AUTH_MESSAGES.unexpected;
     return rejectWithValue(message);

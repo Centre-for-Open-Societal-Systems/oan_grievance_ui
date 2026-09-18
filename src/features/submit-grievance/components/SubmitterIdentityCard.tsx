@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FileEdit, Info, Save, ArrowRight } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchSubmitterOptionsThunk, selectSubmitterTypeOptions, selectSubmissionChannelOptions } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import { IndividualFarmerForm } from "@/components/submitter-identity/SI-IndividualFarmerForm";
 import { CooperativeFPOForm } from "@/components/submitter-identity/SI-CooperativeFPOForm";
 import { NGOForm } from "@/components/submitter-identity/SI-NGOForm";
 import { WoredaKebeleForm } from "@/components/submitter-identity/SI-WoredaKebeleForm";
 import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-DevelopmentAgentForm";
-import { getMissingRequiredFields, submitterTypeOptions, submissionChannelOptions } from "@/components/submitter-identity/fields";
+import { getMissingRequiredFields } from "@/components/submitter-identity/fields";
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
@@ -31,6 +33,17 @@ export function SubmitterIdentityCard({
   identityValues,
   setIdentityValue,
 }: SubmitterIdentityCardProps) {
+  const dispatch = useAppDispatch();
+  const dynamicSubmitterTypes = useAppSelector(selectSubmitterTypeOptions);
+  const dynamicSubmissionChannels = useAppSelector(selectSubmissionChannelOptions);
+  const submitterStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
+
+  useEffect(() => {
+    if (submitterStatus === "idle") {
+      void dispatch(fetchSubmitterOptionsThunk());
+    }
+  }, [dispatch, submitterStatus]);
+
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations("submitGrievance.identityStep");
 
@@ -78,7 +91,7 @@ export function SubmitterIdentityCard({
             </label>
             <AnimatedSelect
               id="submitter-type"
-              options={submitterTypeOptions}
+              options={dynamicSubmitterTypes}
               placeholder="Select Submitter Type"
               value={submitterType}
               onChange={setSubmitterType}
@@ -94,7 +107,7 @@ export function SubmitterIdentityCard({
             </label>
             <AnimatedSelect
               id="submission-channel"
-              options={submissionChannelOptions}
+              options={dynamicSubmissionChannels}
               placeholder="Select Submission Channel"
               value={submissionChannel}
               onChange={setSubmissionChannel}

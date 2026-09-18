@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { selectUser } from "@/features/auth/store/authSlice";
-import { loadSubmitterProfile } from "@/lib/submitterProfile";
+import { normalizeSubmitterType } from "@/features/metadata";
 import { useAppSelector } from "@/store/hooks";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
@@ -13,33 +13,37 @@ import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
 
 export default function SubmitGrievancePage() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-
-  // Pre-fills Step 1 from whatever submitter-identity info this user already
-  // gave at registration (see RegisterForm.tsx / submitterProfile.ts), so
-  // they aren't asked for the same details twice.
-  //
-  // Reading `user` straight into the `useState` initializers below (rather
-  // than syncing it in via an effect once session restore resolves) is safe
-  // here specifically because `AuthBootstrapGate` (src/app/providers.tsx)
+  // Pre-fills Step 1 from the signed-in user's profile (name, Fayda ID,
+  // phone, submitter type), so they aren't asked for the same details
+  // twice. Reading `user` straight into the `useState` initializers below
+  // (rather than syncing it in via an effect once session restore resolves)
+  // is safe specifically because `AuthBootstrapGate` (src/app/providers.tsx)
   // wraps the whole app and withholds every protected route's subtree —
   // this component included — until `getMeThunk` has already resolved and
   // `user` is already populated. This page never gets to mount with `user`
   // still null, so there's no null-then-resolves gap for a `useState`
-  // initializer to miss. Verified live: reverting to exactly this shape
-  // still prefills correctly on a direct navigation/refresh.
+  // initializer to miss. Verified live: this shape prefills correctly on a
+  // direct navigation/refresh, no extra re-sync-on-later-update effect needed.
   const user = useAppSelector(selectUser);
-  const userEmail = user?.email;
-  // Only recomputed when the signed-in email changes, not on every keystroke
-  // this page's own step-wizard state causes — its result feeds nothing but
-  // the two useState initializers just below.
-  const savedProfile = useMemo(() => (userEmail ? loadSubmitterProfile(userEmail) : null), [userEmail]);
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Step 1 — Submitter Identity
-  const [submitterType, setSubmitterType] = useState(savedProfile?.submitterType ?? "");
-  const [submissionChannel, setSubmissionChannel] = useState("");
-  const [identityValues, setIdentityValues] = useState<Record<string, string>>(savedProfile?.identityValues ?? {});
+  const [submitterType, setSubmitterType] = useState(() =>
+    user?.type ? normalizeSubmitterType(user.type) : ""
+  );
+  const [submissionChannel, setSubmissionChannel] = useState(() => (user ? "web" : ""));
+  const [identityValues, setIdentityValues] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    if (user) {
+      if (user.full_name) initial.fullName = user.full_name;
+      if (user.fayda_id) initial.faydaId = user.fayda_id;
+      if (user.mobile_no) initial.phoneNumber = user.mobile_no;
+      if (user.email) initial.email = user.email;
+    }
+    return initial;
+  });
 
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
@@ -59,6 +63,7 @@ export default function SubmitGrievancePage() {
   const [region, setRegion] = useState("");
   const [zone, setZone] = useState("");
   const [woreda, setWoreda] = useState("");
+  const [kebele, setKebele] = useState("");
   const [description, setDescription] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
@@ -79,6 +84,17 @@ export default function SubmitGrievancePage() {
   const handleReset = () => {
     setIsSubmitted(false);
     setCurrentStep(1);
+    setSubmitterType("");
+    setSubmissionChannel("");
+    setIdentityValues({});
+    setServiceCategory("");
+    setGrievanceType("");
+    setRegion("");
+    setZone("");
+    setWoreda("");
+    setKebele("");
+    setDescription("");
+    setUploadedFile(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -142,6 +158,8 @@ export default function SubmitGrievancePage() {
             setZone={setZone}
             woreda={woreda}
             setWoreda={setWoreda}
+            kebele={kebele}
+            setKebele={setKebele}
             description={description}
             setDescription={setDescription}
             uploadedFile={uploadedFile}
@@ -160,6 +178,7 @@ export default function SubmitGrievancePage() {
             region={region}
             zone={zone}
             woreda={woreda}
+            kebele={kebele}
             description={description}
             uploadedFile={uploadedFile}
           />

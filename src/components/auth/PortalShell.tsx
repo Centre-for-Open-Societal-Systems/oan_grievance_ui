@@ -1,5 +1,5 @@
 import { BackLink } from '@/components/auth/BackLink';
-import { LanguageSelector } from '@/components/auth/LanguageSelector';
+import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { LeftSidebar } from '@/components/auth/LeftSidebar';
 
 interface PortalShellProps {
