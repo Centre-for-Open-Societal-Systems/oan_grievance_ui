@@ -2,19 +2,24 @@
   "name": "grievance-management-portal",
   "version": "0.1.0",
   "private": true,
+  "//": "NOTE: package-lock.json is kept temporarily for backward compatibility with npm workflows. It will be removed later in favor of pnpm-lock.yaml.",
+  "packageManager": "pnpm@11.17.0",
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",
     "lucide-react": "^1.28.0",
-    "next": "16.2.12",
+    "next": "16.3.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-redux": "^9.3.0",
@@ -22,12 +27,17 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.3.5",
+    "eslint-plugin-boundaries": "^7.2.0",
+    "jsdom": "^30.0.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.1"
   }
 }

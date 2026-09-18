@@ -1,7 +1,8 @@
 import React from 'react';
 import { Layers, Hourglass, Loader2, Search, CheckCircle, XCircle } from 'lucide-react';
+import type { GrievanceMetrics } from '../hooks/useGrievanceMetrics';
 
-export function MetricCardsComponent({ metrics }: { metrics: Record<string, number> }) {
+export function MetricCardsComponent({ metrics }: { metrics: GrievanceMetrics }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <MetricCard title="All" count={metrics.all ?? 0} icon={<Layers className="text-blue-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />} bgColor="bg-blue-50" />

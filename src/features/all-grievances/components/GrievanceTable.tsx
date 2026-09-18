@@ -7,41 +7,31 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Eye,
-  Paperclip,
+  ArrowUpCircle,
   SlidersHorizontal,
   FileQuestion,
+  Loader2,
+  AlertCircle,
   X
 } from 'lucide-react';
-import { Grievance } from '../mockData';
+import type { Grievance } from '../types';
+import type { FilterOption } from './AdvancedFiltersSidebar';
 
-export const FILTER_OPTIONS = {
-  category: ['Input', 'Schemes', 'Payments', 'Markets', 'Infrastructure', 'Other'],
-  status: ['Assigned', 'Submitted', 'Pending Submit', 'In Progress', 'More Info Needed', 'Resolved', 'Rejected', 'Under Review'],
-  priority: ['Low', 'Medium', 'High', 'Critical'],
-};
-
-export interface TableFilters {
-  category: string[];
-  status: string[];
-  priority: string[];
-}
-
+/**
+ * Lifecycle statuses are configured backend-side, so this map is keyed by the labels we
+ * expect and falls back to neutral styling for anything new.
+ */
 const statusColors: Record<string, string> = {
   'Assigned': 'bg-blue-50 text-blue-600 border border-blue-200/60',
   'Submitted': 'bg-slate-50 text-slate-600 border border-slate-200/60',
   'Pending Submit': 'bg-amber-50 text-amber-700 border border-amber-200/60',
   'In Progress': 'bg-indigo-50 text-indigo-600 border border-indigo-200/60',
+  'Under Investigation': 'bg-indigo-50 text-indigo-600 border border-indigo-200/60',
   'More Info Needed': 'bg-orange-50 text-orange-700 border border-orange-200/60',
   'Resolved': 'bg-emerald-50 text-emerald-600 border border-emerald-200/60',
+  'Closed': 'bg-emerald-50 text-emerald-600 border border-emerald-200/60',
   'Rejected': 'bg-red-50 text-red-600 border border-red-200/60',
   'Under Review': 'bg-purple-50 text-purple-600 border border-purple-200/60',
-};
-
-const priorityColors: Record<string, string> = {
-  'Low': 'bg-slate-50 text-slate-600 border border-slate-200/60',
-  'Medium': 'bg-amber-50 text-amber-700 border border-amber-200/60',
-  'High': 'bg-orange-50 text-orange-700 border border-orange-200/60',
-  'Critical': 'bg-red-50 text-red-600 border border-red-200/60',
 };
 
 export function GrievanceTable({
@@ -53,10 +43,18 @@ export function GrievanceTable({
   setRowsPerPage,
   totalItems,
   totalPages,
-  paginatedGrievances,
+  grievances,
+  isLoading,
+  error,
+  onRetry,
   onOpenAdvancedFilters,
-  selectedFilters,
-  setSelectedFilters,
+  statusOptions,
+  categoryOptions,
+  selectedStatuses,
+  setSelectedStatuses,
+  selectedCategories,
+  setSelectedCategories,
+  onClearFilters,
   onViewGrievance
 }: {
   searchTerm: string;
@@ -67,10 +65,18 @@ export function GrievanceTable({
   setRowsPerPage: (rows: number) => void;
   totalItems: number;
   totalPages: number;
-  paginatedGrievances: Grievance[];
+  grievances: Grievance[];
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
   onOpenAdvancedFilters: () => void;
-  selectedFilters: TableFilters;
-  setSelectedFilters: (filters: TableFilters) => void;
+  statusOptions: FilterOption[];
+  categoryOptions: FilterOption[];
+  selectedStatuses: string[];
+  setSelectedStatuses: (values: string[]) => void;
+  selectedCategories: string[];
+  setSelectedCategories: (values: string[]) => void;
+  onClearFilters: () => void;
   onViewGrievance: (grievance: Grievance) => void;
 }) {
   const [openFilter, setOpenFilter] = React.useState<string | null>(null);
@@ -81,6 +87,9 @@ export function GrievanceTable({
     }
   };
 
+  const rangeStart = totalItems === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+  const rangeEnd = Math.min(currentPage * rowsPerPage, totalItems);
+
   return (
     <div className="bg-white flex flex-col flex-1 overflow-hidden border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl">
       {/* Toolbar */}
@@ -88,16 +97,17 @@ export function GrievanceTable({
         <div className="flex items-center gap-3">
           <h2 className="font-semibold text-gray-800 text-base">Grievance Records</h2>
           <span className="text-xs text-gray-500 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full">
-            Showing {totalItems === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, totalItems)} of {totalItems}
+            Showing {rangeStart}-{rangeEnd} of {totalItems}
           </span>
+          {isLoading && <Loader2 className="h-4 w-4 text-emerald-500 animate-spin" />}
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative w-full md:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
               type="text"
-              placeholder="Search by ID, title, submitter, grievance type, or r..."
-              className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              placeholder="Search by ticket ID, submitter, or grievance type..."
+              className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -127,9 +137,9 @@ export function GrievanceTable({
                   Category <Filter className={`h-4 w-4 transition-colors duration-300 ${openFilter === 'category' ? 'text-emerald-500' : 'text-gray-400 group-hover:text-emerald-500'}`} />
                 </div>
                 <FilterPopup
-                  options={FILTER_OPTIONS.category}
-                  selected={selectedFilters.category}
-                  onChange={(sel) => setSelectedFilters({ ...selectedFilters, category: sel })}
+                  options={categoryOptions}
+                  selected={selectedCategories}
+                  onChange={setSelectedCategories}
                   isOpen={openFilter === 'category'}
                   onClose={() => setOpenFilter(null)}
                 />
@@ -139,22 +149,10 @@ export function GrievanceTable({
                   Status <Filter className={`h-4 w-4 transition-colors duration-300 ${openFilter === 'status' ? 'text-emerald-500' : 'text-gray-400 group-hover:text-emerald-500'}`} />
                 </div>
                 <FilterPopup
-                  options={FILTER_OPTIONS.status}
-                  selected={selectedFilters.status}
-                  onChange={(sel) => setSelectedFilters({ ...selectedFilters, status: sel })}
+                  options={statusOptions}
+                  selected={selectedStatuses}
+                  onChange={setSelectedStatuses}
                   isOpen={openFilter === 'status'}
-                  onClose={() => setOpenFilter(null)}
-                />
-              </th>
-              <th className="px-6 py-3 cursor-pointer hover:text-gray-700 relative">
-                <div className="flex items-center gap-1.5 group" onClick={() => setOpenFilter(openFilter === 'priority' ? null : 'priority')}>
-                  Priority <Filter className={`h-4 w-4 transition-colors duration-300 ${openFilter === 'priority' ? 'text-emerald-500' : 'text-gray-400 group-hover:text-emerald-500'}`} />
-                </div>
-                <FilterPopup
-                  options={FILTER_OPTIONS.priority}
-                  selected={selectedFilters.priority}
-                  onChange={(sel) => setSelectedFilters({ ...selectedFilters, priority: sel })}
-                  isOpen={openFilter === 'priority'}
                   onClose={() => setOpenFilter(null)}
                 />
               </th>
@@ -163,8 +161,36 @@ export function GrievanceTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {paginatedGrievances.length > 0 ? (
-              paginatedGrievances.map((grievance: Grievance) => (
+            {error ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-24 text-center text-gray-500">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="bg-red-50 p-5 rounded-full flex items-center justify-center text-red-500 mb-6">
+                      <AlertCircle className="h-10 w-10" />
+                    </div>
+                    <p className="text-lg font-semibold text-gray-900">Could not load grievances</p>
+                    <p className="text-sm text-gray-500 mt-2 max-w-md text-center leading-relaxed">{error}</p>
+                    <button
+                      onClick={onRetry}
+                      className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all hover:shadow-sm"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ) : isLoading && grievances.length === 0 ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={`skeleton-${i}`} className="animate-pulse">
+                  {Array.from({ length: 6 }).map((__, cell) => (
+                    <td key={cell} className="px-6 py-5">
+                      <div className="h-3 bg-gray-100 rounded" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : grievances.length > 0 ? (
+              grievances.map((grievance: Grievance) => (
                 <tr key={grievance.id} className="hover:bg-gray-50/80 transition-colors group">
                   <td className="px-6 py-4 font-semibold text-gray-900 whitespace-nowrap">
                     {grievance.ticketId}
@@ -174,23 +200,20 @@ export function GrievanceTable({
                       <span className="font-semibold text-gray-900 line-clamp-1">{grievance.title}</span>
                       <span className="text-gray-500 text-xs line-clamp-1">{grievance.location}</span>
                       <span className="text-gray-500 text-xs line-clamp-1">{grievance.type}</span>
-                      <div className="flex items-center gap-1.5 text-gray-400 text-xs mt-0.5 font-medium">
-                        <Paperclip className="h-3 w-3" />
-                        <span>{grievance.responses} response{grievance.responses !== 1 ? 's' : ''}</span>
-                      </div>
+                      {grievance.escalated && (
+                        <div className="flex items-center gap-1.5 text-orange-600 text-xs mt-0.5 font-medium">
+                          <ArrowUpCircle className="h-3 w-3" />
+                          <span>Escalated</span>
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-700 font-medium whitespace-nowrap">
-                    {grievance.category}
+                    {grievance.category || '—'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-2 rounded-full text-sm font-semibold ${statusColors[grievance.status] || 'bg-gray-100 text-gray-700'}`}>
                       {grievance.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-2 rounded-full text-sm font-semibold ${priorityColors[grievance.priority] || 'bg-gray-100 text-gray-700'}`}>
-                      {grievance.priority}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-500 whitespace-nowrap text-xs font-medium">
@@ -209,7 +232,7 @@ export function GrievanceTable({
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="px-6 py-24 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-24 text-center text-gray-500">
                   <div className="flex flex-col items-center justify-center">
                     <div className="relative mb-6 mt-4">
                       <div className="absolute inset-0 bg-emerald-100 rounded-full animate-ping opacity-75"></div>
@@ -225,7 +248,7 @@ export function GrievanceTable({
                       We couldn&apos;t find any grievances matching your criteria right now. Try adjusting your filters or search query.
                     </p>
                     <button
-                      onClick={() => { setSearchTerm(''); setSelectedFilters({ category: [...FILTER_OPTIONS.category], status: [...FILTER_OPTIONS.status], priority: [...FILTER_OPTIONS.priority] }); setOpenFilter(null); }}
+                      onClick={() => { onClearFilters(); setOpenFilter(null); }}
                       className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all hover:shadow-sm"
                     >
                       <X className="h-4 w-4" />
@@ -264,7 +287,7 @@ export function GrievanceTable({
               </div>
             </div>
             <span>
-              Showing <span className="font-semibold text-gray-900">{totalItems === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, totalItems)}</span> of <span className="font-semibold text-gray-900">{totalItems}</span> results
+              Showing <span className="font-semibold text-gray-900">{rangeStart}-{rangeEnd}</span> of <span className="font-semibold text-gray-900">{totalItems}</span> results
             </span>
           </div>
 
@@ -375,7 +398,7 @@ function FilterPopup({
   isOpen,
   onClose,
 }: {
-  options: string[],
+  options: FilterOption[],
   selected: string[],
   onChange: (selected: string[]) => void,
   isOpen: boolean,
@@ -399,21 +422,14 @@ function FilterPopup({
 
   if (!isOpen) return null;
 
-  const isAllSelected = selected.length === options.length;
+  // Filtering is server-side: an empty selection means "no constraint", i.e. All.
+  const isAllSelected = selected.length === 0;
 
-  const handleToggleAll = (checked: boolean) => {
+  const handleToggleSingle = (value: string, checked: boolean) => {
     if (checked) {
-      onChange([...options]);
+      onChange([...selected, value]);
     } else {
-      onChange([]);
-    }
-  };
-
-  const handleToggleSingle = (option: string, checked: boolean) => {
-    if (checked) {
-      onChange([...selected, option]);
-    } else {
-      onChange(selected.filter(o => o !== option));
+      onChange(selected.filter(v => v !== value));
     }
   };
 
@@ -424,19 +440,25 @@ function FilterPopup({
       className="absolute z-10 mt-2 w-max pr-0 min-w-[160px] bg-white border border-gray-200 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] rounded-lg flex flex-col font-normal top-full left-6 overflow-hidden"
     >
       <div className="flex flex-col divide-y divide-gray-100">
-        <AnimatedCheckbox
-          label="All"
-          checked={isAllSelected}
-          onChange={handleToggleAll}
-        />
-        {options.map(option => (
-          <AnimatedCheckbox
-            key={option}
-            label={option}
-            checked={selected.includes(option)}
-            onChange={(checked) => handleToggleSingle(option, checked)}
-          />
-        ))}
+        {options.length === 0 ? (
+          <div className="px-4 py-4 text-sm text-gray-400 whitespace-nowrap">No options available</div>
+        ) : (
+          <>
+            <AnimatedCheckbox
+              label="All"
+              checked={isAllSelected}
+              onChange={() => onChange([])}
+            />
+            {options.map(option => (
+              <AnimatedCheckbox
+                key={option.value}
+                label={option.label}
+                checked={selected.includes(option.value)}
+                onChange={(checked) => handleToggleSingle(option.value, checked)}
+              />
+            ))}
+          </>
+        )}
       </div>
     </div>
   );

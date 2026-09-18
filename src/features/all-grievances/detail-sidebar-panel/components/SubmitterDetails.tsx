@@ -1,6 +1,6 @@
 import { User, Tag, Info, MapPin, Building, Calendar } from 'lucide-react';
 import Image from 'next/image';
-import { Grievance } from '../../mockData';
+import type { Grievance } from '../../types';
 
 interface SubmitterDetailsProps {
   grievance: Grievance;

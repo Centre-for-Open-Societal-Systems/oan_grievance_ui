@@ -8,22 +8,19 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 /**
- * The session-restore probe `AuthBootstrapGate` calls on mount.
+ * The session-restore probe AuthBootstrapGate calls on mount.
  *
- * oan_auth_service has no "get current user" endpoint — login/refresh are the
- * only two calls that ever tell this app who's signed in, and each returns
- * only what it just issued. So this route reads the claims back out of the
- * access-token cookie itself, refreshing first if it's expired (the cookie
- * carries the *session* lifetime, not the 15-minute access-token lifetime, so
- * an expired access token with a live refresh token is the common case, not
- * an edge case).
+ * Reads claims out of the access-token cookie itself, refreshing first if it's
+ * expired (the cookie carries the *session* lifetime, not the 15-minute
+ * access-token lifetime, so an expired access token with a live refresh token
+ * is the common case, not an edge case).
  */
 export async function GET(request: NextRequest) {
   const token = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
   const hasRefreshToken = !!request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
   const claims = token ? decodeAccessToken(token) : null;
 
-  // `proxy.ts` excludes `/api/*` from its matcher, so this is the only place
+  // proxy.ts excludes /api/* from its matcher, so this is the only place
   // a page that restores its session via this route ever gets checked for
   // idle expiry — a stale-but-technically-valid token pair must not restore
   // a session the user was actually idled out of.

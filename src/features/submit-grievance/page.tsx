@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { useAppSelector } from "@/store/hooks";
+import { selectUser } from "@/features/auth/store/authSlice";
+import { normalizeSubmitterType } from "@/features/metadata";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
@@ -10,13 +13,47 @@ import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
 
 export default function SubmitGrievancePage() {
+  const user = useAppSelector(selectUser);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // Step 1 — Submitter Identity
-  const [submitterType, setSubmitterType] = useState("");
-  const [submissionChannel, setSubmissionChannel] = useState("");
-  const [identityValues, setIdentityValues] = useState<Record<string, string>>({});
+  // Step 1 — Submitter Identity (auto-filled from logged-in user if available)
+  const [submitterType, setSubmitterType] = useState(() =>
+    user?.type ? normalizeSubmitterType(user.type) : ""
+  );
+  const [submissionChannel, setSubmissionChannel] = useState(() =>
+    user ? "web" : ""
+  );
+  const [identityValues, setIdentityValues] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    if (user) {
+      if (user.full_name) initial.fullName = user.full_name;
+      if (user.fayda_id) initial.faydaId = user.fayda_id;
+      if (user.mobile_no) initial.phoneNumber = user.mobile_no;
+      if (user.email) initial.email = user.email;
+    }
+    return initial;
+  });
+
+  // If user profile finishes loading asynchronously after initial mount, sync once during render
+  const [syncedUser, setSyncedUser] = useState(user);
+  if (user && user !== syncedUser) {
+    setSyncedUser(user);
+    if (!submitterType && user.type) {
+      setSubmitterType(normalizeSubmitterType(user.type));
+    }
+    if (!submissionChannel) {
+      setSubmissionChannel("web");
+    }
+    setIdentityValues((prev) => ({
+      ...prev,
+      fullName: prev.fullName || user.full_name || "",
+      faydaId: prev.faydaId || user.fayda_id || "",
+      phoneNumber: prev.phoneNumber || user.mobile_no || "",
+      email: prev.email || user.email || "",
+    }));
+  }
 
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
@@ -36,6 +73,7 @@ export default function SubmitGrievancePage() {
   const [region, setRegion] = useState("");
   const [zone, setZone] = useState("");
   const [woreda, setWoreda] = useState("");
+  const [kebele, setKebele] = useState("");
   const [description, setDescription] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
@@ -56,6 +94,17 @@ export default function SubmitGrievancePage() {
   const handleReset = () => {
     setIsSubmitted(false);
     setCurrentStep(1);
+    setSubmitterType("");
+    setSubmissionChannel("");
+    setIdentityValues({});
+    setServiceCategory("");
+    setGrievanceType("");
+    setRegion("");
+    setZone("");
+    setWoreda("");
+    setKebele("");
+    setDescription("");
+    setUploadedFile(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -119,6 +168,8 @@ export default function SubmitGrievancePage() {
             setZone={setZone}
             woreda={woreda}
             setWoreda={setWoreda}
+            kebele={kebele}
+            setKebele={setKebele}
             description={description}
             setDescription={setDescription}
             uploadedFile={uploadedFile}
@@ -137,6 +188,7 @@ export default function SubmitGrievancePage() {
             region={region}
             zone={zone}
             woreda={woreda}
+            kebele={kebele}
             description={description}
             uploadedFile={uploadedFile}
           />
