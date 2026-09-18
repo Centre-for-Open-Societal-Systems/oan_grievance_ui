@@ -31,7 +31,11 @@ function buildCsp(nonce: string): string {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
     `style-src 'self' 'unsafe-inline'`,
     // i.pravatar.cc: the placeholder submitter avatar in SubmitterDetails.tsx.
-    `img-src 'self' data: https://i.pravatar.cc`,
+    // blob: the client-side preview of a just-picked file in
+    // GrievanceDetailsCard (URL.createObjectURL on the local File, before
+    // it's ever uploaded) — without it the browser blocks its own object
+    // URL and the preview modal shows nothing.
+    `img-src 'self' data: blob: https://i.pravatar.cc`,
     `font-src 'self'`,
     `connect-src 'self'`,
     `object-src 'none'`,

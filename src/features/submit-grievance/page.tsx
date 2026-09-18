@@ -106,12 +106,22 @@ export default function SubmitGrievancePage() {
   const [kebele, setKebele] = useState("");
   const [description, setDescription] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  // An attachment the resumed draft already had, if any — see
+  // GrievanceDetailsCard's `initialAttachment` prop for why this has to
+  // come from our own saved `payload` rather than the draft response's own
+  // (structurally broken) attachment list.
+  const [initialAttachment, setInitialAttachment] = useState<{
+    attachmentId: string;
+    fileName: string;
+    scanStatus: string;
+  } | null>(null);
 
   // Resume the caller's saved draft, if one exists, once on mount. Only
-  // `payload` (Step 2's fields) round-trips through the draft today —
-  // Step 1 stays prefilled from the live user profile above, same as
-  // always. A 404 here just means there's no draft yet, the ordinary case
-  // for anyone starting fresh; only unexpected failures are logged.
+  // `payload` (Step 2's fields, plus whichever attachment was last
+  // uploaded) round-trips through the draft today — Step 1 stays prefilled
+  // from the live user profile above, same as always. A 404 here just
+  // means there's no draft yet, the ordinary case for anyone starting
+  // fresh; only unexpected failures are logged.
   useEffect(() => {
     let cancelled = false;
     loadDraft()
@@ -126,6 +136,17 @@ export default function SubmitGrievancePage() {
         if (typeof payload.woreda === "string") setWoreda(payload.woreda);
         if (typeof payload.kebele === "string") setKebele(payload.kebele);
         if (typeof payload.description === "string") setDescription(payload.description);
+        if (
+          typeof payload.attachmentId === "string" &&
+          typeof payload.attachmentFileName === "string" &&
+          typeof payload.scanStatus === "string"
+        ) {
+          setInitialAttachment({
+            attachmentId: payload.attachmentId,
+            fileName: payload.attachmentFileName,
+            scanStatus: payload.scanStatus,
+          });
+        }
         if (draft.step_reached >= 2) setCurrentStep(2);
         setResumedDraft(true);
       })
@@ -250,6 +271,7 @@ export default function SubmitGrievancePage() {
             setDescription={setDescription}
             uploadedFile={uploadedFile}
             setUploadedFile={setUploadedFile}
+            initialAttachment={initialAttachment}
           />
         )}
         {currentStep === 3 && (

@@ -47,6 +47,16 @@ interface GrievanceDetailsCardProps {
   setDescription: (value: string) => void;
   uploadedFile: File | null;
   setUploadedFile: (file: File | null) => void;
+  /**
+   * An attachment already on the resumed draft — the backend has no way to
+   * report this itself (`draft.load`'s own attachment list can't see it:
+   * uploaded files are attached to the Grievance Attachment doc, not
+   * directly to the Grievance Draft, so its query never matches), so
+   * page.tsx recovers it from the same `payload` this component saves its
+   * own fields into. There's no local `File` blob for it (nothing survives
+   * a reload), so it can't be previewed — only shown and removed.
+   */
+  initialAttachment?: { attachmentId: string; fileName: string; scanStatus: string } | null;
 }
 
 export function GrievanceDetailsCard({
@@ -69,6 +79,7 @@ export function GrievanceDetailsCard({
   setDescription,
   uploadedFile,
   setUploadedFile,
+  initialAttachment,
 }: GrievanceDetailsCardProps) {
   const t = useTranslations("submitGrievance.detailsStep");
   const dispatch = useAppDispatch();
@@ -163,8 +174,15 @@ export function GrievanceDetailsCard({
   // is in flight / failed). `scanStatus` mirrors the backend's verdict
   // (Pending/Clean/Infected) rather than the earlier hardcoded placeholder
   // text, since the file isn't actually servable until it comes back Clean.
-  const [attachmentId, setAttachmentId] = useState<string | null>(null);
-  const [scanStatus, setScanStatus] = useState<string | null>(null);
+  // Seeded from `initialAttachment` when resuming a draft that already had
+  // one — see that prop's doc comment for why the backend can't tell us
+  // this itself.
+  const [attachmentId, setAttachmentId] = useState<string | null>(initialAttachment?.attachmentId ?? null);
+  const [scanStatus, setScanStatus] = useState<string | null>(initialAttachment?.scanStatus ?? null);
+  // Only set for a resumed attachment with no local `File` blob to read a
+  // name off of (see `displayFileName` below, where this loses to
+  // `uploadedFile.name` the moment a real file is picked).
+  const [resumedFileName, setResumedFileName] = useState<string | null>(initialAttachment?.fileName ?? null);
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "error">("idle");
   // `submit_document` with a `client_uuid` requires the Grievance Draft to
   // already exist server-side — this fires once, right before the first
@@ -191,11 +209,19 @@ export function GrievanceDetailsCard({
   }, [uploadedFile]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Shared by the explicit Save Draft button and the implicit ensure-before-
-  // first-upload save below — both need the same current-field snapshot, so
-  // whichever fires first doesn't overwrite the other's (or a resumed
-  // draft's) data with an empty payload.
-  const currentDraftPayload = () => ({
+  // Shared by the explicit Save Draft button, the implicit ensure-before-
+  // first-upload save, and the auto-save right after a successful upload —
+  // all three need the same current-field snapshot, so whichever fires
+  // doesn't overwrite one of the others' (or a resumed draft's) data with a
+  // stale or empty payload. `attachmentOverride` is for the post-upload
+  // save specifically: `result`/`file` there are fresher than this render's
+  // `attachmentId`/`uploadedFile` closure, since the state setters that would
+  // update them haven't necessarily re-rendered yet.
+  const currentDraftPayload = (attachmentOverride?: {
+    attachmentId: string | null;
+    fileName: string | null;
+    scanStatus: string | null;
+  }) => ({
     serviceCategory,
     grievanceType,
     region,
@@ -203,6 +229,9 @@ export function GrievanceDetailsCard({
     woreda,
     kebele,
     description,
+    attachmentId: attachmentOverride ? attachmentOverride.attachmentId : attachmentId,
+    attachmentFileName: attachmentOverride ? attachmentOverride.fileName : (uploadedFile?.name ?? resumedFileName),
+    scanStatus: attachmentOverride ? attachmentOverride.scanStatus : scanStatus,
   });
 
   const handleSaveDraft = async () => {
@@ -245,6 +274,7 @@ export function GrievanceDetailsCard({
     setUploadedFile(file);
     setAttachmentId(null);
     setScanStatus(null);
+    setResumedFileName(null);
     setUploadState("uploading");
     setError(null);
 
@@ -258,6 +288,19 @@ export function GrievanceDetailsCard({
       setAttachmentId(result.attachment);
       setScanStatus(result.scan_status);
       setUploadState("idle");
+
+      // Persist the attachment's identity onto the draft right away, not
+      // only when the user separately clicks Save Draft — otherwise
+      // reloading right after an upload (the common case) would resume the
+      // form fields but "forget" the file was ever attached.
+      draftEnsuredRef.current = true;
+      saveDraft(
+        clientUuid,
+        currentDraftPayload({ attachmentId: result.attachment, fileName: file.name, scanStatus: result.scan_status }),
+        2
+      ).catch((saveError) => {
+        logger.error("Failed to persist the attachment onto the draft:", saveError);
+      });
     } catch (uploadError) {
       setUploadState("error");
       setUploadedFile(null);
@@ -276,6 +319,7 @@ export function GrievanceDetailsCard({
     setUploadedFile(null);
     setAttachmentId(null);
     setScanStatus(null);
+    setResumedFileName(null);
     setUploadState("idle");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -288,6 +332,14 @@ export function GrievanceDetailsCard({
       });
     }
   };
+
+  // What to show in the "already uploaded" card — the real file for a
+  // just-picked upload, or the resumed draft's remembered name once there's
+  // no local blob to read one off. `uploadedFile` wins on overlap: it's
+  // only ever set by picking a fresh file, which `handleFileChange` already
+  // clears `resumedFileName` for.
+  const displayFileName = uploadedFile?.name ?? resumedFileName;
+  const hasLocalPreview = uploadedFile !== null;
 
   return (
     <>
@@ -494,7 +546,7 @@ export function GrievanceDetailsCard({
             <label className="block text-sm font-semibold text-gray-800 mb-2">
               Supporting Documents / Evidence
             </label>
-            {!uploadedFile && (
+            {!displayFileName && (
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full bg-[#F9FAFB] border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-[#f0fcf3] transition-colors cursor-pointer"
@@ -523,7 +575,7 @@ export function GrievanceDetailsCard({
             />
 
             {/* Uploaded File */}
-            {uploadedFile && (
+            {displayFileName && (
               <div className="flex items-center justify-between bg-[#F0FDF4] hover:bg-[#e5fbeb] border border-green-300 p-4 rounded-xl mt-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-[#D1FAE5] rounded-xl flex items-center justify-center">
@@ -535,7 +587,7 @@ export function GrievanceDetailsCard({
                   </div>
                   <div>
                     <p className="text-[15px] font-bold text-gray-900 leading-snug">
-                      {uploadedFile.name}
+                      {displayFileName}
                     </p>
                     <div className="flex items-center gap-1.5 mt-0.5 text-[13px] font-medium">
                       {uploadState === "uploading" ? (
@@ -565,7 +617,8 @@ export function GrievanceDetailsCard({
                       e.stopPropagation();
                       setIsPreviewOpen(true);
                     }}
-                    disabled={uploadState === "uploading"}
+                    disabled={uploadState === "uploading" || !hasLocalPreview}
+                    title={!hasLocalPreview ? "Preview isn't available after a reload — only for a file you just picked" : undefined}
                     className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Eye className="w-5 h-5 text-blue-500" />
