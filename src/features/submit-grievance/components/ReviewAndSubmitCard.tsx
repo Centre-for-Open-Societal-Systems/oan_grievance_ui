@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff } from "lucide-react";
-import { SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
+import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import { useAppSelector } from "@/store/hooks";
 import {
   selectGrievanceTypeOptions,
@@ -36,6 +36,20 @@ function labelFor(options: { value: string; label: string }[], value: string): s
   );
 }
 
+/**
+ * `phoneNumber` isn't always the bare local digits `phoneCode` is meant to
+ * prefix — for a signed-in user it's seeded straight from `user.mobile_no`
+ * (see page.tsx), already in full E.164 form, with `phoneCode` never set at
+ * all. Blindly prepending `phoneCode || "+251"` to that would double up
+ * the country code ("+251 +251912345678"). Prepending only when the value
+ * isn't already in international form covers both shapes correctly.
+ */
+function formatPhoneForDisplay(phoneNumber: string | undefined, phoneCode: string | undefined): string {
+  if (!phoneNumber) return "";
+  if (phoneNumber.startsWith("+")) return phoneNumber;
+  return `${phoneCode || "+251"} ${phoneNumber}`;
+}
+
 export function ReviewAndSubmitCard({
   onBack,
   onSubmit,
@@ -54,15 +68,13 @@ export function ReviewAndSubmitCard({
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
   const displayFileName = uploadedFile?.name ?? attachmentFileName;
-  // Same national-ID field set submitterProfile.ts treats as sensitive
-  // (SENSITIVE_FIELD_KEYS's old name, before that stripping was removed) —
-  // masked here by default too, same reveal-on-explicit-action pattern as
-  // SIMaskedIdField and the Profile page's MaskedField. Without this, a
-  // value that only reaches this screen via the localStorage-persisted
-  // submitter profile (representativeFaydaId/officialFaydaId have no other
-  // source) would show up in cleartext on a review screen the user never
-  // typed it into this session.
-  const ID_FIELD_KEYS = ["faydaId", "representativeFaydaId", "officialFaydaId"];
+  // Same national-ID field set fields.ts validates as a Fayda ID (imported
+  // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
+  // action pattern as SIMaskedIdField and the Profile page's MaskedField.
+  // Without this, a value that only reaches this screen via the
+  // localStorage-persisted submitter profile (representativeFaydaId/
+  // officialFaydaId have no other source) would show up in cleartext on a
+  // review screen the user never typed it into this session.
   const [revealedIdFields, setRevealedIdFields] = useState<Set<string>>(new Set());
   const toggleReveal = (key: string) =>
     setRevealedIdFields((prev) => {
@@ -136,7 +148,7 @@ export function ReviewAndSubmitCard({
                 .filter((field) => field.key !== "phoneCode")
                 .map((field) => {
                   const value = field.key === "phoneNumber"
-                    ? (identityValues.phoneNumber ? `${identityValues.phoneCode || "+251"} ${identityValues.phoneNumber}` : "")
+                    ? formatPhoneForDisplay(identityValues.phoneNumber, identityValues.phoneCode)
                     : identityValues[field.key] || "";
                   const isIdField = ID_FIELD_KEYS.includes(field.key);
                   const revealed = revealedIdFields.has(field.key);

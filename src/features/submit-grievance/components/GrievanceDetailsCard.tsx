@@ -185,6 +185,14 @@ export function GrievanceDetailsCard({
   // hardcoded placeholder text, since the file isn't actually servable
   // until it comes back Clean.
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "error">("idle");
+  // Separate from `uploadState`: gates only the Remove button, for the
+  // brief extra window between the upload itself finishing and its
+  // attachment-identity persisted onto the draft (see handleFileChange).
+  // Kept apart from `uploadState` rather than folding into it, so Preview
+  // and the "Uploaded · scan clean/pending" status — both already correct
+  // the instant the upload itself resolves — don't sit showing "Uploading…"
+  // for a round-trip they have no reason to wait on.
+  const [persistingAttachment, setPersistingAttachment] = useState(false);
   // `submit_document` with a `client_uuid` requires the Grievance Draft to
   // already exist server-side — this fires once, right before the first
   // upload, rather than on every file selection.
@@ -329,18 +337,23 @@ export function GrievanceDetailsCard({
       const result = await uploadAttachment({ file, clientUuid });
       setAttachmentId(result.attachment);
       setScanStatus(result.scan_status);
+      // The upload itself is done — Preview and the scan-status line are
+      // already correct, so let them stop showing "Uploading…" now instead
+      // of waiting on the persist-save below too.
+      setUploadState("idle");
 
       // Persist the attachment's identity onto the draft right away, not
       // only when the user separately clicks Save Draft — otherwise
       // reloading right after an upload (the common case) would resume the
       // form fields but "forget" the file was ever attached. Awaited
-      // (uploadState stays "uploading", keeping Remove disabled) rather
-      // than fire-and-forget: Remove issues its own saveDraft to clear the
-      // attachment, and if that resolved before this one, this call's
-      // later-arriving response would silently re-establish the pointer
-      // the user just removed. Sequencing the two removes the race instead
-      // of trying to win it.
+      // (persistingAttachment stays true, keeping only Remove disabled)
+      // rather than fire-and-forget: Remove issues its own saveDraft to
+      // clear the attachment, and if that resolved before this one, this
+      // call's later-arriving response would silently re-establish the
+      // pointer the user just removed. Sequencing the two removes the race
+      // instead of trying to win it.
       draftEnsuredRef.current = true;
+      setPersistingAttachment(true);
       try {
         await saveDraft(
           clientUuid,
@@ -349,8 +362,9 @@ export function GrievanceDetailsCard({
         );
       } catch (saveError) {
         logger.error("Failed to persist the attachment onto the draft:", saveError);
+      } finally {
+        setPersistingAttachment(false);
       }
-      setUploadState("idle");
     } catch (uploadError) {
       setUploadState("error");
       setUploadedFile(null);
@@ -709,8 +723,12 @@ export function GrievanceDetailsCard({
                   </button>
                   <button
                     onClick={handleRemoveFile}
-                    disabled={uploadState === "uploading"}
-                    title={uploadState === "uploading" ? "Wait for the upload to finish before removing it" : undefined}
+                    disabled={uploadState === "uploading" || persistingAttachment}
+                    title={
+                      uploadState === "uploading" || persistingAttachment
+                        ? "Wait for the upload to finish before removing it"
+                        : undefined
+                    }
                     className="p-2.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-5 h-5 text-red-500" />

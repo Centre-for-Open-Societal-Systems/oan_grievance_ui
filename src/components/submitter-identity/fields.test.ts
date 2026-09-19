@@ -63,10 +63,15 @@ describe('getFieldFormatErrors', () => {
 
   it('also accepts phoneNumber in E.164 form, the shape a live account prefills it in', () => {
     // Submit Grievance Step 1 seeds phoneNumber straight from user.mobile_no
-    // (e.g. "+251912345678") for a signed-in user - rejecting that shape
-    // would block every returning user on a field they never typed.
+    // for a signed-in user - rejecting that shape would block every
+    // returning user on a field they never typed. Deliberately not pinned
+    // to exactly 9 digits after +251: authApi.test.ts's own fixture for a
+    // real getMe() response is "+2519344012394" (10 digits after +251) -
+    // an earlier, stricter version of this check rejected that exact,
+    // real, already-valid value.
     expect(getFieldFormatErrors('individual', { phoneNumber: '+251912345678' })).toEqual([]);
-    expect(getFieldFormatErrors('individual', { phoneNumber: '+25191234' }).length).toBe(1);
+    expect(getFieldFormatErrors('individual', { phoneNumber: '+2519344012394' })).toEqual([]);
+    expect(getFieldFormatErrors('individual', { phoneNumber: '+1234' }).length).toBe(1);
   });
 
   it('skips an empty optional field rather than reporting it as invalid', () => {

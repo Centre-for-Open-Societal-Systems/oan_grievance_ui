@@ -71,7 +71,12 @@ const REGISTRATION_PATTERN = /^(?=.{3,60}$)[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*$/;
 // these fields render as type="text" (see SI-*Form.tsx).
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const ID_FIELD_KEYS = ["faydaId", "representativeFaydaId", "officialFaydaId"];
+/**
+ * Exported so ReviewAndSubmitCard.tsx's masked-display logic checks the same
+ * field set this module validates as a Fayda ID, rather than keeping its own
+ * copy that could drift from this one.
+ */
+export const ID_FIELD_KEYS = ["faydaId", "representativeFaydaId", "officialFaydaId"];
 
 /**
  * Labels of fields whose *value* (not presence — see `getMissingRequiredFields`
