@@ -6,6 +6,7 @@ import { selectUser } from "@/features/auth/store/authSlice";
 import { normalizeSubmitterType } from "@/features/metadata";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
 import { loadDraft } from "@/lib/drafts";
+import { SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
 import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
 import { useAppSelector } from "@/store/hooks";
@@ -114,7 +115,7 @@ export default function SubmitGrievancePage() {
   // including for a resumed draft's attachment, which has no local `File`
   // blob to read a name off.
   const [attachmentId, setAttachmentId] = useState<string | null>(null);
-  const [scanStatus, setScanStatus] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
   const [attachmentFileName, setAttachmentFileName] = useState<string | null>(null);
 
   // Guards every draft-dependent action (uploading, saving) until the
@@ -145,14 +146,16 @@ export default function SubmitGrievancePage() {
         if (typeof payload.woreda === "string") setWoreda(payload.woreda);
         if (typeof payload.kebele === "string") setKebele(payload.kebele);
         if (typeof payload.description === "string") setDescription(payload.description);
+        const validScanStatuses: string[] = Object.values(SCAN_STATUS);
         if (
           typeof payload.attachmentId === "string" &&
           typeof payload.attachmentFileName === "string" &&
-          typeof payload.scanStatus === "string"
+          typeof payload.scanStatus === "string" &&
+          validScanStatuses.includes(payload.scanStatus)
         ) {
           setAttachmentId(payload.attachmentId);
           setAttachmentFileName(payload.attachmentFileName);
-          setScanStatus(payload.scanStatus);
+          setScanStatus(payload.scanStatus as ScanStatus);
         }
         if (draft.step_reached >= 2) setCurrentStep(2);
         setResumedDraft(true);

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { getFullProfile, type BackendAuthMeData } from "@/features/auth/api/authApi";
 import { logger } from "@/lib/logger";
-import { UserCircle, Loader2, AlertTriangle, Info } from "lucide-react";
+import { UserCircle, Loader2, AlertTriangle, Info, Eye, EyeOff } from "lucide-react";
 
 function initialsFor(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -18,13 +18,58 @@ function displayValue(value: string | null | undefined): string {
   return value && value.trim() ? value : "Not provided";
 }
 
+// readOnly, not disabled: a disabled input is pulled out of the tab order
+// and inconsistently announced by screen readers, so it makes the entire
+// section unreachable by keyboard. readOnly keeps it focusable and
+// selectable (for copying a value out) while still refusing edits.
 const lockedFieldClass = "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600";
 
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
+  const id = useId();
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-900 mb-1.5">{label}</label>
-      <input type="text" value={displayValue(value)} disabled className={lockedFieldClass} />
+      <label htmlFor={id} className="block text-sm font-medium text-gray-900 mb-1.5">{label}</label>
+      <input id={id} type="text" value={displayValue(value)} readOnly className={lockedFieldClass} />
+    </div>
+  );
+}
+
+/**
+ * Same masked-by-default + explicit-reveal treatment `SIMaskedIdField` gives
+ * a Fayda ID at registration — a government ID number gets the same
+ * shoulder-surfing/screen-share protection a password does, here too, not
+ * plaintext on first paint just because this instance is read-only rather
+ * than editable. Only Fayda ID gets this: registration_number (an
+ * organisation's registration, not a person's national ID) was never
+ * treated as sensitive at registration either — see SI-CooperativeFPOForm.tsx,
+ * a plain input, not SIMaskedIdField.
+ */
+function MaskedField({ label, value }: { label: string; value: string | null | undefined }) {
+  const id = useId();
+  const [revealed, setRevealed] = useState(false);
+  const hasValue = Boolean(value && value.trim());
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-gray-900 mb-1.5">{label}</label>
+      <div className="relative">
+        <input
+          id={id}
+          type={revealed ? "text" : "password"}
+          value={displayValue(value)}
+          readOnly
+          className={`${lockedFieldClass} pr-10`}
+        />
+        {hasValue && (
+          <button
+            type="button"
+            onClick={() => setRevealed((prev) => !prev)}
+            aria-label={revealed ? `Hide ${label}` : `Show ${label}`}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            {revealed ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -71,14 +116,14 @@ export default function ProfilePage() {
       </div>
 
       {status === "loading" && (
-        <div className="bg-white rounded-xl border border-[#F1F3F4] shadow-sm p-8 flex flex-col items-center justify-center">
+        <div role="status" className="bg-white rounded-xl border border-[#F1F3F4] shadow-sm p-8 flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-[#0b8535] animate-spin mb-4" />
           <p className="text-gray-500 text-sm">Loading profile…</p>
         </div>
       )}
 
       {status === "error" && (
-        <div className="bg-white rounded-xl border border-[#F1F3F4] shadow-sm p-6 flex items-center gap-3 text-red-600 text-sm">
+        <div role="alert" className="bg-white rounded-xl border border-[#F1F3F4] shadow-sm p-6 flex items-center gap-3 text-red-600 text-sm">
           <AlertTriangle className="w-5 h-5 shrink-0" />
           Could not load your profile right now.
         </div>
@@ -124,7 +169,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <Field label="Account Type" value={grievanceProfile.type} />
                 <Field label="Role" value={grievanceProfile.role} />
-                {grievanceProfile.fayda_id && <Field label="Fayda ID" value={grievanceProfile.fayda_id} />}
+                {grievanceProfile.fayda_id && <MaskedField label="Fayda ID" value={grievanceProfile.fayda_id} />}
                 {grievanceProfile.registration_number && (
                   <Field label="Registration Number" value={grievanceProfile.registration_number} />
                 )}

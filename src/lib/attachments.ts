@@ -15,6 +15,22 @@ import { ApiError } from '@/lib/api/fetchApi';
 // aborting a request the backend would otherwise have accepted.
 const UPLOAD_TIMEOUT_MS = 60_000;
 
+/**
+ * Mirrors the backend's Grievance Attachment `scan_status` field exactly
+ * (SCAN_PENDING/SCAN_CLEAN in grievance_attachment.py) — a shared constant
+ * instead of the "Clean"/"Infected" literals this codebase used to repeat
+ * across three files, so a future casing change on the backend is a type
+ * error here instead of silently disabling every scan-status check that
+ * compared against the old spelling.
+ */
+export const SCAN_STATUS = {
+  PENDING: 'Pending',
+  CLEAN: 'Clean',
+  INFECTED: 'Infected',
+} as const;
+
+export type ScanStatus = (typeof SCAN_STATUS)[keyof typeof SCAN_STATUS];
+
 export interface AttachmentRow {
   name: string;
   file_name: string;
@@ -22,7 +38,7 @@ export interface AttachmentRow {
   size_bytes: number;
   document_type: string | null;
   response: string | null;
-  scan_status: string;
+  scan_status: ScanStatus;
   scanned_at: string | null;
   uploaded_by_user: string | null;
   uploaded_by_submitter: string | null;
@@ -37,8 +53,8 @@ export interface UploadAttachmentResult {
   mime_type: string;
   size_bytes: number;
   checksum_sha256: string;
-  /** Always "Pending" fresh off upload — no `file_url` comes back until a scanner clears it (see `download`). */
-  scan_status: string;
+  /** Always Pending fresh off upload — no `file_url` comes back until a scanner clears it (see `download`). */
+  scan_status: ScanStatus;
 }
 
 export interface AttachmentDownloadInfo {

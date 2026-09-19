@@ -11,6 +11,7 @@ import { FIELDS as NGO_FIELDS } from "./SI-NGOForm";
 import { FIELDS as WOREDA_KEBELE_FIELDS } from "./SI-WoredaKebeleForm";
 import { FIELDS as DEVELOPMENT_AGENT_FIELDS } from "./SI-DevelopmentAgentForm";
 import type { SIFieldMeta } from "./SI-types";
+import { PHONE_NUMBER_REGEX } from "@/lib/validation/phone";
 
 /** Which field set applies to each submitter type. */
 export const SI_FIELDS_BY_TYPE: Record<string, SIFieldMeta[]> = {
@@ -95,6 +96,8 @@ export function getFieldFormatErrors(
       errors.push(`${field.label} (3-60 letters/numbers, hyphens or slashes allowed between)`);
     } else if (field.key === "email" && !EMAIL_PATTERN.test(value)) {
       errors.push(`${field.label} (not a valid email address)`);
+    } else if (field.key === "phoneNumber" && !PHONE_NUMBER_REGEX.test(value)) {
+      errors.push(`${field.label} (10 digits, e.g. 0912345678)`);
     }
   }
   return errors;

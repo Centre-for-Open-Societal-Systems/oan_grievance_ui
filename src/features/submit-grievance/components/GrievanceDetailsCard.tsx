@@ -23,7 +23,7 @@ import {
   findWoredaNode,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
-import { uploadAttachment } from "@/lib/attachments";
+import { uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
 import { saveDraft } from "@/lib/drafts";
 import { logger } from "@/lib/logger";
 
@@ -58,8 +58,8 @@ interface GrievanceDetailsCardProps {
   // blob to read a name off or preview.
   attachmentId: string | null;
   setAttachmentId: (id: string | null) => void;
-  scanStatus: string | null;
-  setScanStatus: (status: string | null) => void;
+  scanStatus: ScanStatus | null;
+  setScanStatus: (status: ScanStatus | null) => void;
   attachmentFileName: string | null;
   setAttachmentFileName: (name: string | null) => void;
 }
@@ -210,6 +210,29 @@ export function GrievanceDetailsCard({
   }, [uploadedFile]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // "Saved"/"Retry Save" is a snapshot of the save that already happened —
+  // without this, editing a field right after a successful save leaves the
+  // button reading "Saved" indefinitely while the new edit sits unsaved,
+  // telling the user something true about the past and false about the
+  // present. Adjusted during render rather than in an effect (React's own
+  // recommended pattern for "reset state when an input changes" —
+  // https://react.dev/learn/you-might-not-need-an-effect — an effect here
+  // would just cause an extra render pass to do the same thing) by
+  // comparing against a snapshot of the last render's tracked fields. Only
+  // resets away from a settled state (saved/error); doesn't touch "saving"
+  // itself. `attachmentFileName`, not `attachmentId`/`scanStatus`, is the
+  // attachment signal here — it changes exactly when a file is picked,
+  // removed, or the draft resumes one, without also firing mid-upload as
+  // `scanStatus` transitioning Pending -> Clean would.
+  const draftPayloadSnapshot = JSON.stringify([
+    serviceCategory, grievanceType, region, zone, woreda, kebele, description, attachmentFileName,
+  ]);
+  const [lastDraftPayloadSnapshot, setLastDraftPayloadSnapshot] = useState(draftPayloadSnapshot);
+  if (draftPayloadSnapshot !== lastDraftPayloadSnapshot) {
+    setLastDraftPayloadSnapshot(draftPayloadSnapshot);
+    if (draftSaveState === "saved" || draftSaveState === "error") setDraftSaveState("idle");
+  }
+
   // Shared by the explicit Save Draft button, the implicit ensure-before-
   // first-upload save, and the auto-save right after a successful upload —
   // all three need the same current-field snapshot, so whichever fires
@@ -221,7 +244,7 @@ export function GrievanceDetailsCard({
   const currentDraftPayload = (attachmentOverride?: {
     attachmentId: string | null;
     fileName: string | null;
-    scanStatus: string | null;
+    scanStatus: ScanStatus | null;
   }) => ({
     serviceCategory,
     grievanceType,
@@ -270,7 +293,7 @@ export function GrievanceDetailsCard({
       setError(t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count: description.trim().length }));
       return;
     }
-    if (scanStatus === "Infected") {
+    if (scanStatus === SCAN_STATUS.INFECTED) {
       setError("Remove the attachment that failed the malware scan before continuing.");
       return;
     }
@@ -322,6 +345,16 @@ export function GrievanceDetailsCard({
           ? uploadError.message
           : "Could not upload the file. Please try again."
       );
+      // The draft may already record a previous successful attachment (or
+      // the empty-payload ensure-save above may have just run) — either
+      // way, local state just went back to "no attachment," so the draft
+      // needs to say the same thing, not keep pointing at something the UI
+      // no longer shows.
+      saveDraft(clientUuid, currentDraftPayload({ attachmentId: null, fileName: null, scanStatus: null }), 2).catch(
+        (saveError) => {
+          logger.error("Failed to clear the failed-upload attachment from the draft:", saveError);
+        }
+      );
     }
   };
 
@@ -352,10 +385,18 @@ export function GrievanceDetailsCard({
     //
     // What we DO still need: clear the draft's own record of this
     // attachment, so a later resume doesn't seed attachmentId/scanStatus/
-    // attachmentFileName from something the user already removed.
+    // attachmentFileName from something the user already removed. Unlike
+    // the auto-save-after-upload case, a failure here is surfaced, not just
+    // logged: this is the path that runs right after removing a file that
+    // may have failed its malware scan, so silently letting that removal
+    // not stick server-side is the one failure mode here worth interrupting
+    // the user over, not just console noise.
     saveDraft(clientUuid, currentDraftPayload({ attachmentId: null, fileName: null, scanStatus: null }), 2).catch(
       (saveError) => {
         logger.error("Failed to clear the removed attachment from the draft:", saveError);
+        setError(
+          "The file was removed here, but we couldn't confirm that on the server. If you reload before saving again, it may reappear."
+        );
       }
     );
   };
@@ -619,12 +660,12 @@ export function GrievanceDetailsCard({
                     <div className="flex items-center gap-1.5 mt-0.5 text-[13px] font-medium">
                       {uploadState === "uploading" ? (
                         <span className="text-gray-500">Uploading…</span>
-                      ) : scanStatus === "Clean" ? (
+                      ) : scanStatus === SCAN_STATUS.CLEAN ? (
                         <>
                           <div className="w-2 h-2 rounded-full bg-[#16A34A]"></div>
                           <span className="text-[#16A34A]">Uploaded · scan clean</span>
                         </>
-                      ) : scanStatus === "Infected" ? (
+                      ) : scanStatus === SCAN_STATUS.INFECTED ? (
                         <>
                           <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
                           <span className="text-red-600">Failed malware scan · not usable as evidence</span>
@@ -694,7 +735,7 @@ export function GrievanceDetailsCard({
               </button>
               <button
                 onClick={handleNext}
-                disabled={uploadState === "uploading" || scanStatus === "Infected"}
+                disabled={uploadState === "uploading" || scanStatus === SCAN_STATUS.INFECTED}
                 className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save & Continue

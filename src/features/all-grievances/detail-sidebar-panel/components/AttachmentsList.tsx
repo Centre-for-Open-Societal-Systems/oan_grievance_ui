@@ -6,9 +6,15 @@ import {
   getAttachments,
   getAttachmentDownloadInfo,
   fetchAttachmentBlobUrl,
+  SCAN_STATUS,
   type AttachmentRow,
 } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
+
+// Flip this once fetchAttachmentBlobUrl's known 401 gap (see attachments.ts)
+// is actually fixed server-side — a single point to re-enable the control
+// rather than deleting/re-adding the disabled prop by hand.
+const DOWNLOAD_DISABLED = true;
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -17,22 +23,28 @@ function formatSize(bytes: number): string {
 }
 
 function scanBadge(row: AttachmentRow) {
-  if (row.scan_status === "Clean") {
+  if (row.scan_status === SCAN_STATUS.CLEAN) {
     return <span className="text-[11px] font-semibold text-[#16A34A] bg-green-50 px-2 py-0.5 rounded-full">Clean</span>;
   }
-  if (row.scan_status === "Infected") {
+  if (row.scan_status === SCAN_STATUS.INFECTED) {
     return <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Infected</span>;
   }
   return <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Scanning…</span>;
 }
 
 /**
- * Real attachment list + download, wired to the backend's
- * `attachment.get_attachments` / `attachment.download`. Takes the
- * grievance's real backend document name — the surrounding detail sidebar
- * still runs on `../mockData` for everything else, so this will correctly
- * show "no attachments" for any of that mock data's ids (they don't exist as
- * real Grievance records) until the sidebar itself is wired to live data.
+ * Real attachment list + download, wired to the backend's REST routes
+ * (GET /api/v1/grievances/<id>/attachments, GET /api/v1/attachments/<id>/download).
+ * `grievance` is the real backend document name — the surrounding detail
+ * sidebar is backend-driven too (see `mapGrievance.ts`'s `id: item.name`),
+ * not mock data, so this is live against production data as soon as it
+ * mounts.
+ *
+ * Download is disabled unconditionally right now (not just gated on scan
+ * status): `fetchAttachmentBlobUrl` always 401s, a known backend gap (see
+ * its own doc comment in attachments.ts) — showing an enabled control for
+ * an action that cannot currently succeed would just make every user hit
+ * "Could not download this file right now."
  */
 export function AttachmentsList({ grievance }: { grievance: string }) {
   const [rows, setRows] = useState<AttachmentRow[]>([]);
@@ -99,25 +111,25 @@ export function AttachmentsList({ grievance }: { grievance: string }) {
 
       <div className="px-5 py-3">
         {status === "loading" && (
-          <div className="flex items-center gap-2 py-4 text-gray-500 text-sm">
+          <div role="status" className="flex items-center gap-2 py-4 text-gray-500 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
             Loading attachments…
           </div>
         )}
 
         {status === "error" && (
-          <div className="flex items-center gap-2 py-4 text-red-600 text-sm">
+          <div role="alert" className="flex items-center gap-2 py-4 text-red-600 text-sm">
             <AlertTriangle className="w-4 h-4" />
             Could not load attachments for this case.
           </div>
         )}
 
         {status === "ready" && rows.length === 0 && (
-          <p className="py-4 text-sm text-gray-500">No attachments on this case.</p>
+          <p role="status" className="py-4 text-sm text-gray-500">No attachments on this case.</p>
         )}
 
         {downloadError && (
-          <div className="flex items-center gap-2 py-2 text-red-600 text-xs">
+          <div role="alert" className="flex items-center gap-2 py-2 text-red-600 text-xs">
             <AlertTriangle className="w-3.5 h-3.5" />
             {downloadError}
           </div>
@@ -143,8 +155,14 @@ export function AttachmentsList({ grievance }: { grievance: string }) {
               </div>
               <button
                 onClick={() => handleDownload(row)}
-                disabled={!row.servable || downloadingId === row.name}
-                title={row.servable ? "Download" : "Not available until the scan completes"}
+                disabled={!row.servable || downloadingId === row.name || DOWNLOAD_DISABLED}
+                title={
+                  DOWNLOAD_DISABLED
+                    ? "Download isn't available yet (backend gap — file bytes aren't reachable through this app's auth)"
+                    : row.servable
+                      ? "Download"
+                      : "Not available until the scan completes"
+                }
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
               >
                 {downloadingId === row.name ? (
