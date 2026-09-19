@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check } from "lucide-react";
+import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff } from "lucide-react";
 import { SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import { useAppSelector } from "@/store/hooks";
 import {
@@ -54,6 +54,23 @@ export function ReviewAndSubmitCard({
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
   const displayFileName = uploadedFile?.name ?? attachmentFileName;
+  // Same national-ID field set submitterProfile.ts treats as sensitive
+  // (SENSITIVE_FIELD_KEYS's old name, before that stripping was removed) —
+  // masked here by default too, same reveal-on-explicit-action pattern as
+  // SIMaskedIdField and the Profile page's MaskedField. Without this, a
+  // value that only reaches this screen via the localStorage-persisted
+  // submitter profile (representativeFaydaId/officialFaydaId have no other
+  // source) would show up in cleartext on a review screen the user never
+  // typed it into this session.
+  const ID_FIELD_KEYS = ["faydaId", "representativeFaydaId", "officialFaydaId"];
+  const [revealedIdFields, setRevealedIdFields] = useState<Set<string>>(new Set());
+  const toggleReveal = (key: string) =>
+    setRevealedIdFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
   const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
@@ -121,10 +138,28 @@ export function ReviewAndSubmitCard({
                   const value = field.key === "phoneNumber"
                     ? (identityValues.phoneNumber ? `${identityValues.phoneCode || "+251"} ${identityValues.phoneNumber}` : "")
                     : identityValues[field.key] || "";
+                  const isIdField = ID_FIELD_KEYS.includes(field.key);
+                  const revealed = revealedIdFields.has(field.key);
                   return (
                     <div key={field.key}>
                       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">{field.label}</p>
-                      <p className="text-[15px] font-semibold text-gray-900">{value || "Not provided"}</p>
+                      {isIdField && value ? (
+                        <div className="flex items-center gap-2">
+                          <p className="text-[15px] font-semibold text-gray-900">
+                            {revealed ? value : "•".repeat(Math.max(value.length, 8))}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => toggleReveal(field.key)}
+                            aria-label={revealed ? `Hide ${field.label}` : `Show ${field.label}`}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-[15px] font-semibold text-gray-900">{value || "Not provided"}</p>
+                      )}
                     </div>
                   );
                 })}

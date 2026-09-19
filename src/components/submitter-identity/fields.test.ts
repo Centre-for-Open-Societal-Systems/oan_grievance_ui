@@ -61,6 +61,14 @@ describe('getFieldFormatErrors', () => {
     expect(getFieldFormatErrors('individual', { phoneNumber: '0912345678' })).toEqual([]);
   });
 
+  it('also accepts phoneNumber in E.164 form, the shape a live account prefills it in', () => {
+    // Submit Grievance Step 1 seeds phoneNumber straight from user.mobile_no
+    // (e.g. "+251912345678") for a signed-in user - rejecting that shape
+    // would block every returning user on a field they never typed.
+    expect(getFieldFormatErrors('individual', { phoneNumber: '+251912345678' })).toEqual([]);
+    expect(getFieldFormatErrors('individual', { phoneNumber: '+25191234' }).length).toBe(1);
+  });
+
   it('skips an empty optional field rather than reporting it as invalid', () => {
     expect(getFieldFormatErrors('individual', { email: '' })).toEqual([]);
     expect(getFieldFormatErrors('individual', {})).toEqual([]);

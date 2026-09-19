@@ -191,6 +191,20 @@ export function GrievanceDetailsCard({
   const draftEnsuredRef = useRef(false);
   const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
+  // The post-upload auto-save (currentDraftPayload, below) fires from
+  // inside an async handler that can outlive several renders — an upload
+  // takes up to UPLOAD_TIMEOUT_MS (60s). Reading the Step 2 fields directly
+  // (as plain closure variables) would capture whatever they were when that
+  // upload *started*, silently discarding any edit made while it was still
+  // in flight when the auto-save finally runs. Synced in an effect (not
+  // mutated during render — the React Compiler here forbids that, since it
+  // breaks the compiler's purity assumptions) so it always points at the
+  // latest values regardless of when the callback holding it was created.
+  const latestFieldsRef = useRef({ serviceCategory, grievanceType, region, zone, woreda, kebele, description });
+  useEffect(() => {
+    latestFieldsRef.current = { serviceCategory, grievanceType, region, zone, woreda, kebele, description };
+  });
+
   // One object URL per uploaded file, created once and released — not
   // regenerated (and leaked) on every unrelated re-render. This has to be an
   // effect, not state derived during render: `createObjectURL` allocates a
@@ -246,13 +260,7 @@ export function GrievanceDetailsCard({
     fileName: string | null;
     scanStatus: ScanStatus | null;
   }) => ({
-    serviceCategory,
-    grievanceType,
-    region,
-    zone,
-    woreda,
-    kebele,
-    description,
+    ...latestFieldsRef.current,
     attachmentId: attachmentOverride ? attachmentOverride.attachmentId : attachmentId,
     attachmentFileName: attachmentOverride ? attachmentOverride.fileName : (uploadedFile?.name ?? attachmentFileName),
     scanStatus: attachmentOverride ? attachmentOverride.scanStatus : scanStatus,
@@ -321,20 +329,28 @@ export function GrievanceDetailsCard({
       const result = await uploadAttachment({ file, clientUuid });
       setAttachmentId(result.attachment);
       setScanStatus(result.scan_status);
-      setUploadState("idle");
 
       // Persist the attachment's identity onto the draft right away, not
       // only when the user separately clicks Save Draft — otherwise
       // reloading right after an upload (the common case) would resume the
-      // form fields but "forget" the file was ever attached.
+      // form fields but "forget" the file was ever attached. Awaited
+      // (uploadState stays "uploading", keeping Remove disabled) rather
+      // than fire-and-forget: Remove issues its own saveDraft to clear the
+      // attachment, and if that resolved before this one, this call's
+      // later-arriving response would silently re-establish the pointer
+      // the user just removed. Sequencing the two removes the race instead
+      // of trying to win it.
       draftEnsuredRef.current = true;
-      saveDraft(
-        clientUuid,
-        currentDraftPayload({ attachmentId: result.attachment, fileName: file.name, scanStatus: result.scan_status }),
-        2
-      ).catch((saveError) => {
+      try {
+        await saveDraft(
+          clientUuid,
+          currentDraftPayload({ attachmentId: result.attachment, fileName: file.name, scanStatus: result.scan_status }),
+          2
+        );
+      } catch (saveError) {
         logger.error("Failed to persist the attachment onto the draft:", saveError);
-      });
+      }
+      setUploadState("idle");
     } catch (uploadError) {
       setUploadState("error");
       setUploadedFile(null);
