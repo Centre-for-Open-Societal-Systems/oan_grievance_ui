@@ -4,10 +4,12 @@ export const PHONE_NUMBER_LENGTH = 10;
 export const PHONE_NUMBER_REGEX = /^\d{10}$/;
 
 /**
- * General E.164 — matches `E164_PHONE_REGEX` in
- * `src/app/api/auth/register/route.ts` exactly (same 8-15 digit allowance,
- * not pinned to a specific country's length). Deliberately loose rather
- * than "+251 plus exactly 9 digits": a live account's own phone number
+ * General E.164 — shared by this module and `src/app/api/auth/register/
+ * route.ts` (which imports this constant rather than keeping its own copy,
+ * since the form there sends a number already combined with a country/dial
+ * code, the same shape this one accepts alongside the bare local form).
+ * Deliberately loose (8-15 digits, not pinned to a specific country's
+ * length) rather than "+251 plus exactly 9 digits": a live account's own phone number
  * (`user.mobile_no`, prefilled straight into Submit Grievance's Step 1
  * without the user retyping it) already comes from a trusted backend
  * source, normalized however that backend normalizes it — this repo's own

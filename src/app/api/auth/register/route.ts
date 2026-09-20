@@ -5,13 +5,8 @@ import { logger } from '@/lib/logger';
 import { BackendAuthError, callBackendAuth, type TokenPair } from '@/lib/oanAuthBackend';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { validatePassword } from '@/lib/validation/password';
+import { PHONE_NUMBER_E164_REGEX } from '@/lib/validation/phone';
 import { NextResponse } from 'next/server';
-
-// The form sends the number already combined with a country/dial code (e.g.
-// "+251911111111"), unlike `PHONE_NUMBER_REGEX` which validates the bare
-// 10-digit local part before that prefix is attached — so this route needs
-// its own, looser E.164-shaped check rather than reusing that regex directly.
-const E164_PHONE_REGEX = /^\+\d{8,15}$/;
 
 /**
  * Registration issues a token pair too, but this route deliberately discards
@@ -90,7 +85,7 @@ export async function POST(request: Request) {
   if (passwordError) {
     return NextResponse.json({ message: passwordError }, { status: 400 });
   }
-  if (typeof phone_number !== 'string' || !E164_PHONE_REGEX.test(phone_number)) {
+  if (typeof phone_number !== 'string' || !PHONE_NUMBER_E164_REGEX.test(phone_number)) {
     return NextResponse.json({ message: 'Phone number must be a valid international number.' }, { status: 400 });
   }
 

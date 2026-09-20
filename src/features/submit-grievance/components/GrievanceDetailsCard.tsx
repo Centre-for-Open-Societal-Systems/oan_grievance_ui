@@ -184,15 +184,16 @@ export function GrievanceDetailsCard({
   // backend's verdict (Pending/Clean/Infected) rather than the earlier
   // hardcoded placeholder text, since the file isn't actually servable
   // until it comes back Clean.
-  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "error">("idle");
-  // Separate from `uploadState`: gates only the Remove button, for the
-  // brief extra window between the upload itself finishing and its
-  // attachment-identity persisted onto the draft (see handleFileChange).
-  // Kept apart from `uploadState` rather than folding into it, so Preview
-  // and the "Uploaded · scan clean/pending" status — both already correct
-  // the instant the upload itself resolves — don't sit showing "Uploading…"
-  // for a round-trip they have no reason to wait on.
-  const [persistingAttachment, setPersistingAttachment] = useState(false);
+  // "persisting" covers the brief extra window between the upload itself
+  // finishing and its attachment-identity being saved onto the draft (see
+  // handleFileChange) — kept distinct from "uploading" so Preview and the
+  // "Uploaded · scan clean/pending" status, both already correct the
+  // instant the upload itself resolves, don't sit showing "Uploading…" for
+  // a round-trip they have no reason to wait on. Remove and Save & Continue
+  // both still need to block on it too, same as "uploading" — an in-flight
+  // persist-save losing a race against either would resurrect a removed
+  // attachment or leave a draft record that doesn't yet know about it.
+  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "persisting" | "error">("idle");
   // `submit_document` with a `client_uuid` requires the Grievance Draft to
   // already exist server-side — this fires once, right before the first
   // upload, rather than on every file selection.
@@ -346,14 +347,14 @@ export function GrievanceDetailsCard({
       // only when the user separately clicks Save Draft — otherwise
       // reloading right after an upload (the common case) would resume the
       // form fields but "forget" the file was ever attached. Awaited
-      // (persistingAttachment stays true, keeping only Remove disabled)
-      // rather than fire-and-forget: Remove issues its own saveDraft to
-      // clear the attachment, and if that resolved before this one, this
-      // call's later-arriving response would silently re-establish the
-      // pointer the user just removed. Sequencing the two removes the race
-      // instead of trying to win it.
+      // (uploadState becomes "persisting", keeping Remove and Save &
+      // Continue disabled) rather than fire-and-forget: Remove issues its
+      // own saveDraft to clear the attachment, and if that resolved before
+      // this one, this call's later-arriving response would silently
+      // re-establish the pointer the user just removed. Sequencing the two
+      // removes the race instead of trying to win it.
       draftEnsuredRef.current = true;
-      setPersistingAttachment(true);
+      setUploadState("persisting");
       try {
         await saveDraft(
           clientUuid,
@@ -363,7 +364,7 @@ export function GrievanceDetailsCard({
       } catch (saveError) {
         logger.error("Failed to persist the attachment onto the draft:", saveError);
       } finally {
-        setPersistingAttachment(false);
+        setUploadState("idle");
       }
     } catch (uploadError) {
       setUploadState("error");
@@ -723,9 +724,9 @@ export function GrievanceDetailsCard({
                   </button>
                   <button
                     onClick={handleRemoveFile}
-                    disabled={uploadState === "uploading" || persistingAttachment}
+                    disabled={uploadState === "uploading" || uploadState === "persisting"}
                     title={
-                      uploadState === "uploading" || persistingAttachment
+                      uploadState === "uploading" || uploadState === "persisting"
                         ? "Wait for the upload to finish before removing it"
                         : undefined
                     }
@@ -769,7 +770,11 @@ export function GrievanceDetailsCard({
               </button>
               <button
                 onClick={handleNext}
-                disabled={uploadState === "uploading" || scanStatus === SCAN_STATUS.INFECTED}
+                disabled={
+                  uploadState === "uploading" ||
+                  uploadState === "persisting" ||
+                  scanStatus === SCAN_STATUS.INFECTED
+                }
                 className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save & Continue

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff } from "lucide-react";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
+import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
 import {
   selectGrievanceTypeOptions,
@@ -42,11 +43,13 @@ function labelFor(options: { value: string; label: string }[], value: string): s
  * (see page.tsx), already in full E.164 form, with `phoneCode` never set at
  * all. Blindly prepending `phoneCode || "+251"` to that would double up
  * the country code ("+251 +251912345678"). Prepending only when the value
- * isn't already in international form covers both shapes correctly.
+ * isn't already in international form (checked via the same
+ * PHONE_NUMBER_E164_REGEX phone.ts's own E.164 detection uses, rather than
+ * a bare `startsWith("+")` guess) covers both shapes correctly.
  */
 function formatPhoneForDisplay(phoneNumber: string | undefined, phoneCode: string | undefined): string {
   if (!phoneNumber) return "";
-  if (phoneNumber.startsWith("+")) return phoneNumber;
+  if (PHONE_NUMBER_E164_REGEX.test(phoneNumber)) return phoneNumber;
   return `${phoneCode || "+251"} ${phoneNumber}`;
 }
 
