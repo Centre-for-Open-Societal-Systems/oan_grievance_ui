@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check } from "lucide-react";
-import { SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
+import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff } from "lucide-react";
+import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
+import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
 import {
   selectGrievanceTypeOptions,
@@ -24,6 +25,8 @@ interface ReviewAndSubmitCardProps {
   kebele?: string;
   description: string;
   uploadedFile: File | null;
+  /** A resumed draft's attachment has no local `File` blob to read a name off — see page.tsx's lifted attachment state. */
+  attachmentFileName?: string | null;
 }
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
@@ -32,6 +35,22 @@ function labelFor(options: { value: string; label: string }[], value: string): s
     options.find((o) => o.value === value)?.label ||
     value
   );
+}
+
+/**
+ * `phoneNumber` isn't always the bare local digits `phoneCode` is meant to
+ * prefix — for a signed-in user it's seeded straight from `user.mobile_no`
+ * (see page.tsx), already in full E.164 form, with `phoneCode` never set at
+ * all. Blindly prepending `phoneCode || "+251"` to that would double up
+ * the country code ("+251 +251912345678"). Prepending only when the value
+ * isn't already in international form (checked via the same
+ * PHONE_NUMBER_E164_REGEX phone.ts's own E.164 detection uses, rather than
+ * a bare `startsWith("+")` guess) covers both shapes correctly.
+ */
+function formatPhoneForDisplay(phoneNumber: string | undefined, phoneCode: string | undefined): string {
+  if (!phoneNumber) return "";
+  if (PHONE_NUMBER_E164_REGEX.test(phoneNumber)) return phoneNumber;
+  return `${phoneCode || "+251"} ${phoneNumber}`;
 }
 
 export function ReviewAndSubmitCard({
@@ -48,8 +67,25 @@ export function ReviewAndSubmitCard({
   kebele,
   description,
   uploadedFile,
+  attachmentFileName,
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
+  const displayFileName = uploadedFile?.name ?? attachmentFileName;
+  // Same national-ID field set fields.ts validates as a Fayda ID (imported
+  // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
+  // action pattern as SIMaskedIdField and the Profile page's MaskedField.
+  // Without this, a value that only reaches this screen via the
+  // localStorage-persisted submitter profile (representativeFaydaId/
+  // officialFaydaId have no other source) would show up in cleartext on a
+  // review screen the user never typed it into this session.
+  const [revealedIdFields, setRevealedIdFields] = useState<Set<string>>(new Set());
+  const toggleReveal = (key: string) =>
+    setRevealedIdFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
   const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
@@ -115,12 +151,30 @@ export function ReviewAndSubmitCard({
                 .filter((field) => field.key !== "phoneCode")
                 .map((field) => {
                   const value = field.key === "phoneNumber"
-                    ? (identityValues.phoneNumber ? `${identityValues.phoneCode || "+251"} ${identityValues.phoneNumber}` : "")
+                    ? formatPhoneForDisplay(identityValues.phoneNumber, identityValues.phoneCode)
                     : identityValues[field.key] || "";
+                  const isIdField = ID_FIELD_KEYS.includes(field.key);
+                  const revealed = revealedIdFields.has(field.key);
                   return (
                     <div key={field.key}>
                       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">{field.label}</p>
-                      <p className="text-[15px] font-semibold text-gray-900">{value || "Not provided"}</p>
+                      {isIdField && value ? (
+                        <div className="flex items-center gap-2">
+                          <p className="text-[15px] font-semibold text-gray-900">
+                            {revealed ? value : "•".repeat(Math.max(value.length, 8))}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => toggleReveal(field.key)}
+                            aria-label={revealed ? `Hide ${field.label}` : `Show ${field.label}`}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-[15px] font-semibold text-gray-900">{value || "Not provided"}</p>
+                      )}
                     </div>
                   );
                 })}
@@ -142,9 +196,9 @@ export function ReviewAndSubmitCard({
               </div>
               <div className="md:col-span-2">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Attachments {uploadedFile ? "(1)" : "(0)"}
+                  Attachments {displayFileName ? "(1)" : "(0)"}
                 </p>
-                <p className="text-[15px] font-semibold text-gray-900">{uploadedFile ? uploadedFile.name : "No file attached"}</p>
+                <p className="text-[15px] font-semibold text-gray-900">{displayFileName ?? "No file attached"}</p>
               </div>
             </div>
           </div>

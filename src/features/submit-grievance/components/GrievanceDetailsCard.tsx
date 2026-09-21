@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X } from "lucide-react";
+import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -23,10 +23,14 @@ import {
   findWoredaNode,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
+import { uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
+import { saveDraft } from "@/lib/drafts";
+import { logger } from "@/lib/logger";
 
 interface GrievanceDetailsCardProps {
   onNext: () => void;
   onBack: () => void;
+  clientUuid: string;
   serviceCategory: string;
   setServiceCategory: (value: string) => void;
   grievanceType: string;
@@ -43,11 +47,27 @@ interface GrievanceDetailsCardProps {
   setDescription: (value: string) => void;
   uploadedFile: File | null;
   setUploadedFile: (file: File | null) => void;
+  // The attachment's backend identity — owned by page.tsx, not local state
+  // here, so it survives this component unmounting on every Step 1<->2
+  // navigation and so Step 3's review card can see it too. See page.tsx's
+  // doc comment on its `attachmentId` state for why: `draft.load`'s own
+  // attachment list can't see an attachment uploaded through this wizard
+  // (files attach to the Grievance Attachment doc, not directly to the
+  // Grievance Draft), so a resumed draft's attachment comes back through
+  // this same `payload`-persisted metadata instead, with no local `File`
+  // blob to read a name off or preview.
+  attachmentId: string | null;
+  setAttachmentId: (id: string | null) => void;
+  scanStatus: ScanStatus | null;
+  setScanStatus: (status: ScanStatus | null) => void;
+  attachmentFileName: string | null;
+  setAttachmentFileName: (name: string | null) => void;
 }
 
 export function GrievanceDetailsCard({
   onNext,
   onBack,
+  clientUuid,
   serviceCategory,
   setServiceCategory,
   grievanceType,
@@ -64,6 +84,12 @@ export function GrievanceDetailsCard({
   setDescription,
   uploadedFile,
   setUploadedFile,
+  attachmentId,
+  setAttachmentId,
+  scanStatus,
+  setScanStatus,
+  attachmentFileName,
+  setAttachmentFileName,
 }: GrievanceDetailsCardProps) {
   const t = useTranslations("submitGrievance.detailsStep");
   const dispatch = useAppDispatch();
@@ -153,6 +179,41 @@ export function GrievanceDetailsCard({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // attachmentId/scanStatus/attachmentFileName are owned by page.tsx now —
+  // see this component's props doc comment. `scanStatus` mirrors the
+  // backend's verdict (Pending/Clean/Infected) rather than the earlier
+  // hardcoded placeholder text, since the file isn't actually servable
+  // until it comes back Clean.
+  // "persisting" covers the brief extra window between the upload itself
+  // finishing and its attachment-identity being saved onto the draft (see
+  // handleFileChange) — kept distinct from "uploading" so Preview and the
+  // "Uploaded · scan clean/pending" status, both already correct the
+  // instant the upload itself resolves, don't sit showing "Uploading…" for
+  // a round-trip they have no reason to wait on. Remove and Save & Continue
+  // both still need to block on it too, same as "uploading" — an in-flight
+  // persist-save losing a race against either would resurrect a removed
+  // attachment or leave a draft record that doesn't yet know about it.
+  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "persisting" | "error">("idle");
+  // `submit_document` with a `client_uuid` requires the Grievance Draft to
+  // already exist server-side — this fires once, right before the first
+  // upload, rather than on every file selection.
+  const draftEnsuredRef = useRef(false);
+  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  // The post-upload auto-save (currentDraftPayload, below) fires from
+  // inside an async handler that can outlive several renders — an upload
+  // takes up to UPLOAD_TIMEOUT_MS (60s). Reading the Step 2 fields directly
+  // (as plain closure variables) would capture whatever they were when that
+  // upload *started*, silently discarding any edit made while it was still
+  // in flight when the auto-save finally runs. Synced in an effect (not
+  // mutated during render — the React Compiler here forbids that, since it
+  // breaks the compiler's purity assumptions) so it always points at the
+  // latest values regardless of when the callback holding it was created.
+  const latestFieldsRef = useRef({ serviceCategory, grievanceType, region, zone, woreda, kebele, description });
+  useEffect(() => {
+    latestFieldsRef.current = { serviceCategory, grievanceType, region, zone, woreda, kebele, description };
+  });
+
   // One object URL per uploaded file, created once and released — not
   // regenerated (and leaked) on every unrelated re-render. This has to be an
   // effect, not state derived during render: `createObjectURL` allocates a
@@ -172,6 +233,60 @@ export function GrievanceDetailsCard({
   }, [uploadedFile]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // "Saved"/"Retry Save" is a snapshot of the save that already happened —
+  // without this, editing a field right after a successful save leaves the
+  // button reading "Saved" indefinitely while the new edit sits unsaved,
+  // telling the user something true about the past and false about the
+  // present. Adjusted during render rather than in an effect (React's own
+  // recommended pattern for "reset state when an input changes" —
+  // https://react.dev/learn/you-might-not-need-an-effect — an effect here
+  // would just cause an extra render pass to do the same thing) by
+  // comparing against a snapshot of the last render's tracked fields. Only
+  // resets away from a settled state (saved/error); doesn't touch "saving"
+  // itself. `attachmentFileName`, not `attachmentId`/`scanStatus`, is the
+  // attachment signal here — it changes exactly when a file is picked,
+  // removed, or the draft resumes one, without also firing mid-upload as
+  // `scanStatus` transitioning Pending -> Clean would.
+  const draftPayloadSnapshot = JSON.stringify([
+    serviceCategory, grievanceType, region, zone, woreda, kebele, description, attachmentFileName,
+  ]);
+  const [lastDraftPayloadSnapshot, setLastDraftPayloadSnapshot] = useState(draftPayloadSnapshot);
+  if (draftPayloadSnapshot !== lastDraftPayloadSnapshot) {
+    setLastDraftPayloadSnapshot(draftPayloadSnapshot);
+    if (draftSaveState === "saved" || draftSaveState === "error") setDraftSaveState("idle");
+  }
+
+  // Shared by the explicit Save Draft button, the implicit ensure-before-
+  // first-upload save, and the auto-save right after a successful upload —
+  // all three need the same current-field snapshot, so whichever fires
+  // doesn't overwrite one of the others' (or a resumed draft's) data with a
+  // stale or empty payload. `attachmentOverride` is for the post-upload
+  // save specifically: `result`/`file` there are fresher than this render's
+  // `attachmentId`/`uploadedFile` closure, since the state setters that would
+  // update them haven't necessarily re-rendered yet.
+  const currentDraftPayload = (attachmentOverride?: {
+    attachmentId: string | null;
+    fileName: string | null;
+    scanStatus: ScanStatus | null;
+  }) => ({
+    ...latestFieldsRef.current,
+    attachmentId: attachmentOverride ? attachmentOverride.attachmentId : attachmentId,
+    attachmentFileName: attachmentOverride ? attachmentOverride.fileName : (uploadedFile?.name ?? attachmentFileName),
+    scanStatus: attachmentOverride ? attachmentOverride.scanStatus : scanStatus,
+  });
+
+  const handleSaveDraft = async () => {
+    setDraftSaveState("saving");
+    try {
+      await saveDraft(clientUuid, currentDraftPayload(), 2);
+      draftEnsuredRef.current = true;
+      setDraftSaveState("saved");
+    } catch (saveError) {
+      setDraftSaveState("error");
+      logger.error("Failed to save draft:", saveError);
+    }
+  };
+
   const handleNext = () => {
     const missing: string[] = [];
     if (!serviceCategory) missing.push("Service Category");
@@ -185,23 +300,145 @@ export function GrievanceDetailsCard({
       setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
       return;
     }
+    // Matches oan_grievance_service/services/identity.py's
+    // MIN_DESCRIPTION_LENGTH — the backend will reject anything shorter
+    // once grievance.submit is actually wired up; catching it here first
+    // means the user gets a clear reason now rather than a mystery
+    // rejection later.
+    const MIN_DESCRIPTION_LENGTH = 20;
+    if (description.trim().length < MIN_DESCRIPTION_LENGTH) {
+      setError(t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count: description.trim().length }));
+      return;
+    }
+    if (scanStatus === SCAN_STATUS.INFECTED) {
+      setError("Remove the attachment that failed the malware scan before continuing.");
+      return;
+    }
     setError(null);
     onNext();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setUploadedFile(e.target.files[0]!);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadedFile(file);
+    setAttachmentId(null);
+    setScanStatus(null);
+    setAttachmentFileName(file.name);
+    setUploadState("uploading");
+    setError(null);
+
+    try {
+      if (!draftEnsuredRef.current) {
+        await saveDraft(clientUuid, currentDraftPayload(), 2);
+        draftEnsuredRef.current = true;
+      }
+
+      const result = await uploadAttachment({ file, clientUuid });
+      setAttachmentId(result.attachment);
+      setScanStatus(result.scan_status);
+      // The upload itself is done — Preview and the scan-status line are
+      // already correct, so let them stop showing "Uploading…" now instead
+      // of waiting on the persist-save below too.
+      setUploadState("idle");
+
+      // Persist the attachment's identity onto the draft right away, not
+      // only when the user separately clicks Save Draft — otherwise
+      // reloading right after an upload (the common case) would resume the
+      // form fields but "forget" the file was ever attached. Awaited
+      // (uploadState becomes "persisting", keeping Remove and Save &
+      // Continue disabled) rather than fire-and-forget: Remove issues its
+      // own saveDraft to clear the attachment, and if that resolved before
+      // this one, this call's later-arriving response would silently
+      // re-establish the pointer the user just removed. Sequencing the two
+      // removes the race instead of trying to win it.
+      draftEnsuredRef.current = true;
+      setUploadState("persisting");
+      try {
+        await saveDraft(
+          clientUuid,
+          currentDraftPayload({ attachmentId: result.attachment, fileName: file.name, scanStatus: result.scan_status }),
+          2
+        );
+      } catch (saveError) {
+        logger.error("Failed to persist the attachment onto the draft:", saveError);
+      } finally {
+        setUploadState("idle");
+      }
+    } catch (uploadError) {
+      setUploadState("error");
+      setUploadedFile(null);
+      setAttachmentFileName(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Could not upload the file. Please try again."
+      );
+      // The draft may already record a previous successful attachment (or
+      // the empty-payload ensure-save above may have just run) — either
+      // way, local state just went back to "no attachment," so the draft
+      // needs to say the same thing, not keep pointing at something the UI
+      // no longer shows.
+      saveDraft(clientUuid, currentDraftPayload({ attachmentId: null, fileName: null, scanStatus: null }), 2).catch(
+        (saveError) => {
+          logger.error("Failed to clear the failed-upload attachment from the draft:", saveError);
+        }
+      );
     }
   };
 
   const handleRemoveFile = (e: React.MouseEvent) => {
     e.stopPropagation();
+    const hadAttachment = attachmentId !== null;
     setUploadedFile(null);
+    setAttachmentId(null);
+    setScanStatus(null);
+    setAttachmentFileName(null);
+    setUploadState("idle");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    if (!hadAttachment) return;
+
+    // NOT calling deleteAttachment here: every attachment this wizard
+    // uploads is draft-stage (has a client_uuid, no grievance yet — final
+    // submission isn't wired to the real API at all today), and
+    // attachment.delete()'s backend implementation only ever checks
+    // doc.grievance, never doc.draft — it 404s "No such grievance" on a
+    // draft-stage attachment unconditionally. That's not a transient
+    // failure worth a best-effort try; it's a backend gap (out of scope
+    // here, not something to fix from the frontend) that would fire on
+    // literally every removal. The file itself is orphaned server-side
+    // until the draft expires and gets purged — acceptable for now, same
+    // as any other abandoned draft.
+    //
+    // What we DO still need: clear the draft's own record of this
+    // attachment, so a later resume doesn't seed attachmentId/scanStatus/
+    // attachmentFileName from something the user already removed. Unlike
+    // the auto-save-after-upload case, a failure here is surfaced, not just
+    // logged: this is the path that runs right after removing a file that
+    // may have failed its malware scan, so silently letting that removal
+    // not stick server-side is the one failure mode here worth interrupting
+    // the user over, not just console noise.
+    saveDraft(clientUuid, currentDraftPayload({ attachmentId: null, fileName: null, scanStatus: null }), 2).catch(
+      (saveError) => {
+        logger.error("Failed to clear the removed attachment from the draft:", saveError);
+        setError(
+          "The file was removed here, but we couldn't confirm that on the server. If you reload before saving again, it may reappear."
+        );
+      }
+    );
   };
+
+  // `attachmentFileName` (page.tsx's lifted state) is kept in sync with
+  // `uploadedFile` by this component at every point that changes either —
+  // pick, upload, remove — so it alone is what the "already uploaded" card
+  // needs, whether the name came from a just-picked file or a resumed
+  // draft with no local blob to read one off.
+  const displayFileName = attachmentFileName;
+  const hasLocalPreview = uploadedFile !== null;
 
   return (
     <>
@@ -408,7 +645,7 @@ export function GrievanceDetailsCard({
             <label className="block text-sm font-semibold text-gray-800 mb-2">
               Supporting Documents / Evidence
             </label>
-            {!uploadedFile && (
+            {!displayFileName && (
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full bg-[#F9FAFB] border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-[#f0fcf3] transition-colors cursor-pointer"
@@ -437,19 +674,39 @@ export function GrievanceDetailsCard({
             />
 
             {/* Uploaded File */}
-            {uploadedFile && (
+            {displayFileName && (
               <div className="flex items-center justify-between bg-[#F0FDF4] hover:bg-[#e5fbeb] border border-green-300 p-4 rounded-xl mt-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-[#D1FAE5] rounded-xl flex items-center justify-center">
-                    <IdCard className="w-6 h-6 text-[#16A34A]" />
+                    {uploadState === "uploading" ? (
+                      <Loader2 className="w-6 h-6 text-[#16A34A] animate-spin" />
+                    ) : (
+                      <IdCard className="w-6 h-6 text-[#16A34A]" />
+                    )}
                   </div>
                   <div>
                     <p className="text-[15px] font-bold text-gray-900 leading-snug">
-                      {uploadedFile.name}
+                      {displayFileName}
                     </p>
-                    <div className="flex items-center gap-1.5 mt-0.5 text-[#16A34A] text-[13px] font-medium">
-                      <div className="w-2 h-2 rounded-full bg-[#16A34A]"></div>
-                      Uploaded · pending registry verification
+                    <div className="flex items-center gap-1.5 mt-0.5 text-[13px] font-medium">
+                      {uploadState === "uploading" ? (
+                        <span className="text-gray-500">Uploading…</span>
+                      ) : scanStatus === SCAN_STATUS.CLEAN ? (
+                        <>
+                          <div className="w-2 h-2 rounded-full bg-[#16A34A]"></div>
+                          <span className="text-[#16A34A]">Uploaded · scan clean</span>
+                        </>
+                      ) : scanStatus === SCAN_STATUS.INFECTED ? (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                          <span className="text-red-600">Failed malware scan · not usable as evidence</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                          <span className="text-amber-600">Uploaded · pending scan</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -459,13 +716,21 @@ export function GrievanceDetailsCard({
                       e.stopPropagation();
                       setIsPreviewOpen(true);
                     }}
-                    className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                    disabled={uploadState === "uploading" || !hasLocalPreview}
+                    title={!hasLocalPreview ? "Preview isn't available after a reload — only for a file you just picked" : undefined}
+                    className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Eye className="w-5 h-5 text-blue-500" />
                   </button>
                   <button
                     onClick={handleRemoveFile}
-                    className="p-2.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                    disabled={uploadState === "uploading" || uploadState === "persisting"}
+                    title={
+                      uploadState === "uploading" || uploadState === "persisting"
+                        ? "Wait for the upload to finish before removing it"
+                        : undefined
+                    }
+                    className="p-2.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-5 h-5 text-red-500" />
                   </button>
@@ -491,13 +756,26 @@ export function GrievanceDetailsCard({
               <span>All fields marked <span className="text-red-500">*</span> are required</span>
             </div>
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
-                <Save className="w-4 h-4 text-[#0b8535]" />
-                Save Draft
+              <button
+                onClick={handleSaveDraft}
+                disabled={draftSaveState === "saving"}
+                className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {draftSaveState === "saving" ? (
+                  <Loader2 className="w-4 h-4 text-[#0b8535] animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 text-[#0b8535]" />
+                )}
+                {draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Retry Save" : "Save Draft"}
               </button>
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50"
+                disabled={
+                  uploadState === "uploading" ||
+                  uploadState === "persisting" ||
+                  scanStatus === SCAN_STATUS.INFECTED
+                }
+                className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save & Continue
                 <ArrowRight className="w-4 h-4" />

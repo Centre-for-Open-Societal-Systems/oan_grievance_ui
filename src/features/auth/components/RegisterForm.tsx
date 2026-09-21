@@ -1,7 +1,7 @@
 'use client';
 
 import { registerUser } from '@/features/auth/api/authApi';
-import { getMissingRequiredFields } from '@/components/submitter-identity/fields';
+import { getMissingRequiredFields, getFieldFormatErrors } from '@/components/submitter-identity/fields';
 import { saveSubmitterProfile } from '@/lib/submitterProfile';
 import { validatePassword } from '@/lib/validation/password';
 import { PHONE_NUMBER_REGEX, stripLeadingZero } from '@/lib/validation/phone';
@@ -112,13 +112,18 @@ export function RegisterForm() {
 
   const handleProfileSubmit = () => {
     if (!submitterType) {
-      setProfileError('Select a submitter type to continue, or skip for now.');
+      setProfileError('Select a submitter type to continue.');
       return;
     }
     const hiddenFields = ALREADY_COLLECTED_FIELDS_BY_TYPE[submitterType] ?? [];
     const missing = getMissingRequiredFields(submitterType, identityValues, hiddenFields);
     if (missing.length > 0) {
       setProfileError(t('missingFields', { count: missing.length, fields: missing.join(', ') }));
+      return;
+    }
+    const invalid = getFieldFormatErrors(submitterType, identityValues, hiddenFields);
+    if (invalid.length > 0) {
+      setProfileError(t('invalidFields', { count: invalid.length, fields: invalid.join(', ') }));
       return;
     }
     setProfileError(null);
@@ -155,7 +160,6 @@ export function RegisterForm() {
         profileError={profileError}
         consentChecked={consentChecked}
         onConsentChange={setConsentChecked}
-        onSkip={() => setStep('success')}
         onSubmit={handleProfileSubmit}
       />
     );

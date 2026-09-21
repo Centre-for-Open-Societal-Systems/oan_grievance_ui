@@ -1,6 +1,6 @@
 import { env } from '@/lib/env';
 
-// Thin, server-only client for oan_auth_service's whitelisted auth methods.
+// Thin, server-only client for oan_auth_service's REST auth endpoints.
 // Every `/api/auth/*` route calls through here rather than hitting `fetch`
 // directly, so the envelope-unwrapping and error handling can't drift between
 // login/register/refresh/logout.
@@ -21,8 +21,11 @@ export interface TokenPair {
   roles: string[];
 }
 
-export async function callBackendAuth<T>(method: string, body: object, clientIp: string): Promise<T> {
-  const response = await fetch(`${env.AUTH_API_BASE_URL}/api/method/oan_auth_service.api.v1.auth.${method}`, {
+/**
+ * `path` is the REST route under `AUTH_API_BASE_URL` (e.g. `/api/v1/auth/login`).
+ */
+export async function callBackendAuth<T>(path: string, body: object, clientIp: string): Promise<T> {
+  const response = await fetch(`${env.AUTH_API_BASE_URL}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -33,7 +36,14 @@ export async function callBackendAuth<T>(method: string, body: object, clientIp:
   });
 
   const data = await response.json().catch(() => ({}));
-  const envelope = (data?.message ?? data) as { status?: string; message?: string; data?: T } | undefined;
+  // REST responses are flat (`{status, data, message}`, `message` a string) —
+  // unlike the classic RPC shape, which nested the same fields as an object
+  // under `.message`. Only treat `.message` as the envelope when it's an
+  // object, so a flat REST response's string `message` isn't mistaken for one
+  // (see `authProfile.ts`'s `getMe` for the same distinction on `/auth/me`).
+  const envelope = (
+    data?.message && typeof data.message === 'object' ? data.message : data
+  ) as { status?: string; message?: string; data?: T } | undefined;
 
   if (!response.ok || envelope?.status === 'error') {
     throw new BackendAuthError(

@@ -6,6 +6,7 @@ import { CaseManagement } from './components/CaseManagement';
 import { SubmitterDetails } from './components/SubmitterDetails';
 import { ThreadSummary } from './components/ThreadSummary';
 import { ResponseForm } from './components/ResponseForm';
+import { AttachmentsList } from './components/AttachmentsList';
 import { useIsOfficerOrAdmin } from '@/features/auth/hooks/useIsOfficerOrAdmin';
 
 export function GrievanceDetailSidebar({
@@ -50,6 +51,7 @@ export function GrievanceDetailSidebar({
               <CaseManagement canManageCase={canManageCase} />
               <SubmitterDetails grievance={grievance} />
               <ThreadSummary canManageCase={canManageCase} />
+              <AttachmentsList grievance={grievance.id} />
             </div>
           </div>
         </div>

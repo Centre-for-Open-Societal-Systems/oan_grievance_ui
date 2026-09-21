@@ -35,7 +35,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const pair = await callBackendAuth<TokenPair>('login', { usr, pwd, remember_me: rememberMe }, clientIp);
+    const pair = await callBackendAuth<TokenPair>(
+      '/api/v1/auth/login',
+      { usr, pwd, remember_me: rememberMe },
+      clientIp
+    );
 
     const nextResponse = NextResponse.json({
       success: true,

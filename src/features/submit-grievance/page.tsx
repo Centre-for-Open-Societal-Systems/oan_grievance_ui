@@ -1,10 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, X } from "lucide-react";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { normalizeSubmitterType } from "@/features/metadata";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
+import { loadDraft } from "@/lib/drafts";
+import { SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
+import { ApiError } from "@/lib/api/fetchApi";
+import { logger } from "@/lib/logger";
 import { useAppSelector } from "@/store/hooks";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
@@ -54,6 +58,15 @@ export default function SubmitGrievancePage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Identifies this wizard session's Grievance Draft on the backend — needed
+  // before any attachment can be uploaded, since `submit_document` requires
+  // the draft to already exist for whichever `client_uuid` it's given.
+  // Starts as a fresh id for a brand-new wizard; the effect below swaps it
+  // for a resumed draft's real `client_uuid` if one comes back, so later
+  // saves/uploads keep landing on the SAME draft rather than orphaning it.
+  const [clientUuid, setClientUuid] = useState(() => crypto.randomUUID());
+  const [resumedDraft, setResumedDraft] = useState(false);
+
   // Step 1 — Submitter Identity
   const [submitterType, setSubmitterType] = useState(() => {
     const normalized = user?.type ? normalizeSubmitterType(user.type) : "";
@@ -94,6 +107,71 @@ export default function SubmitGrievancePage() {
   const [kebele, setKebele] = useState("");
   const [description, setDescription] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  // The attachment's backend identity — lifted up here (not kept local to
+  // GrievanceDetailsCard) for two reasons: page.tsx conditionally unmounts
+  // that component on every Step 1<->2 navigation (`{currentStep === 2 &&
+  // <GrievanceDetailsCard .../>}`), which would otherwise reset this on
+  // every Back/Next; and Step 3's review card needs to know about it too,
+  // including for a resumed draft's attachment, which has no local `File`
+  // blob to read a name off.
+  const [attachmentId, setAttachmentId] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
+  const [attachmentFileName, setAttachmentFileName] = useState<string | null>(null);
+
+  // Guards every draft-dependent action (uploading, saving) until the
+  // initial resume check below has settled. Without this, a fast typist on
+  // a slow connection (the app's explicit target) could pick a file before
+  // `loadDraft()` resolves — that upload would close over the original
+  // throwaway `clientUuid`, then get orphaned the moment the resumed
+  // draft's real one swaps in underneath it.
+  const [draftCheckDone, setDraftCheckDone] = useState(false);
+
+  // Resume the caller's saved draft, if one exists, once on mount. Only
+  // `payload` (Step 2's fields, plus whichever attachment was last
+  // uploaded) round-trips through the draft today — Step 1 stays prefilled
+  // from the live user profile above, same as always. A 404 here just
+  // means there's no draft yet, the ordinary case for anyone starting
+  // fresh; only unexpected failures are logged.
+  useEffect(() => {
+    let cancelled = false;
+    loadDraft()
+      .then((draft) => {
+        if (cancelled) return;
+        setClientUuid(draft.client_uuid);
+        const payload = draft.payload ?? {};
+        if (typeof payload.serviceCategory === "string") setServiceCategory(payload.serviceCategory);
+        if (typeof payload.grievanceType === "string") setGrievanceType(payload.grievanceType);
+        if (typeof payload.region === "string") setRegion(payload.region);
+        if (typeof payload.zone === "string") setZone(payload.zone);
+        if (typeof payload.woreda === "string") setWoreda(payload.woreda);
+        if (typeof payload.kebele === "string") setKebele(payload.kebele);
+        if (typeof payload.description === "string") setDescription(payload.description);
+        const validScanStatuses: string[] = Object.values(SCAN_STATUS);
+        if (
+          typeof payload.attachmentId === "string" &&
+          typeof payload.attachmentFileName === "string" &&
+          typeof payload.scanStatus === "string" &&
+          validScanStatuses.includes(payload.scanStatus)
+        ) {
+          setAttachmentId(payload.attachmentId);
+          setAttachmentFileName(payload.attachmentFileName);
+          setScanStatus(payload.scanStatus as ScanStatus);
+        }
+        if (draft.step_reached >= 2) setCurrentStep(2);
+        setResumedDraft(true);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 404) return; // no saved draft — the normal case
+        logger.error("Failed to load saved draft:", error);
+      })
+      .finally(() => {
+        if (!cancelled) setDraftCheckDone(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleNext = () => {
     setCurrentStep((prev) => Math.min(prev + 1, 3));
@@ -123,6 +201,14 @@ export default function SubmitGrievancePage() {
     setKebele("");
     setDescription("");
     setUploadedFile(null);
+    setAttachmentId(null);
+    setScanStatus(null);
+    setAttachmentFileName(null);
+    // A fresh draft for the next grievance — reusing the old clientUuid
+    // would let the new, supposedly-empty wizard resume the previous
+    // grievance's already-submitted draft.
+    setClientUuid(crypto.randomUUID());
+    setResumedDraft(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -130,6 +216,18 @@ export default function SubmitGrievancePage() {
     return (
       <div className="font-sans pb-2">
         <GrievanceSubmittedCard onReset={handleReset} />
+      </div>
+    );
+  }
+
+  // Held back until the resume check above settles — see `draftCheckDone`'s
+  // doc comment for the race this closes. One fast API call, so this is
+  // never more than a brief flash in practice.
+  if (!draftCheckDone) {
+    return (
+      <div className="flex flex-col gap-6 font-sans pb-2">
+        <SubmitGrievanceHeader />
+        <div className="flex items-center justify-center py-24 text-gray-400 text-sm">Loading…</div>
       </div>
     );
   }
@@ -156,6 +254,19 @@ export default function SubmitGrievancePage() {
       {/* Page Header */}
       <SubmitGrievanceHeader />
 
+      {resumedDraft && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-[#0b8535]">
+          <span>Resumed your saved draft — your grievance details are filled back in.</span>
+          <button
+            onClick={() => setResumedDraft(false)}
+            aria-label="Dismiss"
+            className="shrink-0 rounded-lg p-1 hover:bg-green-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Stepper */}
       <Stepper currentStep={currentStep} />
 
@@ -176,6 +287,7 @@ export default function SubmitGrievancePage() {
           <GrievanceDetailsCard
             onNext={handleNext}
             onBack={handleBack}
+            clientUuid={clientUuid}
             serviceCategory={serviceCategory}
             setServiceCategory={setServiceCategory}
             grievanceType={grievanceType}
@@ -192,6 +304,12 @@ export default function SubmitGrievancePage() {
             setDescription={setDescription}
             uploadedFile={uploadedFile}
             setUploadedFile={setUploadedFile}
+            attachmentId={attachmentId}
+            setAttachmentId={setAttachmentId}
+            scanStatus={scanStatus}
+            setScanStatus={setScanStatus}
+            attachmentFileName={attachmentFileName}
+            setAttachmentFileName={setAttachmentFileName}
           />
         )}
         {currentStep === 3 && (
@@ -209,6 +327,7 @@ export default function SubmitGrievancePage() {
             kebele={kebele}
             description={description}
             uploadedFile={uploadedFile}
+            attachmentFileName={attachmentFileName}
           />
         )}
       </div>

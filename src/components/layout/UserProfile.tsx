@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Settings, LogOut } from 'lucide-react';
+import { ChevronDown, User, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { performLogout } from '@/features/auth/logout';
 import { selectUser } from '@/features/auth/store/authSlice';
@@ -86,13 +86,15 @@ export function UserProfile() {
         </div>
 
         <div className="py-2">
-          <button className="w-full flex items-center gap-3 px-5 py-3 text-[15px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-            <Settings className="w-5 h-5 text-slate-700 stroke-[2]" />
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              router.push('/profile');
+            }}
+            className="w-full flex items-center gap-3 px-5 py-3 text-[15px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <User className="w-5 h-5 text-slate-700 stroke-[2]" />
             Profile
-          </button>
-          <button className="w-full flex items-center gap-3 px-5 py-3 text-[15px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-            <Settings className="w-5 h-5 text-slate-700 stroke-[2]" />
-            Settings
           </button>
         </div>
 

@@ -50,8 +50,10 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
  * `/no-access` must stay here: it's `DEFAULT_HOME_ROUTE` below, the landing
  * page for a role that matches nothing in `ROUTE_ROLES` — if it required a
  * role itself, that user would bounce off it straight back to itself.
+ * `/profile` is here too: it's every signed-in user's own account page, not
+ * a role-specific dashboard screen, so every role needs it open.
  */
-const UNRESTRICTED_ROUTES = ['/no-access'];
+const UNRESTRICTED_ROUTES = ['/no-access', '/profile'];
 
 function isUnrestrictedRoute(pathname: string): boolean {
   return findMatchingRoute(pathname, UNRESTRICTED_ROUTES) !== undefined;
