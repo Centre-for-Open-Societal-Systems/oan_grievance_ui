@@ -34,6 +34,10 @@ interface GrievanceDetailsCardProps {
   onNext: () => void;
   onBack: () => void;
   clientUuid: string;
+  /** Step 1's fields — read-only here, folded into this step's own Save Draft payload so it can't overwrite them (drafts.ts's `saveDraft` replaces the whole payload). */
+  submitterType: string;
+  submissionChannel: string;
+  identityValues: Record<string, string>;
   serviceCategory: string;
   setServiceCategory: (value: string) => void;
   grievanceType: string;
@@ -89,6 +93,9 @@ export function GrievanceDetailsCard({
   onNext,
   onBack,
   clientUuid,
+  submitterType,
+  submissionChannel,
+  identityValues,
   serviceCategory,
   setServiceCategory,
   grievanceType,
@@ -303,6 +310,9 @@ export function GrievanceDetailsCard({
     fileName: string | null;
     scanStatus: ScanStatus | null;
   }) => ({
+    submitterType,
+    submissionChannel,
+    identityValues,
     ...latestFieldsRef.current,
     attachmentId: attachmentOverride ? attachmentOverride.attachmentId : attachmentId,
     attachmentFileName: attachmentOverride ? attachmentOverride.fileName : (uploadedFile?.name ?? attachmentFileName),

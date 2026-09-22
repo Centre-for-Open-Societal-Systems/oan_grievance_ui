@@ -125,12 +125,14 @@ export default function SubmitGrievancePage() {
   // draft's real one swaps in underneath it.
   const [draftCheckDone, setDraftCheckDone] = useState(false);
 
-  // Resume the caller's saved draft, if one exists, once on mount. Only
-  // `payload` (Step 2's fields, plus whichever attachment was last
-  // uploaded) round-trips through the draft today — Step 1 stays prefilled
-  // from the live user profile above, same as always. A 404 here just
-  // means there's no draft yet, the ordinary case for anyone starting
-  // fresh; only unexpected failures are logged.
+  // Resume the caller's saved draft, if one exists, once on mount. `payload`
+  // carries the whole wizard's state — Step 1's identity fields (which may
+  // differ from the live profile's, e.g. a Development Agent's farmer
+  // details) as well as Step 2's — so a returning submitter who'd already
+  // typed something for this specific grievance gets that back, not just
+  // their account's defaults. A 404 here just means there's no draft yet,
+  // the ordinary case for anyone starting fresh; only unexpected failures
+  // are logged.
   useEffect(() => {
     let cancelled = false;
     loadDraft()
@@ -138,6 +140,17 @@ export default function SubmitGrievancePage() {
         if (cancelled) return;
         setClientUuid(draft.client_uuid);
         const payload = draft.payload ?? {};
+        if (typeof payload.submitterType === "string" && payload.submitterType) setSubmitterType(payload.submitterType);
+        if (typeof payload.submissionChannel === "string" && payload.submissionChannel) {
+          setSubmissionChannel(payload.submissionChannel);
+        }
+        if (payload.identityValues && typeof payload.identityValues === "object") {
+          const restored: Record<string, string> = {};
+          for (const [key, value] of Object.entries(payload.identityValues as Record<string, unknown>)) {
+            if (typeof value === "string") restored[key] = value;
+          }
+          setIdentityValues(restored);
+        }
         if (typeof payload.serviceCategory === "string") setServiceCategory(payload.serviceCategory);
         if (typeof payload.grievanceType === "string") setGrievanceType(payload.grievanceType);
         if (typeof payload.region === "string") setRegion(payload.region);
@@ -243,6 +256,32 @@ export default function SubmitGrievancePage() {
     setDiscardState("idle");
   };
 
+  // The whole wizard's state, exactly as `POST /api/v1/drafts` needs it — that
+  // endpoint overwrites the draft's payload wholesale, not a per-key merge, so
+  // every Save Draft button (Step 1, 2, and 3) must send this same full shape
+  // or it would silently wipe out whatever an earlier save from a *different*
+  // step had put there. `GrievanceDetailsCard` builds its own copy of the
+  // Step 2 portion (it needs a same-render-fresh snapshot for its async
+  // post-upload auto-save — see its `currentDraftPayload`) but folds these
+  // same identity fields in via props rather than keeping a second version.
+  const draftPayload = {
+    submitterType,
+    submissionChannel,
+    identityValues,
+    serviceCategory,
+    grievanceType,
+    region,
+    zone,
+    woreda,
+    kebele,
+    description,
+    desiredOutcome,
+    serviceProvider,
+    attachmentId,
+    attachmentFileName: uploadedFile?.name ?? attachmentFileName,
+    scanStatus,
+  };
+
   if (submitted) {
     return (
       <div className="font-sans pb-2">
@@ -341,6 +380,8 @@ export default function SubmitGrievancePage() {
         {currentStep === 1 && (
           <SubmitterIdentityCard
             onNext={handleNext}
+            clientUuid={clientUuid}
+            draftPayload={draftPayload}
             submitterType={submitterType}
             setSubmitterType={handleSubmitterTypeChange}
             submissionChannel={submissionChannel}
@@ -354,6 +395,9 @@ export default function SubmitGrievancePage() {
             onNext={handleNext}
             onBack={handleBack}
             clientUuid={clientUuid}
+            submitterType={submitterType}
+            submissionChannel={submissionChannel}
+            identityValues={identityValues}
             serviceCategory={serviceCategory}
             setServiceCategory={setServiceCategory}
             grievanceType={grievanceType}
@@ -387,20 +431,7 @@ export default function SubmitGrievancePage() {
             onBack={handleBack}
             onSubmitted={handleSubmitted}
             clientUuid={clientUuid}
-            draftPayload={{
-              serviceCategory,
-              grievanceType,
-              region,
-              zone,
-              woreda,
-              kebele,
-              description,
-              desiredOutcome,
-              serviceProvider,
-              attachmentId,
-              attachmentFileName: uploadedFile?.name ?? attachmentFileName,
-              scanStatus,
-            }}
+            draftPayload={draftPayload}
             submitterType={submitterType}
             submissionChannel={submissionChannel}
             identityValues={identityValues}
