@@ -298,6 +298,9 @@ export function GrievanceDetailsCard({
 
     if (missing.length > 0) {
       setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
+      setTimeout(() => {
+        document.getElementById("grievance-details-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
     // Matches oan_grievance_service/services/identity.py's
@@ -308,10 +311,16 @@ export function GrievanceDetailsCard({
     const MIN_DESCRIPTION_LENGTH = 20;
     if (description.trim().length < MIN_DESCRIPTION_LENGTH) {
       setError(t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count: description.trim().length }));
+      setTimeout(() => {
+        document.getElementById("grievance-details-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
     if (scanStatus === SCAN_STATUS.INFECTED) {
       setError("Remove the attachment that failed the malware scan before continuing.");
+      setTimeout(() => {
+        document.getElementById("grievance-details-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
     setError(null);

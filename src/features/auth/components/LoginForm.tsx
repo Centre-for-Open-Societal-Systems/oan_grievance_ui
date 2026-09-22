@@ -45,7 +45,9 @@ export function LoginForm() {
     const result = await dispatch(loginThunk({ usr: email.trim(), pwd: password, rememberMe }));
 
     if (loginThunk.fulfilled.match(result)) {
-      router.push(homeRouteForRoles(result.payload.roles ?? []));
+      const returnUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('returnUrl') : null;
+      const safeReturnUrl = returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : null;
+      router.push(safeReturnUrl || homeRouteForRoles(result.payload.roles ?? []));
       return;
     }
 

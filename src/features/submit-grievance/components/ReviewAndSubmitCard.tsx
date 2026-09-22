@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff } from "lucide-react";
+import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
@@ -14,6 +15,10 @@ import {
 interface ReviewAndSubmitCardProps {
   onBack: () => void;
   onSubmit: () => void;
+  onSaveDraft?: () => void;
+  draftSaveState?: "idle" | "saving" | "saved" | "error";
+  isSubmitting?: boolean;
+  submitError?: string | null;
   submitterType: string;
   submissionChannel: string;
   identityValues: Record<string, string>;
@@ -32,6 +37,7 @@ interface ReviewAndSubmitCardProps {
 function labelFor(options: { value: string; label: string }[], value: string): string {
   return (
     options.find((o) => o.value.toLowerCase() === value.toLowerCase())?.label ||
+    options.find((o) => o.label.toLowerCase() === value.toLowerCase())?.label ||
     options.find((o) => o.value === value)?.label ||
     value
   );
@@ -56,6 +62,10 @@ function formatPhoneForDisplay(phoneNumber: string | undefined, phoneCode: strin
 export function ReviewAndSubmitCard({
   onBack,
   onSubmit,
+  onSaveDraft,
+  draftSaveState = "idle",
+  isSubmitting = false,
+  submitError = null,
   submitterType,
   submissionChannel,
   identityValues,
@@ -71,13 +81,6 @@ export function ReviewAndSubmitCard({
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
   const displayFileName = uploadedFile?.name ?? attachmentFileName;
-  // Same national-ID field set fields.ts validates as a Fayda ID (imported
-  // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
-  // action pattern as SIMaskedIdField and the Profile page's MaskedField.
-  // Without this, a value that only reaches this screen via the
-  // localStorage-persisted submitter profile (representativeFaydaId/
-  // officialFaydaId have no other source) would show up in cleartext on a
-  // review screen the user never typed it into this session.
   const [revealedIdFields, setRevealedIdFields] = useState<Set<string>>(new Set());
   const toggleReveal = (key: string) =>
     setRevealedIdFields((prev) => {
@@ -100,8 +103,6 @@ export function ReviewAndSubmitCard({
 
   return (
     <div className="bg-white rounded-xl border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 ">
-
-
       {/* Top Card - Review Header */}
       <div className="p-6 pb-4 border-b border-gray-200 flex items-start justify-between">
         <div className="flex items-center gap-4">
@@ -120,141 +121,165 @@ export function ReviewAndSubmitCard({
         </div>
       </div>
 
-
-
-
       {/* Main Content Card */}
       <div className="p-6 pb-8 space-y-6">
-          {/* Ticket Number Alert */}
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 flex items-start gap-4">
-            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <User className="w-4 h-4 text-[#16A34A]" />
-            </div>
-            <div>
-              <p className="text-[15px] font-bold text-gray-900 mb-0.5">Ticket number will be generated as:</p>
-              <p className="text-sm font-medium text-gray-500">AMHA-SD-MAR-XXXXX</p>
-            </div>
-          </div>
+        {submitError && (
+          <ErrorAlert id="submit-grievance-error" className="mb-2">
+            {submitError}
+          </ErrorAlert>
+        )}
 
-          {/* Details Summary */}
-          <div className="border border-gray-200 rounded-xl p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
-              <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Submitter Type</p>
-                <p className="text-[15px] font-semibold text-gray-900">{labelFor(submitterTypes, submitterType) || "Not provided"}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Channel</p>
-                <p className="text-[15px] font-semibold text-gray-900">{labelFor(submissionChannels, submissionChannel) || "Not provided"}</p>
-              </div>
-              {identityFields
-                .filter((field) => field.key !== "phoneCode")
-                .map((field) => {
-                  const value = field.key === "phoneNumber"
-                    ? formatPhoneForDisplay(identityValues.phoneNumber, identityValues.phoneCode)
-                    : identityValues[field.key] || "";
-                  const isIdField = ID_FIELD_KEYS.includes(field.key);
-                  const revealed = revealedIdFields.has(field.key);
-                  return (
-                    <div key={field.key}>
-                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">{field.label}</p>
-                      {isIdField && value ? (
-                        <div className="flex items-center gap-2">
-                          <p className="text-[15px] font-semibold text-gray-900">
-                            {revealed ? value : "•".repeat(Math.max(value.length, 8))}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => toggleReveal(field.key)}
-                            aria-label={revealed ? `Hide ${field.label}` : `Show ${field.label}`}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                          >
-                            {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-[15px] font-semibold text-gray-900">{value || "Not provided"}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Service Category</p>
-                <p className="text-[15px] font-semibold text-gray-900">{labelFor(serviceCategories, serviceCategory) || "Not provided"}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Grievance Type</p>
-                <p className="text-[15px] font-semibold text-gray-900">{labelFor(grievanceTypes, grievanceType) || "Not provided"}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Location</p>
-                <p className="text-[15px] font-semibold text-gray-900">{location}</p>
-              </div>
-              <div className="md:col-span-2">
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</p>
-                <p className="text-[15px] font-semibold text-gray-900">{description || "Not provided"}</p>
-              </div>
-              <div className="md:col-span-2">
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Attachments {displayFileName ? "(1)" : "(0)"}
-                </p>
-                <p className="text-[15px] font-semibold text-gray-900">{displayFileName ?? "No file attached"}</p>
-              </div>
-            </div>
+        {/* Ticket Number Alert */}
+        <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 flex items-start gap-4">
+          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <User className="w-4 h-4 text-[#16A34A]" />
           </div>
-
-          {/* Consent Checkbox */}
-          <div 
-            className="flex items-start gap-3 mt-4 cursor-pointer group"
-            onClick={() => setConsentChecked(!consentChecked)}
-          >
-            <div className="relative mt-0.5 flex-shrink-0">
-              <div className={`w-5 h-5 rounded flex items-center justify-center transition-all duration-300 ${
-                consentChecked 
-                  ? 'bg-[#16A34A] border-2 border-[#16A34A] shadow-[0_0_8px_rgba(22,163,74,0.4)]' 
-                  : 'border-2 border-gray-300 bg-white group-hover:border-[#16A34A]'
-              }`}>
-                <Check className={`w-3.5 h-3.5 text-white transition-all duration-300 ${
-                  consentChecked ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
-                }`} strokeWidth={4} />
-              </div>
-            </div>
-            <span className="text-sm font-medium text-gray-600 leading-relaxed select-none">
-              I consent to this grievance being shared with the relevant department for resolution. I confirm the information above is true and accurate to the best of my knowledge.
-            </span>
+          <div>
+            <p className="text-[15px] font-bold text-gray-900 mb-0.5">Ticket number will be generated upon submission</p>
+            <p className="text-sm font-medium text-gray-500">Official tracking reference formatted according to region and category</p>
           </div>
         </div>
 
+        {/* Details Summary */}
+        <div className="border border-gray-200 rounded-xl p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Submitter Type</p>
+              <p className="text-[15px] font-semibold text-gray-900">{labelFor(submitterTypes, submitterType) || "Not provided"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Channel</p>
+              <p className="text-[15px] font-semibold text-gray-900">{labelFor(submissionChannels, submissionChannel) || "Not provided"}</p>
+            </div>
+            {identityFields
+              .filter((field) => field.key !== "phoneCode")
+              .map((field) => {
+                const value = field.key === "phoneNumber"
+                  ? formatPhoneForDisplay(identityValues.phoneNumber, identityValues.phoneCode)
+                  : identityValues[field.key] || "";
+                const isIdField = ID_FIELD_KEYS.includes(field.key);
+                const revealed = revealedIdFields.has(field.key);
+                return (
+                  <div key={field.key}>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">{field.label}</p>
+                    {isIdField && value ? (
+                      <div className="flex items-center gap-2">
+                        <p className="text-[15px] font-semibold text-gray-900">
+                          {revealed ? value : "•".repeat(Math.max(value.length, 8))}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => toggleReveal(field.key)}
+                          aria-label={revealed ? `Hide ${field.label}` : `Show ${field.label}`}
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-[15px] font-semibold text-gray-900">{value || "Not provided"}</p>
+                    )}
+                  </div>
+                );
+              })}
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Service Category</p>
+              <p className="text-[15px] font-semibold text-gray-900">{labelFor(serviceCategories, serviceCategory) || "Not provided"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Grievance Type</p>
+              <p className="text-[15px] font-semibold text-gray-900">{labelFor(grievanceTypes, grievanceType) || "Not provided"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Location</p>
+              <p className="text-[15px] font-semibold text-gray-900">{location}</p>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</p>
+              <p className="text-[15px] font-semibold text-gray-900">{description || "Not provided"}</p>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Attachments {displayFileName ? "(1)" : "(0)"}
+              </p>
+              <p className="text-[15px] font-semibold text-gray-900">{displayFileName ?? "No file attached"}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Consent Checkbox */}
+        <div 
+          className="flex items-start gap-3 mt-4 cursor-pointer group"
+          onClick={() => setConsentChecked(!consentChecked)}
+        >
+          <div className="relative mt-0.5 flex-shrink-0">
+            <div className={`w-5 h-5 rounded flex items-center justify-center transition-all duration-300 ${
+              consentChecked 
+                ? 'bg-[#16A34A] border-2 border-[#16A34A] shadow-[0_0_8px_rgba(22,163,74,0.4)]' 
+                : 'border-2 border-gray-300 bg-white group-hover:border-[#16A34A]'
+            }`}>
+              <Check className={`w-3.5 h-3.5 text-white transition-all duration-300 ${
+                consentChecked ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+              }`} strokeWidth={4} />
+            </div>
+          </div>
+          <span className="text-sm font-medium text-gray-600 leading-relaxed select-none">
+            I consent to this grievance being shared with the relevant department for resolution. I confirm the information above is true and accurate to the best of my knowledge.
+          </span>
+        </div>
+      </div>
+
       {/* Footer Actions */}
       <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] flex items-center justify-between rounded-b-xl mt-auto">
-          <div className="flex items-center text-sm text-gray-600">
+        <div className="flex items-center text-sm text-gray-600">
+          <button
+            onClick={onBack}
+            disabled={isSubmitting}
+            className="flex items-center gap-2 px-5 py-3 mr-4 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50"
+          >
+            <ArrowLeft className="w-4 h-4 text-gray-600" />
+            Previous
+          </button>
+          <Info className="w-4 h-4 text-blue-600 mr-1.5" />
+          <span>All fields marked <span className="text-red-500">*</span> are required</span>
+        </div>
+        <div className="flex items-center gap-3">
+          {onSaveDraft && (
             <button
-              onClick={onBack}
-              className="flex items-center gap-2 px-5 py-3 mr-4 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
+              onClick={onSaveDraft}
+              disabled={draftSaveState === "saving" || isSubmitting}
+              className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ArrowLeft className="w-4 h-4 text-gray-600" />
-              Previous
+              {draftSaveState === "saving" ? (
+                <Loader2 className="w-4 h-4 text-[#0b8535] animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 text-[#0b8535]" />
+              )}
+              {draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Retry Save" : "Save Draft"}
             </button>
-            <Info className="w-4 h-4 text-blue-600 mr-1.5" />
-            <span>All fields marked <span className="text-red-500">*</span> are required</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
-              <Save className="w-4 h-4 text-[#0b8535]" />
-              Save Draft
-            </button>
-            <button
-              onClick={onSubmit}
-              className={`flex items-center gap-2 px-5 py-3 text-white rounded-lg text-sm font-bold transition-colors shadow-sm focus:outline-none focus:ring-2 ${consentChecked
+          )}
+          <button
+            onClick={onSubmit}
+            className={`flex items-center gap-2 px-5 py-3 text-white rounded-lg text-sm font-bold transition-colors shadow-sm focus:outline-none focus:ring-2 ${
+              consentChecked && !isSubmitting
                 ? "bg-[#16A34A] hover:bg-[#10883c] focus:ring-[#0b8535]/50"
                 : "bg-gray-300 cursor-not-allowed text-gray-500"
-                }`}
-              disabled={!consentChecked}
-            >
-              Submit Grievance
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+            }`}
+            disabled={!consentChecked || isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+                Submitting…
+              </>
+            ) : (
+              <>
+                Submit Grievance
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

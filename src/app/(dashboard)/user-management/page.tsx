@@ -1,5 +1,11 @@
 import UserManagementPage from '@/features/user-management/page';
+import { Suspense } from 'react';
 
 export default function UsersRoute() {
-  return <UserManagementPage />;
+  return (
+    <Suspense>
+      <UserManagementPage />
+    </Suspense>
+  );
 }
+

@@ -85,22 +85,29 @@ export async function uploadAttachment(params: {
   if (params.documentType) form.append('document_type', params.documentType);
   if (params.response) form.append('response', params.response);
 
+  let rawResult: UploadAttachmentResult | UploadAttachmentResult[];
   if (params.grievance) {
-    return fetchApi<UploadAttachmentResult>(
+    rawResult = await fetchApi<UploadAttachmentResult | UploadAttachmentResult[]>(
       `api/v1/grievances/${params.grievance}/attachments`,
       { method: 'POST', body: form },
       UPLOAD_TIMEOUT_MS
     );
+  } else {
+    if (!params.clientUuid) {
+      throw new Error('uploadAttachment requires either a grievance or a clientUuid.');
+    }
+    form.append('client_uuid', params.clientUuid);
+    rawResult = await fetchApi<UploadAttachmentResult | UploadAttachmentResult[]>(
+      'api/v1/drafts/attachments',
+      { method: 'POST', body: form },
+      UPLOAD_TIMEOUT_MS
+    );
   }
-  if (!params.clientUuid) {
-    throw new Error('uploadAttachment requires either a grievance or a clientUuid.');
+
+  if (Array.isArray(rawResult)) {
+    return rawResult[0] as UploadAttachmentResult;
   }
-  form.append('client_uuid', params.clientUuid);
-  return fetchApi<UploadAttachmentResult>(
-    'api/v1/drafts/attachments',
-    { method: 'POST', body: form },
-    UPLOAD_TIMEOUT_MS
-  );
+  return rawResult;
 }
 
 /** GET /api/v1/grievances/<grievance>/attachments — every attachment on a case, including pending/infected ones. */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { mapGrievanceListItem } from './mapGrievance';
+import { mapGrievanceListItem, getInitials, normalizeTimelineEntry } from './mapGrievance';
 import { bucketStatuses } from '../hooks/useGrievanceMetrics';
-import type { GrievanceListItem } from '../types';
+import type { GrievanceListItem, TimelineEntry, TimelineEventItem } from '../types';
 
 const baseItem: GrievanceListItem = {
   name: 'GRV-0001',
@@ -60,6 +60,70 @@ describe('mapGrievanceListItem', () => {
     expect(grievance.location).toBe('');
     expect(grievance.submittedAt).toBe('');
     expect(grievance.escalated).toBe(true);
+  });
+
+  it('prefers ticket_number_display when provided by the backend', () => {
+    const grievance = mapGrievanceListItem({
+      ...baseItem,
+      ticket_number_display: 'ET14IN000012026',
+    });
+
+    expect(grievance.ticketId).toBe('ET14IN000012026');
+    expect(grievance.ticketNumberDisplay).toBe('ET14IN000012026');
+    expect(grievance.id).toBe('GRV-0001');
+  });
+});
+
+describe('getInitials', () => {
+  it('extracts initials for various name patterns', () => {
+    expect(getInitials('Abebe Bekele')).toBe('AB');
+    expect(getInitials('Tigist Alemu')).toBe('TA');
+    expect(getInitials('Admin')).toBe('AD');
+    expect(getInitials('Yonas Mekonnen Kebede')).toBe('YK');
+    expect(getInitials('')).toBe('??');
+    expect(getInitials(null)).toBe('??');
+  });
+});
+
+describe('normalizeTimelineEntry', () => {
+  it('normalizes backend TimelineEntry correctly', () => {
+    const entry: TimelineEntry = {
+      name: 'GR-TIME-00001',
+      entry_type: 'note',
+      is_internal: true,
+      body: 'Investigating warehouse logs.',
+      author_user: 'officer@example.com',
+      author_name: 'Tigist Alemu',
+      author_type: 'officer',
+      created_on: '2026-04-12T10:15:00Z',
+    };
+
+    const normalized = normalizeTimelineEntry(entry);
+    expect(normalized.id).toBe('GR-TIME-00001');
+    expect(normalized.typeLabel).toBe('Internal Note');
+    expect(normalized.isInternal).toBe(true);
+    expect(normalized.authorName).toBe('Tigist Alemu');
+    expect(normalized.authorType).toBe('officer');
+    expect(normalized.initials).toBe('TA');
+    expect(normalized.body).toBe('Investigating warehouse logs.');
+  });
+
+  it('normalizes OpenAPI TimelineEventItem correctly', () => {
+    const event: TimelineEventItem = {
+      event_type: 'Status Change',
+      from_status: 'Assigned',
+      to_status: 'In Progress',
+      actor: 'Tigist Alemu',
+      actor_role: 'Grievance Officer',
+      message: 'Status updated to In Progress',
+      creation: '2026-04-28T19:40:00Z',
+    };
+
+    const normalized = normalizeTimelineEntry(event);
+    expect(normalized.typeLabel).toBe('Status Change');
+    expect(normalized.authorName).toBe('Tigist Alemu');
+    expect(normalized.fromStatus).toBe('Assigned');
+    expect(normalized.toStatus).toBe('In Progress');
   });
 });
 

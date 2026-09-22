@@ -1,19 +1,5 @@
 import { fetchApi } from '@/lib/api/fetchApi';
 
-// oan_grievance_service's Grievance Draft: working state for a
-// still-in-progress submission, keyed by a client-generated UUID. Uploading
-// an attachment before the case exists (`uploadAttachment` in attachments.ts
-// with a `clientUuid`) requires this draft to already exist server-side —
-// see `submit_document`'s docstring on the backend.
-
-export interface DraftSaveResult {
-  client_uuid: string;
-  step_reached: number;
-  expires_on: string;
-  attachment_count: number;
-  owner_user: string | null;
-}
-
 export interface DraftAttachment {
   name: string;
   file_name: string;
@@ -23,44 +9,132 @@ export interface DraftAttachment {
 }
 
 export interface DraftState {
-  name: string;
-  client_uuid: string;
-  payload: Record<string, unknown>;
-  step_reached: number;
-  contact_mobile: string | null;
-  expires_on: string;
-  submitted_as: string | null;
-  attachments: DraftAttachment[];
-  attachment_count: number;
+  name?: string;
+  ticket_number?: string | null;
+  client_submission_uuid?: string;
+  client_uuid?: string;
+  owner?: string | null;
+  submitter_name?: string | null;
+  contact_mobile?: string | null;
+  contact_email?: string | null;
+  submitter_type?: string | null;
+  submission_channel?: string | null;
+  service_category?: string | null;
+  grievance_type?: string | null;
+  grievance_type_name?: string | null;
+  administrative_area?: string | null;
+  administrative_unit?: string | null;
+  description?: string | null;
+  desired_outcome?: string | null;
+  is_anonymous?: boolean | number;
+  payload?: Record<string, unknown>;
+  attachments?: DraftAttachment[];
+  attachment_count?: number;
 }
 
-/** POST /api/v1/drafts — create or overwrite the draft for `clientUuid`. Authenticated only. */
+export interface SaveDraftPayload {
+  client_submission_uuid?: string;
+  submission_channel?: string;
+  submitter_type?: string;
+  submitter_name?: string;
+  contact_mobile?: string;
+  contact_email?: string;
+  administrative_area?: string;
+  administrative_unit?: string;
+  service_category?: string;
+  grievance_type?: string;
+  associated_service_provider?: string;
+  description?: string;
+  desired_outcome?: string;
+  is_anonymous?: number;
+}
+
+export interface SubmitDraftPayload extends SaveDraftPayload {
+  consent_given?: number | boolean;
+  anonymity_justification?: string;
+}
+
+export interface SubmitDraftResult {
+  ticket_number: string;
+  status: string;
+  client_submission_uuid?: string;
+  routing_rule?: string | null;
+}
+
+/**
+ * POST /api/v1/drafts — create or update an active draft directly in the backend.
+ * Supports typed SaveDraftPayload object as well as legacy signature (clientUuid, payload, stepReached).
+ */
 export async function saveDraft(
-  clientUuid: string,
-  payload: Record<string, unknown>,
-  stepReached: number
-): Promise<DraftSaveResult> {
-  return fetchApi<DraftSaveResult>('api/v1/drafts', {
+  paramsOrClientUuid: string | SaveDraftPayload,
+  legacyPayload?: Record<string, unknown>,
+  _stepReached?: number
+): Promise<DraftState> {
+  let body: SaveDraftPayload;
+
+  if (typeof paramsOrClientUuid === 'string') {
+    const p = legacyPayload || {};
+    body = {
+      client_submission_uuid: paramsOrClientUuid,
+      submission_channel: typeof p.submissionChannel === 'string' ? p.submissionChannel : (p.submission_channel as string | undefined),
+      submitter_type: typeof p.submitterType === 'string' ? p.submitterType : (p.submitter_type as string | undefined),
+      submitter_name: typeof p.submitterName === 'string' ? p.submitterName : (p.submitter_name as string | undefined),
+      contact_mobile: typeof p.contactMobile === 'string' ? p.contactMobile : (p.contact_mobile as string | undefined),
+      contact_email: typeof p.contactEmail === 'string' ? p.contactEmail : (p.contact_email as string | undefined),
+      administrative_area: typeof p.administrativeArea === 'string' ? p.administrativeArea : (p.administrative_area as string | undefined),
+      administrative_unit: typeof p.administrativeUnit === 'string' ? p.administrativeUnit : (p.administrative_unit as string | undefined),
+      service_category: typeof p.serviceCategory === 'string' ? p.serviceCategory : (p.service_category as string | undefined),
+      grievance_type: typeof p.grievanceType === 'string' ? p.grievanceType : (p.grievance_type as string | undefined),
+      description: typeof p.description === 'string' ? p.description : undefined,
+      desired_outcome: typeof p.desiredOutcome === 'string' ? p.desiredOutcome : (p.desired_outcome as string | undefined),
+    };
+  } else {
+    body = paramsOrClientUuid;
+  }
+
+  // Filter out undefined values to keep payload clean
+  const cleanBody: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(body)) {
+    if (v !== undefined && v !== null && v !== '') {
+      cleanBody[k] = v;
+    }
+  }
+
+  return fetchApi<DraftState>('api/v1/drafts', {
     method: 'POST',
-    body: JSON.stringify({ client_uuid: clientUuid, payload, step_reached: stepReached }),
+    body: JSON.stringify(cleanBody),
   });
 }
 
 /**
- * GET /api/v1/drafts — the authenticated caller's latest unsubmitted draft,
- * if any, looked up by session owner (no client_uuid needed). Not called
- * anywhere in the UI yet — resuming an in-progress wizard across a page
- * reload is a separate feature this PR doesn't wire up, but the client is
- * available for whoever builds that next.
+ * POST /api/v1/drafts/submit — submit an existing draft into a registered Grievance case.
  */
-export async function loadDraft(): Promise<DraftState> {
-  return fetchApi<DraftState>('api/v1/drafts', { method: 'GET' });
+export async function submitDraft(payload: SubmitDraftPayload): Promise<SubmitDraftResult> {
+  const cleanBody: Record<string, unknown> = { consent_given: 1 };
+  for (const [k, v] of Object.entries(payload)) {
+    if (v !== undefined && v !== null && v !== '') {
+      cleanBody[k] = v;
+    }
+  }
+
+  return fetchApi<SubmitDraftResult>('api/v1/drafts/submit', {
+    method: 'POST',
+    body: JSON.stringify(cleanBody),
+  });
 }
 
 /**
- * DELETE /api/v1/drafts?client_uuid=... — discard a draft the submitter
- * abandoned. Not called anywhere in the UI yet, same as `loadDraft`.
+ * GET /api/v1/drafts — the authenticated caller's latest unsubmitted draft, if any.
  */
-export async function discardDraft(clientUuid: string): Promise<void> {
-  await fetchApi(`api/v1/drafts?client_uuid=${encodeURIComponent(clientUuid)}`, { method: 'DELETE' });
+export async function loadDraft(clientUuid?: string): Promise<DraftState | null> {
+  const query = clientUuid ? `?client_submission_uuid=${encodeURIComponent(clientUuid)}` : '';
+  return fetchApi<DraftState | null>(`api/v1/drafts${query}`, { method: 'GET' });
+}
+
+/**
+ * DELETE /api/v1/drafts — discard a draft the submitter abandoned.
+ */
+export async function discardDraft(clientUuid?: string): Promise<void> {
+  const query = clientUuid ? `?client_submission_uuid=${encodeURIComponent(clientUuid)}` : '';
+  await fetchApi(`api/v1/drafts${query}`, { method: 'DELETE' });
 }

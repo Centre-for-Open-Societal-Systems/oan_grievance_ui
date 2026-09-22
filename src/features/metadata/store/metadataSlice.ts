@@ -320,7 +320,7 @@ export const selectServiceCategoryOptions = (state: RootState): Array<{ value: s
 
   if (backendCategories && backendCategories.length > 0) {
     return backendCategories.map((c) => ({
-      value: c.category_name.toLowerCase(),
+      value: c.category_name,
       label: c.category_name,
     }));
   }
@@ -344,7 +344,7 @@ export const selectGrievanceTypeOptions = (
       );
     }
     return filtered.map((t) => ({
-      value: t.type_name,
+      value: t.grievance_type_id,
       label: t.type_name,
     }));
   }

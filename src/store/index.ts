@@ -2,6 +2,7 @@ import { performLogout } from '@/features/auth/logout';
 import { isProtectedRoute } from '@/features/auth/rbac';
 import { authReducer, getMeThunk } from '@/features/auth/store/authSlice';
 import { metadataReducer } from '@/features/metadata/store/metadataSlice';
+import { timelineReducer } from '@/features/all-grievances/store/timelineSlice';
 import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/toolkit';
 
 type AuthState = ReturnType<typeof authReducer>;
@@ -50,6 +51,7 @@ export const store = configureStore({
   reducer: {
     auth: authReducer,
     metadata: metadataReducer,
+    timeline: timelineReducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sessionExpiryMiddleware),
 });

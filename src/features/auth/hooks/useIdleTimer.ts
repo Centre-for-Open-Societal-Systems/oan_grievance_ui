@@ -55,8 +55,10 @@ export function useIdleTimer(): IdleTimerState {
     // "logged out" user's session silently restored by `AuthBootstrapGate`
     // on the very page meant to end it.
     void (async () => {
+      const currentUrl = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '';
       await performLogout(dispatch, userEmail);
-      router.push('/login?reason=idle');
+      const returnParam = currentUrl && !currentUrl.startsWith('/login') ? `&returnUrl=${encodeURIComponent(currentUrl)}` : '';
+      router.push(`/login?reason=idle${returnParam}`);
     })();
   }, [dispatch, router, userEmail]);
 

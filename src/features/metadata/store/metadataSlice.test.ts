@@ -92,6 +92,14 @@ function createMockRootState(metadataOverrides: Partial<MetadataState> = {}): Ro
       grievanceOptionsError: null,
       ...metadataOverrides,
     },
+    timeline: {
+      selectedTicketNumber: null,
+      timelineData: null,
+      status: 'idle',
+      error: null,
+      isSubmitting: false,
+      submitError: null,
+    },
   };
 }
 
