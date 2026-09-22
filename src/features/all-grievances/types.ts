@@ -70,6 +70,7 @@ export interface GrievanceListQueryParams {
 export interface Grievance {
   id: string;
   ticketId: string;
+  ticketNumber?: string;
   ticketNumberDisplay?: string;
   title: string;
   location: string;

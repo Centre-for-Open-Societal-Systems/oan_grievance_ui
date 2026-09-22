@@ -23,6 +23,7 @@ describe('mapGrievanceListItem', () => {
     const grievance = mapGrievanceListItem(baseItem);
 
     expect(grievance.id).toBe('GRV-0001');
+    expect(grievance.ticketNumber).toBe('SOMA-JIG-INP-09905');
     expect(grievance.ticketId).toBe('SOMA-JIG-INP-09905');
     expect(grievance.title).toBe('Fertiliser allocation delivered 6 weeks late');
     expect(grievance.location).toBe('Abebe Bekele - ET / OR / BSH');
@@ -70,6 +71,7 @@ describe('mapGrievanceListItem', () => {
 
     expect(grievance.ticketId).toBe('ET14IN000012026');
     expect(grievance.ticketNumberDisplay).toBe('ET14IN000012026');
+    expect(grievance.ticketNumber).toBe('SOMA-JIG-INP-09905');
     expect(grievance.id).toBe('GRV-0001');
   });
 });

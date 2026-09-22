@@ -166,7 +166,7 @@ export default function AllGrievancesPage() {
       />
 
       <GrievanceDetailSidebar
-        ticketNumber={selectedGrievance?.ticketId ?? null}
+        ticketNumber={selectedGrievance?.ticketNumber ?? selectedGrievance?.ticketId ?? null}
         grievance={selectedGrievance}
         onClose={() => setSelectedGrievance(null)}
       />

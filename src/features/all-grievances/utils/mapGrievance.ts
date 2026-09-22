@@ -53,6 +53,7 @@ export function mapGrievanceListItem(item: GrievanceListItem): Grievance {
 
   return {
     id: item.name,
+    ticketNumber: item.ticket_number || item.name,
     ticketId: item.ticket_number_display || item.ticket_number || item.name,
     ticketNumberDisplay: item.ticket_number_display ?? undefined,
     title: deriveTitle(item.description),

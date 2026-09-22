@@ -21,7 +21,7 @@ export function GrievanceDetailSidebar({
   grievance?: Grievance | null;
   onClose: () => void;
 }) {
-  const activeTicket = ticketNumber || grievance?.ticketId || null;
+  const activeTicket = ticketNumber || grievance?.ticketNumber || grievance?.ticketId || null;
   const userRoles = useAppSelector((state) => state.auth.user?.roles ?? []);
   const canManageCase = userRoles.includes('Grievance Officer') || userRoles.includes('Grievance Admin');
 
