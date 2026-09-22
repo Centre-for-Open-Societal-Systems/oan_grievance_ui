@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { FileEdit, Info, ArrowRight } from "lucide-react";
-import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { errorIdFor, FieldError } from "@/components/ui/FieldError";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchSubmitterOptionsThunk, selectSubmitterTypeOptions, selectSubmissionChannelOptions } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
@@ -12,7 +12,7 @@ import { CooperativeFPOForm } from "@/components/submitter-identity/SI-Cooperati
 import { NGOForm } from "@/components/submitter-identity/SI-NGOForm";
 import { WoredaKebeleForm } from "@/components/submitter-identity/SI-WoredaKebeleForm";
 import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-DevelopmentAgentForm";
-import { getMissingRequiredFields, getFieldFormatErrors } from "@/components/submitter-identity/fields";
+import { useIdentityErrors } from "@/components/submitter-identity/useIdentityErrors";
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
@@ -44,26 +44,53 @@ export function SubmitterIdentityCard({
     }
   }, [dispatch, submitterStatus]);
 
-  const [error, setError] = useState<string | null>(null);
   const t = useTranslations("submitGrievance.identityStep");
 
-  const handleNext = () => {
-    const missingTopLevel: string[] = [];
-    if (!submitterType) missingTopLevel.push("Submitter Type");
-    if (!submissionChannel) missingTopLevel.push("Submission Channel");
+  // Inline errors: the two dropdowns ("submitterType", "submissionChannel")
+  // and the identity form's own fields share one set of messages, so the same
+  // rules apply the same way here as on the register profile step.
+  const identity = useIdentityErrors({
+    submitterType,
+    values: identityValues,
+    requiredMessage: t("fieldRequired"),
+  });
 
-    const missing = [...missingTopLevel, ...getMissingRequiredFields(submitterType, identityValues)];
-    if (missing.length > 0) {
-      setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
-      return;
+  const handleSubmitterTypeChange = (value: string) => {
+    setSubmitterType(value);
+    // The previous type's fields are gone, so their messages are too.
+    identity.clear();
+  };
+
+  const handleChannelChange = (value: string) => {
+    setSubmissionChannel(value);
+    identity.setError("submissionChannel", null);
+  };
+
+  const handleIdentityValue = (key: string, value: string) => {
+    setIdentityValue(key, value);
+    identity.revalidateIfShowing(key, value);
+    // The phone country isn't a validated field itself, but it changes what
+    // "valid" means for phoneNumber (see validateLocalPhone) — re-check a
+    // phoneNumber error already showing against the newly selected country.
+    if (key === "phoneCode" && identity.errors.phoneNumber) {
+      identity.validateField("phoneNumber", { ...identityValues, phoneCode: value });
     }
-    const invalid = getFieldFormatErrors(submitterType, identityValues);
-    if (invalid.length > 0) {
-      setError(t("invalidFields", { count: invalid.length, fields: invalid.join(", ") }));
-      return;
-    }
-    setError(null);
-    onNext?.();
+  };
+
+  const handleNext = () => {
+    const valid = identity.validateAll([
+      { key: "submitterType", id: "submitter-type", message: submitterType ? null : t("fieldRequired") },
+      { key: "submissionChannel", id: "submission-channel", message: submissionChannel ? null : t("fieldRequired") },
+    ]);
+    if (valid) onNext?.();
+  };
+
+  // What each identity form needs to show and update its inline errors.
+  const identityForm = {
+    values: identityValues,
+    setValue: handleIdentityValue,
+    errors: identity.errors,
+    onFieldBlur: (key: string) => identity.validateField(key),
   };
 
   return (
@@ -99,10 +126,13 @@ export function SubmitterIdentityCard({
               options={dynamicSubmitterTypes}
               placeholder="Select Submitter Type"
               value={submitterType}
-              onChange={setSubmitterType}
-              invalid={!!error}
-              describedBy={error ? "submitter-identity-error" : undefined}
+              onChange={handleSubmitterTypeChange}
+              invalid={!!identity.errors.submitterType}
+              describedBy={identity.errors.submitterType ? errorIdFor("submitter-type") : undefined}
             />
+            {identity.errors.submitterType && (
+              <FieldError id={errorIdFor("submitter-type")}>{identity.errors.submitterType}</FieldError>
+            )}
           </div>
 
           {/* Submission Channel */}
@@ -115,22 +145,24 @@ export function SubmitterIdentityCard({
               options={dynamicSubmissionChannels}
               placeholder="Select Submission Channel"
               value={submissionChannel}
-              onChange={setSubmissionChannel}
-              invalid={!!error}
-              describedBy={error ? "submitter-identity-error" : undefined}
+              onChange={handleChannelChange}
+              invalid={!!identity.errors.submissionChannel}
+              describedBy={identity.errors.submissionChannel ? errorIdFor("submission-channel") : undefined}
             />
+            {identity.errors.submissionChannel && (
+              <FieldError id={errorIdFor("submission-channel")}>{identity.errors.submissionChannel}</FieldError>
+            )}
           </div>
         </div>
-        {submitterType === "individual" && <IndividualFarmerForm values={identityValues} setValue={setIdentityValue} />}
-        {submitterType === "cooperative" && <CooperativeFPOForm values={identityValues} setValue={setIdentityValue} />}
-        {submitterType === "ngo" && <NGOForm values={identityValues} setValue={setIdentityValue} />}
-        {submitterType === "woreda_kebele" && <WoredaKebeleForm values={identityValues} setValue={setIdentityValue} />}
-        {submitterType === "development_agent" && <DevelopmentAgentForm values={identityValues} setValue={setIdentityValue} />}
+        {submitterType === "individual" && <IndividualFarmerForm {...identityForm} />}
+        {submitterType === "cooperative" && <CooperativeFPOForm {...identityForm} />}
+        {submitterType === "ngo" && <NGOForm {...identityForm} />}
+        {submitterType === "woreda_kebele" && <WoredaKebeleForm {...identityForm} />}
+        {submitterType === "development_agent" && <DevelopmentAgentForm {...identityForm} />}
       </div>
 
       {/* Card Footer */}
       <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] rounded-b-xl">
-        {error && <ErrorAlert id="submitter-identity-error" className="mb-4">{error}</ErrorAlert>}
         <div className="flex items-center justify-between">
           <div className="flex items-center text-sm text-gray-600">
             <Info className="w-4 h-4 text-blue-600 mr-1.5" />

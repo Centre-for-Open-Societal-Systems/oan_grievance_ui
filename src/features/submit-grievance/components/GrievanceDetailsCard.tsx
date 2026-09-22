@@ -4,6 +4,9 @@ import React, { useEffect, useState, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from "@/components/ui/FieldError";
+import { MIN_DESCRIPTION_LENGTH } from "@/lib/validation/fieldRules";
+import { focusFirstError, useFieldErrors, type FieldErrors } from "@/lib/validation/useFieldErrors";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   fetchChildAreasThunk,
@@ -45,6 +48,12 @@ interface GrievanceDetailsCardProps {
   setKebele: (value: string) => void;
   description: string;
   setDescription: (value: string) => void;
+  /** What the submitter would like done about it — optional. Sent as `desired_outcome`. */
+  desiredOutcome: string;
+  setDesiredOutcome: (value: string) => void;
+  /** The store, cooperative, bank or market the grievance is about — optional. Sent as `associated_service_provider`. */
+  serviceProvider: string;
+  setServiceProvider: (value: string) => void;
   uploadedFile: File | null;
   setUploadedFile: (file: File | null) => void;
   // The attachment's backend identity — owned by page.tsx, not local state
@@ -64,6 +73,18 @@ interface GrievanceDetailsCardProps {
   setAttachmentFileName: (name: string | null) => void;
 }
 
+/** The required fields on this step, in form order — where "focus the first invalid field" looks. */
+type DetailsField = "serviceCategory" | "grievanceType" | "region" | "zone" | "woreda" | "description";
+
+const DETAILS_FIELD_ORDER: ReadonlyArray<{ key: DetailsField; id: string }> = [
+  { key: "serviceCategory", id: "service-category" },
+  { key: "grievanceType", id: "grievance-type" },
+  { key: "region", id: "grievance-region" },
+  { key: "zone", id: "grievance-zone" },
+  { key: "woreda", id: "grievance-woreda" },
+  { key: "description", id: "grievance-description" },
+];
+
 export function GrievanceDetailsCard({
   onNext,
   onBack,
@@ -82,6 +103,10 @@ export function GrievanceDetailsCard({
   setKebele,
   description,
   setDescription,
+  desiredOutcome,
+  setDesiredOutcome,
+  serviceProvider,
+  setServiceProvider,
   uploadedFile,
   setUploadedFile,
   attachmentId,
@@ -175,7 +200,11 @@ export function GrievanceDetailsCard({
   }, [dispatch, woreda, woredaNode]);
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  // `error` is for problems that aren't tied to one field (an upload failure,
+  // an attachment that failed the malware scan). A missing or malformed field
+  // is shown under that field instead — see `fieldErrors`.
   const [error, setError] = useState<string | null>(null);
+  const fieldErrors = useFieldErrors<DetailsField>();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -209,9 +238,13 @@ export function GrievanceDetailsCard({
   // mutated during render — the React Compiler here forbids that, since it
   // breaks the compiler's purity assumptions) so it always points at the
   // latest values regardless of when the callback holding it was created.
-  const latestFieldsRef = useRef({ serviceCategory, grievanceType, region, zone, woreda, kebele, description });
+  const latestFieldsRef = useRef({
+    serviceCategory, grievanceType, region, zone, woreda, kebele, description, desiredOutcome, serviceProvider,
+  });
   useEffect(() => {
-    latestFieldsRef.current = { serviceCategory, grievanceType, region, zone, woreda, kebele, description };
+    latestFieldsRef.current = {
+      serviceCategory, grievanceType, region, zone, woreda, kebele, description, desiredOutcome, serviceProvider,
+    };
   });
 
   // One object URL per uploaded file, created once and released — not
@@ -248,7 +281,8 @@ export function GrievanceDetailsCard({
   // removed, or the draft resumes one, without also firing mid-upload as
   // `scanStatus` transitioning Pending -> Clean would.
   const draftPayloadSnapshot = JSON.stringify([
-    serviceCategory, grievanceType, region, zone, woreda, kebele, description, attachmentFileName,
+    serviceCategory, grievanceType, region, zone, woreda, kebele, description, desiredOutcome, serviceProvider,
+    attachmentFileName,
   ]);
   const [lastDraftPayloadSnapshot, setLastDraftPayloadSnapshot] = useState(draftPayloadSnapshot);
   if (draftPayloadSnapshot !== lastDraftPayloadSnapshot) {
@@ -287,27 +321,31 @@ export function GrievanceDetailsCard({
     }
   };
 
-  const handleNext = () => {
-    const missing: string[] = [];
-    if (!serviceCategory) missing.push("Service Category");
-    if (!grievanceType) missing.push("Grievance Type");
-    if (!region) missing.push("Region");
-    if (!zone.trim()) missing.push("Zone / Sub-city");
-    if (!woreda.trim()) missing.push("Woreda");
-    if (!description.trim()) missing.push("Description");
-
-    if (missing.length > 0) {
-      setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
-      return;
+  // The message for the description field, or null if it's fine. Also used
+  // as the user types into a field that is already showing one.
+  const descriptionErrorFor = (value: string): string | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return t("fieldRequired");
+    if (trimmed.length < MIN_DESCRIPTION_LENGTH) {
+      return t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count: trimmed.length });
     }
-    // Matches oan_grievance_service/services/identity.py's
-    // MIN_DESCRIPTION_LENGTH — the backend will reject anything shorter
-    // once grievance.submit is actually wired up; catching it here first
-    // means the user gets a clear reason now rather than a mystery
-    // rejection later.
-    const MIN_DESCRIPTION_LENGTH = 20;
-    if (description.trim().length < MIN_DESCRIPTION_LENGTH) {
-      setError(t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count: description.trim().length }));
+    return null;
+  };
+
+  const handleNext = () => {
+    const errors: FieldErrors<DetailsField> = {};
+    if (!serviceCategory) errors.serviceCategory = t("fieldRequired");
+    if (!grievanceType) errors.grievanceType = t("fieldRequired");
+    if (!region) errors.region = t("fieldRequired");
+    if (!zone.trim()) errors.zone = t("fieldRequired");
+    if (!woreda.trim()) errors.woreda = t("fieldRequired");
+    const descriptionError = descriptionErrorFor(description);
+    if (descriptionError) errors.description = descriptionError;
+
+    fieldErrors.setAll(errors);
+    if (Object.keys(errors).length > 0) {
+      setError(null);
+      focusFirstError(DETAILS_FIELD_ORDER, errors);
       return;
     }
     if (scanStatus === SCAN_STATUS.INFECTED) {
@@ -315,6 +353,17 @@ export function GrievanceDetailsCard({
       return;
     }
     setError(null);
+    // "Save & Continue" saves: without this a reload or a closed tab on the
+    // next step lost everything typed here unless Save Draft had been clicked
+    // or a file uploaded. Not awaited — a slow connection (this app's
+    // explicit target) shouldn't hold up moving on, and a failed save is
+    // logged the same way the upload path's auto-save is; the explicit Save
+    // Draft button remains for anyone who wants to see it confirmed.
+    saveDraft(clientUuid, currentDraftPayload(), 3)
+      .then(() => {
+        draftEnsuredRef.current = true;
+      })
+      .catch((saveError) => logger.error("Failed to save draft on continue:", saveError));
     onNext();
   };
 
@@ -477,10 +526,14 @@ export function GrievanceDetailsCard({
                 onChange={(cat) => {
                   setServiceCategory(cat);
                   setGrievanceType("");
+                  fieldErrors.setError("serviceCategory", null);
                 }}
-                invalid={!!error}
-                describedBy={error ? "grievance-details-error" : undefined}
+                invalid={!!fieldErrors.errors.serviceCategory}
+                describedBy={fieldErrors.errors.serviceCategory ? errorIdFor("service-category") : undefined}
               />
+              {fieldErrors.errors.serviceCategory && (
+                <FieldError id={errorIdFor("service-category")}>{fieldErrors.errors.serviceCategory}</FieldError>
+              )}
             </div>
 
             {/* Grievance Type */}
@@ -493,10 +546,16 @@ export function GrievanceDetailsCard({
                 options={dynamicGrievanceTypes}
                 placeholder="Select grievance type"
                 value={grievanceType}
-                onChange={setGrievanceType}
-                invalid={!!error}
-                describedBy={error ? "grievance-details-error" : undefined}
+                onChange={(type) => {
+                  setGrievanceType(type);
+                  fieldErrors.setError("grievanceType", null);
+                }}
+                invalid={!!fieldErrors.errors.grievanceType}
+                describedBy={fieldErrors.errors.grievanceType ? errorIdFor("grievance-type") : undefined}
               />
+              {fieldErrors.errors.grievanceType && (
+                <FieldError id={errorIdFor("grievance-type")}>{fieldErrors.errors.grievanceType}</FieldError>
+              )}
             </div>
 
             {/* Region */}
@@ -514,10 +573,14 @@ export function GrievanceDetailsCard({
                   setZone("");
                   setWoreda("");
                   setKebele("");
+                  fieldErrors.setError("region", null);
                 }}
-                invalid={!!error}
-                describedBy={error ? "grievance-details-error" : undefined}
+                invalid={!!fieldErrors.errors.region}
+                describedBy={fieldErrors.errors.region ? errorIdFor("grievance-region") : undefined}
               />
+              {fieldErrors.errors.region && (
+                <FieldError id={errorIdFor("grievance-region")}>{fieldErrors.errors.region}</FieldError>
+              )}
             </div>
 
             {/* Zone / Sub-city */}
@@ -542,11 +605,15 @@ export function GrievanceDetailsCard({
                   setZone(newZone);
                   setWoreda("");
                   setKebele("");
+                  fieldErrors.setError("zone", null);
                 }}
                 disabled={!region || zoneStatus === "loading"}
-                invalid={!!error}
-                describedBy={error ? "grievance-details-error" : undefined}
+                invalid={!!fieldErrors.errors.zone}
+                describedBy={fieldErrors.errors.zone ? errorIdFor("grievance-zone") : undefined}
               />
+              {fieldErrors.errors.zone && (
+                <FieldError id={errorIdFor("grievance-zone")}>{fieldErrors.errors.zone}</FieldError>
+              )}
             </div>
 
             {/* Woreda */}
@@ -570,11 +637,15 @@ export function GrievanceDetailsCard({
                 onChange={(newWoreda) => {
                   setWoreda(newWoreda);
                   setKebele("");
+                  fieldErrors.setError("woreda", null);
                 }}
                 disabled={!region || woredaStatus === "loading" || Boolean(zone && !zoneNode)}
-                invalid={!!error}
-                describedBy={error ? "grievance-details-error" : undefined}
+                invalid={!!fieldErrors.errors.woreda}
+                describedBy={fieldErrors.errors.woreda ? errorIdFor("grievance-woreda") : undefined}
               />
+              {fieldErrors.errors.woreda && (
+                <FieldError id={errorIdFor("grievance-woreda")}>{fieldErrors.errors.woreda}</FieldError>
+              )}
             </div>
 
             {/* Kebele / Village */}
@@ -603,11 +674,16 @@ export function GrievanceDetailsCard({
 
           {/* Service Provider / Branch / Office Name */}
           <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
+            <label htmlFor="grievance-service-provider" className="block text-sm font-semibold text-gray-800 mb-2">
               Service Provider / Branch / Office Name
             </label>
             <input
+              id="grievance-service-provider"
               type="text"
+              // The backend stores this in a 140-character field.
+              maxLength={140}
+              value={serviceProvider}
+              onChange={(e) => setServiceProvider(e.target.value)}
               placeholder="Enter Input store, cooperative, bank, or market name (if applicable)"
               className="w-full bg-white border border-gray-300 text-gray-900 py-2.5 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm"
             />
@@ -622,19 +698,34 @@ export function GrievanceDetailsCard({
               id="grievance-description"
               rows={4}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                // Re-check as they type while it's showing an error, so it clears the moment it's long enough.
+                if (fieldErrors.errors.description) {
+                  fieldErrors.setError("description", descriptionErrorFor(e.target.value));
+                }
+              }}
+              onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
+              aria-invalid={fieldErrors.errors.description ? true : undefined}
+              aria-describedby={fieldErrors.errors.description ? errorIdFor("grievance-description") : undefined}
               placeholder="Describe the issue clearly — what happened, when, where, and who was involved. Include dates, amounts, and reference numbers where available."
-              className="w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y"
+              className={`w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
             />
+            {fieldErrors.errors.description && (
+              <FieldError id={errorIdFor("grievance-description")}>{fieldErrors.errors.description}</FieldError>
+            )}
           </div>
 
           {/* Desired Outcome */}
           <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
+            <label htmlFor="grievance-desired-outcome" className="block text-sm font-semibold text-gray-800 mb-2">
               Desired Outcome
             </label>
             <textarea
+              id="grievance-desired-outcome"
               rows={3}
+              value={desiredOutcome}
+              onChange={(e) => setDesiredOutcome(e.target.value)}
               placeholder="What is the expected resolution for this grievance?"
               className="w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y"
             />

@@ -3,22 +3,26 @@
 import { type ComponentType } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, ShieldCheck } from 'lucide-react';
-import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { errorIdFor, FieldError } from '@/components/ui/FieldError';
+import { Spinner } from '@/components/ui/Spinner';
 import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
 import { CooperativeFPOForm } from '@/components/submitter-identity/SI-CooperativeFPOForm';
-import { DevelopmentAgentForm } from '@/components/submitter-identity/SI-DevelopmentAgentForm';
 import { IndividualFarmerForm } from '@/components/submitter-identity/SI-IndividualFarmerForm';
 import { NGOForm } from '@/components/submitter-identity/SI-NGOForm';
 import { WoredaKebeleForm } from '@/components/submitter-identity/SI-WoredaKebeleForm';
 import type { SIFormProps } from '@/components/submitter-identity/SI-types';
 import { submitterTypeOptions } from '@/components/submitter-identity/fields';
 
+// Deliberately no entry for `development_agent`: an agent files for other
+// people and enters *their* details when filing each grievance, so registration
+// asks for nothing about the agent (see `submitsOnBehalfOfOthers`). Without a
+// form here the ID-consent box below isn't shown either — there is no national
+// ID being collected to consent to.
 const SUBMITTER_TYPE_FORMS: Record<string, ComponentType<SIFormProps>> = {
   individual: IndividualFarmerForm,
   cooperative: CooperativeFPOForm,
   ngo: NGOForm,
   woreda_kebele: WoredaKebeleForm,
-  development_agent: DevelopmentAgentForm,
 };
 
 export interface ProfileStepProps {
@@ -27,9 +31,15 @@ export interface ProfileStepProps {
   identityValues: Record<string, string>;
   setIdentityValue: (key: string, value: string) => void;
   hiddenFields: string[];
-  profileError: string | null;
+  /** Inline validation messages by field key — `submitterType` for the dropdown, the rest for the identity form. */
+  errors: Record<string, string>;
+  /** Called with a field's key when it loses focus, so the form can validate it. */
+  onFieldBlur: (key: string) => void;
   consentChecked: boolean;
   onConsentChange: (checked: boolean) => void;
+  /** True while the account is being created — this step's Continue is what creates it. */
+  isSubmitting: boolean;
+  onBack: () => void;
   onSubmit: () => void;
 }
 
@@ -50,9 +60,12 @@ export function ProfileStep({
   identityValues,
   setIdentityValue,
   hiddenFields,
-  profileError,
+  errors,
+  onFieldBlur,
   consentChecked,
   onConsentChange,
+  isSubmitting,
+  onBack,
   onSubmit,
 }: ProfileStepProps) {
   const IdentityForm = SUBMITTER_TYPE_FORMS[submitterType];
@@ -62,11 +75,9 @@ export function ProfileStep({
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h3 className="text-2xl font-bold text-gray-900">{t('accountCreatedTitle')}</h3>
+        <h3 className="text-2xl font-bold text-gray-900">{t('title')}</h3>
         <p className="text-gray-500 font-medium">{t('subtitle')}</p>
       </div>
-
-      {profileError && <ErrorAlert id="register-profile-error">{profileError}</ErrorAlert>}
 
       <div>
         <label htmlFor="register-submitter-type" className="block text-sm font-semibold text-gray-800 mb-2">{t('submitterTypeLabel')}</label>
@@ -76,13 +87,22 @@ export function ProfileStep({
           placeholder={t('submitterTypePlaceholder')}
           value={submitterType}
           onChange={onSubmitterTypeChange}
-          invalid={!!profileError}
-          describedBy={profileError ? 'register-profile-error' : undefined}
+          invalid={!!errors.submitterType}
+          describedBy={errors.submitterType ? errorIdFor('register-submitter-type') : undefined}
         />
+        {errors.submitterType && (
+          <FieldError id={errorIdFor('register-submitter-type')}>{errors.submitterType}</FieldError>
+        )}
       </div>
 
       {IdentityForm && (
-        <IdentityForm values={identityValues} setValue={setIdentityValue} hiddenFields={hiddenFields} />
+        <IdentityForm
+          values={identityValues}
+          setValue={setIdentityValue}
+          hiddenFields={hiddenFields}
+          errors={errors}
+          onFieldBlur={onFieldBlur}
+        />
       )}
 
       {collectsNationalId && (
@@ -119,14 +139,22 @@ export function ProfileStep({
         </div>
       )}
 
-      <div className="flex items-center justify-end pt-2">
+      <div className="flex items-center justify-between pt-2">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={isSubmitting}
+          className="text-gray-600 hover:text-gray-900 disabled:opacity-50 py-3 px-2 font-semibold text-[15px] transition-colors"
+        >
+          Back
+        </button>
         <button
           type="button"
           onClick={onSubmit}
-          disabled={collectsNationalId && !consentChecked}
-          className="bg-[#16A34A] hover:bg-[#15803d] disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-6 rounded-2xl font-extrabold text-[15px] transition-all transform active:scale-[0.98] shadow-sm"
+          disabled={(collectsNationalId && !consentChecked) || isSubmitting}
+          className="bg-[#16A34A] hover:bg-[#15803d] disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-6 rounded-2xl font-extrabold text-[15px] transition-all transform active:scale-[0.98] shadow-sm flex items-center justify-center min-w-[120px]"
         >
-          {t('continue')}
+          {isSubmitting ? <Spinner size="sm" /> : t('continue')}
         </button>
       </div>
     </div>

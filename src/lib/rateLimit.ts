@@ -133,6 +133,12 @@ export const RATE_LIMITS = {
   registerShared: limitFromEnv('REGISTER_SHARED', 50, 60_000),
   refresh: limitFromEnv('REFRESH', 20, 60_000),
   logout: limitFromEnv('LOGOUT', 10, 60_000),
+  // Both are unauthenticated and both cost the backend real work (a reset mail
+  // or a password write), so they get login's tight budget. The backend adds
+  // its own hourly per-IP ceiling on top; this one just stops a burst a hop
+  // earlier.
+  forgotPassword: limitFromEnv('FORGOT_PASSWORD', 5, 60_000),
+  resetPassword: limitFromEnv('RESET_PASSWORD', 5, 60_000),
   // Fired on real user activity while a session is open (see
   // `/api/auth/heartbeat`); throttled client-side to roughly once a minute
   // per open tab. Scoped by a hash of the session's refresh-token cookie

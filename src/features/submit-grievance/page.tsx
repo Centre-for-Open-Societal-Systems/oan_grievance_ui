@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, X } from "lucide-react";
 import { selectUser } from "@/features/auth/store/authSlice";
-import { normalizeSubmitterType } from "@/features/metadata";
+import { buildInitialIdentityValues, identityAfterReset, resolveInitialSubmitterType } from "./initialIdentity";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
-import { loadDraft } from "@/lib/drafts";
+import { discardDraft, loadDraft } from "@/lib/drafts";
 import { SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
 import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
 import { useAppSelector } from "@/store/hooks";
+import type { SubmitGrievanceResult } from "./api/submitGrievanceApi";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
@@ -56,7 +57,10 @@ export default function SubmitGrievancePage() {
   );
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  // What the backend returned once the grievance has been filed (ticket
+  // number, status, SLA date, ...). Its presence is what puts the page into
+  // the "submitted" state.
+  const [submitted, setSubmitted] = useState<SubmitGrievanceResult | null>(null);
 
   // Identifies this wizard session's Grievance Draft on the backend — needed
   // before any attachment can be uploaded, since `submit_document` requires
@@ -66,25 +70,18 @@ export default function SubmitGrievancePage() {
   // saves/uploads keep landing on the SAME draft rather than orphaning it.
   const [clientUuid, setClientUuid] = useState(() => crypto.randomUUID());
   const [resumedDraft, setResumedDraft] = useState(false);
+  // "Discard draft" is destructive (the backend deletes the draft and its
+  // uploads), so it takes a second click to confirm rather than firing at once.
+  const [discardState, setDiscardState] = useState<"idle" | "confirming" | "discarding">("idle");
+  const [discardError, setDiscardError] = useState<string | null>(null);
 
   // Step 1 — Submitter Identity
-  const [submitterType, setSubmitterType] = useState(() => {
-    const normalized = user?.type ? normalizeSubmitterType(user.type) : "";
-    const KNOWN_TYPES = ["individual", "cooperative", "ngo", "woreda_kebele", "development_agent"];
-    if (KNOWN_TYPES.includes(normalized)) return normalized;
-    return savedProfile?.submitterType ?? "";
-  });
+  const [submitterType, setSubmitterType] = useState(() => resolveInitialSubmitterType(user, savedProfile));
   const [submissionChannel, setSubmissionChannel] = useState(() => (user ? "web" : ""));
-  const [identityValues, setIdentityValues] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = { ...savedProfile?.identityValues };
-    if (user) {
-      if (user.full_name) initial.fullName = user.full_name;
-      if (user.fayda_id) initial.faydaId = user.fayda_id;
-      if (user.mobile_no) initial.phoneNumber = user.mobile_no;
-      if (user.email) initial.email = user.email;
-    }
-    return initial;
-  });
+  // Nothing is prefilled for a Development Agent — see `buildInitialIdentityValues`.
+  const [identityValues, setIdentityValues] = useState<Record<string, string>>(() =>
+    buildInitialIdentityValues(user, savedProfile, resolveInitialSubmitterType(user, savedProfile))
+  );
 
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
@@ -106,6 +103,8 @@ export default function SubmitGrievancePage() {
   const [woreda, setWoreda] = useState("");
   const [kebele, setKebele] = useState("");
   const [description, setDescription] = useState("");
+  const [desiredOutcome, setDesiredOutcome] = useState("");
+  const [serviceProvider, setServiceProvider] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   // The attachment's backend identity — lifted up here (not kept local to
   // GrievanceDetailsCard) for two reasons: page.tsx conditionally unmounts
@@ -146,6 +145,8 @@ export default function SubmitGrievancePage() {
         if (typeof payload.woreda === "string") setWoreda(payload.woreda);
         if (typeof payload.kebele === "string") setKebele(payload.kebele);
         if (typeof payload.description === "string") setDescription(payload.description);
+        if (typeof payload.desiredOutcome === "string") setDesiredOutcome(payload.desiredOutcome);
+        if (typeof payload.serviceProvider === "string") setServiceProvider(payload.serviceProvider);
         const validScanStatuses: string[] = Object.values(SCAN_STATUS);
         if (
           typeof payload.attachmentId === "string" &&
@@ -181,18 +182,17 @@ export default function SubmitGrievancePage() {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleSubmit = () => {
-    setIsSubmitted(true);
-    // In a real application, you would scroll to top here or handle routing
+  const handleSubmitted = (result: SubmitGrievanceResult) => {
+    setSubmitted(result);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleReset = () => {
-    setIsSubmitted(false);
-    setCurrentStep(1);
-    setSubmitterType("");
-    setSubmissionChannel("");
-    setIdentityValues({});
+  // Step 2's fields, the attachment, and the draft identity — everything a
+  // saved draft carries. Shared by the two ways of starting over (after a
+  // submit, or after discarding a resumed draft) so they can't drift apart.
+  // Step 1 is deliberately not in here: discarding a draft shouldn't wipe the
+  // identity fields prefilled from the user's profile.
+  const resetDraftFields = () => {
     setServiceCategory("");
     setGrievanceType("");
     setRegion("");
@@ -200,6 +200,8 @@ export default function SubmitGrievancePage() {
     setWoreda("");
     setKebele("");
     setDescription("");
+    setDesiredOutcome("");
+    setServiceProvider("");
     setUploadedFile(null);
     setAttachmentId(null);
     setScanStatus(null);
@@ -209,13 +211,42 @@ export default function SubmitGrievancePage() {
     // grievance's already-submitted draft.
     setClientUuid(crypto.randomUUID());
     setResumedDraft(false);
+  };
+
+  // Starting over for the next grievance keeps Step 1 (type, channel and, for
+  // most types, identity) — see `identityAfterReset` for the one exception.
+  const handleReset = () => {
+    setSubmitted(null);
+    setCurrentStep(1);
+    setIdentityValues((prev) => identityAfterReset(submitterType, prev));
+    resetDraftFields();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (isSubmitted) {
+  // Deletes the saved draft (and anything uploaded against it) server-side,
+  // then starts Step 2 over. Only offered on a resumed draft. On failure the
+  // wizard is left exactly as it was — clearing the screen while the draft
+  // still exists would show an empty form that resumes full again on reload.
+  const handleDiscardDraft = async () => {
+    setDiscardState("discarding");
+    setDiscardError(null);
+    try {
+      await discardDraft(clientUuid);
+    } catch (error) {
+      logger.error("Failed to discard draft:", error);
+      setDiscardError("We could not discard your draft. Please try again.");
+      setDiscardState("idle");
+      return;
+    }
+    resetDraftFields();
+    setCurrentStep((prev) => Math.min(prev, 2));
+    setDiscardState("idle");
+  };
+
+  if (submitted) {
     return (
       <div className="font-sans pb-2">
-        <GrievanceSubmittedCard onReset={handleReset} />
+        <GrievanceSubmittedCard result={submitted} onReset={handleReset} />
       </div>
     );
   }
@@ -255,15 +286,50 @@ export default function SubmitGrievancePage() {
       <SubmitGrievanceHeader />
 
       {resumedDraft && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-[#0b8535]">
-          <span>Resumed your saved draft — your grievance details are filled back in.</span>
-          <button
-            onClick={() => setResumedDraft(false)}
-            aria-label="Dismiss"
-            className="shrink-0 rounded-lg p-1 hover:bg-green-100"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-[#0b8535]">
+          <div className="flex items-center justify-between gap-3">
+            <span>Resumed your saved draft — your grievance details are filled back in.</span>
+            <div className="flex shrink-0 items-center gap-2">
+              {discardState === "idle" ? (
+                <button
+                  onClick={() => setDiscardState("confirming")}
+                  className="rounded-lg px-2 py-1 font-semibold hover:bg-green-100"
+                >
+                  Discard draft
+                </button>
+              ) : (
+                <>
+                  <span className="font-semibold">Delete this draft?</span>
+                  <button
+                    onClick={handleDiscardDraft}
+                    disabled={discardState === "discarding"}
+                    className="rounded-lg bg-red-600 px-2.5 py-1 font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {discardState === "discarding" ? "Deleting…" : "Yes, delete"}
+                  </button>
+                  <button
+                    onClick={() => setDiscardState("idle")}
+                    disabled={discardState === "discarding"}
+                    className="rounded-lg px-2 py-1 font-semibold hover:bg-green-100 disabled:opacity-60"
+                  >
+                    Keep
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setResumedDraft(false)}
+                aria-label="Dismiss"
+                className="rounded-lg p-1 hover:bg-green-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          {discardError && (
+            <p role="alert" className="mt-2 font-medium text-red-700">
+              {discardError}
+            </p>
+          )}
         </div>
       )}
 
@@ -302,6 +368,10 @@ export default function SubmitGrievancePage() {
             setKebele={setKebele}
             description={description}
             setDescription={setDescription}
+            desiredOutcome={desiredOutcome}
+            setDesiredOutcome={setDesiredOutcome}
+            serviceProvider={serviceProvider}
+            setServiceProvider={setServiceProvider}
             uploadedFile={uploadedFile}
             setUploadedFile={setUploadedFile}
             attachmentId={attachmentId}
@@ -315,7 +385,22 @@ export default function SubmitGrievancePage() {
         {currentStep === 3 && (
           <ReviewAndSubmitCard
             onBack={handleBack}
-            onSubmit={handleSubmit}
+            onSubmitted={handleSubmitted}
+            clientUuid={clientUuid}
+            draftPayload={{
+              serviceCategory,
+              grievanceType,
+              region,
+              zone,
+              woreda,
+              kebele,
+              description,
+              desiredOutcome,
+              serviceProvider,
+              attachmentId,
+              attachmentFileName: uploadedFile?.name ?? attachmentFileName,
+              scanStatus,
+            }}
             submitterType={submitterType}
             submissionChannel={submissionChannel}
             identityValues={identityValues}
@@ -326,6 +411,8 @@ export default function SubmitGrievancePage() {
             woreda={woreda}
             kebele={kebele}
             description={description}
+            desiredOutcome={desiredOutcome}
+            serviceProvider={serviceProvider}
             uploadedFile={uploadedFile}
             attachmentFileName={attachmentFileName}
           />

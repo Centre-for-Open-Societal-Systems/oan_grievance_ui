@@ -98,6 +98,7 @@ export function AddOfficerModal({ isOpen, onClose }: AddOfficerModalProps) {
                 </label>
                 <input
                   type="email"
+                  autoComplete="off"
                   placeholder="Enter Email ID"
                   className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] transition-colors placeholder:text-gray-400"
                 />

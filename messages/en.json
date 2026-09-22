@@ -6,7 +6,7 @@
   },
   "register": {
     "profile": {
-      "accountCreatedTitle": "Account Created!",
+      "title": "Almost done!",
       "subtitle": "One more thing — tell us how you'll be submitting grievances, so we don't ask again later.",
       "submitterTypeLabel": "Submitter Type",
       "submitterTypePlaceholder": "Select Submitter Type",
@@ -14,7 +14,8 @@
       "consentNotice": "The Fayda ID above confirms your identity when a grievance is reviewed. It's masked on screen by default, and it's kept on this device to prefill Submit Grievance next time.",
       "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
-      "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}."
+      "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
+      "fieldRequired": "This field is required."
     },
     "success": {
       "title": "Account Created!",
@@ -25,11 +26,13 @@
   "submitGrievance": {
     "identityStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
-      "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}."
+      "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
+      "fieldRequired": "This field is required."
     },
     "detailsStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
-      "descriptionTooShort": "Description must be at least {min} characters (currently {count})."
+      "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
+      "fieldRequired": "This field is required."
     }
   },
   "commentsAndCommunication": {

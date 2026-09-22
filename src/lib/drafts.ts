@@ -14,12 +14,20 @@ export interface DraftSaveResult {
   owner_user: string | null;
 }
 
+/**
+ * One upload against a draft, as `GET /api/v1/drafts` reports it — a Grievance
+ * Attachment row (backend commit 51ed66c; it used to count File records, which
+ * always came back empty). There is deliberately no `file_url`: it is withheld
+ * until a scan clears the file and `download` is asked for it.
+ */
 export interface DraftAttachment {
   name: string;
   file_name: string;
-  file_url: string;
-  file_size: number;
-  is_private: number;
+  mime_type: string | null;
+  size_bytes: number | null;
+  document_type: string | null;
+  scan_status: string;
+  creation: string;
 }
 
 export interface DraftState {

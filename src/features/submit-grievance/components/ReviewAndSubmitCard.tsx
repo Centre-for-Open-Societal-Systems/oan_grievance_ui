@@ -1,19 +1,34 @@
 import { useState } from "react";
-import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff } from "lucide-react";
+import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
+import { saveDraft } from "@/lib/drafts";
+import { logger } from "@/lib/logger";
 import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
 import {
+  findFilingArea,
   selectGrievanceTypeOptions,
   selectRegionOptions,
   selectServiceCategoryOptions,
   selectSubmissionChannelOptions,
   selectSubmitterTypeOptions,
 } from "@/features/metadata";
+import {
+  buildSubmitGrievancePayload,
+  submitErrorMessage,
+  submitGrievance,
+  type SubmitGrievanceResult,
+} from "../api/submitGrievanceApi";
 
 interface ReviewAndSubmitCardProps {
   onBack: () => void;
-  onSubmit: () => void;
+  /** Called once the backend has accepted the grievance (or recognised a retry of one it already has). */
+  onSubmitted: (result: SubmitGrievanceResult) => void;
+  /** The wizard's draft. Files uploaded against it become the case's attachments on submit. */
+  clientUuid: string;
+  /** Same shape Step 2 saves, so Save Draft here can't drop the attachment identity a resumed draft carries. */
+  draftPayload: Record<string, unknown>;
   submitterType: string;
   submissionChannel: string;
   identityValues: Record<string, string>;
@@ -24,6 +39,8 @@ interface ReviewAndSubmitCardProps {
   woreda: string;
   kebele?: string;
   description: string;
+  desiredOutcome?: string;
+  serviceProvider?: string;
   uploadedFile: File | null;
   /** A resumed draft's attachment has no local `File` blob to read a name off — see page.tsx's lifted attachment state. */
   attachmentFileName?: string | null;
@@ -55,7 +72,9 @@ function formatPhoneForDisplay(phoneNumber: string | undefined, phoneCode: strin
 
 export function ReviewAndSubmitCard({
   onBack,
-  onSubmit,
+  onSubmitted,
+  clientUuid,
+  draftPayload,
   submitterType,
   submissionChannel,
   identityValues,
@@ -66,6 +85,8 @@ export function ReviewAndSubmitCard({
   woreda,
   kebele,
   description,
+  desiredOutcome,
+  serviceProvider,
   uploadedFile,
   attachmentFileName,
 }: ReviewAndSubmitCardProps) {
@@ -94,6 +115,65 @@ export function ReviewAndSubmitCard({
     selectGrievanceTypeOptions(state, serviceCategory)
   );
   const regions = useAppSelector(selectRegionOptions);
+  // What the case is actually filed against — see `findFilingArea` for why this
+  // is a resolved node and not the display names held in `region`/`woreda`/`kebele`.
+  const filingArea = useAppSelector((state) => findFilingArea(state, { region, zone, woreda, kebele }));
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const handleSubmit = async () => {
+    // The button is already disabled without consent or mid-request; this
+    // covers a second click landing before React has re-rendered it disabled.
+    if (!consentChecked || isSubmitting) return;
+
+    // Labels, not the wizard's slugs: `value` here is e.g. "web" / "inputs",
+    // while the backend links to the records named "Web Portal" / "Inputs".
+    const channelLabel = labelFor(submissionChannels, submissionChannel);
+    const categoryLabel = labelFor(serviceCategories, serviceCategory);
+
+    if (!channelLabel || !categoryLabel || !grievanceType || !description.trim() || !filingArea) {
+      setSubmitError(
+        "Some required details are missing. Go back and complete the earlier steps, including a Woreda."
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const result = await submitGrievance(
+        buildSubmitGrievancePayload({
+          submissionChannel: channelLabel,
+          serviceCategory: categoryLabel,
+          grievanceType,
+          description,
+          desiredOutcome: desiredOutcome ?? "",
+          serviceProvider: serviceProvider ?? "",
+          areaId: filingArea.area_id,
+          kebele: kebele ?? "",
+          clientUuid,
+        })
+      );
+      onSubmitted(result);
+    } catch (error) {
+      logger.error("Failed to submit grievance:", error);
+      setSubmitError(submitErrorMessage(error));
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setDraftSaveState("saving");
+    try {
+      await saveDraft(clientUuid, draftPayload, 3);
+      setDraftSaveState("saved");
+    } catch (error) {
+      setDraftSaveState("error");
+      logger.error("Failed to save draft:", error);
+    }
+  };
 
   const location = [labelFor(regions, region), zone, woreda, kebele].filter(Boolean).join(", ") || "Not provided";
   const identityFields = SI_FIELDS_BY_TYPE[submitterType] || [];
@@ -131,8 +211,8 @@ export function ReviewAndSubmitCard({
               <User className="w-4 h-4 text-[#16A34A]" />
             </div>
             <div>
-              <p className="text-[15px] font-bold text-gray-900 mb-0.5">Ticket number will be generated as:</p>
-              <p className="text-sm font-medium text-gray-500">AMHA-SD-MAR-XXXXX</p>
+              <p className="text-[15px] font-bold text-gray-900 mb-0.5">Your ticket number is issued when you submit</p>
+              <p className="text-sm font-medium text-gray-500">You will use it to track this grievance.</p>
             </div>
           </div>
 
@@ -194,6 +274,14 @@ export function ReviewAndSubmitCard({
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</p>
                 <p className="text-[15px] font-semibold text-gray-900">{description || "Not provided"}</p>
               </div>
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Service Provider / Office</p>
+                <p className="text-[15px] font-semibold text-gray-900">{serviceProvider?.trim() || "Not provided"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Desired Outcome</p>
+                <p className="text-[15px] font-semibold text-gray-900">{desiredOutcome?.trim() || "Not provided"}</p>
+              </div>
               <div className="md:col-span-2">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
                   Attachments {displayFileName ? "(1)" : "(0)"}
@@ -226,11 +314,14 @@ export function ReviewAndSubmitCard({
         </div>
 
       {/* Footer Actions */}
-      <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] flex items-center justify-between rounded-b-xl mt-auto">
+      <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] rounded-b-xl mt-auto">
+        {submitError && <ErrorAlert id="review-submit-error" className="mb-4">{submitError}</ErrorAlert>}
+        <div className="flex items-center justify-between">
           <div className="flex items-center text-sm text-gray-600">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 px-5 py-3 mr-4 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-5 py-3 mr-4 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ArrowLeft className="w-4 h-4 text-gray-600" />
               Previous
@@ -239,22 +330,31 @@ export function ReviewAndSubmitCard({
             <span>All fields marked <span className="text-red-500">*</span> are required</span>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
-              <Save className="w-4 h-4 text-[#0b8535]" />
-              Save Draft
+            <button
+              onClick={handleSaveDraft}
+              disabled={draftSaveState === "saving" || isSubmitting}
+              className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {draftSaveState === "saving" ? (
+                <Loader2 className="w-4 h-4 text-[#0b8535] animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 text-[#0b8535]" />
+              )}
+              {draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Retry Save" : "Save Draft"}
             </button>
             <button
-              onClick={onSubmit}
+              onClick={handleSubmit}
               className={`flex items-center gap-2 px-5 py-3 text-white rounded-lg text-sm font-bold transition-colors shadow-sm focus:outline-none focus:ring-2 ${consentChecked
                 ? "bg-[#16A34A] hover:bg-[#10883c] focus:ring-[#0b8535]/50"
                 : "bg-gray-300 cursor-not-allowed text-gray-500"
                 }`}
-              disabled={!consentChecked}
+              disabled={!consentChecked || isSubmitting}
             >
-              Submit Grievance
-              <ArrowRight className="w-4 h-4" />
+              {isSubmitting ? "Submitting…" : "Submit Grievance"}
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
             </button>
           </div>
+        </div>
       </div>
     </div>
   );

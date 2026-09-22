@@ -6,7 +6,7 @@
   },
   "register": {
     "profile": {
-      "accountCreatedTitle": "Akkaawuntiin Uumameera!",
+      "title": "Xumuruu dhiyaateera!",
       "subtitle": "Wanti tokko hafe — akkaataa komii itti dhiheessitan nu beeksisaa, kanaafuu ammas isin hin gaafannu.",
       "submitterTypeLabel": "Gosa Dhiheessituu",
       "submitterTypePlaceholder": "Gosa Dhiheessituu Filadhu",
@@ -14,7 +14,8 @@
       "consentNotice": "Lakkoofsi ID Fayda armaan olii yeroo komiin ilaalamu eenyummaa keessan mirkaneessa. Bifa dhoksaan skiriinii irratti argama, yeroo itti aanu Komii Galchuu (Submit Grievance) dursanii guutuuf meeshaa kana irratti ni kuufama.",
       "consentCheckboxLabel": "Lakkoofsa ID biyyaalessaa koo mirkaneessa eenyummaaf kennuuf nan waliigala.",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
-      "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}."
+      "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
+      "fieldRequired": "Gabateen kun barbaachisaadha."
     },
     "success": {
       "title": "Akkaawuntiin Uumameera!",
@@ -25,11 +26,13 @@
   "submitGrievance": {
     "identityStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
-      "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}."
+      "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
+      "fieldRequired": "Gabateen kun barbaachisaadha."
     },
     "detailsStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
-      "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count})."
+      "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
+      "fieldRequired": "Gabateen kun barbaachisaadha."
     }
   },
   "commentsAndCommunication": {

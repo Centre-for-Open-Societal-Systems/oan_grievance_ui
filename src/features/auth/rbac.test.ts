@@ -4,10 +4,11 @@ import { canAccessRoute, homeRouteForRoles, isOfficerOrAdmin, isProtectedRoute, 
 const ALL_ROLES = [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN];
 
 describe('isPublicRoute / isProtectedRoute', () => {
-  it('treats /login and /register (and their sub-paths) as public', () => {
+  it('treats /login, /register and /reset-password (and their sub-paths) as public', () => {
     expect(isPublicRoute('/login')).toBe(true);
     expect(isPublicRoute('/login/whatever')).toBe(true);
     expect(isPublicRoute('/register')).toBe(true);
+    expect(isPublicRoute('/reset-password')).toBe(true);
   });
 
   it('does not treat a route that merely starts with the same characters as public', () => {

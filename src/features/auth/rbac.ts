@@ -13,10 +13,23 @@ function findMatchingRoute(pathname: string, routes: readonly string[]): string 
 }
 
 /** The only public routes. Everything else is a dashboard screen that needs a session. */
-export const PUBLIC_ROUTES = ['/login', '/register'];
+export const PUBLIC_ROUTES = ['/login', '/register', '/reset-password'];
 
 export function isPublicRoute(pathname: string): boolean {
   return findMatchingRoute(pathname, PUBLIC_ROUTES) !== undefined;
+}
+
+/**
+ * Public routes that stay open even to an already-authenticated visitor,
+ * unlike `/login` and `/register` which proxy.ts bounces an authenticated
+ * session away from. A password-reset link can land on someone who's still
+ * signed in elsewhere (or in another tab) — they need to reach the reset
+ * form itself, not get redirected back to their dashboard before it renders.
+ */
+const PUBLIC_ROUTES_ALLOWED_WHEN_AUTHENTICATED = ['/reset-password'];
+
+export function isPublicRouteAllowedWhenAuthenticated(pathname: string): boolean {
+  return findMatchingRoute(pathname, PUBLIC_ROUTES_ALLOWED_WHEN_AUTHENTICATED) !== undefined;
 }
 
 export function isProtectedRoute(pathname: string): boolean {
