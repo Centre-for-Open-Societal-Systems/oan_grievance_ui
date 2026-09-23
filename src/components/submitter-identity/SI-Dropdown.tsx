@@ -53,7 +53,9 @@ export function AnimatedSelect({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const selectedOption = options.find((opt) => opt.value === value);
+  const selectedOption = options.find(
+    (opt) => opt.value === value || (Boolean(value) && opt.label.toLowerCase() === value.toLowerCase())
+  );
 
   // Derived display value: if user is actively typing, show typed query;
   // otherwise, show selected option label (or empty for placeholder).

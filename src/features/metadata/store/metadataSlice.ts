@@ -320,7 +320,7 @@ export const selectServiceCategoryOptions = (state: RootState): Array<{ value: s
 
   if (backendCategories && backendCategories.length > 0) {
     return backendCategories.map((c) => ({
-      value: c.category_name.toLowerCase(),
+      value: c.category_name,
       label: c.category_name,
     }));
   }
@@ -697,6 +697,89 @@ export const selectKebeleStatus = (
     'idle'
   );
 };
+
+export function findKebeleNode(
+  state: RootState,
+  kebeleValue?: string,
+  woredaValue?: string,
+  zoneValue?: string,
+  regionValue?: string
+): AdministrativeArea | undefined {
+  if (!kebeleValue) return undefined;
+  const normKebele = kebeleValue.toLowerCase().trim();
+
+  if (woredaValue) {
+    const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
+    const parentKey = woredaNode?.area_id || woredaValue;
+    const kebeleChildren =
+      state.metadata.childAreasByParent[`${parentKey}_Kebele`] ||
+      state.metadata.childAreasByParent[parentKey] ||
+      (woredaNode?.path_code ? state.metadata.childAreasByParent[`${woredaNode.path_code}_Kebele`] : undefined) ||
+      (woredaNode?.path_code ? state.metadata.childAreasByParent[woredaNode.path_code] : undefined);
+    const found = kebeleChildren?.find(
+      (a) =>
+        a.area_name.toLowerCase() === normKebele ||
+        a.area_id.toLowerCase() === normKebele ||
+        (a.code && a.code.toLowerCase() === normKebele) ||
+        (a.path_code && a.path_code.toLowerCase() === normKebele)
+    );
+    if (found) return found;
+  }
+
+  for (const childList of Object.values(state.metadata.childAreasByParent)) {
+    const found = childList.find(
+      (a) =>
+        a.area_name.toLowerCase() === normKebele ||
+        a.area_id.toLowerCase() === normKebele ||
+        (a.code && a.code.toLowerCase() === normKebele) ||
+        (a.path_code && a.path_code.toLowerCase() === normKebele)
+    );
+    if (found) return found;
+  }
+
+  return undefined;
+}
+
+export function resolveAdministrativeAreaId(
+  state: RootState,
+  kebele?: string,
+  woreda?: string,
+  zone?: string,
+  region?: string
+): string | undefined {
+  if (kebele) {
+    const kebeleNode = findKebeleNode(state, kebele, woreda, zone, region);
+    if (kebeleNode?.area_id || kebeleNode?.path_code) {
+      return kebeleNode.area_id || kebeleNode.path_code;
+    }
+  }
+  if (woreda) {
+    const woredaNode = findWoredaNode(state, woreda, zone, region);
+    if (woredaNode?.area_id || woredaNode?.path_code) {
+      return woredaNode.area_id || woredaNode.path_code;
+    }
+  }
+  if (zone) {
+    const zoneNode = findZoneNode(state, zone, region);
+    if (zoneNode?.area_id || zoneNode?.path_code) {
+      return zoneNode.area_id || zoneNode.path_code;
+    }
+  }
+  if (region) {
+    const normRegion = region.toLowerCase().trim();
+    const regionNode = state.metadata.regions.find(
+      (r) =>
+        r.area_name.toLowerCase() === normRegion ||
+        r.area_id.toLowerCase() === normRegion ||
+        (r.code && r.code.toLowerCase() === normRegion) ||
+        (r.path_code && r.path_code.toLowerCase() === normRegion)
+    );
+    if (regionNode?.area_id || regionNode?.path_code) {
+      return regionNode.area_id || regionNode.path_code;
+    }
+  }
+  return undefined;
+}
 
 /**
  * Filter option lists for the grievance list screen.

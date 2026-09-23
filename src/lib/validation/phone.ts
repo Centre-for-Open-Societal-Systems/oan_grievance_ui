@@ -47,6 +47,9 @@ export function isValidLocalPhoneForCountry(digits: string, dialCode: string): b
   return isEthiopianDialCode(dialCode) ? PHONE_NUMBER_REGEX.test(digits) : GENERIC_LOCAL_PHONE_REGEX.test(digits);
 }
 
+/** Dial codes the phone-country picker offers alongside Ethiopia — see `DEFAULT_COUNTRY_CODES` in PhoneField.tsx. */
+export const KNOWN_COUNTRY_CODES = ['+251', '+254', '+255', '+256', '+250', '+252', '+253', '+258', '+1'];
+
 /**
  * General E.164 — shared by this module and `src/app/api/auth/register/
  * route.ts` (which imports this constant rather than keeping its own copy,
@@ -74,7 +77,6 @@ export const PHONE_NUMBER_E164_REGEX = /^\+\d{8,15}$/;
 export function isValidPhoneNumber(value: string, dialCode: string = ETHIOPIA_DIAL_CODE): boolean {
   return isValidLocalPhoneForCountry(value, dialCode) || PHONE_NUMBER_E164_REGEX.test(value);
 }
-
 /** Strips every non-digit character (spaces, dashes, parens, `+`, letters). */
 export function toDigitsOnly(value: string): string {
   return value.replace(/\D/g, '');
@@ -87,4 +89,70 @@ export function toDigitsOnly(value: string): string {
  */
 export function stripLeadingZero(digits: string): string {
   return digits.replace(/^0/, '');
+}
+
+export interface ParsedPhone {
+  phoneCode: string;
+  phoneNumber: string;
+}
+
+/**
+ * Splits an E.164 or raw phone string into its dial code and local subscriber digits.
+ * e.g. "+251911234567" -> { phoneCode: "+251", phoneNumber: "911234567" }
+ * e.g. "0911234567" -> { phoneCode: "+251", phoneNumber: "0911234567" }
+ */
+export function splitPhoneNumber(rawPhone?: string | null): ParsedPhone {
+  if (!rawPhone || !rawPhone.trim()) {
+    return { phoneCode: '+251', phoneNumber: '' };
+  }
+  const trimmed = rawPhone.trim();
+
+  if (trimmed.startsWith('+')) {
+    const matched = KNOWN_COUNTRY_CODES.find((code) => trimmed.startsWith(code));
+    if (matched) {
+      const rest = toDigitsOnly(trimmed.slice(matched.length));
+      return { phoneCode: matched, phoneNumber: rest };
+    }
+    const generic = trimmed.match(/^(\+\d{1,3})(\d+)$/);
+    if (generic && generic[1] && generic[2]) {
+      return { phoneCode: generic[1], phoneNumber: generic[2] };
+    }
+  }
+
+  const digits = toDigitsOnly(trimmed);
+  if (digits.startsWith('251') && digits.length >= 12) {
+    return { phoneCode: '+251', phoneNumber: digits.slice(3) };
+  }
+
+  return { phoneCode: '+251', phoneNumber: digits };
+}
+
+/**
+ * Normalizes a phone number and country code into canonical E.164 format (+<code><digits>).
+ * Handles:
+ * - Already in E.164 form: "+251911234567" -> "+251911234567"
+ * - Domestic form with trunk 0: "0911234567", "+251" -> "+251911234567"
+ * - Bare subscriber digits: "911234567", "+251" -> "+251911234567"
+ * - Country code accidentally typed in local box: "251911234567", "+251" -> "+251911234567"
+ */
+export function formatToE164(phoneNumber?: string | null, phoneCode: string = '+251'): string {
+  if (!phoneNumber) return '';
+  const trimmed = phoneNumber.trim();
+  if (!trimmed) return '';
+
+  if (trimmed.startsWith('+')) {
+    return trimmed;
+  }
+
+  const digits = toDigitsOnly(trimmed);
+  if (!digits) return '';
+
+  const codeDigits = toDigitsOnly(phoneCode);
+  if (codeDigits && digits.startsWith(codeDigits) && digits.length > codeDigits.length + 6) {
+    return `+${digits}`;
+  }
+
+  const cleanCode = phoneCode.startsWith('+') ? phoneCode : `+${phoneCode}`;
+  const localDigits = stripLeadingZero(digits);
+  return `${cleanCode}${localDigits}`;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchGrievanceOptionsThunk,
@@ -19,12 +20,64 @@ import { EMPTY_GRIEVANCE_FILTERS, type Grievance, type GrievanceFilters } from '
 
 export default function AllGrievancesPage() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [selectedGrievance, setSelectedGrievance] = useState<Grievance | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [filters, setFilters] = useState<GrievanceFilters>({ ...EMPTY_GRIEVANCE_FILTERS });
+
+  // Read pagination state from URL search params so reloads and shared links preserve the page
+  const pageParam = searchParams.get('page');
+  const parsedPage = pageParam ? parseInt(pageParam, 10) : 1;
+  const currentPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+  const pageSizeParam = searchParams.get('pageSize') || searchParams.get('page_size');
+  const parsedPageSize = pageSizeParam ? parseInt(pageSizeParam, 10) : 10;
+  const rowsPerPage = [10, 20, 50].includes(parsedPageSize) ? parsedPageSize : 10;
+
+  const setCurrentPage = useCallback(
+    (pageOrFn: number | ((prev: number) => number), replace = false) => {
+      const targetPage = typeof pageOrFn === 'function' ? pageOrFn(currentPage) : pageOrFn;
+      if (targetPage === currentPage && searchParams.get('page') === String(targetPage)) return;
+
+      const params = new URLSearchParams(searchParams.toString());
+      if (targetPage <= 1) {
+        params.set('page', '1');
+      } else {
+        params.set('page', String(targetPage));
+      }
+
+      const queryString = params.toString();
+      const targetUrl = queryString ? `${pathname}?${queryString}` : pathname;
+      if (replace) {
+        router.replace(targetUrl, { scroll: false });
+      } else {
+        router.push(targetUrl, { scroll: false });
+      }
+    },
+    [currentPage, pathname, router, searchParams]
+  );
+
+  const setRowsPerPage = useCallback(
+    (rows: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (rows === 10) {
+        params.delete('pageSize');
+        params.delete('page_size');
+      } else {
+        params.set('pageSize', String(rows));
+      }
+      params.set('page', '1');
+
+      const queryString = params.toString();
+      const targetUrl = queryString ? `${pathname}?${queryString}` : pathname;
+      router.push(targetUrl, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   // Reference data for the filter dropdowns comes from GET /api/v1/grievances/options
   // (statuses, categories) and GET /api/v1/administrative-areas (regions).
@@ -48,18 +101,33 @@ export default function AllGrievancesPage() {
   const allStatusValues = useMemo(() => statusOptions.map((s) => s.value), [statusOptions]);
   const { metrics } = useGrievanceMetrics(allStatusValues);
 
-  // Reset to the first page whenever the query changes, so pagination can't point past
-  // the end of a narrowed result set. Adjusted during render (React's documented pattern
-  // for "reset this state when that one changes") rather than in an effect.
-  const [prevQueryState, setPrevQueryState] = useState({ searchTerm, filters });
-  if (prevQueryState.searchTerm !== searchTerm || prevQueryState.filters !== filters) {
-    setPrevQueryState({ searchTerm, filters });
-    setCurrentPage(1);
-  }
+  // Reset to page 1 whenever the query changes (search term or filters),
+  // so pagination cannot point past the end of a narrowed result set.
+  const prevQueryRef = useRef({ searchTerm, filters });
+  useEffect(() => {
+    const prev = prevQueryRef.current;
+    if (prev.searchTerm !== searchTerm || prev.filters !== filters) {
+      prevQueryRef.current = { searchTerm, filters };
+      if (currentPage !== 1) {
+        setCurrentPage(1, true);
+      }
+    }
+  }, [searchTerm, filters, currentPage, setCurrentPage]);
+
+  // If currentPage is beyond totalPages (e.g. records deleted or high page in URL),
+  // clamp it back to totalPages.
+  useEffect(() => {
+    if (!isLoading && totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages, true);
+    }
+  }, [isLoading, totalPages, currentPage, setCurrentPage]);
 
   const handleClearFilters = () => {
     setSearchTerm('');
     setFilters({ ...EMPTY_GRIEVANCE_FILTERS });
+    if (currentPage !== 1) {
+      setCurrentPage(1, true);
+    }
   };
 
   return (
@@ -98,6 +166,7 @@ export default function AllGrievancesPage() {
       />
 
       <GrievanceDetailSidebar
+        ticketNumber={selectedGrievance?.ticketNumber ?? selectedGrievance?.ticketId ?? null}
         grievance={selectedGrievance}
         onClose={() => setSelectedGrievance(null)}
       />

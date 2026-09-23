@@ -6,6 +6,7 @@ interface GrievanceSubmittedCardProps {
   /** What the backend returned for the case just filed. */
   result: SubmitGrievanceResult;
   onReset?: () => void;
+  ticketNumber?: string | null;
 }
 
 /**

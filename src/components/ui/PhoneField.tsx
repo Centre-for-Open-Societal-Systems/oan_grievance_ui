@@ -176,7 +176,14 @@ export function PhoneField({
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         onBlur={onBlur}
-        onChange={(e) => setPhoneNumber(toDigitsOnly(e.target.value))}
+        onChange={(e) => {
+          let digits = toDigitsOnly(e.target.value);
+          const codeDigits = toDigitsOnly(countryCode);
+          if (codeDigits && digits.startsWith(codeDigits) && digits.length >= codeDigits.length + 8) {
+            digits = digits.slice(codeDigits.length);
+          }
+          setPhoneNumber(digits.slice(0, effectiveMaxLength));
+        }}
         placeholder={placeholder}
         className="flex-1 bg-white text-gray-800 py-2.5 px-3.5 rounded-r-lg focus:outline-none text-sm placeholder:text-gray-400 font-medium"
       />

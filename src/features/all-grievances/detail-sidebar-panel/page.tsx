@@ -1,4 +1,5 @@
-import type { Grievance } from '../types';
+"use client";
+
 import { SidebarHeader } from './components/SidebarHeader';
 import { CommentsAndCommunication } from './components/CommentsAndCommunication';
 import { SLATracker } from './components/SLATracker';
@@ -7,51 +8,100 @@ import { SubmitterDetails } from './components/SubmitterDetails';
 import { ThreadSummary } from './components/ThreadSummary';
 import { ResponseForm } from './components/ResponseForm';
 import { AttachmentsList } from './components/AttachmentsList';
-import { useIsOfficerOrAdmin } from '@/features/auth/hooks/useIsOfficerOrAdmin';
+import { useGrievanceTimeline } from '../hooks/useGrievanceTimeline';
+import type { Grievance } from '../types';
+import { useAppSelector } from '@/store/hooks';
 
 export function GrievanceDetailSidebar({
+  ticketNumber,
   grievance,
-  onClose
+  onClose,
 }: {
-  grievance: Grievance | null;
+  ticketNumber?: string | null;
+  grievance?: Grievance | null;
   onClose: () => void;
 }) {
-  // Decided once, at the boundary that composes the panel, rather than by
-  // each of the five child components independently calling the same hook —
-  // this is the one place that states who may see officer/admin-only
-  // content in this panel, instead of five separate memories of the rule.
-  const canManageCase = useIsOfficerOrAdmin();
+  const activeTicket = ticketNumber || grievance?.ticketNumber || grievance?.ticketId || null;
+  const userRoles = useAppSelector((state) => state.auth.user?.roles ?? []);
+  const canManageCase = userRoles.includes('Grievance Officer') || userRoles.includes('Grievance Admin');
 
-  if (!grievance) return null;
+  // Load live timeline, conversation, and case state from Redux
+  const {
+    timelineData,
+    isLoading,
+    isSubmitting,
+    error,
+    refetch,
+    postMessage,
+    addNote,
+    executeAction,
+  } = useGrievanceTimeline({
+    ticketNumber: activeTicket,
+  });
+
+  if (!activeTicket) return null;
 
   return (
     <>
       <div
-        className={`fixed inset-0 bg-gray-900/20 z-40 transition-opacity duration-300 ${grievance ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-gray-900/20 z-40 transition-opacity duration-300 ${
+          activeTicket ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
         onClick={onClose}
       />
 
-      <div className={`fixed inset-y-0 right-0 w-[1100px] max-w-[100vw] bg-[#F8F9FA] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${grievance ? 'translate-x-0' : 'translate-x-full'}`}>
-
+      <div
+        className={`fixed inset-y-0 right-0 w-[1100px] max-w-[100vw] bg-[#F8F9FA] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
+          activeTicket ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
         {/* Header */}
-        <SidebarHeader grievance={grievance} onClose={onClose} />
+        <SidebarHeader
+          ticketNumber={activeTicket}
+          timelineData={timelineData}
+          grievance={grievance}
+          onClose={onClose}
+        />
 
         <div className="flex-1 overflow-y-auto p-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
           <div className="grid grid-cols-3 gap-6">
-
-            {/* Left Column */}
+            {/* Left Column: Comments, Activity Timeline & Response Form */}
             <div className="col-span-2 flex flex-col gap-6">
-              <CommentsAndCommunication canManageCase={canManageCase} />
-              <ResponseForm canManageCase={canManageCase} />
+              <CommentsAndCommunication
+                canManageCase={canManageCase}
+                timelineData={timelineData}
+                isLoading={isLoading}
+                error={error}
+                onRetry={refetch}
+                grievance={grievance}
+              />
+              <ResponseForm
+                canManageCase={canManageCase}
+                onPostMessage={postMessage}
+                onAddNote={addNote}
+                isSubmitting={isSubmitting}
+              />
             </div>
 
-            {/* Right Column */}
+            {/* Right Column: SLA, Case Management, Submitter, Summary & Attachments */}
             <div className="col-span-1 flex flex-col gap-6">
-              <SLATracker canManageCase={canManageCase} />
-              <CaseManagement canManageCase={canManageCase} />
-              <SubmitterDetails grievance={grievance} />
-              <ThreadSummary canManageCase={canManageCase} />
-              <AttachmentsList grievance={grievance.id} />
+              {grievance ? (
+                <SLATracker
+                  canManageCase={canManageCase}
+                  grievance={grievance}
+                  timelineData={timelineData}
+                />
+              ) : null}
+              <CaseManagement
+                canManageCase={canManageCase}
+                timelineData={timelineData}
+                onExecuteAction={executeAction}
+              />
+              {grievance ? (
+                <SubmitterDetails grievance={grievance} timelineData={timelineData} />
+              ) : null}
+              <ThreadSummary canManageCase={canManageCase} timelineData={timelineData} />
+              <AttachmentsList grievance={timelineData?.name || grievance?.id || activeTicket} />
             </div>
           </div>
         </div>

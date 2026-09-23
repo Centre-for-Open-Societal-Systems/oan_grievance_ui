@@ -7,6 +7,7 @@ import {
   getMissingRequiredFields,
   submitsOnBehalfOfOthers,
 } from './fields';
+import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
 
 describe('getMissingRequiredFields', () => {
   it('lists labels of required fields left empty', () => {
@@ -165,5 +166,62 @@ describe('getFieldError / getFieldErrors (the message shown under a field)', () 
 
   it('returns nothing for an unknown submitter type', () => {
     expect(getFieldErrors('not-a-real-type', {})).toEqual({});
+  });
+});
+
+describe('splitPhoneNumber', () => {
+  it('splits +251 E.164 phone into dial code and subscriber digits', () => {
+    expect(splitPhoneNumber('+251911234567')).toEqual({
+      phoneCode: '+251',
+      phoneNumber: '911234567',
+    });
+  });
+
+  it('splits +1 US phone into dial code and subscriber digits', () => {
+    expect(splitPhoneNumber('+12025550123')).toEqual({
+      phoneCode: '+1',
+      phoneNumber: '2025550123',
+    });
+  });
+
+  it('handles domestic numbers without country code', () => {
+    expect(splitPhoneNumber('0911234567')).toEqual({
+      phoneCode: '+251',
+      phoneNumber: '0911234567',
+    });
+  });
+
+  it('handles empty or undefined phone', () => {
+    expect(splitPhoneNumber('')).toEqual({
+      phoneCode: '+251',
+      phoneNumber: '',
+    });
+    expect(splitPhoneNumber(undefined)).toEqual({
+      phoneCode: '+251',
+      phoneNumber: '',
+    });
+  });
+});
+
+describe('formatToE164', () => {
+  it('combines domestic number with leading zero and +251 country code', () => {
+    expect(formatToE164('0911234567', '+251')).toBe('+251911234567');
+  });
+
+  it('combines 9-digit subscriber number with +251 country code', () => {
+    expect(formatToE164('911234567', '+251')).toBe('+251911234567');
+  });
+
+  it('leaves already valid E.164 number untouched', () => {
+    expect(formatToE164('+251911234567', '+251')).toBe('+251911234567');
+  });
+
+  it('handles country code typed into number input', () => {
+    expect(formatToE164('251911234567', '+251')).toBe('+251911234567');
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(formatToE164('')).toBe('');
+    expect(formatToE164(undefined)).toBe('');
   });
 });
