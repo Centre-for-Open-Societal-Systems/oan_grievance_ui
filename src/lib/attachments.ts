@@ -27,6 +27,15 @@ export const SCAN_STATUS = {
   PENDING: 'Pending',
   CLEAN: 'Clean',
   INFECTED: 'Infected',
+  /**
+   * Fail-closed result when the scanner itself couldn't be reached or errored
+   * (`scanning.py`'s `SCAN_FAILED` — a self-hosted ClamAV sidecar that's down
+   * or unconfigured, not a verdict about the file). Same as Infected from this
+   * app's side: `is_servable()` on the backend only ever passes on Clean, so a
+   * Failed file is just as unusable as evidence and needs the same "remove
+   * and retry" treatment, not a message implying the file itself is suspect.
+   */
+  FAILED: 'Failed',
 } as const;
 
 export type ScanStatus = (typeof SCAN_STATUS)[keyof typeof SCAN_STATUS];

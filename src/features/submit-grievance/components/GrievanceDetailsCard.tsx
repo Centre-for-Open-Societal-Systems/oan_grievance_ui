@@ -29,7 +29,7 @@ import {
   findWoredaNode,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
-import { uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
+import { getAttachments, uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
 import { saveDraft } from "@/lib/drafts";
 import { buildSaveDraftPayload } from "../draftPayload";
 import { logger } from "@/lib/logger";
@@ -106,6 +106,16 @@ const DETAILS_FIELD_ORDER: ReadonlyArray<{ key: DetailsField; id: string }> = [
   { key: "woreda", id: "grievance-woreda" },
   { key: "description", id: "grievance-description" },
 ];
+
+// The malware scan is asynchronous (queued for ClamAV, see scanning.py's
+// `enqueue_scan_attachment`) — the upload response's "Pending" never updates
+// itself, so something has to ask again. ClamAV's own scan is fast; this just
+// needs to catch up with a background queue, not a slow external service.
+const SCAN_POLL_INTERVAL_MS = 3000;
+// ~2 minutes: long enough to ride out a busy queue, short enough that a
+// truly stuck scan (a down/unconfigured scanner — see scanning.py's
+// "fail closed" note) doesn't poll forever in an abandoned tab.
+const SCAN_POLL_MAX_ATTEMPTS = 40;
 
 export function GrievanceDetailsCard({
   onNext,
@@ -400,6 +410,14 @@ export function GrievanceDetailsCard({
       setError("Remove the attachment that failed the malware scan before continuing.");
       return;
     }
+    if (scanStatus === SCAN_STATUS.FAILED) {
+      setError("The attachment's malware scan couldn't complete. Remove it and try uploading again.");
+      return;
+    }
+    if (scanStatus === SCAN_STATUS.PENDING) {
+      setError("Still scanning the attachment for malware — this takes a few seconds, please wait.");
+      return;
+    }
     setError(null);
     // "Save & Continue" saves: without this a reload or a closed tab on the
     // next step lost everything typed here unless Save Draft had been clicked
@@ -512,6 +530,50 @@ export function GrievanceDetailsCard({
   // draft with no local blob to read one off.
   const displayFileName = attachmentFileName;
   const hasLocalPreview = uploadedFile !== null;
+
+  // Polls while the scan is still in flight — see SCAN_POLL_INTERVAL_MS's
+  // doc comment for why this can't just wait for a push. Stops itself once
+  // the status leaves Pending (Clean/Infected/Failed), the attachment is
+  // removed, or this step unmounts; a resumed draft's already-scanned
+  // attachment never starts this at all, since its scanStatus arrives
+  // non-Pending from page.tsx's draft-load in the first place.
+  useEffect(() => {
+    if (scanStatus !== SCAN_STATUS.PENDING || !attachmentId) return;
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const poll = async () => {
+      attempts += 1;
+      try {
+        const rows = await getAttachments(clientUuid);
+        if (cancelled) return;
+        const row = rows.find((r) => r.name === attachmentId);
+        if (row && row.scan_status !== SCAN_STATUS.PENDING) {
+          setScanStatus(row.scan_status);
+          return;
+        }
+      } catch (pollError) {
+        logger.error("Failed to check attachment scan status:", pollError);
+      }
+      if (!cancelled && attempts >= SCAN_POLL_MAX_ATTEMPTS) {
+        logger.error(`Scan status still Pending for ${attachmentId} after ${attempts} checks — giving up.`);
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      if (attempts >= SCAN_POLL_MAX_ATTEMPTS) {
+        clearInterval(intervalId);
+        return;
+      }
+      void poll();
+    }, SCAN_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [scanStatus, attachmentId, clientUuid, setScanStatus]);
 
   return (
     <>
@@ -816,10 +878,15 @@ export function GrievanceDetailsCard({
                           <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
                           <span className="text-red-600">Failed malware scan · not usable as evidence</span>
                         </>
+                      ) : scanStatus === SCAN_STATUS.FAILED ? (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                          <span className="text-red-600">Scan didn&apos;t complete · remove and try again</span>
+                        </>
                       ) : (
                         <>
-                          <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                          <span className="text-amber-600">Uploaded · pending scan</span>
+                          <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
+                          <span className="text-amber-600">Scanning for malware…</span>
                         </>
                       )}
                     </div>
@@ -840,6 +907,7 @@ export function GrievanceDetailsCard({
                   <button
                     onClick={handleRemoveFile}
                     disabled={uploadState === "uploading" || uploadState === "persisting"}
+                    aria-label="Remove attachment"
                     title={
                       uploadState === "uploading" || uploadState === "persisting"
                         ? "Wait for the upload to finish before removing it"
@@ -888,7 +956,9 @@ export function GrievanceDetailsCard({
                 disabled={
                   uploadState === "uploading" ||
                   uploadState === "persisting" ||
-                  scanStatus === SCAN_STATUS.INFECTED
+                  scanStatus === SCAN_STATUS.INFECTED ||
+                  scanStatus === SCAN_STATUS.FAILED ||
+                  scanStatus === SCAN_STATUS.PENDING
                 }
                 className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50 disabled:opacity-50 disabled:cursor-not-allowed"
               >

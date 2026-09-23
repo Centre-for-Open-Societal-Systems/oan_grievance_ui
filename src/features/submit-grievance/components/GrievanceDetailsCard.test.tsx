@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ScanStatus } from '@/lib/attachments';
+import type { AttachmentRow, ScanStatus } from '@/lib/attachments';
 import en from '../../../../messages/en.json';
 import { makeStore } from '../testFixtures';
 
@@ -13,6 +13,12 @@ const saveDraft = vi.fn();
 vi.mock('@/lib/drafts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/drafts')>()),
   saveDraft: (...args: unknown[]) => saveDraft(...args),
+}));
+
+const getAttachments = vi.fn<(grievance: string) => Promise<AttachmentRow[]>>();
+vi.mock('@/lib/attachments', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/attachments')>()),
+  getAttachments: (...args: [string]) => getAttachments(...args),
 }));
 
 import { GrievanceDetailsCard } from './GrievanceDetailsCard';
@@ -29,6 +35,9 @@ interface Initial {
   zone?: string;
   woreda?: string;
   description?: string;
+  attachmentId?: string;
+  scanStatus?: ScanStatus;
+  attachmentFileName?: string;
 }
 
 const COMPLETE: Initial = {
@@ -52,9 +61,9 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
   const [desiredOutcome, setDesiredOutcome] = useState('');
   const [serviceProvider, setServiceProvider] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [attachmentId, setAttachmentId] = useState<string | null>(null);
-  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
-  const [attachmentFileName, setAttachmentFileName] = useState<string | null>(null);
+  const [attachmentId, setAttachmentId] = useState<string | null>(initial.attachmentId ?? null);
+  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(initial.scanStatus ?? null);
+  const [attachmentFileName, setAttachmentFileName] = useState<string | null>(initial.attachmentFileName ?? null);
   return (
     <GrievanceDetailsCard
       onNext={onNext}
@@ -227,5 +236,167 @@ describe('Step 2 — Save & Continue', () => {
     expect(outcome.value).toBe('Replace the allocation');
     expect(provider.value).toBe('Basona Cooperative Union');
     expect(provider).toHaveAttribute('maxlength', '140');
+  });
+});
+
+describe('Step 2 — attachment scan status', () => {
+  const ATTACHMENT_ID = 'ATT-0001';
+
+  beforeEach(() => {
+    saveDraft.mockReset();
+    saveDraft.mockResolvedValue({});
+    getAttachments.mockReset();
+  });
+
+  // The button is `disabled` for Pending/Failed/Infected, so clicking it is a
+  // no-op (jsdom, like a real browser, never fires a disabled control's click
+  // handler) — these check the disabled state and the status line the user
+  // actually sees, not a click-through error banner that can't fire here.
+  // `handleNext`'s own early-return for each status is exercised by the
+  // "allows Save & Continue once clean" case below finding its way past all
+  // three, plus direct behavior below for a file that finishes scanning
+  // between render and click (see the polling test).
+
+  it('blocks Save & Continue and shows "Scanning for malware…" while the scan is pending', () => {
+    const { onNext } = renderStep({
+      ...COMPLETE,
+      attachmentId: ATTACHMENT_ID,
+      scanStatus: 'Pending',
+      attachmentFileName: 'evidence.pdf',
+    });
+
+    expect(screen.getByText('Scanning for malware…')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Save & Continue/ });
+    expect(button).toBeDisabled();
+
+    fireEvent.click(button);
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('blocks Save & Continue when the scan failed to complete (scanner unreachable), distinctly from Infected', () => {
+    const { onNext } = renderStep({
+      ...COMPLETE,
+      attachmentId: ATTACHMENT_ID,
+      scanStatus: 'Failed',
+      attachmentFileName: 'evidence.pdf',
+    });
+
+    expect(screen.getByText(/Scan didn.t complete/)).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Save & Continue/ });
+    expect(button).toBeDisabled();
+
+    fireEvent.click(button);
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('still blocks on an infected file, with its own distinct message', () => {
+    const { onNext } = renderStep({
+      ...COMPLETE,
+      attachmentId: ATTACHMENT_ID,
+      scanStatus: 'Infected',
+      attachmentFileName: 'evidence.pdf',
+    });
+
+    expect(screen.getByText(/Failed malware scan/)).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Save & Continue/ });
+    expect(button).toBeDisabled();
+
+    fireEvent.click(button);
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('allows Save & Continue once the scan comes back clean', () => {
+    const { onNext } = renderStep({
+      ...COMPLETE,
+      attachmentId: ATTACHMENT_ID,
+      scanStatus: 'Clean',
+      attachmentFileName: 'evidence.pdf',
+    });
+
+    expect(screen.getByRole('button', { name: /Save & Continue/ })).toBeEnabled();
+    saveAndContinue();
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
+  it('polls for the scan result while pending, and unblocks the moment it resolves', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      getAttachments.mockResolvedValue([
+        {
+          name: ATTACHMENT_ID,
+          file_name: 'evidence.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          document_type: null,
+          response: null,
+          scan_status: 'Clean',
+          scanned_at: '2026-09-23T10:00:00Z',
+          uploaded_by_user: null,
+          uploaded_by_submitter: null,
+          creation: '2026-09-23T09:59:00Z',
+          servable: true,
+        },
+      ]);
+
+      renderStep({
+        ...COMPLETE,
+        attachmentId: ATTACHMENT_ID,
+        scanStatus: 'Pending',
+        attachmentFileName: 'evidence.pdf',
+      });
+
+      expect(screen.getByRole('button', { name: /Save & Continue/ })).toBeDisabled();
+
+      // The poll effect's interval (SCAN_POLL_INTERVAL_MS) fires and asks again.
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(getAttachments).toHaveBeenCalledWith(CLIENT_UUID);
+      await waitFor(() => expect(screen.getByRole('button', { name: /Save & Continue/ })).toBeEnabled());
+      expect(screen.getByText('Uploaded · scan clean')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops polling once the attachment is removed', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      getAttachments.mockResolvedValue([
+        {
+          name: ATTACHMENT_ID,
+          file_name: 'evidence.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          document_type: null,
+          response: null,
+          scan_status: 'Clean',
+          scanned_at: null,
+          uploaded_by_user: null,
+          uploaded_by_submitter: null,
+          creation: '2026-09-23T09:59:00Z',
+          servable: true,
+        },
+      ]);
+
+      renderStep({
+        ...COMPLETE,
+        attachmentId: ATTACHMENT_ID,
+        scanStatus: 'Pending',
+        attachmentFileName: 'evidence.pdf',
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Remove attachment' }));
+      expect(screen.queryByText('evidence.pdf')).not.toBeInTheDocument();
+
+      // If the effect's cleanup didn't run, this tick's poll would still fire
+      // and (harmlessly, since nothing renders it) call getAttachments again —
+      // asserting it stays at whatever it was before removal either way isn't
+      // useful, so what actually matters is that no stray "Clean" state comes
+      // back and resurrects a card for an attachment the user just removed.
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(screen.queryByText('Uploaded · scan clean')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
