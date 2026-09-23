@@ -344,7 +344,7 @@ export const selectGrievanceTypeOptions = (
       );
     }
     return filtered.map((t) => ({
-      value: t.grievance_type_id,
+      value: t.type_name,
       label: t.type_name,
     }));
   }
@@ -604,33 +604,83 @@ export function findWoredaNode(
   return undefined;
 }
 
-export const selectKebeleOptions = (
+function kebeleChildren(
   state: RootState,
-  woredaValue?: string,
-  zoneValue?: string,
-  regionValue?: string
-): Array<{ value: string; label: string }> => {
-  if (!woredaValue) return [];
-
-  const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
+  woredaNode: AdministrativeArea | undefined,
+  woredaValue: string
+): AdministrativeArea[] | undefined {
   const parentKey = woredaNode?.area_id || woredaValue;
-  const childAreas =
+  return (
     state.metadata.childAreasByParent[`${parentKey}_Kebele`] ||
     state.metadata.childAreasByParent[parentKey] ||
     (woredaNode?.path_code ? state.metadata.childAreasByParent[`${woredaNode.path_code}_Kebele`] : undefined) ||
-    (woredaNode?.path_code ? state.metadata.childAreasByParent[woredaNode.path_code] : undefined);
+    (woredaNode?.path_code ? state.metadata.childAreasByParent[woredaNode.path_code] : undefined)
+  );
+}
 
-  if (childAreas && childAreas.length > 0) {
-    return childAreas
-      .filter((a) => !a.level_name || a.level_name === 'Kebele')
-      .map((a) => ({
-        value: a.area_name,
-        label: a.area_name,
-      }));
+/**
+ * Memoized with `createSelector` on just the `metadata` slice (rather than the
+ * whole `RootState`, which is a fresh object on every dispatch) so an unrelated
+ * store update doesn't hand the kebele dropdown a new array reference.
+ */
+export const selectKebeleOptions = createSelector(
+  [
+    (state: RootState) => state.metadata,
+    (_state: RootState, woredaValue?: string) => woredaValue,
+    (_state: RootState, _woredaValue?: string, zoneValue?: string) => zoneValue,
+    (_state: RootState, _woredaValue?: string, _zoneValue?: string, regionValue?: string) => regionValue,
+  ],
+  (metadata, woredaValue, zoneValue, regionValue): Array<{ value: string; label: string }> => {
+    if (!woredaValue) return [];
+
+    const state = { metadata } as RootState;
+    const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
+    const childAreas = kebeleChildren(state, woredaNode, woredaValue);
+
+    if (childAreas && childAreas.length > 0) {
+      return childAreas
+        .filter((a) => !a.level_name || a.level_name === 'Kebele')
+        .map((a) => ({
+          value: a.area_name,
+          label: a.area_name,
+        }));
+    }
+
+    return [];
   }
+);
 
-  return [];
-};
+/**
+ * The administrative area a grievance is filed against: the chosen kebele if
+ * there is one, otherwise the woreda. Those are the only two levels the
+ * backend accepts (`ALLOWED_FILING_LEVELS` in oan_grievance_service's
+ * identity.py); a region or zone is rejected.
+ *
+ * The wizard's dropdowns hold display names, but kebele names repeat across
+ * woredas (over a hundred are just "1" or "2"), which is why the backend
+ * refuses to resolve an area by name. The kebele is therefore looked up only
+ * among the chosen woreda's own children, and the caller sends the returned
+ * node's `area_id` rather than any name.
+ *
+ * Returns undefined when the woreda hasn't been resolved to a node yet.
+ */
+export function findFilingArea(
+  state: RootState,
+  selection: { region?: string; zone?: string; woreda?: string; kebele?: string }
+): AdministrativeArea | undefined {
+  const { region, zone, woreda, kebele } = selection;
+  if (!woreda) return undefined;
+
+  const woredaNode = findWoredaNode(state, woreda, zone, region);
+  if (!woredaNode) return undefined;
+  if (!kebele) return woredaNode;
+
+  const normKebele = kebele.toLowerCase().trim();
+  const kebeleNode = kebeleChildren(state, woredaNode, woreda)?.find(
+    (a) => (!a.level_name || a.level_name === 'Kebele') && a.area_name.toLowerCase() === normKebele
+  );
+  return kebeleNode ?? woredaNode;
+}
 
 export const selectKebeleStatus = (
   state: RootState,

@@ -6,7 +6,7 @@
   },
   "register": {
     "profile": {
-      "accountCreatedTitle": "መለያ ተፈጥሯል!",
+      "title": "ሊጨርሱ ትንሽ ቀርቷል!",
       "subtitle": "አንድ ተጨማሪ ነገር — ቅሬታዎችን እንዴት እንደሚያቀርቡ ይንገሩን፣ ስለዚህ በኋላ እንደገና አንጠይቅም።",
       "submitterTypeLabel": "የአቅራቢ ዓይነት",
       "submitterTypePlaceholder": "የአቅራቢ ዓይነት ይምረጡ",
@@ -14,7 +14,8 @@
       "consentNotice": "ከላይ ያለው የፋይዳ መታወቂያ ቅሬታው ሲገመገም ማንነትዎን ያረጋግጣል። በነባሪነት በስክሪኑ ላይ የተደበቀ ሲሆን፣ ለቀጣዩ ጊዜ ቅሬታ ለማቅረብ አስቀድሞ ለመሙላት በዚህ መሣሪያ ላይ ይቀመጣል።",
       "consentCheckboxLabel": "ብሔራዊ መታወቂያ ቁጥሬን ለማንነት ማረጋገጫ ለመስጠት እስማማለሁ።",
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
-      "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።"
+      "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
+      "fieldRequired": "ይህ መስክ ያስፈልጋል።"
     },
     "success": {
       "title": "መለያ ተፈጥሯል!",
@@ -25,11 +26,13 @@
   "submitGrievance": {
     "identityStep": {
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
-      "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።"
+      "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
+      "fieldRequired": "ይህ መስክ ያስፈልጋል።"
     },
     "detailsStep": {
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
-      "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።"
+      "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
+      "fieldRequired": "ይህ መስክ ያስፈልጋል።"
     }
   },
   "commentsAndCommunication": {

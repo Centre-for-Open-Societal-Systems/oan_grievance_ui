@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { BackendAuthError, callBackendAuth, type TokenPair } from '@/lib/oanAuthBackend';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { validatePassword } from '@/lib/validation/password';
+import { isRegistrableSubmitterType } from '@/lib/validation/submitterType';
 import { PHONE_NUMBER_E164_REGEX } from '@/lib/validation/phone';
 import { NextResponse } from 'next/server';
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { email, password, full_name, phone_number } = body ?? {};
+  const { email, password, full_name, phone_number, submitter_type } = body ?? {};
 
   if (!email || !password || !full_name || !phone_number) {
     return NextResponse.json({ message: 'Missing required fields in request' }, { status: 400 });
@@ -92,7 +93,16 @@ export async function POST(request: Request) {
   try {
     await callBackendAuth<TokenPair>(
       '/api/v1/auth/register',
-      { email, password, full_name, phone_number },
+      {
+        email,
+        password,
+        full_name,
+        phone_number,
+        // Allowlisted rather than passed through: an unrecognised value is
+        // dropped (the backend then registers the default type) instead of
+        // being forwarded for the backend to reject or, worse, accept.
+        ...(isRegistrableSubmitterType(submitter_type) ? { submitter_type } : {}),
+      },
       clientIp
     );
     return NextResponse.json({ success: true });

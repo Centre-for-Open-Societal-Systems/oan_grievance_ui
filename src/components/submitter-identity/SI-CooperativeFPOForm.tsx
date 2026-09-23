@@ -1,7 +1,6 @@
 "use client";
 
-import { SIPhoneField } from "./SI-PhoneField";
-import { SIMaskedIdField } from "./SIMaskedIdField";
+import { SIIdField, SIPhoneFormField, SITextField } from "./SI-fields";
 import type { SIFormProps } from "./SI-types";
 
 export const FIELDS = [
@@ -14,106 +13,56 @@ export const FIELDS = [
   { key: "email", label: "Contact Email ID", required: false },
 ];
 
-export function CooperativeFPOForm({ values, setValue, hiddenFields = [] }: SIFormProps) {
+export function CooperativeFPOForm({ values, setValue, hiddenFields = [], errors, onFieldBlur }: SIFormProps) {
+  const field = { values, setValue, errors, onFieldBlur };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-      {/* Organisation Name */}
-      <div className="md:col-span-2">
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Organisation Name <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={values.orgName || ""}
-          onChange={(e) => setValue("orgName", e.target.value)}
-          placeholder="Enter Full registered organisation name"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-        />
-      </div>
+      <SITextField
+        {...field}
+        name="orgName"
+        label="Organisation Name"
+        required
+        placeholder="Enter Full registered organisation name"
+        className="md:col-span-2"
+      />
 
-      {/* Registration Number */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Registration Number <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={values.registrationNumber || ""}
-          onChange={(e) => setValue("registrationNumber", e.target.value)}
-          placeholder="Enter COOP-XX-2024-XXXX"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-        />
-      </div>
+      <SITextField
+        {...field}
+        name="registrationNumber"
+        label="Registration Number"
+        required
+        placeholder="Enter COOP-XX-2024-XXXX"
+      />
 
-      {/* Authorised Representative */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Authorised Representative <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={values.representativeName || ""}
-          onChange={(e) => setValue("representativeName", e.target.value)}
-          placeholder="Enter Rep's full name"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-        />
-      </div>
+      <SITextField
+        {...field}
+        name="representativeName"
+        label="Authorised Representative"
+        required
+        placeholder="Enter Rep's full name"
+      />
 
-      {/* Member Count Affected */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Member Count Affected
-        </label>
-        <input
-          type="text"
-          value={values.memberCount || ""}
-          onChange={(e) => setValue("memberCount", e.target.value)}
-          placeholder="Enter Number of members affected"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-        />
-      </div>
+      <SITextField
+        {...field}
+        name="memberCount"
+        label="Member Count Affected"
+        placeholder="Enter Number of members affected"
+      />
 
-      {/* Representative Fayda ID */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Representative Fayda ID <span className="text-red-500">*</span>
-        </label>
-        <SIMaskedIdField
-          value={values.representativeFaydaId || ""}
-          onChange={(value) => setValue("representativeFaydaId", value)}
-          placeholder="Enter Fayda ID"
-        />
-      </div>
+      <SIIdField
+        {...field}
+        name="representativeFaydaId"
+        label="Representative Fayda ID"
+        required
+        placeholder="Enter 16-digit Fayda ID"
+      />
 
-      {/* Contact Mobile */}
       {!hiddenFields.includes("phoneNumber") && (
-        <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-2">
-            Contact Mobile <span className="text-red-500">*</span>
-          </label>
-          <SIPhoneField
-            countryCode={values.phoneCode || "+251"}
-            setCountryCode={(code) => setValue("phoneCode", code)}
-            phoneNumber={values.phoneNumber || ""}
-            setPhoneNumber={(value) => setValue("phoneNumber", value)}
-          />
-        </div>
+        <SIPhoneFormField {...field} label="Contact Mobile" required />
       )}
 
-      {/* Contact Email ID */}
       {!hiddenFields.includes("email") && (
-        <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-2">
-            Contact Email ID
-          </label>
-          <input
-            type="email"
-            value={values.email || ""}
-            onChange={(e) => setValue("email", e.target.value)}
-            placeholder="Enter Contact Email ID"
-            className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-          />
-        </div>
+        <SITextField {...field} name="email" type="email" label="Contact Email ID" placeholder="Enter Contact Email ID" />
       )}
     </div>
   );

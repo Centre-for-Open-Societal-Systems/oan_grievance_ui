@@ -1,7 +1,6 @@
 "use client";
 
-import { SIPhoneField } from "./SI-PhoneField";
-import { SIMaskedIdField } from "./SIMaskedIdField";
+import { SIIdField, SIPhoneFormField, SITextField } from "./SI-fields";
 import type { SIFormProps } from "./SI-types";
 
 export const FIELDS = [
@@ -13,92 +12,48 @@ export const FIELDS = [
   { key: "email", label: "Contact Email ID", required: false },
 ];
 
-export function WoredaKebeleForm({ values, setValue, hiddenFields = [] }: SIFormProps) {
+export function WoredaKebeleForm({ values, setValue, hiddenFields = [], errors, onFieldBlur }: SIFormProps) {
+  const field = { values, setValue, errors, onFieldBlur };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-      {/* Office Name */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Woreda / Kebele Office Name <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={values.officeName || ""}
-          onChange={(e) => setValue("officeName", e.target.value)}
-          placeholder="Enter Woreda or Kebele office name"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-        />
-      </div>
+      <SITextField
+        {...field}
+        name="officeName"
+        label="Woreda / Kebele Office Name"
+        required
+        placeholder="Enter Woreda or Kebele office name"
+      />
 
-      {/* Administrative Zone */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Administrative Zone <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={values.adminZone || ""}
-          onChange={(e) => setValue("adminZone", e.target.value)}
-          placeholder="Enter the zone this office administers"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-        />
-      </div>
+      <SITextField
+        {...field}
+        name="adminZone"
+        label="Administrative Zone"
+        required
+        placeholder="Enter the zone this office administers"
+      />
 
-      {/* Responsible Official */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Responsible Official <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={values.responsibleOfficial || ""}
-          onChange={(e) => setValue("responsibleOfficial", e.target.value)}
-          placeholder="Enter official's full name"
-          className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-        />
-      </div>
+      <SITextField
+        {...field}
+        name="responsibleOfficial"
+        label="Responsible Official"
+        required
+        placeholder="Enter official's full name"
+      />
 
-      {/* Official's Fayda ID */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          Official&apos;s Fayda ID <span className="text-red-500">*</span>
-        </label>
-        <SIMaskedIdField
-          value={values.officialFaydaId || ""}
-          onChange={(value) => setValue("officialFaydaId", value)}
-          placeholder="Enter Fayda ID"
-        />
-      </div>
+      <SIIdField
+        {...field}
+        name="officialFaydaId"
+        label="Official's Fayda ID"
+        required
+        placeholder="Enter 16-digit Fayda ID"
+      />
 
-      {/* Contact Mobile */}
       {!hiddenFields.includes("phoneNumber") && (
-        <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-2">
-            Contact Mobile <span className="text-red-500">*</span>
-          </label>
-          <SIPhoneField
-            countryCode={values.phoneCode || "+251"}
-            setCountryCode={(code) => setValue("phoneCode", code)}
-            phoneNumber={values.phoneNumber || ""}
-            setPhoneNumber={(value) => setValue("phoneNumber", value)}
-          />
-        </div>
+        <SIPhoneFormField {...field} label="Contact Mobile" required />
       )}
 
-      {/* Contact Email ID */}
       {!hiddenFields.includes("email") && (
-        <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-2">
-            Contact Email ID
-          </label>
-          <input
-            type="email"
-            value={values.email || ""}
-            onChange={(e) => setValue("email", e.target.value)}
-            placeholder="Enter Contact Email ID"
-            className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm"
-          />
-        </div>
+        <SITextField {...field} name="email" type="email" label="Contact Email ID" placeholder="Enter Contact Email ID" />
       )}
     </div>
   );

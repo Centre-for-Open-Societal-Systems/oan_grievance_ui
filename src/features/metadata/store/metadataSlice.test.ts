@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  findFilingArea,
   selectRegionOptions,
   selectZoneOptions,
   selectZoneStatus,
@@ -169,5 +170,56 @@ describe('Administrative area cascading selectors', () => {
     expect(selectZoneStatus(state, 'Oromia')).toBe('loading');
     expect(selectWoredaStatus(state, 'North Shewa', 'Oromia')).toBe('loading');
     expect(selectKebeleStatus(state, 'Basona Werana')).toBe('loading');
+  });
+});
+
+describe('findFilingArea', () => {
+  const selection = { region: 'Oromia', zone: 'North Shewa', woreda: 'Basona Werana' };
+
+  it('files against the kebele when one is chosen', () => {
+    const state = createMockRootState();
+    expect(findFilingArea(state, { ...selection, kebele: 'Kebele 01' })?.area_id).toBe('keb-01');
+  });
+
+  it('files against the woreda when no kebele is chosen', () => {
+    const state = createMockRootState();
+    expect(findFilingArea(state, selection)?.area_id).toBe('wor-basona');
+    expect(findFilingArea(state, { ...selection, kebele: '' })?.area_id).toBe('wor-basona');
+  });
+
+  it('matches the kebele name case-insensitively', () => {
+    const state = createMockRootState();
+    expect(findFilingArea(state, { ...selection, kebele: '  kebele 01 ' })?.area_id).toBe('keb-01');
+  });
+
+  it('only looks for the kebele under the chosen woreda, so a same-named kebele elsewhere is never picked', () => {
+    // Kebele names repeat across woredas ("1", "2", ...). A second woreda with
+    // its own "Kebele 01" must not be matched when the first woreda is chosen.
+    const otherWoreda: AdministrativeArea = { ...mockWoreda, area_id: 'wor-other', area_name: 'Other Woreda', path_code: 'ETH/OR/NSH/OW' };
+    const otherKebele: AdministrativeArea = { ...mockKebele, area_id: 'keb-other-01', parent_administrative_area: 'wor-other' };
+    const state = createMockRootState({
+      childAreasByParent: {
+        'reg-oromia': [mockZone],
+        'zone-north-shewa_Woreda': [mockWoreda, otherWoreda],
+        'wor-basona_Kebele': [mockKebele],
+        'wor-other_Kebele': [otherKebele],
+      },
+    });
+
+    expect(findFilingArea(state, { ...selection, kebele: 'Kebele 01' })?.area_id).toBe('keb-01');
+    expect(
+      findFilingArea(state, { ...selection, woreda: 'Other Woreda', kebele: 'Kebele 01' })?.area_id
+    ).toBe('keb-other-01');
+  });
+
+  it('falls back to the woreda when the kebele is not in the loaded list', () => {
+    const state = createMockRootState();
+    expect(findFilingArea(state, { ...selection, kebele: 'Not A Real Kebele' })?.area_id).toBe('wor-basona');
+  });
+
+  it('returns undefined when no woreda is chosen or it cannot be resolved', () => {
+    const state = createMockRootState();
+    expect(findFilingArea(state, { region: 'Oromia', zone: 'North Shewa' })).toBeUndefined();
+    expect(findFilingArea(state, { ...selection, woreda: 'Nowhere' })).toBeUndefined();
   });
 });

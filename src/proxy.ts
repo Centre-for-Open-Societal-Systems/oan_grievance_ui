@@ -1,4 +1,4 @@
-import { canAccessRoute, homeRouteForRoles, isProtectedRoute } from '@/features/auth/rbac';
+import { canAccessRoute, homeRouteForRoles, isProtectedRoute, isPublicRouteAllowedWhenAuthenticated } from '@/features/auth/rbac';
 import { hasRecentActivity } from '@/lib/idleSession';
 import { decodeAccessToken, isExpired } from '@/lib/jwt';
 import {
@@ -119,7 +119,7 @@ export function proxy(request: NextRequest) {
   // `isAuthenticated` implies `claims` is set (it requires `hasValidSession`,
   // which requires `!!claims`) — reconfirmed here so the checks below don't
   // need a non-null assertion on `claims`.
-  if (isAuthenticated && claims) {
+  if (isAuthenticated && claims && !isPublicRouteAllowedWhenAuthenticated(pathname)) {
     if (!protectedRoute || pathname === '/') {
       // `/` itself has no content of its own (`app/page.tsx` just redirects
       // to /login) — without this, an authenticated visit to `/` would fall

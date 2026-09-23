@@ -2,24 +2,30 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { toDigitsOnly } from '@/lib/validation/phone';
+import { isEthiopianDialCode, PHONE_NUMBER_LENGTH, toDigitsOnly } from '@/lib/validation/phone';
+
+/** The longest local number `GENERIC_LOCAL_PHONE_REGEX` (phone.ts) accepts for a non-Ethiopian country. */
+const GENERIC_LOCAL_PHONE_MAX_LENGTH = 14;
 
 export interface CountryCodeOption {
   code: string;
   country: string;
+  /** A local SVG, where one exists (see public/images/flags/). */
   flagUrl?: string;
+  /** Emoji fallback for a country with no SVG asset — see LanguageSelector.tsx for the same flagUrl-then-flag pattern. */
+  flag?: string;
 }
 
 export const DEFAULT_COUNTRY_CODES: CountryCodeOption[] = [
-  { code: '+251', country: 'Ethiopia', flagUrl: '/images/flags/et.svg' },
-  { code: '+254', country: 'Kenya' },
-  { code: '+255', country: 'Tanzania' },
-  { code: '+256', country: 'Uganda' },
-  { code: '+250', country: 'Rwanda' },
-  { code: '+252', country: 'Somalia' },
-  { code: '+253', country: 'Djibouti' },
-  { code: '+258', country: 'Mozambique' },
-  { code: '+1', country: 'United States', flagUrl: '/images/flags/us.svg' },
+  { code: '+251', country: 'Ethiopia', flagUrl: '/images/flags/et.svg', flag: '🇪🇹' },
+  { code: '+254', country: 'Kenya', flagUrl: '/images/flags/ke.svg', flag: '🇰🇪' },
+  { code: '+255', country: 'Tanzania', flagUrl: '/images/flags/tz.svg', flag: '🇹🇿' },
+  { code: '+256', country: 'Uganda', flagUrl: '/images/flags/ug.svg', flag: '🇺🇬' },
+  { code: '+250', country: 'Rwanda', flagUrl: '/images/flags/rw.svg', flag: '🇷🇼' },
+  { code: '+252', country: 'Somalia', flagUrl: '/images/flags/so.svg', flag: '🇸🇴' },
+  { code: '+253', country: 'Djibouti', flagUrl: '/images/flags/dj.svg', flag: '🇩🇯' },
+  { code: '+258', country: 'Mozambique', flagUrl: '/images/flags/mz.svg', flag: '🇲🇿' },
+  { code: '+1', country: 'United States', flagUrl: '/images/flags/us.svg', flag: '🇺🇸' },
 ];
 
 export interface PhoneFieldProps {
@@ -32,8 +38,15 @@ export interface PhoneFieldProps {
   disabled?: boolean;
   id?: string;
   name?: string;
+  /** Caps the digits the input accepts. Defaults to the selected country's own limit (10 for Ethiopia, 14 for everywhere else — see `GENERIC_LOCAL_PHONE_REGEX`) when omitted. */
   maxLength?: number;
   className?: string;
+  /** Set when the field has a validation error: red border, and `aria-invalid` for assistive tech. */
+  invalid?: boolean;
+  /** The id of the error message shown for this field, wired up as `aria-describedby`. */
+  describedBy?: string;
+  /** Fired when the number input loses focus — where the form validates on blur. */
+  onBlur?: () => void;
 }
 
 /**
@@ -50,11 +63,16 @@ export function PhoneField({
   disabled = false,
   id,
   name,
-  maxLength = 10,
+  maxLength,
   className = '',
+  invalid = false,
+  describedBy,
+  onBlur,
 }: PhoneFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const effectiveMaxLength =
+    maxLength ?? (isEthiopianDialCode(countryCode) ? PHONE_NUMBER_LENGTH : GENERIC_LOCAL_PHONE_MAX_LENGTH);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -71,11 +89,13 @@ export function PhoneField({
       code: countryCode || '+251',
       country: 'Ethiopia',
       flagUrl: '/images/flags/et.svg',
+      flag: '🇪🇹',
     };
 
   return (
     <div
-      className={`flex shadow-xs rounded-lg border border-gray-300 focus-within:ring-2 focus-within:ring-[#16A34A]/20 focus-within:border-[#16A34A] transition-colors relative bg-white ${
+      data-invalid={invalid ? 'true' : undefined}
+      className={`flex shadow-xs rounded-lg border border-gray-300 focus-within:ring-2 focus-within:ring-[#16A34A]/20 focus-within:border-[#16A34A] data-[invalid=true]:border-red-500 data-[invalid=true]:focus-within:border-red-500 data-[invalid=true]:focus-within:ring-red-500/20 transition-colors relative bg-white ${
         disabled ? 'opacity-60 pointer-events-none' : ''
       } ${className}`}
     >
@@ -89,10 +109,16 @@ export function PhoneField({
           onClick={() => setIsOpen(!isOpen)}
           className="bg-gray-50 rounded-l-lg px-3 py-2.5 border-r border-gray-300 flex items-center gap-1.5 cursor-pointer h-full hover:bg-gray-100 transition-colors focus:outline-none"
         >
-          {active.flagUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={active.flagUrl} alt="" width={18} height={13} className="w-4 h-3 rounded-xs object-cover" />
-          )}
+          <span className="flex items-center justify-center w-4 h-3 shrink-0 overflow-hidden rounded-xs">
+            {active.flagUrl ? (
+              // next/image's overhead (loader, blur placeholder) isn't worth it for
+              // a fixed 18x13 decorative icon from a small local sprite set.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={active.flagUrl} alt="" width={18} height={13} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-sm leading-none">{active.flag}</span>
+            )}
+          </span>
           <span className="text-gray-700 text-sm font-medium">{active.code}</span>
           <ChevronDown
             className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
@@ -120,10 +146,15 @@ export function PhoneField({
                       countryCode === c.code ? 'bg-gray-50 text-[#16A34A] font-bold' : 'text-gray-700 font-medium'
                     }`}
                   >
-                    {c.flagUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={c.flagUrl} alt="" width={18} height={13} className="w-4 h-3 rounded-xs object-cover shrink-0" />
-                    )}
+                    <span className="flex items-center justify-center w-4 h-3 shrink-0 overflow-hidden rounded-xs">
+                      {c.flagUrl ? (
+                        // Same fixed-size decorative icon as the trigger button above.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.flagUrl} alt="" width={18} height={13} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-sm leading-none">{c.flag}</span>
+                      )}
+                    </span>
                     <span>{c.country} ({c.code})</span>
                   </button>
                 </li>
@@ -140,15 +171,18 @@ export function PhoneField({
         name={name}
         required={required}
         disabled={disabled}
-        maxLength={16}
+        maxLength={effectiveMaxLength}
         value={phoneNumber}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
+        onBlur={onBlur}
         onChange={(e) => {
           let digits = toDigitsOnly(e.target.value);
           const codeDigits = toDigitsOnly(countryCode);
           if (codeDigits && digits.startsWith(codeDigits) && digits.length >= codeDigits.length + 8) {
             digits = digits.slice(codeDigits.length);
           }
-          setPhoneNumber(digits.slice(0, maxLength));
+          setPhoneNumber(digits.slice(0, effectiveMaxLength));
         }}
         placeholder={placeholder}
         className="flex-1 bg-white text-gray-800 py-2.5 px-3.5 rounded-r-lg focus:outline-none text-sm placeholder:text-gray-400 font-medium"

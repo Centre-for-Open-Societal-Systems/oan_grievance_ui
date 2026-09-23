@@ -8,6 +8,10 @@ export interface SIFormProps {
    * after already asking for them). Defaults to none.
    */
   hiddenFields?: string[];
+  /** Validation messages by field key, shown directly under the matching field. */
+  errors?: Record<string, string>;
+  /** Called with a field's key when it loses focus, so the caller can validate it. */
+  onFieldBlur?: (key: string) => void;
 }
 
 export interface SIFieldMeta {

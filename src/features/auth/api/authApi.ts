@@ -68,6 +68,8 @@ export interface RegisterFields {
   password: string;
   full_name: string;
   phone_number: string;
+  /** Backend submitter type to register as (see `backendSubmitterTypeFor`). Omit for the default, Individual Farmer. */
+  submitter_type?: string;
 }
 
 /** Does not sign the caller in — see the route: registration is "account created, now log in". */
@@ -77,6 +79,48 @@ export async function registerUser(fields: RegisterFields): Promise<void> {
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     credentials: 'include',
     body: JSON.stringify(fields),
+  });
+
+  const data = (await res.json().catch(() => ({}))) as { message?: string };
+
+  if (!res.ok) {
+    throw new Error(data.message || AUTH_MESSAGES.unexpected);
+  }
+}
+
+/**
+ * Asks for a password-reset message for `usr` (the account's sign-in email).
+ *
+ * Resolves the same way whether or not an account exists — the route
+ * deliberately doesn't say — so a resolved call means "request accepted", never
+ * "account found". Only a throttle or an unreachable service rejects.
+ */
+export async function forgotPassword(usr: string): Promise<void> {
+  const res = await fetch('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ usr }),
+  });
+
+  const data = (await res.json().catch(() => ({}))) as { message?: string };
+
+  if (!res.ok) {
+    throw new Error(data.message || AUTH_MESSAGES.unexpected);
+  }
+}
+
+/**
+ * Sets a new password using the `key` from the reset email. Like registration
+ * this does not sign anyone in — the backend revokes the account's existing
+ * sessions on a reset, so the caller is sent to the login page afterwards.
+ */
+export async function resetPassword(key: string, newPassword: string): Promise<void> {
+  const res = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ key, new_password: newPassword }),
   });
 
   const data = (await res.json().catch(() => ({}))) as { message?: string };

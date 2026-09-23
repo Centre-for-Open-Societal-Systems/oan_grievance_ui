@@ -2,14 +2,25 @@
 
 import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
+import { ForgotPasswordModal } from '@/features/auth/components/ForgotPasswordModal';
 import { homeRouteForRoles } from '@/features/auth/rbac';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { AUTH_MESSAGES } from '@/lib/authMessages';
+import { validateEmail, validateLoginPassword } from '@/lib/validation/fieldRules';
+import { focusFirstError, useFieldErrors, type FieldErrors } from '@/lib/validation/useFieldErrors';
 import { useAppDispatch } from '@/store/hooks';
 import { ArrowRight, Eye, EyeOff, Lock, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+type LoginField = 'email' | 'password';
+
+const LOGIN_FIELD_ORDER: ReadonlyArray<{ key: LoginField; id: string }> = [
+  { key: 'email', id: 'login-email' },
+  { key: 'password', id: 'login-password' },
+];
 
 export function LoginForm() {
   const router = useRouter();
@@ -21,24 +32,55 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showForgotNotice, setShowForgotNotice] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   // Read via `window.location` rather than `useSearchParams()` — this page is
   // otherwise fully static, and `useSearchParams()` would force it (and
   // everything above it) into a Suspense-gated client render just to notice a
-  // query param that's only ever present after `proxy.ts` redirects here.
+  // query param that's only ever present after `proxy.ts` redirects here (or
+  // after a completed password reset).
   // Has to be an effect: `window` doesn't exist during this client
   // component's server render, so it can't be read in a `useState`
   // initializer or during render itself.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('reason') === 'idle') {
+    const reason = new URLSearchParams(window.location.search).get('reason');
+    if (reason === 'idle') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrorMessage(AUTH_MESSAGES.sessionExpiredIdle);
+    } else if (reason === 'reset') {
+      setSuccessMessage(AUTH_MESSAGES.passwordResetSuccess);
     }
   }, []);
 
+  const fieldErrors = useFieldErrors<LoginField>();
+
+  const validators: Record<LoginField, (value: string) => string | null> = {
+    email: validateEmail,
+    password: validateLoginPassword,
+  };
+
+  // Checked when a field loses focus, and re-checked as it's edited while it
+  // is showing an error — so the message clears the moment it's fixed.
+  const changeField = (field: LoginField, value: string, apply: (value: string) => void) => {
+    apply(value);
+    if (fieldErrors.errors[field]) fieldErrors.setError(field, validators[field](value));
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    const errors: FieldErrors<LoginField> = {};
+    const emailError = validators.email(email);
+    const passwordError = validators.password(password);
+    if (emailError) errors.email = emailError;
+    if (passwordError) errors.password = passwordError;
+    fieldErrors.setAll(errors);
+    if (emailError || passwordError) {
+      focusFirstError(LOGIN_FIELD_ORDER, errors);
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -63,54 +105,77 @@ export function LoginForm() {
       </div>
 
       {errorMessage && <ErrorAlert className="mb-6">{errorMessage}</ErrorAlert>}
+      {successMessage && (
+        <p role="status" className="w-full mb-6 text-[14px] font-medium text-[#166534] bg-[#F4FDF7] border border-[#16A34A]/20 rounded-xl px-4 py-3">
+          {successMessage}
+        </p>
+      )}
 
-      <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6" autoComplete="off">
+      {/* noValidate: the browser's own required/email bubbles would pre-empt the inline messages below. */}
+      <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6" autoComplete="off" noValidate>
         <div className="flex flex-col gap-5">
-          <label className="flex flex-col gap-2.5">
-            <span className="text-[14px] font-semibold text-[#374151]">Email</span>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#9CA3AF]">
-                <User size={18} strokeWidth={2} />
+          <div>
+            <label className="flex flex-col gap-2.5">
+              <span className="text-[14px] font-semibold text-[#374151]">Email</span>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#9CA3AF]">
+                  <User size={18} strokeWidth={2} />
+                </div>
+                <input
+                  id="login-email"
+                  type="email"
+                  autoComplete="off"
+                  value={email}
+                  onChange={(e) => changeField('email', e.target.value, setEmail)}
+                  onBlur={() => fieldErrors.setError('email', validateEmail(email))}
+                  aria-invalid={fieldErrors.errors.email ? true : undefined}
+                  aria-describedby={fieldErrors.errors.email ? errorIdFor('login-email') : undefined}
+                  placeholder="you@example.com"
+                  className={`w-full pl-10 pr-4 py-3 bg-white border border-[#D1D5DB] rounded-xl text-[14px] text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all placeholder:text-[#9CA3AF] font-medium shadow-sm ${INVALID_INPUT_STYLES}`}
+                />
               </div>
-              <input
-                type="email"
-                autoComplete="off"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                className="w-full pl-10 pr-4 py-3 bg-white border border-[#D1D5DB] rounded-xl text-[14px] text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all placeholder:text-[#9CA3AF] font-medium shadow-sm"
-              />
-            </div>
-          </label>
+            </label>
+            {fieldErrors.errors.email && (
+              <FieldError id={errorIdFor('login-email')}>{fieldErrors.errors.email}</FieldError>
+            )}
+          </div>
 
-          <label className="flex flex-col gap-2.5">
-            <span className="text-[14px] font-semibold text-[#374151]">Password</span>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#9CA3AF]">
-                <Lock size={18} strokeWidth={2} />
+          <div>
+            <label className="flex flex-col gap-2.5">
+              <span className="text-[14px] font-semibold text-[#374151]">Password</span>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#9CA3AF]">
+                  <Lock size={18} strokeWidth={2} />
+                </div>
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="off"
+                  value={password}
+                  onChange={(e) => changeField('password', e.target.value, setPassword)}
+                  onBlur={() => fieldErrors.setError('password', validateLoginPassword(password))}
+                  aria-invalid={fieldErrors.errors.password ? true : undefined}
+                  aria-describedby={fieldErrors.errors.password ? errorIdFor('login-password') : undefined}
+                  placeholder="••••••••"
+                  className={`w-full pl-10 pr-12 py-3 bg-white border border-[#D1D5DB] rounded-xl text-[14px] text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all placeholder:text-[#9CA3AF] font-medium shadow-sm ${INVALID_INPUT_STYLES}`}
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowPassword(!showPassword);
+                  }}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#9CA3AF] hover:text-[#4B5563] transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="off"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="w-full pl-10 pr-12 py-3 bg-white border border-[#D1D5DB] rounded-xl text-[14px] text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all placeholder:text-[#9CA3AF] font-medium shadow-sm"
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setShowPassword(!showPassword);
-                }}
-                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#9CA3AF] hover:text-[#4B5563] transition-colors"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </label>
+            </label>
+            {fieldErrors.errors.password && (
+              <FieldError id={errorIdFor('login-password')}>{fieldErrors.errors.password}</FieldError>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-between">
@@ -135,18 +200,12 @@ export function LoginForm() {
           </label>
           <button
             type="button"
-            onClick={() => setShowForgotNotice(true)}
+            onClick={() => setShowForgotModal(true)}
             className="text-[14px] font-bold text-[#16A34A] hover:underline bg-transparent border-none p-0 cursor-pointer"
           >
             Forgot Password?
           </button>
         </div>
-
-        {showForgotNotice && (
-          <p role="status" className="text-[13px] text-[#4B5563] bg-[#F4FDF7] border border-[#16A34A]/20 rounded-xl px-4 py-3 -mt-2">
-            Contact your system administrator to reset your password.
-          </p>
-        )}
 
         <Button
           type="submit"
@@ -165,6 +224,8 @@ export function LoginForm() {
           </Link>
         </div>
       </form>
+
+      {showForgotModal && <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />}
     </div>
   );
 }

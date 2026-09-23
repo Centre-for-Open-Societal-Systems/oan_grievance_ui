@@ -147,6 +147,7 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
               <label className="text-sm font-bold text-gray-900">Email ID <span className="text-red-500">*</span></label>
               <input
                 type="email"
+                autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter Email ID"

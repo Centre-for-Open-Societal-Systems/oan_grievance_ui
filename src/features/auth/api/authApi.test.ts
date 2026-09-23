@@ -1,5 +1,76 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { getMe } from './authApi';
+import { forgotPassword, getMe, registerUser, resetPassword } from './authApi';
+
+describe('authApi - registerUser', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('sends the chosen submitter type to /api/auth/register, and only when there is one', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true }) } as Response);
+    const base = { email: 'a@example.com', password: 'Str0ng!Passw0rd', full_name: 'A B', phone_number: '+251911000000' };
+
+    await registerUser({ ...base, submitter_type: 'Development Agent' });
+    await registerUser(base);
+
+    const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls[0]![0]).toBe('/api/auth/register');
+    expect(JSON.parse(calls[0]![1].body)).toEqual({ ...base, submitter_type: 'Development Agent' });
+    expect(JSON.parse(calls[1]![1].body)).toEqual(base);
+  });
+});
+
+describe('authApi - password reset', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockFetch(status: number, body: object) {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => body,
+    } as Response);
+    return global.fetch as ReturnType<typeof vi.fn>;
+  }
+
+  it('forgotPassword posts the address to /api/auth/forgot-password', async () => {
+    const fetchMock = mockFetch(200, { success: true });
+
+    await expect(forgotPassword('a@example.com')).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('/api/auth/forgot-password');
+    expect(JSON.parse(init.body)).toEqual({ usr: 'a@example.com' });
+  });
+
+  it('forgotPassword surfaces the route message on failure', async () => {
+    mockFetch(429, { message: 'Too many attempts. Please wait a moment and try again.' });
+    await expect(forgotPassword('a@example.com')).rejects.toThrow('Too many attempts');
+  });
+
+  it('resetPassword posts the key and new password to /api/auth/reset-password', async () => {
+    const fetchMock = mockFetch(200, { success: true });
+
+    await expect(resetPassword('the-key', 'Str0ng!Passw0rd')).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('/api/auth/reset-password');
+    expect(JSON.parse(init.body)).toEqual({ key: 'the-key', new_password: 'Str0ng!Passw0rd' });
+  });
+
+  it('resetPassword surfaces the route message on failure, and falls back to generic copy without one', async () => {
+    mockFetch(400, { message: 'The reset password link has either been used before or is invalid' });
+    await expect(resetPassword('k', 'Str0ng!Passw0rd')).rejects.toThrow('used before or is invalid');
+
+    mockFetch(500, {});
+    await expect(resetPassword('k', 'Str0ng!Passw0rd')).rejects.toThrow('Something went wrong');
+  });
+});
 
 describe('authApi - getMe()', () => {
   const originalFetch = global.fetch;

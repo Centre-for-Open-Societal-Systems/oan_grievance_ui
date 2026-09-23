@@ -22,13 +22,52 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The per-field error map from a failed response, wherever the backend put it:
+ * the classic RPC envelope nests it under `message`, the REST routes
+ * (`/api/v1/...`) put it at the top level next to `code: VALIDATION_ERROR`.
+ */
+function fieldDetailsOf(responseData: unknown): Record<string, unknown> | null {
+  const data = responseData as
+    | { message?: { details?: unknown } | string; details?: unknown }
+    | null
+    | undefined;
+  const nested = typeof data?.message === 'object' ? data.message?.details : undefined;
+  const details = nested ?? data?.details;
+  return details && typeof details === 'object' ? (details as Record<string, unknown>) : null;
+}
+
 export function extractFieldErrors(error: unknown): Record<string, string> {
   if (!(error instanceof ApiError)) return {};
-  const details = (error.responseData as { message?: { details?: unknown } } | undefined)?.message?.details;
-  if (!details || typeof details !== 'object') return {};
+  const details = fieldDetailsOf(error.responseData);
+  if (!details) return {};
   return Object.fromEntries(
     Object.entries(details).filter(([, v]) => typeof v === 'string')
   ) as Record<string, string>;
+}
+
+/**
+ * One readable sentence from the per-field details ("Description: Description
+ * must be at least 20 characters."), or null when there are none worth showing
+ * — including an empty map, so the caller falls back to the response's own
+ * message rather than to generic copy.
+ */
+function messageFromDetails(responseData: unknown): string | null {
+  const details = fieldDetailsOf(responseData);
+  if (!details) return null;
+  const entries = Object.entries(details).filter(([, v]) => Boolean(v));
+  if (entries.length === 0) return null;
+  return entries
+    .map(([k, v]) => {
+      // A cross-field rule arrives under an empty key — there is no field name to lead with.
+      const field = k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      return field ? `${field}: ${v}` : String(v);
+    })
+    .reduce((joined, part) => {
+      if (!joined) return part;
+      // Backend messages usually end in a full stop already; don't double it up.
+      return /[.!?]$/.test(joined) ? `${joined} ${part}` : `${joined}. ${part}`;
+    }, '');
 }
 
 /**
@@ -165,15 +204,9 @@ export async function fetchApi<T = unknown>(
     }
 
     let errorMsg = genericMessageForStatus(response.status);
-    if (responseData?.message?.details && typeof responseData.message.details === 'object') {
-      const detailEntries = Object.entries(responseData.message.details).filter(([, v]) => Boolean(v));
-      if (detailEntries.length > 0) {
-        errorMsg = detailEntries
-          .map(([k, v]) => `${k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}: ${v}`)
-          .join('. ');
-      } else if (responseData?.message?.message) {
-        errorMsg = responseData.message.message;
-      }
+    const detailsMessage = messageFromDetails(responseData);
+    if (detailsMessage) {
+      errorMsg = detailsMessage;
     } else if (responseData?.message?.message) {
       errorMsg = responseData.message.message;
     } else if (typeof responseData?.message === 'string') {
@@ -184,15 +217,7 @@ export async function fetchApi<T = unknown>(
 
   // Handle application-level errors returned with status 200
   if (responseData?.message?.status === 'error' || responseData?.status === 'error') {
-    let errorMsg = responseData.message?.message || responseData?.message || 'Application Error';
-    if (responseData?.message?.details && typeof responseData.message.details === 'object') {
-      const detailEntries = Object.entries(responseData.message.details).filter(([, v]) => Boolean(v));
-      if (detailEntries.length > 0) {
-        errorMsg = detailEntries
-          .map(([k, v]) => `${k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}: ${v}`)
-          .join('. ');
-      }
-    }
+    const errorMsg = messageFromDetails(responseData) ?? (responseData.message?.message || responseData?.message || 'Application Error');
     throw new ApiError(typeof errorMsg === 'string' ? errorMsg : 'Application Error', responseData);
   }
 
