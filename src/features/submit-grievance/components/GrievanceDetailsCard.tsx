@@ -365,15 +365,23 @@ export function GrievanceDetailsCard({
     setError(null);
     // "Save & Continue" saves: without this a reload or a closed tab on the
     // next step lost everything typed here unless Save Draft had been clicked
-    // or a file uploaded. Not awaited — a slow connection (this app's
-    // explicit target) shouldn't hold up moving on, and a failed save is
-    // logged the same way the upload path's auto-save is; the explicit Save
-    // Draft button remains for anyone who wants to see it confirmed.
-    saveDraft(clientUuid, currentDraftPayload(), 3)
-      .then(() => {
-        draftEnsuredRef.current = true;
-      })
-      .catch((saveError) => logger.error("Failed to save draft on continue:", saveError));
+    // or a file uploaded. Skipped when the draft is already known to be
+    // persisted and unchanged since (`draftEnsuredRef` plus `draftSaveState`
+    // "saved" — the same signal the snapshot check above resets to "idle" on
+    // any edit): uploading a file already fires two of these saves back to
+    // back, and clicking Save & Continue right after shouldn't add a third
+    // near-identical one. Not awaited when it does run — a slow connection
+    // (this app's explicit target) shouldn't hold up moving on, and a failed
+    // save is logged the same way the upload path's auto-save is; the
+    // explicit Save Draft button remains for anyone who wants to see it
+    // confirmed.
+    if (!draftEnsuredRef.current || draftSaveState !== "saved") {
+      saveDraft(clientUuid, currentDraftPayload(), 3)
+        .then(() => {
+          draftEnsuredRef.current = true;
+        })
+        .catch((saveError) => logger.error("Failed to save draft on continue:", saveError));
+    }
     onNext();
   };
 

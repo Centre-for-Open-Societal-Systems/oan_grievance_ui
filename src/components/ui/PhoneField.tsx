@@ -2,7 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { toDigitsOnly } from '@/lib/validation/phone';
+import { isEthiopianDialCode, PHONE_NUMBER_LENGTH, toDigitsOnly } from '@/lib/validation/phone';
+
+/** The longest local number `GENERIC_LOCAL_PHONE_REGEX` (phone.ts) accepts for a non-Ethiopian country. */
+const GENERIC_LOCAL_PHONE_MAX_LENGTH = 14;
 
 export interface CountryCodeOption {
   code: string;
@@ -35,6 +38,7 @@ export interface PhoneFieldProps {
   disabled?: boolean;
   id?: string;
   name?: string;
+  /** Caps the digits the input accepts. Defaults to the selected country's own limit (10 for Ethiopia, 14 for everywhere else — see `GENERIC_LOCAL_PHONE_REGEX`) when omitted. */
   maxLength?: number;
   className?: string;
   /** Set when the field has a validation error: red border, and `aria-invalid` for assistive tech. */
@@ -59,7 +63,7 @@ export function PhoneField({
   disabled = false,
   id,
   name,
-  maxLength = 10,
+  maxLength,
   className = '',
   invalid = false,
   describedBy,
@@ -67,6 +71,8 @@ export function PhoneField({
 }: PhoneFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const effectiveMaxLength =
+    maxLength ?? (isEthiopianDialCode(countryCode) ? PHONE_NUMBER_LENGTH : GENERIC_LOCAL_PHONE_MAX_LENGTH);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -165,7 +171,7 @@ export function PhoneField({
         name={name}
         required={required}
         disabled={disabled}
-        maxLength={maxLength}
+        maxLength={effectiveMaxLength}
         value={phoneNumber}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}

@@ -32,8 +32,11 @@ export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, des
         id={id}
         type={revealed ? "text" : "password"}
         autoComplete="off"
-        inputMode="numeric"
-        maxLength={16}
+        // Not `inputMode="numeric"`/a numeric maxLength: a signed-in account's
+        // own Fayda ID can come back in the backend's issued shape (letters and
+        // hyphens, up to 60 chars — see ISSUED_FAYDA_ID_PATTERN in fields.ts),
+        // not just the 16-digit shape a user types by hand.
+        maxLength={60}
         value={value}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
