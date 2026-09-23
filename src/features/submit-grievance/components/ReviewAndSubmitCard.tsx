@@ -50,6 +50,7 @@ interface ReviewAndSubmitCardProps {
 function labelFor(options: { value: string; label: string }[], value: string): string {
   return (
     options.find((o) => o.value.toLowerCase() === value.toLowerCase())?.label ||
+    options.find((o) => o.label.toLowerCase() === value.toLowerCase())?.label ||
     options.find((o) => o.value === value)?.label ||
     value
   );
