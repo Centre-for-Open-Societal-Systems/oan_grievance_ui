@@ -40,6 +40,15 @@ export const SCAN_STATUS = {
 
 export type ScanStatus = (typeof SCAN_STATUS)[keyof typeof SCAN_STATUS];
 
+/**
+ * A row from `GET /api/v1/grievances/<id>/attachments` — exactly the field
+ * list `get_attachments`'s `frappe.get_all(..., fields=[...])` selects on the
+ * backend, no more. In particular there's no `servable`/similar boolean here:
+ * `is_servable()` (Clean-only) is enforced server-side, on `download` and on
+ * read permission for the row itself — a Clean check has to be done here by
+ * comparing `scan_status` against `SCAN_STATUS.CLEAN`, not by trusting an
+ * extra field the list endpoint doesn't actually send.
+ */
 export interface AttachmentRow {
   name: string;
   file_name: string;
@@ -52,8 +61,6 @@ export interface AttachmentRow {
   uploaded_by_user: string | null;
   uploaded_by_submitter: string | null;
   creation: string;
-  /** True once `scan_status` is Clean — the only state `download` will actually serve. */
-  servable: boolean;
 }
 
 export interface UploadAttachmentResult {

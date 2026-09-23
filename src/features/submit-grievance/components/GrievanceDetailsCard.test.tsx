@@ -334,7 +334,6 @@ describe('Step 2 — attachment scan status', () => {
           uploaded_by_user: null,
           uploaded_by_submitter: null,
           creation: '2026-09-23T09:59:00Z',
-          servable: true,
         },
       ]);
 
@@ -374,7 +373,6 @@ describe('Step 2 — attachment scan status', () => {
           uploaded_by_user: null,
           uploaded_by_submitter: null,
           creation: '2026-09-23T09:59:00Z',
-          servable: true,
         },
       ]);
 
