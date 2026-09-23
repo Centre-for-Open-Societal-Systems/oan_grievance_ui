@@ -16,7 +16,6 @@ import {
   TrendingUp,
   UserCheck,
 } from 'lucide-react';
-import { DocumentViewerPopup } from './DocumentViewerPopup';
 import type { Grievance, GrievanceTimelineData, TimelineEntry, TimelineEventItem } from '../../types';
 import { normalizeTimelineEntry, type FormattedTimelineEvent } from '../../utils/mapGrievance';
 
@@ -39,7 +38,6 @@ export function CommentsAndCommunication({
 }: CommentsAndCommunicationProps) {
   const canSeeInternal = canManageCase;
   const t = useTranslations('commentsAndCommunication');
-  const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const [expandedMsgs, setExpandedMsgs] = useState<Record<string, boolean>>({});
 
   // Combine and normalize events from timelineData (or fallback to initial grievance submission if empty)
@@ -301,10 +299,6 @@ export function CommentsAndCommunication({
           )}
         </div>
       </div>
-
-      {selectedDoc && (
-        <DocumentViewerPopup documentName={selectedDoc} onClose={() => setSelectedDoc(null)} />
-      )}
     </>
   );
 }
