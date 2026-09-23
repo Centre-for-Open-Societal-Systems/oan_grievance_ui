@@ -85,24 +85,19 @@ export async function uploadAttachment(params: {
   if (params.documentType) form.append('document_type', params.documentType);
   if (params.response) form.append('response', params.response);
 
-  let rawResult: UploadAttachmentResult | UploadAttachmentResult[];
-  if (params.grievance) {
-    rawResult = await fetchApi<UploadAttachmentResult | UploadAttachmentResult[]>(
-      `api/v1/grievances/${params.grievance}/attachments`,
-      { method: 'POST', body: form },
-      UPLOAD_TIMEOUT_MS
-    );
-  } else {
-    if (!params.clientUuid) {
-      throw new Error('uploadAttachment requires either a grievance or a clientUuid.');
-    }
-    form.append('client_uuid', params.clientUuid);
-    rawResult = await fetchApi<UploadAttachmentResult | UploadAttachmentResult[]>(
-      'api/v1/drafts/attachments',
-      { method: 'POST', body: form },
-      UPLOAD_TIMEOUT_MS
-    );
+  const targetId = params.grievance || params.clientUuid;
+  if (!targetId) {
+    throw new Error('uploadAttachment requires either a grievance or a clientUuid.');
   }
+
+  form.append('grievance', targetId);
+  if (params.clientUuid) form.append('client_uuid', params.clientUuid);
+
+  const rawResult = await fetchApi<UploadAttachmentResult | UploadAttachmentResult[]>(
+    `api/v1/grievances/${encodeURIComponent(targetId)}/attachments`,
+    { method: 'POST', body: form },
+    UPLOAD_TIMEOUT_MS
+  );
 
   if (Array.isArray(rawResult)) {
     return rawResult[0] as UploadAttachmentResult;

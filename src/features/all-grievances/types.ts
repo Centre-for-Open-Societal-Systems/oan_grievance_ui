@@ -19,6 +19,8 @@ export interface GrievanceListItem {
   contact_email?: string | null;
   is_anonymous: boolean;
   administrative_area?: string | null;
+  location?: string | null;
+  administrative_hierarchy?: Record<string, string> | null;
   service_category?: string | null;
   grievance_type?: string | null;
   description?: string | null;
@@ -54,6 +56,11 @@ export interface GrievanceListQueryParams {
   status?: string[];
   category?: string[];
   region?: string[];
+  zone?: string[];
+  woreda?: string[];
+  kebele?: string[];
+  location?: string[];
+  administrative_area?: string[];
   grievance_type?: string[];
   department?: string[];
   submission_channel?: string[];

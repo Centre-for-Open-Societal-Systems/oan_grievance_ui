@@ -5,17 +5,21 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X } from "lucide-react";
 import { selectUser } from "@/features/auth/store/authSlice";
 import {
+  fetchAdministrativeAreaAncestors,
+  fetchChildAreasThunk,
   normalizeSubmissionChannel,
   normalizeSubmitterType,
+  resolveAdministrativeAreaId,
   selectSubmissionChannelOptions,
   selectSubmitterTypeOptions,
 } from "@/features/metadata";
 import { loadSubmitterProfile, saveSubmitterProfile } from "@/lib/submitterProfile";
 import { loadDraft, saveDraft, submitDraft, type SaveDraftPayload } from "@/lib/drafts";
 import { SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
+import { formatToE164, splitPhoneNumber } from "@/lib/validation/phone";
 import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
@@ -37,6 +41,7 @@ export default function SubmitGrievancePage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const dispatch = useAppDispatch();
   const user = useAppSelector(selectUser);
   const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
   const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
@@ -93,9 +98,14 @@ export default function SubmitGrievancePage() {
     if (user) {
       if (user.full_name) initial.fullName = user.full_name;
       if (user.fayda_id) initial.faydaId = user.fayda_id;
-      if (user.mobile_no) initial.phoneNumber = user.mobile_no;
+      if (user.mobile_no && !initial.phoneNumber) {
+        const parsed = splitPhoneNumber(user.mobile_no);
+        initial.phoneCode = parsed.phoneCode;
+        initial.phoneNumber = parsed.phoneNumber;
+      }
       if (user.email) initial.email = user.email;
     }
+    if (!initial.phoneCode) initial.phoneCode = "+251";
     return initial;
   });
 
@@ -133,6 +143,10 @@ export default function SubmitGrievancePage() {
 
   const [draftCheckDone, setDraftCheckDone] = useState(false);
 
+  const resolvedAreaId = useAppSelector((state) =>
+    resolveAdministrativeAreaId(state, kebele, woreda, zone, region)
+  );
+
   // Resume saved draft on mount
   useEffect(() => {
     let cancelled = false;
@@ -146,17 +160,74 @@ export default function SubmitGrievancePage() {
         const cat = draft.service_category || (typeof payload.serviceCategory === "string" ? payload.serviceCategory : "");
         const type = draft.grievance_type || (typeof payload.grievanceType === "string" ? payload.grievanceType : "");
         const desc = draft.description || (typeof payload.description === "string" ? payload.description : "");
-        const area = draft.administrative_area || (typeof payload.region === "string" ? payload.region : "");
 
         if (cat) setServiceCategory(cat);
         if (type) setGrievanceType(type);
         if (desc) setDescription(desc);
-        if (area) setRegion(area);
 
-        if (typeof payload.zone === "string") setZone(payload.zone);
-        if (typeof payload.woreda === "string") setWoreda(payload.woreda);
-        if (typeof payload.kebele === "string") setKebele(payload.kebele);
-        if (draft.administrative_unit && !payload.woreda) setWoreda(draft.administrative_unit);
+        const h = draft.administrative_hierarchy;
+        if (h) {
+          if (h.region) setRegion(h.region);
+          if (h.zone) setZone(h.zone);
+          if (h.woreda) setWoreda(h.woreda);
+          if (h.kebele) setKebele(h.kebele);
+
+          if (h.region_id) {
+            void dispatch(fetchChildAreasThunk({ parent: h.region_id, level_name: "Zone" }));
+            void dispatch(fetchChildAreasThunk({ parent: h.region_id, level_name: "Woreda" }));
+          }
+          if (h.zone_id) {
+            void dispatch(fetchChildAreasThunk({ parent: h.zone_id, level_name: "Woreda" }));
+          }
+          if (h.woreda_id) {
+            void dispatch(fetchChildAreasThunk({ parent: h.woreda_id, level_name: "Kebele" }));
+          }
+        } else if (draft.administrative_area) {
+          fetchAdministrativeAreaAncestors(draft.administrative_area)
+            .then((res) => {
+              if (cancelled) return;
+              const crumbs = res.breadcrumbs || [];
+              let rNode: { area_id: string; area_name: string } | undefined;
+              let zNode: { area_id: string; area_name: string } | undefined;
+              let wNode: { area_id: string; area_name: string } | undefined;
+
+              for (const b of crumbs) {
+                const lvl = (b.level_name || "").toLowerCase();
+                if (lvl === "region") {
+                  setRegion(b.area_name);
+                  rNode = b;
+                } else if (lvl === "zone") {
+                  setZone(b.area_name);
+                  zNode = b;
+                } else if (lvl === "woreda") {
+                  setWoreda(b.area_name);
+                  wNode = b;
+                } else if (lvl === "kebele") {
+                  setKebele(b.area_name);
+                }
+              }
+
+              if (rNode?.area_id) {
+                void dispatch(fetchChildAreasThunk({ parent: rNode.area_id, level_name: "Zone" }));
+                void dispatch(fetchChildAreasThunk({ parent: rNode.area_id, level_name: "Woreda" }));
+              }
+              if (zNode?.area_id) {
+                void dispatch(fetchChildAreasThunk({ parent: zNode.area_id, level_name: "Woreda" }));
+              }
+              if (wNode?.area_id) {
+                void dispatch(fetchChildAreasThunk({ parent: wNode.area_id, level_name: "Kebele" }));
+              }
+            })
+            .catch((err) => {
+              logger.warn("Failed to fetch ancestors for administrative area:", err);
+            });
+        } else {
+          if (typeof payload.region === "string") setRegion(payload.region);
+          if (typeof payload.zone === "string") setZone(payload.zone);
+          if (typeof payload.woreda === "string") setWoreda(payload.woreda);
+          if (typeof payload.kebele === "string") setKebele(payload.kebele);
+        }
+        if (draft.administrative_unit && !h?.woreda && !payload.woreda) setWoreda(draft.administrative_unit);
 
         if (draft.submitter_type) {
           const norm = normalizeSubmitterType(draft.submitter_type);
@@ -172,10 +243,12 @@ export default function SubmitGrievancePage() {
             ...(payload.identityValues as Record<string, string>),
           }));
         } else if (draft.submitter_name || draft.contact_mobile || draft.contact_email) {
+          const parsed = draft.contact_mobile ? splitPhoneNumber(draft.contact_mobile) : null;
           setIdentityValues((prev) => ({
             ...prev,
             fullName: draft.submitter_name || prev.fullName || '',
-            phoneNumber: draft.contact_mobile || prev.phoneNumber || '',
+            phoneCode: parsed?.phoneCode || prev.phoneCode || '+251',
+            phoneNumber: parsed?.phoneNumber || prev.phoneNumber || '',
             email: draft.contact_email || prev.email || '',
           }));
         }
@@ -224,9 +297,10 @@ export default function SubmitGrievancePage() {
       identityValues.agentName ||
       user?.full_name ||
       "";
-    const contactMobile = identityValues.phoneNumber || user?.mobile_no || "";
+    const rawMobile = identityValues.phoneNumber || user?.mobile_no || "";
+    const contactMobile = formatToE164(rawMobile, identityValues.phoneCode || "+251");
     const contactEmail = identityValues.email || user?.email || "";
-    const area = kebele || woreda || zone || region || "";
+    const area = resolvedAreaId || kebele || woreda || zone || region || "";
 
     return {
       client_submission_uuid: clientUuid,

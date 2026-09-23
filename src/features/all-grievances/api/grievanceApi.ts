@@ -31,6 +31,11 @@ function buildListQuery(params: GrievanceListQueryParams): string {
   setMulti('status', params.status);
   setMulti('category', params.category);
   setMulti('region', params.region);
+  setMulti('zone', params.zone);
+  setMulti('woreda', params.woreda);
+  setMulti('kebele', params.kebele);
+  setMulti('location', params.location);
+  setMulti('administrative_area', params.administrative_area);
   setMulti('grievance_type', params.grievance_type);
   setMulti('department', params.department);
   setMulti('submission_channel', params.submission_channel);

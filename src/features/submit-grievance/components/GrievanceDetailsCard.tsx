@@ -21,6 +21,7 @@ import {
   selectKebeleStatus,
   findZoneNode,
   findWoredaNode,
+  resolveAdministrativeAreaId,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import { uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
@@ -107,6 +108,9 @@ export function GrievanceDetailsCard({
   const rawRegions = useAppSelector((state) => state.metadata.regions);
   const zoneNode = useAppSelector((state) => findZoneNode(state, zone, region));
   const woredaNode = useAppSelector((state) => findWoredaNode(state, woreda, zone, region));
+  const resolvedAreaId = useAppSelector((state) =>
+    resolveAdministrativeAreaId(state, kebele, woreda, zone, region)
+  );
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
@@ -270,6 +274,7 @@ export function GrievanceDetailsCard({
     scanStatus: ScanStatus | null;
   }) => ({
     ...latestFieldsRef.current,
+    administrative_area: resolvedAreaId || undefined,
     attachmentId: attachmentOverride ? attachmentOverride.attachmentId : attachmentId,
     attachmentFileName: attachmentOverride ? attachmentOverride.fileName : (uploadedFile?.name ?? attachmentFileName),
     scanStatus: attachmentOverride ? attachmentOverride.scanStatus : scanStatus,

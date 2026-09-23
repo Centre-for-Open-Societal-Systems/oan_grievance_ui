@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
-import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
+import { PHONE_NUMBER_E164_REGEX, stripLeadingZero, toDigitsOnly } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
 import {
   selectGrievanceTypeOptions,
@@ -56,7 +56,8 @@ function labelFor(options: { value: string; label: string }[], value: string): s
 function formatPhoneForDisplay(phoneNumber: string | undefined, phoneCode: string | undefined): string {
   if (!phoneNumber) return "";
   if (PHONE_NUMBER_E164_REGEX.test(phoneNumber)) return phoneNumber;
-  return `${phoneCode || "+251"} ${phoneNumber}`;
+  const digits = stripLeadingZero(toDigitsOnly(phoneNumber));
+  return `${phoneCode || "+251"} ${digits || phoneNumber}`;
 }
 
 export function ReviewAndSubmitCard({

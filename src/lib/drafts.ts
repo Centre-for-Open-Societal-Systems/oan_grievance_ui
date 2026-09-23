@@ -1,4 +1,5 @@
 import { fetchApi } from '@/lib/api/fetchApi';
+import { formatToE164 } from '@/lib/validation/phone';
 
 export interface DraftAttachment {
   name: string;
@@ -6,6 +7,17 @@ export interface DraftAttachment {
   file_url: string;
   file_size: number;
   is_private: number;
+}
+
+export interface AdministrativeHierarchy {
+  region?: string;
+  region_id?: string;
+  zone?: string;
+  zone_id?: string;
+  woreda?: string;
+  woreda_id?: string;
+  kebele?: string;
+  kebele_id?: string;
 }
 
 export interface DraftState {
@@ -23,6 +35,8 @@ export interface DraftState {
   grievance_type?: string | null;
   grievance_type_name?: string | null;
   administrative_area?: string | null;
+  administrative_hierarchy?: AdministrativeHierarchy | null;
+  location?: string | null;
   administrative_unit?: string | null;
   description?: string | null;
   desired_outcome?: string | null;
@@ -100,6 +114,10 @@ export async function saveDraft(
     }
   }
 
+  if (typeof cleanBody.contact_mobile === 'string' && !cleanBody.contact_mobile.startsWith('+')) {
+    cleanBody.contact_mobile = formatToE164(cleanBody.contact_mobile);
+  }
+
   return fetchApi<DraftState>('api/v1/drafts', {
     method: 'POST',
     body: JSON.stringify(cleanBody),
@@ -115,6 +133,10 @@ export async function submitDraft(payload: SubmitDraftPayload): Promise<SubmitDr
     if (v !== undefined && v !== null && v !== '') {
       cleanBody[k] = v;
     }
+  }
+
+  if (typeof cleanBody.contact_mobile === 'string' && !cleanBody.contact_mobile.startsWith('+')) {
+    cleanBody.contact_mobile = formatToE164(cleanBody.contact_mobile);
   }
 
   return fetchApi<SubmitDraftResult>('api/v1/drafts/submit', {
