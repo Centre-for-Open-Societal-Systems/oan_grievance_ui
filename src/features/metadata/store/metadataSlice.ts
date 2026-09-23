@@ -618,28 +618,37 @@ function kebeleChildren(
   );
 }
 
-export const selectKebeleOptions = (
-  state: RootState,
-  woredaValue?: string,
-  zoneValue?: string,
-  regionValue?: string
-): Array<{ value: string; label: string }> => {
-  if (!woredaValue) return [];
+/**
+ * Memoized with `createSelector` on just the `metadata` slice (rather than the
+ * whole `RootState`, which is a fresh object on every dispatch) so an unrelated
+ * store update doesn't hand the kebele dropdown a new array reference.
+ */
+export const selectKebeleOptions = createSelector(
+  [
+    (state: RootState) => state.metadata,
+    (_state: RootState, woredaValue?: string) => woredaValue,
+    (_state: RootState, _woredaValue?: string, zoneValue?: string) => zoneValue,
+    (_state: RootState, _woredaValue?: string, _zoneValue?: string, regionValue?: string) => regionValue,
+  ],
+  (metadata, woredaValue, zoneValue, regionValue): Array<{ value: string; label: string }> => {
+    if (!woredaValue) return [];
 
-  const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
-  const childAreas = kebeleChildren(state, woredaNode, woredaValue);
+    const state = { metadata } as RootState;
+    const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
+    const childAreas = kebeleChildren(state, woredaNode, woredaValue);
 
-  if (childAreas && childAreas.length > 0) {
-    return childAreas
-      .filter((a) => !a.level_name || a.level_name === 'Kebele')
-      .map((a) => ({
-        value: a.area_name,
-        label: a.area_name,
-      }));
+    if (childAreas && childAreas.length > 0) {
+      return childAreas
+        .filter((a) => !a.level_name || a.level_name === 'Kebele')
+        .map((a) => ({
+          value: a.area_name,
+          label: a.area_name,
+        }));
+    }
+
+    return [];
   }
-
-  return [];
-};
+);
 
 /**
  * The administrative area a grievance is filed against: the chosen kebele if

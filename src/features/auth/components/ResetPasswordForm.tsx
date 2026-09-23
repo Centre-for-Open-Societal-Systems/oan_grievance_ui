@@ -75,6 +75,8 @@ export function ResetPasswordForm() {
   useEffect(() => {
     const key = new URLSearchParams(window.location.search).get('key');
     if (key) {
+      // Seeding state from the URL is exactly what this effect is for (see the
+      // doc comment above) — there's no non-effect way to read `window` here.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setResetKey(key);
     }

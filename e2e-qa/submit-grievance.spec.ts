@@ -88,7 +88,6 @@ test('SG full flow: register, log in, submit a grievance, get a real ticket', as
   await expect(page.getByRole('heading', { name: 'Grievance Submitted', level: 2 })).toBeVisible({ timeout: 20_000 });
   const ticket = page.locator('text=Ticket Number').locator('..').locator('p').last();
   await expect(ticket).not.toHaveText('', { timeout: 5_000 });
-  console.log('SG ticket issued:', await ticket.textContent());
 });
 
 test('SG-Step2 empty form: every required field is flagged and the wizard does not advance', async ({ page }) => {

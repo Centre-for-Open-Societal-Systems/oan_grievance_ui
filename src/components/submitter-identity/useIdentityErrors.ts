@@ -29,7 +29,21 @@ interface Options {
  * already showing an error as it's edited (so the message clears the moment
  * it's fixed), and check everything on submit.
  */
-export function useIdentityErrors({ submitterType, values, hiddenFields = [], requiredMessage = DEFAULT_REQUIRED_MESSAGE }: Options) {
+export interface UseIdentityErrorsResult {
+  errors: Record<string, string>;
+  setError: (key: string, message: string | null) => void;
+  validateField: (key: string, nextValues?: Record<string, string>) => void;
+  validateAll: (extra?: ExtraFieldCheck[]) => boolean;
+  revalidateIfShowing: (key: string, nextValue: string) => void;
+  clear: () => void;
+}
+
+export function useIdentityErrors({
+  submitterType,
+  values,
+  hiddenFields = [],
+  requiredMessage = DEFAULT_REQUIRED_MESSAGE,
+}: Options): UseIdentityErrorsResult {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const setError = useCallback((key: string, message: string | null) => {

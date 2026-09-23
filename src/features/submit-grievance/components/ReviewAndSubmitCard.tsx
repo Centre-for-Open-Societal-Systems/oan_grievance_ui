@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
@@ -6,6 +6,7 @@ import { saveDraft } from "@/lib/drafts";
 import { logger } from "@/lib/logger";
 import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
+import type { RootState } from "@/store";
 import {
   findFilingArea,
   selectGrievanceTypeOptions,
@@ -117,7 +118,14 @@ export function ReviewAndSubmitCard({
   const regions = useAppSelector(selectRegionOptions);
   // What the case is actually filed against — see `findFilingArea` for why this
   // is a resolved node and not the display names held in `region`/`woreda`/`kebele`.
-  const filingArea = useAppSelector((state) => findFilingArea(state, { region, zone, woreda, kebele }));
+  // `findFilingArea` only reads `state.metadata`, so selecting just that slice
+  // (stable across unrelated store updates) and memoizing on it plus the four
+  // fields avoids re-running the woreda/kebele tree search on every render.
+  const metadata = useAppSelector((state) => state.metadata);
+  const filingArea = useMemo(
+    () => findFilingArea({ metadata } as RootState, { region, zone, woreda, kebele }),
+    [metadata, region, zone, woreda, kebele]
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);

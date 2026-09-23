@@ -7,8 +7,11 @@ import { forgotPassword } from '@/features/auth/api/authApi';
 import { validateEmail } from '@/lib/validation/fieldRules';
 import { CheckCircle2, Mail, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface ForgotPasswordModalProps {
   onClose: () => void;
@@ -28,6 +31,7 @@ export function ForgotPasswordModal({ onClose }: ForgotPasswordModalProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Shown under the field; `errorMessage` above is for a failed request.
   const [emailError, setEmailError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -36,6 +40,34 @@ export function ForgotPasswordModal({ onClose }: ForgotPasswordModalProps) {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
+
+  // Only mounted while open (see the doc comment above), so mount/unmount
+  // doubles as open/close: restore focus to whatever opened this on unmount,
+  // and keep Tab from leaving the dialog into the obscured page behind it
+  // while it's open.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    return () => previouslyFocused?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      const first = focusable.at(0);
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -69,6 +101,7 @@ export function ForgotPasswordModal({ onClose }: ForgotPasswordModalProps) {
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="forgot-password-title"

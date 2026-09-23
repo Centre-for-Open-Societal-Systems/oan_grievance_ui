@@ -105,6 +105,8 @@ export function PhoneField({
         >
           <span className="flex items-center justify-center w-4 h-3 shrink-0 overflow-hidden rounded-xs">
             {active.flagUrl ? (
+              // next/image's overhead (loader, blur placeholder) isn't worth it for
+              // a fixed 18x13 decorative icon from a small local sprite set.
               // eslint-disable-next-line @next/next/no-img-element
               <img src={active.flagUrl} alt="" width={18} height={13} className="w-full h-full object-cover" />
             ) : (
@@ -140,6 +142,7 @@ export function PhoneField({
                   >
                     <span className="flex items-center justify-center w-4 h-3 shrink-0 overflow-hidden rounded-xs">
                       {c.flagUrl ? (
+                        // Same fixed-size decorative icon as the trigger button above.
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={c.flagUrl} alt="" width={18} height={13} className="w-full h-full object-cover" />
                       ) : (
