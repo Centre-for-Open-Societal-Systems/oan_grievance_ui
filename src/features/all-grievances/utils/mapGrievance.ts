@@ -37,12 +37,54 @@ export function formatDate(value?: string | null): string {
 }
 
 /**
- * Administrative areas are named by their dotted path code (e.g. `ET.OR.BSH`);
- * the list endpoint returns the link name rather than the display label.
+ * Formats location as "Woreda / Region".
+ * Handles administrative_hierarchy, location string, and administrative_area dotted path codes.
  */
-function formatAreaPath(area?: string | null): string {
-  if (!area) return '';
-  return area.split('.').join(' / ');
+export function formatLocation(item: GrievanceListItem): string {
+  const h = item.administrative_hierarchy;
+  if (h) {
+    const woreda = (h.woreda || h.woreda_name || h.woreda_id || '').trim();
+    const region = (h.region || h.region_name || h.region_id || '').trim();
+    if (woreda && region) return `${woreda} / ${region}`;
+    if (woreda) return woreda;
+    if (region) return region;
+  }
+
+  if (item.location) {
+    const loc = item.location.trim();
+    if (loc.includes('/')) return loc;
+    const parts = loc.split(',').map((p) => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const nonCountry = parts.filter((p) => p.toLowerCase() !== 'ethiopia');
+      if (nonCountry.length === 2) {
+        return `${nonCountry[0]} / ${nonCountry[1]}`;
+      }
+      if (nonCountry.length >= 3) {
+        const woreda = nonCountry[0];
+        const region = nonCountry[nonCountry.length - 1];
+        return `${woreda} / ${region}`;
+      }
+    }
+    return loc;
+  }
+
+  if (item.administrative_area) {
+    const area = item.administrative_area.trim();
+    if (area.includes('.')) {
+      const parts = area.split('.').filter(Boolean);
+      // e.g. ET.OR.BSH -> BSH / OR
+      if (parts.length === 3) {
+        return `${parts[2]} / ${parts[1]}`;
+      }
+      if (parts.length === 2) {
+        return parts.reverse().join(' / ');
+      }
+      return parts.join(' / ');
+    }
+    return area;
+  }
+
+  return '';
 }
 
 /** First line of the description, used as the row title. */
@@ -55,7 +97,7 @@ function deriveTitle(description?: string | null): string {
 
 export function mapGrievanceListItem(item: GrievanceListItem): Grievance {
   const submitterName = item.is_anonymous ? 'Anonymous' : (item.submitter_name ?? '');
-  const area = formatAreaPath(item.administrative_area);
+  const location = formatLocation(item);
 
   return {
     id: item.name,
@@ -63,7 +105,7 @@ export function mapGrievanceListItem(item: GrievanceListItem): Grievance {
     ticketId: item.ticket_number_display || item.ticket_number || item.name,
     ticketNumberDisplay: item.ticket_number_display ?? undefined,
     title: deriveTitle(item.description),
-    location: [submitterName, area].filter(Boolean).join(' - '),
+    location,
     type: item.grievance_type ?? '',
     category: item.service_category ?? '',
     status: item.status,

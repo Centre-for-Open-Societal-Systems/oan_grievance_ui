@@ -4,9 +4,14 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchGrievanceOptionsThunk,
   fetchRegionsThunk,
+  fetchWoredasThunk,
+  fetchKebelesThunk,
+  fetchChildAreasThunk,
   selectCategoryFilterOptions,
   selectRegionFilterOptions,
   selectStatusFilterOptions,
+  selectWoredaFilterOptions,
+  selectKebeleFilterOptions,
 } from '@/features/metadata';
 import { EMPTY_GRIEVANCE_FILTERS, type GrievanceFilters } from '../types';
 
@@ -220,8 +225,12 @@ export function AdvancedFiltersSidebar({
   const statusOptions = useAppSelector(selectStatusFilterOptions);
   const categoryOptions = useAppSelector(selectCategoryFilterOptions);
   const regionOptions = useAppSelector(selectRegionFilterOptions);
+  const woredaOptions = useAppSelector(selectWoredaFilterOptions);
+  const kebeleOptions = useAppSelector(selectKebeleFilterOptions);
   const grievanceStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
+  const woredasStatus = useAppSelector((state) => state.metadata.woredasStatus);
+  const kebelesStatus = useAppSelector((state) => state.metadata.kebelesStatus);
 
   useEffect(() => {
     if (grievanceStatus === "idle") {
@@ -230,12 +239,47 @@ export function AdvancedFiltersSidebar({
     if (regionsStatus === "idle") {
       void dispatch(fetchRegionsThunk());
     }
-  }, [dispatch, grievanceStatus, regionsStatus]);
+    if (woredasStatus === "idle") {
+      void dispatch(fetchWoredasThunk());
+    }
+    if (kebelesStatus === "idle") {
+      void dispatch(fetchKebelesThunk());
+    }
+  }, [dispatch, grievanceStatus, regionsStatus, woredasStatus, kebelesStatus]);
+
+  useEffect(() => {
+    if (filters.regions.length > 0) {
+      filters.regions.forEach((regionName) => {
+        const region = regionOptions.find((r) => r.label === regionName || r.value === regionName);
+        if (region) {
+          void dispatch(fetchChildAreasThunk({ parent: region.value, level_name: 'Woreda' }));
+          void dispatch(fetchChildAreasThunk({ parent: region.value, level_name: 'Kebele' }));
+        }
+      });
+    }
+  }, [dispatch, filters.regions, regionOptions]);
+
+  useEffect(() => {
+    if (filters.woredas.length > 0) {
+      filters.woredas.forEach((woredaName) => {
+        const woreda = woredaOptions.find((w) => w.label === woredaName || w.value === woredaName);
+        if (woreda) {
+          void dispatch(fetchChildAreasThunk({ parent: woreda.value, level_name: 'Kebele' }));
+        }
+      });
+    }
+  }, [dispatch, filters.woredas, woredaOptions]);
 
   const [isFromCalendarOpen, setIsFromCalendarOpen] = useState(false);
   const [isToCalendarOpen, setIsToCalendarOpen] = useState(false);
 
-  const totalFilters = filters.status.length + filters.category.length + filters.regions.length + (filters.fromDate || filters.toDate || filters.dateRange ? 1 : 0);
+  const totalFilters =
+    filters.status.length +
+    filters.category.length +
+    filters.regions.length +
+    filters.woredas.length +
+    filters.kebeles.length +
+    (filters.fromDate || filters.toDate || filters.dateRange ? 1 : 0);
 
   const handleReset = () => {
     setFilters({ ...EMPTY_GRIEVANCE_FILTERS });
@@ -310,6 +354,20 @@ export function AdvancedFiltersSidebar({
             selected={filters.regions}
             onChange={(val) => setFilters((f) => ({ ...f, regions: val }))}
             isLoading={regionsStatus === 'loading'}
+          />
+          <FilterDropdown
+            label="Woredas"
+            options={woredaOptions}
+            selected={filters.woredas}
+            onChange={(val) => setFilters((f) => ({ ...f, woredas: val }))}
+            isLoading={woredasStatus === 'loading'}
+          />
+          <FilterDropdown
+            label="Kebeles"
+            options={kebeleOptions}
+            selected={filters.kebeles}
+            onChange={(val) => setFilters((f) => ({ ...f, kebeles: val }))}
+            isLoading={kebelesStatus === 'loading'}
           />
 
           <div className="mt-2 mb-6 relative">

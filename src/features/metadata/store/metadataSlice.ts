@@ -24,6 +24,14 @@ export interface MetadataState {
   regionsStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
   regionsError: string | null;
 
+  woredas: AdministrativeArea[];
+  woredasStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  woredasError: string | null;
+
+  kebeles: AdministrativeArea[];
+  kebelesStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  kebelesError: string | null;
+
   childAreasByParent: Record<string, AdministrativeArea[]>;
   childAreasStatus: Record<string, 'idle' | 'loading' | 'succeeded' | 'failed'>;
 
@@ -42,6 +50,14 @@ const initialState: MetadataState = {
   regions: [],
   regionsStatus: 'idle',
   regionsError: null,
+
+  woredas: [],
+  woredasStatus: 'idle',
+  woredasError: null,
+
+  kebeles: [],
+  kebelesStatus: 'idle',
+  kebelesError: null,
 
   childAreasByParent: {},
   childAreasStatus: {},
@@ -75,6 +91,40 @@ export const fetchRegionsThunk = createAsyncThunk<
     return await fetchAdministrativeAreas({ level_name: 'Region', limit: 100 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch regions';
+    return rejectWithValue(msg);
+  }
+});
+
+export const fetchWoredasThunk = createAsyncThunk<
+  AdministrativeAreasData,
+  { parent?: string } | void,
+  { rejectValue: string }
+>('metadata/fetchWoredas', async (params, { rejectWithValue }) => {
+  try {
+    return await fetchAdministrativeAreas({
+      level_name: 'Woreda',
+      parent: params?.parent,
+      limit: 1000,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to fetch woredas';
+    return rejectWithValue(msg);
+  }
+});
+
+export const fetchKebelesThunk = createAsyncThunk<
+  AdministrativeAreasData,
+  { parent?: string } | void,
+  { rejectValue: string }
+>('metadata/fetchKebeles', async (params, { rejectWithValue }) => {
+  try {
+    return await fetchAdministrativeAreas({
+      level_name: 'Kebele',
+      parent: params?.parent,
+      limit: 1000,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to fetch kebeles';
     return rejectWithValue(msg);
   }
 });
@@ -114,6 +164,8 @@ const metadataSlice = createSlice({
     clearMetadataErrors(state) {
       state.submitterOptionsError = null;
       state.regionsError = null;
+      state.woredasError = null;
+      state.kebelesError = null;
       state.grievanceOptionsError = null;
     },
     setSelectedLanguage(state, action: PayloadAction<string>) {
@@ -153,6 +205,40 @@ const metadataSlice = createSlice({
     builder.addCase(fetchRegionsThunk.rejected, (state, action) => {
       state.regionsStatus = 'failed';
       state.regionsError = action.payload ?? 'Error loading regions';
+    });
+
+    // Woredas
+    builder.addCase(fetchWoredasThunk.pending, (state) => {
+      state.woredasStatus = 'loading';
+      state.woredasError = null;
+    });
+    builder.addCase(
+      fetchWoredasThunk.fulfilled,
+      (state, action: PayloadAction<AdministrativeAreasData>) => {
+        state.woredasStatus = 'succeeded';
+        state.woredas = action.payload.areas;
+      }
+    );
+    builder.addCase(fetchWoredasThunk.rejected, (state, action) => {
+      state.woredasStatus = 'failed';
+      state.woredasError = action.payload ?? 'Error loading woredas';
+    });
+
+    // Kebeles
+    builder.addCase(fetchKebelesThunk.pending, (state) => {
+      state.kebelesStatus = 'loading';
+      state.kebelesError = null;
+    });
+    builder.addCase(
+      fetchKebelesThunk.fulfilled,
+      (state, action: PayloadAction<AdministrativeAreasData>) => {
+        state.kebelesStatus = 'succeeded';
+        state.kebeles = action.payload.areas;
+      }
+    );
+    builder.addCase(fetchKebelesThunk.rejected, (state, action) => {
+      state.kebelesStatus = 'failed';
+      state.kebelesError = action.payload ?? 'Error loading kebeles';
     });
 
     // Child Areas
@@ -811,4 +897,64 @@ export const selectRegionFilterOptions = createSelector(
   [(state: RootState) => state.metadata.regions],
   (regions): Array<{ value: string; label: string }> =>
     regions.map((r) => ({ value: r.area_name, label: r.area_name }))
+);
+
+export const selectWoredaFilterOptions = createSelector(
+  [
+    (state: RootState) => state.metadata.woredas,
+    (state: RootState) => state.metadata.childAreasByParent,
+  ],
+  (allWoredas, childAreasByParent): Array<{ value: string; label: string }> => {
+    const woredaMap = new Map<string, string>();
+
+    for (const areas of Object.values(childAreasByParent)) {
+      for (const area of areas) {
+        if (!area.level_name || area.level_name === 'Woreda') {
+          woredaMap.set(area.area_name, area.area_name);
+        }
+      }
+    }
+
+    if (allWoredas) {
+      for (const area of allWoredas) {
+        if (!area.level_name || area.level_name === 'Woreda') {
+          woredaMap.set(area.area_name, area.area_name);
+        }
+      }
+    }
+
+    return Array.from(woredaMap.values())
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ value: name, label: name }));
+  }
+);
+
+export const selectKebeleFilterOptions = createSelector(
+  [
+    (state: RootState) => state.metadata.kebeles,
+    (state: RootState) => state.metadata.childAreasByParent,
+  ],
+  (allKebeles, childAreasByParent): Array<{ value: string; label: string }> => {
+    const kebeleMap = new Map<string, string>();
+
+    for (const areas of Object.values(childAreasByParent)) {
+      for (const area of areas) {
+        if (!area.level_name || area.level_name === 'Kebele') {
+          kebeleMap.set(area.area_name, area.area_name);
+        }
+      }
+    }
+
+    if (allKebeles) {
+      for (const area of allKebeles) {
+        if (!area.level_name || area.level_name === 'Kebele') {
+          kebeleMap.set(area.area_name, area.area_name);
+        }
+      }
+    }
+
+    return Array.from(kebeleMap.values())
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ value: name, label: name }));
+  }
 );

@@ -105,6 +105,8 @@ export interface GrievanceFilters {
   status: string[];
   category: string[];
   regions: string[];
+  woredas: string[];
+  kebeles: string[];
   dateRange: string | null;
   /** `YYYY-MM-DD`, empty when unset. */
   fromDate: string;
@@ -116,6 +118,8 @@ export const EMPTY_GRIEVANCE_FILTERS: GrievanceFilters = {
   status: [],
   category: [],
   regions: [],
+  woredas: [],
+  kebeles: [],
   dateRange: null,
   fromDate: '',
   toDate: '',
@@ -174,6 +178,8 @@ export interface GrievanceTimelineSummary {
   service_category?: string | null;
   grievance_type?: string | null;
   administrative_area?: string | null;
+  administrative_hierarchy?: Record<string, string> | null;
+  location?: string | null;
   administrative_unit?: string | null;
   submission_channel?: string | null;
 }
@@ -235,6 +241,8 @@ export interface GrievanceTimelineData {
   service_category?: string | null;
   grievance_type?: string | null;
   administrative_area?: string | null;
+  administrative_hierarchy?: Record<string, string> | null;
+  location?: string | null;
   summary?: GrievanceTimelineSummary;
   submitter?: GrievanceTimelineSubmitter;
   sla?: GrievanceTimelineSla;

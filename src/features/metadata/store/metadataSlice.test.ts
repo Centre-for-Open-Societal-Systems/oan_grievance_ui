@@ -8,6 +8,8 @@ import {
   selectWoredaStatus,
   selectKebeleOptions,
   selectKebeleStatus,
+  selectWoredaFilterOptions,
+  selectKebeleFilterOptions,
   type MetadataState,
 } from './metadataSlice';
 import type { RootState } from '@/store';
@@ -70,6 +72,12 @@ function createMockRootState(metadataOverrides: Partial<MetadataState> = {}): Ro
       regions: [mockRegion],
       regionsStatus: 'succeeded',
       regionsError: null,
+      woredas: [mockWoreda],
+      woredasStatus: 'succeeded',
+      woredasError: null,
+      kebeles: [mockKebele],
+      kebelesStatus: 'succeeded',
+      kebelesError: null,
       childAreasByParent: {
         'reg-oromia': [mockZone],
         'reg-oromia_Zone': [mockZone],
@@ -170,6 +178,14 @@ describe('Administrative area cascading selectors', () => {
     expect(selectZoneStatus(state, 'Oromia')).toBe('loading');
     expect(selectWoredaStatus(state, 'North Shewa', 'Oromia')).toBe('loading');
     expect(selectKebeleStatus(state, 'Basona Werana')).toBe('loading');
+  });
+
+  it('selects woreda and kebele filter options correctly', () => {
+    const state = createMockRootState();
+    const woredas = selectWoredaFilterOptions(state);
+    expect(woredas).toContainEqual({ value: 'Basona Werana', label: 'Basona Werana' });
+    const kebeles = selectKebeleFilterOptions(state);
+    expect(kebeles).toContainEqual({ value: 'Kebele 01', label: 'Kebele 01' });
   });
 });
 

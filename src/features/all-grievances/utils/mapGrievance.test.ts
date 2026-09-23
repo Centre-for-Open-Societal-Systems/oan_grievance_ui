@@ -10,6 +10,7 @@ const baseItem: GrievanceListItem = {
   escalated: false,
   is_anonymous: false,
   submitter_name: 'Abebe Bekele',
+  administrative_hierarchy: { woreda: 'Basona Werana', region: 'Oromia' },
   administrative_area: 'ET.OR.BSH',
   service_category: 'Inputs',
   grievance_type: 'Fertilizer non-delivery or shortage',
@@ -19,20 +20,20 @@ const baseItem: GrievanceListItem = {
 };
 
 describe('mapGrievanceListItem', () => {
-  it('flattens a list row into the shape the table renders', () => {
+  it('flattens a list row into the shape the table renders with Location as Woreda / Region', () => {
     const grievance = mapGrievanceListItem(baseItem);
 
     expect(grievance.id).toBe('GRV-0001');
     expect(grievance.ticketNumber).toBe('SOMA-JIG-INP-09905');
     expect(grievance.ticketId).toBe('SOMA-JIG-INP-09905');
     expect(grievance.title).toBe('Fertiliser allocation delivered 6 weeks late');
-    expect(grievance.location).toBe('Abebe Bekele - ET / OR / BSH');
+    expect(grievance.location).toBe('Basona Werana / Oromia');
     expect(grievance.category).toBe('Inputs');
     expect(grievance.department).toBe('Agriculture');
     expect(grievance.submittedAt).toMatch(/May 28, 2026/);
   });
 
-  it('withholds submitter identity on anonymous grievances', () => {
+  it('withholds submitter identity on anonymous grievances while keeping location intact', () => {
     const grievance = mapGrievanceListItem({
       ...baseItem,
       is_anonymous: true,
@@ -44,7 +45,7 @@ describe('mapGrievanceListItem', () => {
     expect(grievance.submitterName).toBe('Anonymous');
     expect(grievance.contactMobile).toBe('');
     expect(grievance.contactEmail).toBe('');
-    expect(grievance.location).toBe('Anonymous - ET / OR / BSH');
+    expect(grievance.location).toBe('Basona Werana / Oromia');
   });
 
   it('tolerates missing optional fields', () => {
@@ -61,6 +62,28 @@ describe('mapGrievanceListItem', () => {
     expect(grievance.location).toBe('');
     expect(grievance.submittedAt).toBe('');
     expect(grievance.escalated).toBe(true);
+  });
+
+  it('formats location from comma-separated location string', () => {
+    const grievance = mapGrievanceListItem({
+      ...baseItem,
+      administrative_hierarchy: null,
+      administrative_area: null,
+      location: 'Kebele 01, Basona Werana, North Shewa, Oromia, Ethiopia',
+    });
+
+    expect(grievance.location).toBe('Kebele 01 / Oromia');
+  });
+
+  it('formats location from administrative_area dotted path', () => {
+    const grievance = mapGrievanceListItem({
+      ...baseItem,
+      administrative_hierarchy: null,
+      location: null,
+      administrative_area: 'ET.OR.BSH',
+    });
+
+    expect(grievance.location).toBe('BSH / OR');
   });
 
   it('prefers ticket_number_display when provided by the backend', () => {

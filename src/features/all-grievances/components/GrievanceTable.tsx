@@ -131,7 +131,8 @@ export function GrievanceTable({
           <thead className="text-sm text-slate-500 bg-[#F8F9FA] border-b border-gray-200 font-semibold">
             <tr>
               <th className="px-6 py-3 whitespace-nowrap">Ticket ID</th>
-              <th className="px-6 py-3 w-full min-w-[320px]">Details</th>
+              <th className="px-6 py-3 w-full min-w-[280px]">Details</th>
+              <th className="px-6 py-3 whitespace-nowrap">Location</th>
               <th className="px-6 py-3 cursor-pointer hover:text-gray-700 relative">
                 <div className="flex items-center gap-1.5 group" onClick={() => setOpenFilter(openFilter === 'category' ? null : 'category')}>
                   Category <Filter className={`h-4 w-4 transition-colors duration-300 ${openFilter === 'category' ? 'text-emerald-500' : 'text-gray-400 group-hover:text-emerald-500'}`} />
@@ -163,7 +164,7 @@ export function GrievanceTable({
           <tbody className="divide-y divide-gray-100">
             {error ? (
               <tr>
-                <td colSpan={6} className="px-6 py-24 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-24 text-center text-gray-500">
                   <div className="flex flex-col items-center justify-center">
                     <div className="bg-red-50 p-5 rounded-full flex items-center justify-center text-red-500 mb-6">
                       <AlertCircle className="h-10 w-10" />
@@ -182,7 +183,7 @@ export function GrievanceTable({
             ) : isLoading && grievances.length === 0 ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={`skeleton-${i}`} className="animate-pulse">
-                  {Array.from({ length: 6 }).map((__, cell) => (
+                  {Array.from({ length: 7 }).map((__, cell) => (
                     <td key={cell} className="px-6 py-5">
                       <div className="h-3 bg-gray-100 rounded" />
                     </td>
@@ -195,10 +196,9 @@ export function GrievanceTable({
                   <td className="px-6 py-4 font-semibold text-gray-900 whitespace-nowrap">
                     {grievance.ticketId}
                   </td>
-                  <td className="px-6 py-4 w-full min-w-[320px]">
+                  <td className="px-6 py-4 w-full min-w-[280px]">
                     <div className="flex flex-col gap-1">
                       <span className="font-semibold text-gray-900 line-clamp-1">{grievance.title}</span>
-                      <span className="text-gray-500 text-xs line-clamp-1">{grievance.location}</span>
                       <span className="text-gray-500 text-xs line-clamp-1">{grievance.type}</span>
                       {grievance.escalated && (
                         <div className="flex items-center gap-1.5 text-orange-600 text-xs mt-0.5 font-medium">
@@ -207,6 +207,9 @@ export function GrievanceTable({
                         </div>
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700 font-medium whitespace-nowrap">
+                    {grievance.location || '—'}
                   </td>
                   <td className="px-6 py-4 text-gray-700 font-medium whitespace-nowrap">
                     {grievance.category || '—'}
@@ -232,7 +235,7 @@ export function GrievanceTable({
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="px-6 py-24 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-24 text-center text-gray-500">
                   <div className="flex flex-col items-center justify-center">
                     <div className="relative mb-6 mt-4">
                       <div className="absolute inset-0 bg-emerald-100 rounded-full animate-ping opacity-75"></div>

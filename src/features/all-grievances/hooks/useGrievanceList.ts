@@ -71,6 +71,8 @@ export function useGrievanceList({
         status: filters.status,
         category: filters.category,
         regions: filters.regions,
+        woredas: filters.woredas,
+        kebeles: filters.kebeles,
         fromDate: filters.fromDate,
         toDate: filters.toDate,
         search: debouncedSearch.trim(),
@@ -86,6 +88,8 @@ export function useGrievanceList({
       status: string[];
       category: string[];
       regions: string[];
+      woredas: string[];
+      kebeles: string[];
       fromDate: string;
       toDate: string;
       search: string;
@@ -104,6 +108,8 @@ export function useGrievanceList({
         status: params.status,
         category: params.category,
         region: params.regions,
+        woreda: params.woredas,
+        kebele: params.kebeles,
         from_date: params.fromDate || undefined,
         to_date: params.toDate || undefined,
         search: params.search || undefined,

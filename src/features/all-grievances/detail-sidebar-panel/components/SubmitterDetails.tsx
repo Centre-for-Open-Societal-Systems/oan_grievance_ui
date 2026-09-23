@@ -23,7 +23,20 @@ export function SubmitterDetails({ grievance, timelineData }: SubmitterDetailsPr
 
   const category = timelineData?.summary?.service_category || grievance.category || 'General';
   const grievanceType = timelineData?.summary?.grievance_type || grievance.type || 'General Inquiry';
-  const location = timelineData?.summary?.administrative_area || grievance.location || 'N/A';
+  const hierarchy =
+    timelineData?.summary?.administrative_hierarchy ||
+    timelineData?.administrative_hierarchy;
+  const hierarchyLocation = hierarchy
+    ? [hierarchy.woreda, hierarchy.region].filter(Boolean).join(' / ') ||
+      [hierarchy.kebele, hierarchy.woreda, hierarchy.zone, hierarchy.region].filter(Boolean).join(', ')
+    : null;
+  const location =
+    hierarchyLocation ||
+    grievance.location ||
+    timelineData?.summary?.location ||
+    timelineData?.location ||
+    timelineData?.summary?.administrative_area ||
+    'N/A';
   const unit = timelineData?.summary?.administrative_unit || grievance.administrativeUnit || 'N/A';
   const channel = timelineData?.summary?.submission_channel || grievance.submissionChannel || 'Web Portal';
   const submittedAt = grievance.submittedAt || 'N/A';
