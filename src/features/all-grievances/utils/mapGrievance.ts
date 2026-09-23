@@ -1,4 +1,10 @@
-import type { Grievance, GrievanceListItem, TimelineEntry, TimelineEventItem } from '../types';
+import type {
+  Grievance,
+  GrievanceListItem,
+  GrievanceTimelineAttachment,
+  TimelineEntry,
+  TimelineEventItem,
+} from '../types';
 
 /**
  * Frappe returns naive datetimes ("2026-05-28 10:42:13.123456"). `new Date` treats
@@ -108,6 +114,7 @@ export interface FormattedTimelineEvent {
   rawDate: string;
   fromStatus?: string | null;
   toStatus?: string | null;
+  attachments?: GrievanceTimelineAttachment[];
 }
 
 const ENTRY_TYPE_LABELS: Record<string, string> = {
@@ -119,6 +126,8 @@ const ENTRY_TYPE_LABELS: Record<string, string> = {
   status_change: 'Status Change',
   assignment: 'Assignment',
   escalation: 'Escalation',
+  resolution: 'Resolution',
+  rejection: 'Rejection',
   attachment: 'Attachment',
   submission: 'Submission',
   'Status Change': 'Status Change',
@@ -149,7 +158,7 @@ export function normalizeTimelineEntry(
     authorName = isInternal ? 'Case Officer' : 'Citizen Submitter';
   }
 
-  const authorRole = (entry as TimelineEventItem).actor_role || undefined;
+  const authorRole = (entry as TimelineEntry).author_role || (entry as TimelineEventItem).actor_role || undefined;
 
   let authorType: 'submitter' | 'officer' | 'system' = 'submitter';
   if ((entry as TimelineEntry).author_type) {
@@ -160,9 +169,10 @@ export function normalizeTimelineEntry(
 
   const body = (entry as TimelineEntry).body || (entry as TimelineEventItem).message || '';
   const typeLabel = ENTRY_TYPE_LABELS[rawType] || rawType;
+  const entryId = (entry as TimelineEntry).id || (entry as TimelineEntry).name || `evt-${index}-${rawCreated}`;
 
   return {
-    id: (entry as TimelineEntry).name || `evt-${index}-${rawCreated}`,
+    id: entryId,
     entryType: rawType,
     typeLabel,
     isInternal,
@@ -173,7 +183,8 @@ export function normalizeTimelineEntry(
     initials: getInitials(authorName),
     formattedDate: formatDateTime(rawCreated),
     rawDate: rawCreated,
-    fromStatus: (entry as TimelineEventItem).from_status,
-    toStatus: (entry as TimelineEventItem).to_status,
+    fromStatus: (entry as TimelineEntry).from_status || (entry as TimelineEventItem).from_status,
+    toStatus: (entry as TimelineEntry).to_status || (entry as TimelineEventItem).to_status,
+    attachments: entry.attachments,
   };
 }

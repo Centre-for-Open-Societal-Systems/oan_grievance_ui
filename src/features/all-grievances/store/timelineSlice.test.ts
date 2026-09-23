@@ -113,4 +113,45 @@ describe('timelineSlice', () => {
     expect(selectTimelineSLA(mockRootState)).toEqual(sampleTimelineData.sla);
     expect(selectTimelineAssignment(mockRootState)).toEqual(sampleTimelineData.assignment);
   });
+
+  it('updates current_state and appends timeline_event on executeTimelineActionThunk.fulfilled', () => {
+    const currentState: TimelineState = {
+      selectedTicketNumber: 'ET14IN000012026',
+      timelineData: { ...sampleTimelineData },
+      status: 'succeeded',
+      error: null,
+      isSubmitting: true,
+      submitError: null,
+    };
+
+    const actionResult = {
+      ticket_number: 'ET14IN000012026',
+      status: 'Closed',
+      action: 'Confirm Resolution',
+      current_state: {
+        status: 'Closed',
+        escalated: false,
+        assigned_to: 'Tigist Alemu',
+        department: 'Inputs Supply & Distribution Agency',
+        available_actions: [],
+      },
+      timeline_event: {
+        id: 'GR-TIME-000002',
+        entry_type: 'resolution',
+        is_internal: false,
+        body: 'Resolution confirmed by submitter',
+        created_on: '2026-04-11T10:00:00Z',
+      },
+    };
+
+    const nextState = timelineReducer(currentState, {
+      type: 'timeline/executeAction/fulfilled',
+      payload: actionResult,
+    });
+
+    expect(nextState.isSubmitting).toBe(false);
+    expect(nextState.timelineData?.status).toBe('Closed');
+    expect(nextState.timelineData?.timeline?.length).toBe(2);
+    expect(nextState.timelineData?.timeline?.[1]?.body).toBe('Resolution confirmed by submitter');
+  });
 });

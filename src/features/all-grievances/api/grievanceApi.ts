@@ -189,6 +189,86 @@ export async function executeGrievanceAction(
   );
 }
 
+/**
+ * Reassigns a grievance to a target department and/or officer.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/reassign
+ */
+export async function reassignGrievance(
+  ticketNumber: string,
+  payload: {
+    target_department: string;
+    target_officer?: string | null;
+    sla_treatment?: 'Continue' | 'Reset' | string;
+    reason?: string | null;
+  },
+  options: RequestOptions = {}
+): Promise<GrievanceActionResult> {
+  return fetchApi<GrievanceActionResult>(
+    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/reassign`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        ticket_number: ticketNumber,
+        ...payload,
+      }),
+      signal: options.signal,
+    }
+  );
+}
+
+/**
+ * Extends the SLA deadline for a grievance via approved deferral.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/defer-sla
+ */
+export async function deferGrievanceSLA(
+  ticketNumber: string,
+  payload: {
+    additional_days: number;
+    reason: string;
+  },
+  options: RequestOptions = {}
+): Promise<GrievanceActionResult> {
+  return fetchApi<GrievanceActionResult>(
+    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/defer-sla`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        ticket_number: ticketNumber,
+        ...payload,
+      }),
+      signal: options.signal,
+    }
+  );
+}
+
+/**
+ * Approves or rejects an anonymity request for a grievance.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/anonymity-decision
+ */
+export async function decideGrievanceAnonymity(
+  ticketNumber: string,
+  payload: {
+    decision: 'Approved' | 'Rejected' | string;
+    reason?: string | null;
+  },
+  options: RequestOptions = {}
+): Promise<GrievanceActionResult> {
+  return fetchApi<GrievanceActionResult>(
+    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/anonymity-decision`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        ticket_number: ticketNumber,
+        ...payload,
+      }),
+      signal: options.signal,
+    }
+  );
+}
+
 /** Service object matching the OAN A2C enterprise standard */
 export const grievanceService = {
   listGrievances: fetchGrievances,
@@ -197,4 +277,7 @@ export const grievanceService = {
   postMessage: postGrievanceMessage,
   addNote: addGrievanceNote,
   executeAction: executeGrievanceAction,
+  reassign: reassignGrievance,
+  deferSLA: deferGrievanceSLA,
+  decideAnonymity: decideGrievanceAnonymity,
 };

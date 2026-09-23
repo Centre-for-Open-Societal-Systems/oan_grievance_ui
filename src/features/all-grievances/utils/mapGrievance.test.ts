@@ -127,6 +127,54 @@ describe('normalizeTimelineEntry', () => {
     expect(normalized.fromStatus).toBe('Assigned');
     expect(normalized.toStatus).toBe('In Progress');
   });
+
+  it('normalizes submission, resolution, and rejection entries with attachments', () => {
+    const submissionEntry: TimelineEntry = {
+      name: 'GR-TIME-SUB-01',
+      entry_type: 'submission',
+      is_internal: false,
+      body: 'Description of the grievance filed by farmer.',
+      author_name: 'Abebe Bekele',
+      author_type: 'submitter',
+      created_on: '2026-04-10T10:00:00Z',
+      attachments: [
+        {
+          name: 'ATT-001',
+          file_name: 'receipt.pdf',
+          file_size: 102400,
+          file_url: '/files/receipt.pdf',
+        },
+      ],
+    };
+
+    const normSubmission = normalizeTimelineEntry(submissionEntry);
+    expect(normSubmission.entryType).toBe('submission');
+    expect(normSubmission.typeLabel).toBe('Submission');
+    expect(normSubmission.attachments?.length).toBe(1);
+    expect(normSubmission.attachments?.[0]?.file_name).toBe('receipt.pdf');
+
+    const resolutionEntry: TimelineEntry = {
+      name: 'GR-TIME-RES-01',
+      entry_type: 'resolution',
+      is_internal: false,
+      body: 'Fertilizer delivered successfully.',
+      created_on: '2026-04-15T12:00:00Z',
+    };
+    const normResolution = normalizeTimelineEntry(resolutionEntry);
+    expect(normResolution.entryType).toBe('resolution');
+    expect(normResolution.typeLabel).toBe('Resolution');
+
+    const rejectionEntry: TimelineEntry = {
+      name: 'GR-TIME-REJ-01',
+      entry_type: 'rejection',
+      is_internal: false,
+      body: 'Out of scope.',
+      created_on: '2026-04-16T12:00:00Z',
+    };
+    const normRejection = normalizeTimelineEntry(rejectionEntry);
+    expect(normRejection.entryType).toBe('rejection');
+    expect(normRejection.typeLabel).toBe('Rejection');
+  });
 });
 
 describe('bucketStatuses', () => {

@@ -15,6 +15,9 @@ import {
   HelpCircle,
   TrendingUp,
   UserCheck,
+  CheckCircle2,
+  XCircle,
+  Paperclip,
 } from 'lucide-react';
 import { DocumentViewerPopup } from './DocumentViewerPopup';
 import type { Grievance, GrievanceTimelineData, TimelineEntry, TimelineEventItem } from '../../types';
@@ -107,6 +110,22 @@ export function CommentsAndCommunication({
         icon: <AlertCircle className="h-3 w-3 shrink-0" />,
         avatarBg: 'bg-amber-600 text-white',
         cardBg: 'bg-[#FFF9E5] border border-amber-200/70 text-amber-950',
+      };
+    }
+    if (type === 'resolution' || type.includes('resol')) {
+      return {
+        badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+        icon: <CheckCircle2 className="h-3 w-3 shrink-0" />,
+        avatarBg: 'bg-emerald-600 text-white',
+        cardBg: 'bg-emerald-50/40 border border-emerald-100 text-gray-800',
+      };
+    }
+    if (type === 'rejection' || type.includes('reject')) {
+      return {
+        badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200',
+        icon: <XCircle className="h-3 w-3 shrink-0" />,
+        avatarBg: 'bg-rose-600 text-white',
+        cardBg: 'bg-rose-50/40 border border-rose-100 text-gray-800',
       };
     }
     if (type === 'response' || type.includes('dept')) {
@@ -271,6 +290,35 @@ export function CommentsAndCommunication({
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">{event.body}</p>
                         ) : (
                           <p className="text-sm italic opacity-70">No message text recorded for this event.</p>
+                        )}
+
+                        {/* Inline attachments if present for this timeline event */}
+                        {event.attachments && event.attachments.length > 0 && (
+                          <div className="mt-3 pt-2.5 border-t border-gray-200/60 flex flex-wrap gap-2">
+                            {event.attachments.map((att) => (
+                              <button
+                                key={att.name || att.id || att.file_name}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (att.file_url) {
+                                    window.open(att.file_url, '_blank', 'noopener,noreferrer');
+                                  } else if (att.name || att.file_name) {
+                                    setSelectedDoc(att.name || att.file_name || '');
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 font-medium transition-colors shadow-2xs group"
+                              >
+                                <Paperclip className="h-3 w-3 text-gray-400 group-hover:text-indigo-600" />
+                                <span className="truncate max-w-[200px]">{att.file_name || att.name}</span>
+                                {att.file_size ? (
+                                  <span className="text-[10px] text-gray-400 font-normal">
+                                    ({(att.file_size / 1024).toFixed(0)} KB)
+                                  </span>
+                                ) : null}
+                              </button>
+                            ))}
+                          </div>
                         )}
 
                         {/* Status transition pill if applicable */}
