@@ -294,6 +294,7 @@ export default function SubmitGrievancePage() {
   const draftPayload = buildSaveDraftPayload({
     clientSubmissionUuid: clientUuid,
     submissionChannelLabel: submissionChannel ? labelFor(submissionChannels, submissionChannel) : undefined,
+    submitterType,
     submitterTypeLabel: submitterType ? labelFor(submitterTypes, submitterType) : undefined,
     identityValues,
     userFullName: user?.full_name,

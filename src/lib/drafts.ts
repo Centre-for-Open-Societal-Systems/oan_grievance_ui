@@ -89,13 +89,21 @@ export interface SubmitDraftResult {
   routing_rule: string | null;
 }
 
+/**
+ * Drops only `undefined`/`null` — an empty string is kept and sent as-is.
+ * The backend only updates a field it actually receives in the request body
+ * (`if field is not None: doc.field = field`), so a field the caller means
+ * to actively clear (kebele removed, desired outcome deleted, ...) has to
+ * arrive as `""`, not be missing — omitting it would leave an earlier save's
+ * stale value in place instead of clearing it.
+ */
 function cleanedBody(body: object): Record<string, unknown> {
   const clean: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(body)) {
-    if (value === undefined || value === null || value === '') continue;
+    if (value === undefined || value === null) continue;
     clean[key] = value;
   }
-  if (typeof clean.contact_mobile === 'string' && !clean.contact_mobile.startsWith('+')) {
+  if (typeof clean.contact_mobile === 'string' && clean.contact_mobile && !clean.contact_mobile.startsWith('+')) {
     clean.contact_mobile = formatToE164(clean.contact_mobile);
   }
   return clean;
@@ -115,11 +123,9 @@ export async function saveDraft(payload: SaveDraftPayload): Promise<DraftState> 
  * other field just overwrites whatever the draft already has saved.
  */
 export async function submitDraft(payload: SubmitDraftPayload): Promise<SubmitDraftResult> {
-  const body = cleanedBody(payload);
-  body.consent_given = payload.consent_given;
   return fetchApi<SubmitDraftResult>('api/v1/drafts/submit', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify(cleanedBody(payload)),
   });
 }
 

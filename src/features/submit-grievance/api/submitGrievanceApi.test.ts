@@ -32,6 +32,8 @@ describe('buildSubmitGrievancePayload', () => {
       description: 'Fertilizer allocated for the season has not reached the kebele store.',
       administrative_area: 'kebele-ET140108101008',
       administrative_unit: 'Kebele 01 Center',
+      associated_service_provider: '',
+      desired_outcome: '',
       consent_given: 1,
     });
   });
@@ -52,9 +54,9 @@ describe('buildSubmitGrievancePayload', () => {
     );
   });
 
-  it('omits administrative_unit when no kebele was chosen', () => {
-    expect(buildSubmitGrievancePayload({ ...BASE_INPUT, kebele: '' }).administrative_unit).toBeUndefined();
-    expect(buildSubmitGrievancePayload({ ...BASE_INPUT, kebele: '   ' }).administrative_unit).toBeUndefined();
+  it('sends an empty administrative_unit when no kebele was chosen, so a stale one saved earlier cannot resurface', () => {
+    expect(buildSubmitGrievancePayload({ ...BASE_INPUT, kebele: '' }).administrative_unit).toBe('');
+    expect(buildSubmitGrievancePayload({ ...BASE_INPUT, kebele: '   ' }).administrative_unit).toBe('');
   });
 
   it("sends the submitter's own identity — never reaches the backend any other way for a represented submission", () => {

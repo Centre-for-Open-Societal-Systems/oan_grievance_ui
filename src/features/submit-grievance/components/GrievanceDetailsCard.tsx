@@ -341,6 +341,7 @@ export function GrievanceDetailsCard({
     return buildSaveDraftPayload({
       clientSubmissionUuid: clientUuid,
       submissionChannelLabel: submissionChannel ? labelFor(submissionChannels, submissionChannel) : undefined,
+      submitterType,
       submitterTypeLabel: submitterType ? labelFor(submitterTypes, submitterType) : undefined,
       identityValues,
       userFullName,
