@@ -12,6 +12,17 @@ afterEach(cleanup);
 const DESCRIPTION = 'Fertilizer allocated for the season has not reached the kebele store.';
 const CLIENT_UUID = '11111111-2222-3333-4444-555555555555';
 
+const BASE_DRAFT_PAYLOAD = {
+  client_submission_uuid: CLIENT_UUID,
+  submission_channel: 'Web Portal', // the record's name, not the wizard's "web"
+  submitter_type: 'Individual Farmer',
+  administrative_area: 'kebele-ET040101001', // the kebele's ID, not its name
+  administrative_unit: 'Kebele 01',
+  service_category: 'Inputs', // not the lowercased "inputs"
+  grievance_type: 'Fertilizer Shortage',
+  description: DESCRIPTION,
+};
+
 function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCard>> = {}, store = makeStore()) {
   const onSubmitted = vi.fn();
   render(
@@ -19,8 +30,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCa
       <ReviewAndSubmitCard
         onBack={vi.fn()}
         onSubmitted={onSubmitted}
-        clientUuid={CLIENT_UUID}
-        draftPayload={{ description: DESCRIPTION }}
+        draftPayload={BASE_DRAFT_PAYLOAD}
         submitterType="individual"
         submissionChannel="web"
         identityValues={{}}
@@ -76,30 +86,31 @@ describe('Review step → POST /api/v1/grievances', () => {
     expect(String(url)).toContain('/api/proxy/api/v1/grievances');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual({
+      client_submission_uuid: CLIENT_UUID,
       submission_channel: 'Web Portal', // the record's name, not the wizard's "web"
+      submitter_type: 'Individual Farmer',
       service_category: 'Inputs', // not the lowercased "inputs"
       grievance_type: 'Fertilizer Shortage',
       description: DESCRIPTION,
-      desired_outcome: '',
-      associated_service_provider: '',
       administrative_area: 'kebele-ET040101001', // the kebele's ID, not its name
-      kebele: 'Kebele 01',
+      administrative_unit: 'Kebele 01',
       consent_given: 1,
-      client_uuid: CLIENT_UUID,
-      client_submission_uuid: CLIENT_UUID,
     });
   });
 
-  it('files against the woreda when no kebele was chosen, and sends an empty kebele so no stale one resurfaces', async () => {
+  it('files against the woreda when no kebele was chosen', async () => {
     const fetchMock = mockFetch(200, { data: { ticket_number: 'B00100011', status: 'Submitted' }, status: 'success' });
-    const { onSubmitted } = renderCard({ kebele: '' });
+    const { onSubmitted } = renderCard({
+      kebele: '',
+      draftPayload: { ...BASE_DRAFT_PAYLOAD, administrative_area: 'woreda-ET040101', administrative_unit: undefined },
+    });
 
     consentAndSubmit();
 
     await waitFor(() => expect(onSubmitted).toHaveBeenCalled());
     const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
     expect(body.administrative_area).toBe('woreda-ET040101');
-    expect(body.kebele).toBe('');
+    expect(body.administrative_unit).toBeUndefined();
   });
 
   it('sends the desired outcome and service provider the person typed, and shows them on the review', async () => {
@@ -107,6 +118,11 @@ describe('Review step → POST /api/v1/grievances', () => {
     const { onSubmitted } = renderCard({
       desiredOutcome: '  Replace the fertilizer allocation  ',
       serviceProvider: 'Basona Cooperative Union',
+      draftPayload: {
+        ...BASE_DRAFT_PAYLOAD,
+        desired_outcome: 'Replace the fertilizer allocation',
+        associated_service_provider: 'Basona Cooperative Union',
+      },
     });
 
     expect(screen.getByText('Replace the fertilizer allocation')).toBeInTheDocument();
@@ -146,7 +162,11 @@ describe('Review step → POST /api/v1/grievances', () => {
 
   it('says so, without calling the backend, when the woreda cannot be resolved to an area', () => {
     const fetchMock = mockFetch(200, {});
-    renderCard({ woreda: 'Not A Real Woreda', kebele: '' });
+    renderCard({
+      woreda: 'Not A Real Woreda',
+      kebele: '',
+      draftPayload: { ...BASE_DRAFT_PAYLOAD, administrative_area: undefined, administrative_unit: undefined },
+    });
 
     consentAndSubmit();
 

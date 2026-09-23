@@ -1,35 +1,26 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
-import { saveDraft } from "@/lib/drafts";
+import { saveDraft, type SaveDraftPayload } from "@/lib/drafts";
 import { logger } from "@/lib/logger";
 import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
-import type { RootState } from "@/store";
 import {
-  findFilingArea,
   selectGrievanceTypeOptions,
   selectRegionOptions,
   selectServiceCategoryOptions,
   selectSubmissionChannelOptions,
   selectSubmitterTypeOptions,
 } from "@/features/metadata";
-import {
-  buildSubmitGrievancePayload,
-  submitErrorMessage,
-  submitGrievance,
-  type SubmitGrievanceResult,
-} from "../api/submitGrievanceApi";
+import { submitErrorMessage, submitGrievance, type SubmitGrievanceResult } from "../api/submitGrievanceApi";
 
 interface ReviewAndSubmitCardProps {
   onBack: () => void;
   /** Called once the backend has accepted the grievance (or recognised a retry of one it already has). */
   onSubmitted: (result: SubmitGrievanceResult) => void;
-  /** The wizard's draft. Files uploaded against it become the case's attachments on submit. */
-  clientUuid: string;
-  /** Same shape Step 2 saves, so Save Draft here can't drop the attachment identity a resumed draft carries. */
-  draftPayload: Record<string, unknown>;
+  /** Already shaped for `POST /api/v1/drafts` (and, with `consent_given` added, `/api/v1/grievances`) — see page.tsx's `draftPayload`. */
+  draftPayload: SaveDraftPayload;
   submitterType: string;
   submissionChannel: string;
   identityValues: Record<string, string>;
@@ -75,7 +66,6 @@ function formatPhoneForDisplay(phoneNumber: string | undefined, phoneCode: strin
 export function ReviewAndSubmitCard({
   onBack,
   onSubmitted,
-  clientUuid,
   draftPayload,
   submitterType,
   submissionChannel,
@@ -117,16 +107,6 @@ export function ReviewAndSubmitCard({
     selectGrievanceTypeOptions(state, serviceCategory)
   );
   const regions = useAppSelector(selectRegionOptions);
-  // What the case is actually filed against — see `findFilingArea` for why this
-  // is a resolved node and not the display names held in `region`/`woreda`/`kebele`.
-  // `findFilingArea` only reads `state.metadata`, so selecting just that slice
-  // (stable across unrelated store updates) and memoizing on it plus the four
-  // fields avoids re-running the woreda/kebele tree search on every render.
-  const metadata = useAppSelector((state) => state.metadata);
-  const filingArea = useMemo(
-    () => findFilingArea({ metadata } as RootState, { region, zone, woreda, kebele }),
-    [metadata, region, zone, woreda, kebele]
-  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -137,12 +117,13 @@ export function ReviewAndSubmitCard({
     // covers a second click landing before React has re-rendered it disabled.
     if (!consentChecked || isSubmitting) return;
 
-    // Labels, not the wizard's slugs: `value` here is e.g. "web" / "inputs",
-    // while the backend links to the records named "Web Portal" / "Inputs".
-    const channelLabel = labelFor(submissionChannels, submissionChannel);
-    const categoryLabel = labelFor(serviceCategories, serviceCategory);
-
-    if (!channelLabel || !categoryLabel || !grievanceType || !description.trim() || !filingArea) {
+    if (
+      !draftPayload.submission_channel ||
+      !draftPayload.service_category ||
+      !grievanceType ||
+      !description.trim() ||
+      !draftPayload.administrative_area
+    ) {
       setSubmitError(
         "Some required details are missing. Go back and complete the earlier steps, including a Woreda."
       );
@@ -152,19 +133,7 @@ export function ReviewAndSubmitCard({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await submitGrievance(
-        buildSubmitGrievancePayload({
-          submissionChannel: channelLabel,
-          serviceCategory: categoryLabel,
-          grievanceType,
-          description,
-          desiredOutcome: desiredOutcome ?? "",
-          serviceProvider: serviceProvider ?? "",
-          areaId: filingArea.area_id,
-          kebele: kebele ?? "",
-          clientUuid,
-        })
-      );
+      const result = await submitGrievance({ ...draftPayload, consent_given: 1 });
       onSubmitted(result);
     } catch (error) {
       logger.error("Failed to submit grievance:", error);
@@ -176,7 +145,7 @@ export function ReviewAndSubmitCard({
   const handleSaveDraft = async () => {
     setDraftSaveState("saving");
     try {
-      await saveDraft(clientUuid, draftPayload, 3);
+      await saveDraft(draftPayload);
       setDraftSaveState("saved");
     } catch (error) {
       setDraftSaveState("error");

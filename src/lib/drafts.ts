@@ -1,74 +1,140 @@
 import { fetchApi } from '@/lib/api/fetchApi';
+import { formatToE164 } from '@/lib/validation/phone';
 
-// oan_grievance_service's Grievance Draft: working state for a
-// still-in-progress submission, keyed by a client-generated UUID. Uploading
-// an attachment before the case exists (`uploadAttachment` in attachments.ts
-// with a `clientUuid`) requires this draft to already exist server-side —
-// see `submit_document`'s docstring on the backend.
+// A draft is a Grievance document itself (workflow_state="Draft"), not a
+// separate doctype with a JSON payload blob — oan_grievance_service's
+// `Grievance Draft` doctype was removed; see api/v1/draft.py's SaveDraftRequest
+// (`model_config = {"extra": "forbid"}` — it rejects any field this shape
+// doesn't list, so this must match the backend's flat fields exactly).
 
-export interface DraftSaveResult {
-  client_uuid: string;
-  step_reached: number;
-  expires_on: string;
-  attachment_count: number;
-  owner_user: string | null;
+export interface AdministrativeHierarchy {
+  region?: string;
+  region_id?: string;
+  zone?: string;
+  zone_id?: string;
+  woreda?: string;
+  woreda_id?: string;
+  kebele?: string;
+  kebele_id?: string;
 }
 
-/**
- * One upload against a draft, as `GET /api/v1/drafts` reports it — a Grievance
- * Attachment row (backend commit 51ed66c; it used to count File records, which
- * always came back empty). There is deliberately no `file_url`: it is withheld
- * until a scan clears the file and `download` is asked for it.
- */
+/** One upload against a draft, as `GET /api/v1/drafts` reports it — a Grievance Attachment row. */
 export interface DraftAttachment {
   name: string;
   file_name: string;
-  mime_type: string | null;
+  file_url: string;
   size_bytes: number | null;
-  document_type: string | null;
+  mime_type: string | null;
   scan_status: string;
   creation: string;
 }
 
 export interface DraftState {
   name: string;
-  client_uuid: string;
-  payload: Record<string, unknown>;
-  step_reached: number;
+  ticket_number: string | null;
+  client_submission_uuid: string;
+  status: string;
+  workflow_state: string;
+  submission_channel: string | null;
+  submitter_type: string | null;
+  submitter_name: string | null;
   contact_mobile: string | null;
-  expires_on: string;
-  submitted_as: string | null;
+  contact_email: string | null;
+  administrative_area: string | null;
+  /** Region/zone/woreda/kebele names + ids for `administrative_area`, resolved server-side. */
+  administrative_hierarchy: AdministrativeHierarchy | null;
+  /** Comma-separated display string built from `administrative_hierarchy`, leaf to root. */
+  location: string | null;
+  administrative_unit: string | null;
+  service_category: string | null;
+  grievance_type: string | null;
+  associated_service_provider: string | null;
+  description: string | null;
+  desired_outcome: string | null;
+  is_anonymous: number;
   attachments: DraftAttachment[];
   attachment_count: number;
+  owner: string | null;
 }
 
-/** POST /api/v1/drafts — create or overwrite the draft for `clientUuid`. Authenticated only. */
-export async function saveDraft(
-  clientUuid: string,
-  payload: Record<string, unknown>,
-  stepReached: number
-): Promise<DraftSaveResult> {
-  return fetchApi<DraftSaveResult>('api/v1/drafts', {
+export interface SaveDraftPayload {
+  client_submission_uuid: string;
+  submission_channel?: string;
+  submitter_type?: string;
+  submitter_name?: string;
+  contact_mobile?: string;
+  contact_email?: string;
+  /** An area's `area_id` or `path_code` — never a display name (see `findFilingArea`). */
+  administrative_area?: string;
+  administrative_unit?: string;
+  service_category?: string;
+  grievance_type?: string;
+  associated_service_provider?: string;
+  description?: string;
+  desired_outcome?: string;
+  is_anonymous?: number;
+}
+
+export interface SubmitDraftPayload extends Omit<SaveDraftPayload, 'client_submission_uuid'> {
+  client_submission_uuid: string;
+  consent_given: number;
+  anonymity_justification?: string;
+}
+
+export interface SubmitDraftResult {
+  ticket_number: string;
+  status: string;
+  workflow_state: string;
+  client_submission_uuid: string;
+  routing_rule: string | null;
+}
+
+function cleanedBody(body: object): Record<string, unknown> {
+  const clean: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (value === undefined || value === null || value === '') continue;
+    clean[key] = value;
+  }
+  if (typeof clean.contact_mobile === 'string' && !clean.contact_mobile.startsWith('+')) {
+    clean.contact_mobile = formatToE164(clean.contact_mobile);
+  }
+  return clean;
+}
+
+/** POST /api/v1/drafts — create or update the draft for `payload.client_submission_uuid`. */
+export async function saveDraft(payload: SaveDraftPayload): Promise<DraftState> {
+  return fetchApi<DraftState>('api/v1/drafts', {
     method: 'POST',
-    body: JSON.stringify({ client_uuid: clientUuid, payload, step_reached: stepReached }),
+    body: JSON.stringify(cleanedBody(payload)),
+  });
+}
+
+/**
+ * POST /api/v1/drafts/submit — submit an existing draft into an active case.
+ * `consent_given` is required by the backend (it 400s without it); every
+ * other field just overwrites whatever the draft already has saved.
+ */
+export async function submitDraft(payload: SubmitDraftPayload): Promise<SubmitDraftResult> {
+  const body = cleanedBody(payload);
+  body.consent_given = payload.consent_given;
+  return fetchApi<SubmitDraftResult>('api/v1/drafts/submit', {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }
 
 /**
  * GET /api/v1/drafts — the authenticated caller's latest unsubmitted draft,
- * if any, looked up by session owner (no client_uuid needed). Not called
- * anywhere in the UI yet — resuming an in-progress wizard across a page
- * reload is a separate feature this PR doesn't wire up, but the client is
- * available for whoever builds that next.
+ * looked up by session owner (no client_submission_uuid needed). Rejects with
+ * an ApiError(404) when there is none — the ordinary case for a fresh wizard.
  */
 export async function loadDraft(): Promise<DraftState> {
   return fetchApi<DraftState>('api/v1/drafts', { method: 'GET' });
 }
 
-/**
- * DELETE /api/v1/drafts?client_uuid=... — discard a draft the submitter
- * abandoned. Not called anywhere in the UI yet, same as `loadDraft`.
- */
-export async function discardDraft(clientUuid: string): Promise<void> {
-  await fetchApi(`api/v1/drafts?client_uuid=${encodeURIComponent(clientUuid)}`, { method: 'DELETE' });
+/** DELETE /api/v1/drafts?client_submission_uuid=... — discard a draft the submitter abandoned. */
+export async function discardDraft(clientSubmissionUuid: string): Promise<void> {
+  await fetchApi(`api/v1/drafts?client_submission_uuid=${encodeURIComponent(clientSubmissionUuid)}`, {
+    method: 'DELETE',
+  });
 }

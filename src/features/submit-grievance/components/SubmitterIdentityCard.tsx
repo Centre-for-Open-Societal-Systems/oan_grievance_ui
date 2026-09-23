@@ -13,14 +13,13 @@ import { NGOForm } from "@/components/submitter-identity/SI-NGOForm";
 import { WoredaKebeleForm } from "@/components/submitter-identity/SI-WoredaKebeleForm";
 import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-DevelopmentAgentForm";
 import { useIdentityErrors } from "@/components/submitter-identity/useIdentityErrors";
-import { saveDraft } from "@/lib/drafts";
+import { saveDraft, type SaveDraftPayload } from "@/lib/drafts";
 import { logger } from "@/lib/logger";
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
-  /** The wizard's draft. Saving here can't drop the Step 2/3 data a resumed draft carries — see page.tsx's `draftPayload`. */
-  clientUuid: string;
-  draftPayload: Record<string, unknown>;
+  /** The wizard's draft, already shaped for `POST /api/v1/drafts` — see page.tsx's `draftPayload`. */
+  draftPayload: SaveDraftPayload;
   submitterType: string;
   setSubmitterType: (value: string) => void;
   submissionChannel: string;
@@ -31,7 +30,6 @@ interface SubmitterIdentityCardProps {
 
 export function SubmitterIdentityCard({
   onNext,
-  clientUuid,
   draftPayload,
   submitterType,
   setSubmitterType,
@@ -117,7 +115,7 @@ export function SubmitterIdentityCard({
   const handleSaveDraft = async () => {
     setDraftSaveState("saving");
     try {
-      await saveDraft(clientUuid, draftPayload, 1);
+      await saveDraft(draftPayload);
       setDraftSaveState("saved");
     } catch (error) {
       setDraftSaveState("error");

@@ -7,29 +7,32 @@ import {
 } from './submitGrievanceApi';
 
 const BASE_INPUT = {
-  submissionChannel: 'Web Portal',
-  serviceCategory: 'Inputs',
+  clientSubmissionUuid: '11111111-2222-3333-4444-555555555555',
+  submissionChannelLabel: 'Web Portal',
+  submitterTypeLabel: 'Individual Farmer',
+  identityValues: { fullName: 'Abebe Bikila', phoneNumber: '0911223344', phoneCode: '+251', email: 'abebe@example.com' },
+  serviceCategoryLabel: 'Inputs',
   grievanceType: 'Fertilizer Shortage',
   description: 'Fertilizer allocated for the season has not reached the kebele store.',
-  areaId: 'kebele-ET140108101008',
+  administrativeAreaId: 'kebele-ET140108101008',
   kebele: 'Kebele 01 Center',
-  clientUuid: '11111111-2222-3333-4444-555555555555',
 };
 
 describe('buildSubmitGrievancePayload', () => {
   it('maps the wizard state onto the backend field names', () => {
     expect(buildSubmitGrievancePayload(BASE_INPUT)).toEqual({
+      client_submission_uuid: '11111111-2222-3333-4444-555555555555',
       submission_channel: 'Web Portal',
+      submitter_type: 'Individual Farmer',
+      submitter_name: 'Abebe Bikila',
+      contact_mobile: '+251911223344',
+      contact_email: 'abebe@example.com',
       service_category: 'Inputs',
       grievance_type: 'Fertilizer Shortage',
       description: 'Fertilizer allocated for the season has not reached the kebele store.',
-      desired_outcome: '',
-      associated_service_provider: '',
       administrative_area: 'kebele-ET140108101008',
-      kebele: 'Kebele 01 Center',
+      administrative_unit: 'Kebele 01 Center',
       consent_given: 1,
-      client_uuid: '11111111-2222-3333-4444-555555555555',
-      client_submission_uuid: '11111111-2222-3333-4444-555555555555',
     });
   });
 
@@ -37,7 +40,7 @@ describe('buildSubmitGrievancePayload', () => {
     const payload = buildSubmitGrievancePayload({
       ...BASE_INPUT,
       desiredOutcome: '  Replace the allocation ',
-      serviceProvider: ' Basona Cooperative Union ',
+      associatedServiceProvider: ' Basona Cooperative Union ',
     });
     expect(payload.desired_outcome).toBe('Replace the allocation');
     expect(payload.associated_service_provider).toBe('Basona Cooperative Union');
@@ -49,24 +52,21 @@ describe('buildSubmitGrievancePayload', () => {
     );
   });
 
-  it('always sends kebele, empty when none was chosen, so a stale draft value cannot resurface', () => {
-    // The backend merges the saved draft under this body and only overwrites with non-null values.
-    expect(buildSubmitGrievancePayload({ ...BASE_INPUT, kebele: '' }).kebele).toBe('');
-    expect(buildSubmitGrievancePayload({ ...BASE_INPUT, kebele: '   ' }).kebele).toBe('');
-    expect(buildSubmitGrievancePayload({ ...BASE_INPUT, kebele: ' Kebele 01 ' }).kebele).toBe('Kebele 01');
+  it('omits administrative_unit when no kebele was chosen', () => {
+    expect(buildSubmitGrievancePayload({ ...BASE_INPUT, kebele: '' }).administrative_unit).toBeUndefined();
+    expect(buildSubmitGrievancePayload({ ...BASE_INPUT, kebele: '   ' }).administrative_unit).toBeUndefined();
   });
 
-  it("never sends the submitter's own identity, which the backend derives from the session", () => {
+  it("sends the submitter's own identity — never reaches the backend any other way for a represented submission", () => {
     const payload = buildSubmitGrievancePayload(BASE_INPUT);
-    for (const key of ['submitter', 'submitter_name', 'contact_mobile', 'contact_email', 'submitter_type']) {
-      expect(payload).not.toHaveProperty(key);
-    }
+    expect(payload.submitter_name).toBe('Abebe Bikila');
+    expect(payload.contact_mobile).toBe('+251911223344');
+    expect(payload.contact_email).toBe('abebe@example.com');
   });
 
-  it('uses the draft id for both the draft claim and the idempotency key', () => {
+  it('uses the draft id as the idempotency key', () => {
     const payload = buildSubmitGrievancePayload(BASE_INPUT);
-    expect(payload.client_uuid).toBe(BASE_INPUT.clientUuid);
-    expect(payload.client_submission_uuid).toBe(BASE_INPUT.clientUuid);
+    expect(payload.client_submission_uuid).toBe(BASE_INPUT.clientSubmissionUuid);
   });
 });
 
@@ -82,13 +82,9 @@ describe('submitGrievance', () => {
       data: {
         ticket_number: 'B00100010',
         status: 'Submitted',
-        assigned_department: null,
-        auto_routed: false,
-        sla_due_date: '2026-10-05 12:00:00',
-        possible_duplicates: [],
-        area_path_code: 'ET.ET14',
-        attachments: 1,
-        duplicate_submission: false,
+        workflow_state: 'Submitted',
+        client_submission_uuid: BASE_INPUT.clientSubmissionUuid,
+        routing_rule: null,
       },
       message: 'Grievance submitted successfully',
       status: 'success',
@@ -103,7 +99,6 @@ describe('submitGrievance', () => {
     const result = await submitGrievance(payload);
 
     expect(result.ticket_number).toBe('B00100010');
-    expect(result.attachments).toBe(1);
 
     const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
     expect(String(url)).toContain('/api/proxy/api/v1/grievances');

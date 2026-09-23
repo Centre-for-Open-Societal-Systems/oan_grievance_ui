@@ -13,9 +13,12 @@ import {
   fetchGrievanceOptionsThunk,
   fetchRegionsThunk,
   fetchSubmitterOptionsThunk,
+  findFilingArea,
   selectGrievanceTypeOptions,
   selectRegionOptions,
   selectServiceCategoryOptions,
+  selectSubmissionChannelOptions,
+  selectSubmitterTypeOptions,
   selectZoneOptions,
   selectZoneStatus,
   selectWoredaOptions,
@@ -28,7 +31,18 @@ import {
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import { uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
 import { saveDraft } from "@/lib/drafts";
+import { buildSaveDraftPayload } from "../draftPayload";
 import { logger } from "@/lib/logger";
+import type { RootState } from "@/store";
+
+function labelFor(options: { value: string; label: string }[], value: string): string {
+  return (
+    options.find((o) => o.value.toLowerCase() === value.toLowerCase())?.label ||
+    options.find((o) => o.label.toLowerCase() === value.toLowerCase())?.label ||
+    options.find((o) => o.value === value)?.label ||
+    value
+  );
+}
 
 interface GrievanceDetailsCardProps {
   onNext: () => void;
@@ -38,6 +52,10 @@ interface GrievanceDetailsCardProps {
   submitterType: string;
   submissionChannel: string;
   identityValues: Record<string, string>;
+  /** The signed-in account's own profile — the fallback `buildSaveDraftPayload` uses when `identityValues` doesn't have a name/mobile/email of its own. */
+  userFullName?: string | null;
+  userMobile?: string | null;
+  userEmail?: string | null;
   serviceCategory: string;
   setServiceCategory: (value: string) => void;
   grievanceType: string;
@@ -96,6 +114,9 @@ export function GrievanceDetailsCard({
   submitterType,
   submissionChannel,
   identityValues,
+  userFullName,
+  userMobile,
+  userEmail,
   serviceCategory,
   setServiceCategory,
   grievanceType,
@@ -125,6 +146,8 @@ export function GrievanceDetailsCard({
 }: GrievanceDetailsCardProps) {
   const t = useTranslations("submitGrievance.detailsStep");
   const dispatch = useAppDispatch();
+  const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
+  const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
   const dynamicServiceCategories = useAppSelector(selectServiceCategoryOptions);
   const dynamicGrievanceTypes = useAppSelector((state) =>
     selectGrievanceTypeOptions(state, serviceCategory)
@@ -137,6 +160,7 @@ export function GrievanceDetailsCard({
   const dynamicKebeles = useAppSelector((state) => selectKebeleOptions(state, woreda, zone, region));
   const kebeleStatus = useAppSelector((state) => selectKebeleStatus(state, woreda, zone, region));
   const rawRegions = useAppSelector((state) => state.metadata.regions);
+  const metadata = useAppSelector((state) => state.metadata);
   const zoneNode = useAppSelector((state) => findZoneNode(state, zone, region));
   const woredaNode = useAppSelector((state) => findWoredaNode(state, woreda, zone, region));
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
@@ -301,28 +325,41 @@ export function GrievanceDetailsCard({
   // first-upload save, and the auto-save right after a successful upload —
   // all three need the same current-field snapshot, so whichever fires
   // doesn't overwrite one of the others' (or a resumed draft's) data with a
-  // stale or empty payload. `attachmentOverride` is for the post-upload
-  // save specifically: `result`/`file` there are fresher than this render's
-  // `attachmentId`/`uploadedFile` closure, since the state setters that would
-  // update them haven't necessarily re-rendered yet.
-  const currentDraftPayload = (attachmentOverride?: {
-    attachmentId: string | null;
-    fileName: string | null;
-    scanStatus: ScanStatus | null;
-  }) => ({
-    submitterType,
-    submissionChannel,
-    identityValues,
-    ...latestFieldsRef.current,
-    attachmentId: attachmentOverride ? attachmentOverride.attachmentId : attachmentId,
-    attachmentFileName: attachmentOverride ? attachmentOverride.fileName : (uploadedFile?.name ?? attachmentFileName),
-    scanStatus: attachmentOverride ? attachmentOverride.scanStatus : scanStatus,
-  });
+  // stale or empty payload. Reads `latestFieldsRef` rather than the render's
+  // own closure — see that ref's doc comment for why. The attachment itself
+  // is never part of this: the backend tracks it separately (Grievance
+  // Attachment rows keyed by `client_uuid`), associated the moment
+  // `uploadAttachment` succeeds, not through this draft-save payload.
+  const currentDraftPayload = () => {
+    const fields = latestFieldsRef.current;
+    const filingArea = findFilingArea({ metadata } as RootState, {
+      region: fields.region,
+      zone: fields.zone,
+      woreda: fields.woreda,
+      kebele: fields.kebele,
+    });
+    return buildSaveDraftPayload({
+      clientSubmissionUuid: clientUuid,
+      submissionChannelLabel: submissionChannel ? labelFor(submissionChannels, submissionChannel) : undefined,
+      submitterTypeLabel: submitterType ? labelFor(submitterTypes, submitterType) : undefined,
+      identityValues,
+      userFullName,
+      userMobile,
+      userEmail,
+      administrativeAreaId: filingArea?.area_id,
+      kebele: fields.kebele,
+      serviceCategoryLabel: fields.serviceCategory ? labelFor(dynamicServiceCategories, fields.serviceCategory) : undefined,
+      grievanceType: fields.grievanceType,
+      associatedServiceProvider: fields.serviceProvider,
+      description: fields.description,
+      desiredOutcome: fields.desiredOutcome,
+    });
+  };
 
   const handleSaveDraft = async () => {
     setDraftSaveState("saving");
     try {
-      await saveDraft(clientUuid, currentDraftPayload(), 2);
+      await saveDraft(currentDraftPayload());
       draftEnsuredRef.current = true;
       setDraftSaveState("saved");
     } catch (saveError) {
@@ -376,7 +413,7 @@ export function GrievanceDetailsCard({
     // explicit Save Draft button remains for anyone who wants to see it
     // confirmed.
     if (!draftEnsuredRef.current || draftSaveState !== "saved") {
-      saveDraft(clientUuid, currentDraftPayload(), 3)
+      saveDraft(currentDraftPayload())
         .then(() => {
           draftEnsuredRef.current = true;
         })
@@ -398,7 +435,7 @@ export function GrievanceDetailsCard({
 
     try {
       if (!draftEnsuredRef.current) {
-        await saveDraft(clientUuid, currentDraftPayload(), 2);
+        await saveDraft(currentDraftPayload());
         draftEnsuredRef.current = true;
       }
 
@@ -423,11 +460,7 @@ export function GrievanceDetailsCard({
       draftEnsuredRef.current = true;
       setUploadState("persisting");
       try {
-        await saveDraft(
-          clientUuid,
-          currentDraftPayload({ attachmentId: result.attachment, fileName: file.name, scanStatus: result.scan_status }),
-          2
-        );
+        await saveDraft(currentDraftPayload());
       } catch (saveError) {
         logger.error("Failed to persist the attachment onto the draft:", saveError);
       } finally {
@@ -442,16 +475,6 @@ export function GrievanceDetailsCard({
         uploadError instanceof Error
           ? uploadError.message
           : "Could not upload the file. Please try again."
-      );
-      // The draft may already record a previous successful attachment (or
-      // the empty-payload ensure-save above may have just run) — either
-      // way, local state just went back to "no attachment," so the draft
-      // needs to say the same thing, not keep pointing at something the UI
-      // no longer shows.
-      saveDraft(clientUuid, currentDraftPayload({ attachmentId: null, fileName: null, scanStatus: null }), 2).catch(
-        (saveError) => {
-          logger.error("Failed to clear the failed-upload attachment from the draft:", saveError);
-        }
       );
     }
   };
@@ -469,34 +492,16 @@ export function GrievanceDetailsCard({
     }
     if (!hadAttachment) return;
 
-    // NOT calling deleteAttachment here: every attachment this wizard
-    // uploads is draft-stage (has a client_uuid, no grievance yet — final
-    // submission isn't wired to the real API at all today), and
-    // attachment.delete()'s backend implementation only ever checks
-    // doc.grievance, never doc.draft — it 404s "No such grievance" on a
-    // draft-stage attachment unconditionally. That's not a transient
-    // failure worth a best-effort try; it's a backend gap (out of scope
-    // here, not something to fix from the frontend) that would fire on
-    // literally every removal. The file itself is orphaned server-side
-    // until the draft expires and gets purged — acceptable for now, same
-    // as any other abandoned draft.
-    //
-    // What we DO still need: clear the draft's own record of this
-    // attachment, so a later resume doesn't seed attachmentId/scanStatus/
-    // attachmentFileName from something the user already removed. Unlike
-    // the auto-save-after-upload case, a failure here is surfaced, not just
-    // logged: this is the path that runs right after removing a file that
-    // may have failed its malware scan, so silently letting that removal
-    // not stick server-side is the one failure mode here worth interrupting
-    // the user over, not just console noise.
-    saveDraft(clientUuid, currentDraftPayload({ attachmentId: null, fileName: null, scanStatus: null }), 2).catch(
-      (saveError) => {
-        logger.error("Failed to clear the removed attachment from the draft:", saveError);
-        setError(
-          "The file was removed here, but we couldn't confirm that on the server. If you reload before saving again, it may reappear."
-        );
-      }
-    );
+    // NOT calling deleteAttachment here — needs its own verification pass
+    // against the current backend (the doctype consolidation that made a
+    // draft a Grievance document itself, done in this same change, may have
+    // already fixed the 404 this used to hit; not confirmed). The file is
+    // orphaned server-side until the draft expires and gets purged,
+    // acceptable for now, same as any other abandoned draft. Nothing to
+    // clear on the draft record itself either: unlike the old JSON-payload
+    // draft, a resumed draft's attachment list now always comes straight
+    // from the backend's own Grievance Attachment rows, not from anything
+    // this component saves.
   };
 
   // `attachmentFileName` (page.tsx's lifted state) is kept in sync with

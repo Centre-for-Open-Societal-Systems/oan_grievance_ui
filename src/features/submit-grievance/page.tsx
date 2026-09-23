@@ -3,12 +3,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, X } from "lucide-react";
 import { selectUser } from "@/features/auth/store/authSlice";
+import {
+  findFilingArea,
+  normalizeSubmissionChannel,
+  normalizeSubmitterType,
+  selectServiceCategoryOptions,
+  selectSubmissionChannelOptions,
+  selectSubmitterTypeOptions,
+} from "@/features/metadata";
 import { buildInitialIdentityValues, identityAfterReset, resolveInitialSubmitterType } from "./initialIdentity";
+import { buildSaveDraftPayload } from "./draftPayload";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
 import { discardDraft, loadDraft } from "@/lib/drafts";
 import { SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
 import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
+import type { RootState } from "@/store";
 import { useAppSelector } from "@/store/hooks";
 import type { SubmitGrievanceResult } from "./api/submitGrievanceApi";
 import { Stepper } from "./components/Stepper";
@@ -17,6 +27,15 @@ import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
 import { ReviewAndSubmitCard } from "./components/ReviewAndSubmitCard";
 import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
+
+function labelFor(options: { value: string; label: string }[], value: string): string {
+  return (
+    options.find((o) => o.value.toLowerCase() === value.toLowerCase())?.label ||
+    options.find((o) => o.label.toLowerCase() === value.toLowerCase())?.label ||
+    options.find((o) => o.value === value)?.label ||
+    value
+  );
+}
 
 export default function SubmitGrievancePage() {
   // Pre-fills Step 1 from the signed-in user's profile (name, Fayda ID,
@@ -125,53 +144,52 @@ export default function SubmitGrievancePage() {
   // draft's real one swaps in underneath it.
   const [draftCheckDone, setDraftCheckDone] = useState(false);
 
-  // Resume the caller's saved draft, if one exists, once on mount. `payload`
-  // carries the whole wizard's state — Step 1's identity fields (which may
-  // differ from the live profile's, e.g. a Development Agent's farmer
-  // details) as well as Step 2's — so a returning submitter who'd already
-  // typed something for this specific grievance gets that back, not just
-  // their account's defaults. A 404 here just means there's no draft yet,
-  // the ordinary case for anyone starting fresh; only unexpected failures
-  // are logged.
+  // Resume the caller's saved draft, if one exists, once on mount. A draft is
+  // a Grievance document itself (`workflow_state="Draft"`), flat fields, not
+  // a separate JSON blob — so this reads the same field set Step 1/2/3's own
+  // Save Draft buttons write via `buildSaveDraftPayload`. A 404 here just
+  // means there's no draft yet, the ordinary case for anyone starting fresh;
+  // only unexpected failures are logged.
   useEffect(() => {
     let cancelled = false;
     loadDraft()
       .then((draft) => {
         if (cancelled) return;
-        setClientUuid(draft.client_uuid);
-        const payload = draft.payload ?? {};
-        if (typeof payload.submitterType === "string" && payload.submitterType) setSubmitterType(payload.submitterType);
-        if (typeof payload.submissionChannel === "string" && payload.submissionChannel) {
-          setSubmissionChannel(payload.submissionChannel);
-        }
-        if (payload.identityValues && typeof payload.identityValues === "object") {
-          const restored: Record<string, string> = {};
-          for (const [key, value] of Object.entries(payload.identityValues as Record<string, unknown>)) {
-            if (typeof value === "string") restored[key] = value;
+        setClientUuid(draft.client_submission_uuid);
+        if (draft.submitter_type) setSubmitterType(normalizeSubmitterType(draft.submitter_type));
+        if (draft.submission_channel) setSubmissionChannel(normalizeSubmissionChannel(draft.submission_channel));
+        setIdentityValues((prev) => {
+          if (!draft.submitter_name && !draft.contact_mobile && !draft.contact_email) return prev;
+          const next = { ...prev };
+          if (draft.submitter_name) next.fullName = draft.submitter_name;
+          if (draft.contact_mobile) {
+            next.phoneCode = prev.phoneCode || "+251";
+            next.phoneNumber = draft.contact_mobile;
           }
-          setIdentityValues(restored);
+          if (draft.contact_email) next.email = draft.contact_email;
+          return next;
+        });
+        if (draft.service_category) setServiceCategory(draft.service_category);
+        if (draft.grievance_type) setGrievanceType(draft.grievance_type);
+        const h = draft.administrative_hierarchy;
+        if (h?.region) setRegion(h.region);
+        if (h?.zone) setZone(h.zone);
+        if (h?.woreda) setWoreda(h.woreda);
+        if (h?.kebele) setKebele(h.kebele);
+        else if (draft.administrative_unit) setKebele(draft.administrative_unit);
+        if (draft.description) setDescription(draft.description);
+        if (draft.desired_outcome) setDesiredOutcome(draft.desired_outcome);
+        if (draft.associated_service_provider) setServiceProvider(draft.associated_service_provider);
+        if (draft.attachments && draft.attachments.length > 0) {
+          const first = draft.attachments[0];
+          const validScanStatuses: string[] = Object.values(SCAN_STATUS);
+          if (first && validScanStatuses.includes(first.scan_status)) {
+            setAttachmentId(first.name);
+            setAttachmentFileName(first.file_name);
+            setScanStatus(first.scan_status as ScanStatus);
+          }
         }
-        if (typeof payload.serviceCategory === "string") setServiceCategory(payload.serviceCategory);
-        if (typeof payload.grievanceType === "string") setGrievanceType(payload.grievanceType);
-        if (typeof payload.region === "string") setRegion(payload.region);
-        if (typeof payload.zone === "string") setZone(payload.zone);
-        if (typeof payload.woreda === "string") setWoreda(payload.woreda);
-        if (typeof payload.kebele === "string") setKebele(payload.kebele);
-        if (typeof payload.description === "string") setDescription(payload.description);
-        if (typeof payload.desiredOutcome === "string") setDesiredOutcome(payload.desiredOutcome);
-        if (typeof payload.serviceProvider === "string") setServiceProvider(payload.serviceProvider);
-        const validScanStatuses: string[] = Object.values(SCAN_STATUS);
-        if (
-          typeof payload.attachmentId === "string" &&
-          typeof payload.attachmentFileName === "string" &&
-          typeof payload.scanStatus === "string" &&
-          validScanStatuses.includes(payload.scanStatus)
-        ) {
-          setAttachmentId(payload.attachmentId);
-          setAttachmentFileName(payload.attachmentFileName);
-          setScanStatus(payload.scanStatus as ScanStatus);
-        }
-        if (draft.step_reached >= 2) setCurrentStep(2);
+        if (h?.region || h?.woreda) setCurrentStep(2);
         setResumedDraft(true);
       })
       .catch((error) => {
@@ -256,31 +274,39 @@ export default function SubmitGrievancePage() {
     setDiscardState("idle");
   };
 
-  // The whole wizard's state, exactly as `POST /api/v1/drafts` needs it — that
-  // endpoint overwrites the draft's payload wholesale, not a per-key merge, so
-  // every Save Draft button (Step 1, 2, and 3) must send this same full shape
-  // or it would silently wipe out whatever an earlier save from a *different*
-  // step had put there. `GrievanceDetailsCard` builds its own copy of the
-  // Step 2 portion (it needs a same-render-fresh snapshot for its async
+  const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
+  const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
+  const serviceCategories = useAppSelector(selectServiceCategoryOptions);
+  // What the case is actually filed against — see `findFilingArea` for why this
+  // is a resolved node and not the display names held in region/woreda/kebele.
+  const metadata = useAppSelector((state) => state.metadata);
+  const filingArea = useMemo(
+    () => findFilingArea({ metadata } as RootState, { region, zone, woreda, kebele }),
+    [metadata, region, zone, woreda, kebele]
+  );
+
+  // The wizard's state, shaped for `POST /api/v1/drafts` — every Save Draft
+  // button (Step 1, 2, and 3) sends this same full snapshot, so a save from
+  // one step doesn't leave an earlier step's fields behind. `GrievanceDetailsCard`
+  // builds its own copy (it needs a same-render-fresh snapshot for its async
   // post-upload auto-save — see its `currentDraftPayload`) but folds these
   // same identity fields in via props rather than keeping a second version.
-  const draftPayload = {
-    submitterType,
-    submissionChannel,
+  const draftPayload = buildSaveDraftPayload({
+    clientSubmissionUuid: clientUuid,
+    submissionChannelLabel: submissionChannel ? labelFor(submissionChannels, submissionChannel) : undefined,
+    submitterTypeLabel: submitterType ? labelFor(submitterTypes, submitterType) : undefined,
     identityValues,
-    serviceCategory,
-    grievanceType,
-    region,
-    zone,
-    woreda,
+    userFullName: user?.full_name,
+    userMobile: user?.mobile_no,
+    userEmail: user?.email,
+    administrativeAreaId: filingArea?.area_id,
     kebele,
+    serviceCategoryLabel: serviceCategory ? labelFor(serviceCategories, serviceCategory) : undefined,
+    grievanceType,
+    associatedServiceProvider: serviceProvider,
     description,
     desiredOutcome,
-    serviceProvider,
-    attachmentId,
-    attachmentFileName: uploadedFile?.name ?? attachmentFileName,
-    scanStatus,
-  };
+  });
 
   if (submitted) {
     return (
@@ -380,7 +406,6 @@ export default function SubmitGrievancePage() {
         {currentStep === 1 && (
           <SubmitterIdentityCard
             onNext={handleNext}
-            clientUuid={clientUuid}
             draftPayload={draftPayload}
             submitterType={submitterType}
             setSubmitterType={handleSubmitterTypeChange}
@@ -398,6 +423,9 @@ export default function SubmitGrievancePage() {
             submitterType={submitterType}
             submissionChannel={submissionChannel}
             identityValues={identityValues}
+            userFullName={user?.full_name}
+            userMobile={user?.mobile_no}
+            userEmail={user?.email}
             serviceCategory={serviceCategory}
             setServiceCategory={setServiceCategory}
             grievanceType={grievanceType}
@@ -430,7 +458,6 @@ export default function SubmitGrievancePage() {
           <ReviewAndSubmitCard
             onBack={handleBack}
             onSubmitted={handleSubmitted}
-            clientUuid={clientUuid}
             draftPayload={draftPayload}
             submitterType={submitterType}
             submissionChannel={submissionChannel}

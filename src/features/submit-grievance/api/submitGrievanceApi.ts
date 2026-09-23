@@ -1,52 +1,48 @@
 import { fetchApi } from '@/lib/api/fetchApi';
 import { ApiErrorCode, classifyError } from '@/lib/api/apiErrors';
+import { buildSaveDraftPayload, type BuildSaveDraftPayloadInput } from '../draftPayload';
 
 /**
- * The body of `POST /api/v1/grievances` (oan_grievance_service's `submit`).
- *
- * Deliberately absent: the submitter's own name, mobile, email and type. For a
- * signed-in submitter the backend fills those from their profile and ignores
- * any client-supplied copy (`CLIENT_IMMUTABLE_FIELDS`), so sending them would
- * only suggest they were honoured.
+ * The body of `POST /api/v1/grievances` (oan_grievance_service's `submit`,
+ * which just calls the same `draft.save` + `draft.submit_draft` the wizard's
+ * own Save Draft buttons use — a `SaveDraftRequest` plus consent). Identity
+ * fields ARE forwarded here, unlike a signed-in individual's own profile
+ * fields: a Cooperative/NGO/Woreda-Kebele/Development-Agent submission's
+ * representative details never reach the backend any other way (see
+ * `draftPayload.ts`'s `WizardIdentitySource` doc comment).
  */
 export interface SubmitGrievancePayload {
-  /** Display name of a Grievance Submission Type, e.g. "Web Portal". */
-  submission_channel: string;
-  /** Display name of a Grievance Service Category, e.g. "Inputs". */
-  service_category: string;
-  /** Type name, e.g. "Fertilizer Shortage". The backend resolves it to the type's ID. */
-  grievance_type: string;
-  description: string;
-  /** What the submitter would like done about it. Empty when they left it blank. */
-  desired_outcome: string;
-  /** The store, cooperative, bank or market the grievance is about. Empty when left blank. */
-  associated_service_provider: string;
-  /** `area_id` of the woreda or kebele filed against — never a display name (see `findFilingArea`). */
-  administrative_area: string;
-  /**
-   * The kebele's display name, kept on the case as its `administrative_unit`
-   * label — or "" when none was chosen. Always sent, even when empty: the
-   * backend merges the saved draft underneath this body and only lets a
-   * non-null request value overwrite it, so omitting the key would let a
-   * kebele picked and later cleared (but not re-saved) resurface from the draft.
-   */
-  kebele: string;
-  consent_given: 1;
-  /** The wizard's draft: the backend moves the files uploaded against it onto the new case. */
-  client_uuid: string;
-  /**
-   * Idempotency key. A retry carrying the same value gets the original ticket
-   * back instead of lodging a second case, which is what makes it safe for
-   * `fetchApi` to replay this POST after a token refresh, or for the user to
-   * press Submit again after a dropped connection.
-   */
   client_submission_uuid: string;
+  submission_channel?: string;
+  submitter_type?: string;
+  submitter_name?: string;
+  contact_mobile?: string;
+  contact_email?: string;
+  /** `area_id` or `path_code` of the woreda or kebele filed against — never a display name (see `findFilingArea`). */
+  administrative_area?: string;
+  administrative_unit?: string;
+  service_category?: string;
+  grievance_type?: string;
+  associated_service_provider?: string;
+  description?: string;
+  desired_outcome?: string;
+  is_anonymous?: number;
+  consent_given: number;
 }
 
+/**
+ * What `draft.submit_draft` actually returns — see api/v1/draft.py on the
+ * backend. Everything below `routing_rule` is speculative (not in the
+ * current response) and kept only so GrievanceSubmittedCard.tsx's richer
+ * display degrades gracefully — those rows simply won't render — rather
+ * than breaking the type the day the backend adds them for real.
+ */
 export interface SubmitGrievanceResult {
   ticket_number: string;
   status: string;
-  /** Absent on a `duplicate_submission` reply, which only carries the original ticket and status. */
+  workflow_state?: string;
+  client_submission_uuid?: string;
+  routing_rule?: string | null;
   assigned_department?: string | null;
   auto_routed?: boolean;
   sla_due_date?: string | null;
@@ -56,39 +52,15 @@ export interface SubmitGrievanceResult {
   duplicate_submission?: boolean;
 }
 
-interface BuildPayloadInput {
-  submissionChannel: string;
-  serviceCategory: string;
-  grievanceType: string;
-  description: string;
-  desiredOutcome?: string;
-  serviceProvider?: string;
-  areaId: string;
-  kebele?: string;
-  /** Identifies this wizard's draft; also reused as the idempotency key. */
-  clientUuid: string;
-}
-
 /**
  * Shapes the wizard's state into the request body. Pure, so the mapping the
  * backend depends on (labels not slugs, an area ID not a name, trimmed text)
  * can be tested without rendering the wizard.
  */
-export function buildSubmitGrievancePayload(input: BuildPayloadInput): SubmitGrievancePayload {
+export function buildSubmitGrievancePayload(input: BuildSaveDraftPayloadInput): SubmitGrievancePayload {
   return {
-    submission_channel: input.submissionChannel,
-    service_category: input.serviceCategory,
-    grievance_type: input.grievanceType,
-    description: input.description.trim(),
-    // Always sent, blank or not, like `kebele`: the backend lets a non-null
-    // request value overwrite the saved draft's, so a blank is a real answer.
-    desired_outcome: input.desiredOutcome?.trim() ?? '',
-    associated_service_provider: input.serviceProvider?.trim() ?? '',
-    administrative_area: input.areaId,
-    kebele: input.kebele?.trim() ?? '',
+    ...buildSaveDraftPayload(input),
     consent_given: 1,
-    client_uuid: input.clientUuid,
-    client_submission_uuid: input.clientUuid,
   };
 }
 

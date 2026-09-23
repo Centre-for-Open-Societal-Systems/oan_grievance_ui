@@ -15,6 +15,7 @@ vi.mock('@/lib/drafts', async (importOriginal) => ({
 }));
 
 import { SubmitterIdentityCard } from './SubmitterIdentityCard';
+import { buildSaveDraftPayload } from '../draftPayload';
 
 afterEach(cleanup);
 
@@ -48,8 +49,12 @@ function Harness({
   return (
     <SubmitterIdentityCard
       onNext={onNext}
-      clientUuid={CLIENT_UUID}
-      draftPayload={{ submitterType, submissionChannel, identityValues }}
+      draftPayload={buildSaveDraftPayload({
+        clientSubmissionUuid: CLIENT_UUID,
+        submitterTypeLabel: submitterType,
+        submissionChannelLabel: submissionChannel,
+        identityValues,
+      })}
       submitterType={submitterType}
       setSubmitterType={handleSubmitterTypeChange}
       submissionChannel={submissionChannel}
@@ -107,12 +112,11 @@ describe('Step 1 — Save Draft', () => {
     expect(screen.queryByText('This field is required.')).not.toBeInTheDocument();
 
     await waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1));
-    const [uuid, payload, step] = saveDraft.mock.calls[0]!;
-    expect(uuid).toBe(CLIENT_UUID);
-    expect(step).toBe(1);
+    const [payload] = saveDraft.mock.calls[0]!;
     expect(payload).toMatchObject({
-      submitterType: 'development_agent',
-      identityValues: { farmerName: 'Tigist Bekele' },
+      client_submission_uuid: CLIENT_UUID,
+      submitter_type: 'development_agent',
+      submitter_name: 'Tigist Bekele',
     });
   });
 

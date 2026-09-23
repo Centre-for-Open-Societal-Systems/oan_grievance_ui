@@ -182,15 +182,12 @@ describe('Step 2 — Save & Continue', () => {
 
     expect(onNext).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1));
-    const [uuid, payload, step] = saveDraft.mock.calls[0]!;
-    expect(uuid).toBe(CLIENT_UUID);
-    expect(step).toBe(3);
+    const [payload] = saveDraft.mock.calls[0]!;
     expect(payload).toMatchObject({
-      serviceCategory: 'inputs',
-      grievanceType: 'Fertilizer Shortage',
-      region: 'Oromia',
-      zone: 'North Shewa',
-      woreda: 'Basona Werana',
+      client_submission_uuid: CLIENT_UUID,
+      service_category: 'Inputs',
+      grievance_type: 'Fertilizer Shortage',
+      administrative_area: 'woreda-ET040101',
       description: DESCRIPTION,
     });
   });
@@ -213,9 +210,9 @@ describe('Step 2 — Save & Continue', () => {
     saveAndContinue();
 
     await waitFor(() => expect(saveDraft).toHaveBeenCalled());
-    expect(saveDraft.mock.calls[0]![1]).toMatchObject({
-      desiredOutcome: 'Replace the allocation',
-      serviceProvider: 'Basona Cooperative Union',
+    expect(saveDraft.mock.calls[0]![0]).toMatchObject({
+      desired_outcome: 'Replace the allocation',
+      associated_service_provider: 'Basona Cooperative Union',
     });
   });
 
