@@ -2,9 +2,10 @@ import { FileText, Plus } from "lucide-react";
 
 interface GrievanceSubmittedCardProps {
   onReset?: () => void;
+  ticketNumber?: string | null;
 }
 
-export function GrievanceSubmittedCard({ onReset }: GrievanceSubmittedCardProps) {
+export function GrievanceSubmittedCard({ onReset, ticketNumber }: GrievanceSubmittedCardProps) {
   return (
     <>
       <style>{`
@@ -86,7 +87,7 @@ export function GrievanceSubmittedCard({ onReset }: GrievanceSubmittedCardProps)
           {/* Ticket Number Box */}
           <div className="bg-[#F1F5F9] rounded-xl p-5 mb-5 min-w-[340px] border border-gray-100 animate-slide-up delay-400 shadow-inner">
             <p className="text-[11px] font-semibold text-gray-400 tracking-widest mb-1.5 uppercase">Ticket Number</p>
-            <p className="text-2xl font-bold text-gray-900 tracking-wide">AMHA-SD-MAR-79848</p>
+            <p className="text-2xl font-bold text-gray-900 tracking-wide">{ticketNumber || "AMHA-SD-MAR-79848"}</p>
           </div>
 
           <p className="text-sm text-gray-400 font-medium animate-slide-up delay-500 mb-10">

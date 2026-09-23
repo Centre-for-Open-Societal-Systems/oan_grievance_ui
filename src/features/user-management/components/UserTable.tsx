@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Pencil, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
 import { EditRoleModal } from './EditRoleModal';
 
@@ -133,10 +134,20 @@ export function UserTable() {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('userListChanged', { detail: userList }));
   }, [userList]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const totalPages = Math.ceil(userList.length / rowsPerPage);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const pageParam = searchParams.get('page');
+  const parsedPage = pageParam ? parseInt(pageParam, 10) : 1;
+  const currentPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+  const pageSizeParam = searchParams.get('pageSize') || searchParams.get('page_size');
+  const parsedPageSize = pageSizeParam ? parseInt(pageSizeParam, 10) : 10;
+  const rowsPerPage = [10, 25, 50].includes(parsedPageSize) ? parsedPageSize : 10;
+
+  const totalPages = Math.max(1, Math.ceil(userList.length / rowsPerPage));
   const startIndex = (currentPage - 1) * rowsPerPage;
   const endIndex = Math.min(startIndex + rowsPerPage, userList.length);
   const paginatedUsers = userList.slice(startIndex, endIndex);
@@ -149,11 +160,28 @@ export function UserTable() {
     ));
   };
 
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+  const handlePageChange = useCallback((page: number) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('page', String(page));
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     }
-  };
+  }, [currentPage, pathname, router, searchParams, totalPages]);
+
+  const handleRowsPerPageChange = useCallback((val: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('pageSize', String(val));
+    params.set('page', '1');
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('page', String(totalPages));
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [currentPage, totalPages, pathname, router, searchParams]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
@@ -251,10 +279,7 @@ export function UserTable() {
             <span>Rows per page:</span>
             <AnimatedPaginationSelect
               value={rowsPerPage}
-              onChange={(val: number) => {
-                setRowsPerPage(val);
-                setCurrentPage(1);
-              }}
+              onChange={handleRowsPerPageChange}
               options={[10, 25, 50]}
             />
           </div>

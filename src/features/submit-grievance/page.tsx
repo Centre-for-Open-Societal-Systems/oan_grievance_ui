@@ -1,15 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X } from "lucide-react";
 import { selectUser } from "@/features/auth/store/authSlice";
-import { normalizeSubmitterType } from "@/features/metadata";
-import { loadSubmitterProfile } from "@/lib/submitterProfile";
-import { loadDraft } from "@/lib/drafts";
+import {
+  fetchAdministrativeAreaAncestors,
+  fetchChildAreasThunk,
+  normalizeSubmissionChannel,
+  normalizeSubmitterType,
+  resolveAdministrativeAreaId,
+  selectSubmissionChannelOptions,
+  selectSubmitterTypeOptions,
+} from "@/features/metadata";
+import { loadSubmitterProfile, saveSubmitterProfile } from "@/lib/submitterProfile";
+import { loadDraft, saveDraft, submitDraft, type SaveDraftPayload } from "@/lib/drafts";
 import { SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
+import { formatToE164, splitPhoneNumber } from "@/lib/validation/phone";
 import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { Stepper } from "./components/Stepper";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
@@ -17,53 +27,61 @@ import { ReviewAndSubmitCard } from "./components/ReviewAndSubmitCard";
 import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
 
-export default function SubmitGrievancePage() {
-  // Pre-fills Step 1 from the signed-in user's profile (name, Fayda ID,
-  // phone, submitter type), so they aren't asked for the same details
-  // twice. Reading `user` straight into the `useState` initializers below
-  // (rather than syncing it in via an effect once session restore resolves)
-  // is safe for the case this guards against — `AuthBootstrapGate`
-  // (src/app/providers.tsx) wraps the whole app and withholds every
-  // protected route's subtree, this component included, while
-  // `getMeThunk` is still in flight (`status` idle/loading), so this page
-  // never mounts with `user` merely-not-yet-resolved. Verified live: this
-  // shape prefills correctly on a direct navigation/refresh, no extra
-  // re-sync-on-later-update effect needed. It does *not* cover a
-  // `getMeThunk` that resolves to rejected (revoked session, invalid
-  // refresh token) — `isRestoring` in AuthBootstrapGate only checks for
-  // idle/loading, not failed, so this page can still mount with `user`
-  // null in that case. Harmless here (every read below is optional-
-  // chained, so it just renders unprefilled), and `store/index.ts`'s
-  // `sessionExpiryMiddleware` redirects to /login shortly after — but
-  // worth knowing this isn't an absolute guarantee against `user` being
-  // null on mount, only against the ordinary restore-in-progress race.
-  const user = useAppSelector(selectUser);
+function labelFor(options: { value: string; label: string }[], value: string): string {
+  return (
+    options.find((o) => o.value.toLowerCase() === value.toLowerCase())?.label ||
+    options.find((o) => o.label.toLowerCase() === value.toLowerCase())?.label ||
+    options.find((o) => o.value === value)?.label ||
+    value
+  );
+}
 
-  // `user` only carries the fields the backend's own profile has (name,
-  // Fayda ID, phone, email, type) — it has nothing for submitter-type-
-  // specific fields RegisterForm.tsx's Profile step collects and persists
-  // via `saveSubmitterProfile` (org name, registration number,
-  // representative identity for cooperative/NGO/woreda_kebele/
-  // development_agent types — see SI-CooperativeFPOForm.tsx etc.). Those
-  // never reach the backend at all, so `loadSubmitterProfile` is the only
-  // place they can come back from. `user`'s fields still win on overlap
-  // (it's live/authoritative; this is a same-browser snapshot from
-  // registration time that can go stale), this only fills in what `user`
-  // doesn't have.
+export default function SubmitGrievancePage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const dispatch = useAppDispatch();
+  const user = useAppSelector(selectUser);
+  const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
+  const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
+
   const savedProfile = useMemo(
     () => (user?.email ? loadSubmitterProfile(user.email) : null),
     [user]
   );
 
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  // Derive wizard step from URL query parameters (default: 1)
+  const stepParam = searchParams.get("step");
+  const parsedStep = stepParam ? parseInt(stepParam, 10) : 1;
+  const currentStep = [1, 2, 3].includes(parsedStep) ? parsedStep : 1;
 
-  // Identifies this wizard session's Grievance Draft on the backend — needed
-  // before any attachment can be uploaded, since `submit_document` requires
-  // the draft to already exist for whichever `client_uuid` it's given.
-  // Starts as a fresh id for a brand-new wizard; the effect below swaps it
-  // for a resumed draft's real `client_uuid` if one comes back, so later
-  // saves/uploads keep landing on the SAME draft rather than orphaning it.
+  const goToStep = useCallback(
+    (step: number, replace = false) => {
+      const targetStep = Math.max(1, Math.min(3, step));
+      const params = new URLSearchParams(searchParams.toString());
+      if (targetStep <= 1) {
+        params.delete("step");
+      } else {
+        params.set("step", String(targetStep));
+      }
+      const qs = params.toString();
+      const targetUrl = qs ? `${pathname}?${qs}` : pathname;
+      if (replace) {
+        router.replace(targetUrl, { scroll: false });
+      } else {
+        router.push(targetUrl, { scroll: false });
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [pathname, router, searchParams]
+  );
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedTicketNumber, setSubmittedTicketNumber] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
   const [clientUuid, setClientUuid] = useState(() => crypto.randomUUID());
   const [resumedDraft, setResumedDraft] = useState(false);
 
@@ -80,22 +98,33 @@ export default function SubmitGrievancePage() {
     if (user) {
       if (user.full_name) initial.fullName = user.full_name;
       if (user.fayda_id) initial.faydaId = user.fayda_id;
-      if (user.mobile_no) initial.phoneNumber = user.mobile_no;
+      if (user.mobile_no && !initial.phoneNumber) {
+        const parsed = splitPhoneNumber(user.mobile_no);
+        initial.phoneCode = parsed.phoneCode;
+        initial.phoneNumber = parsed.phoneNumber;
+      }
       if (user.email) initial.email = user.email;
     }
+    if (!initial.phoneCode) initial.phoneCode = "+251";
     return initial;
   });
 
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
-    // Switching type mid-form invalidates whatever was entered for the
-    // previous type's field set — carrying it over would show unrelated
-    // stale values (or, worse, silently submit them) after the switch.
     setIdentityValues({});
   };
 
   const setIdentityValue = (key: string, value: string) => {
-    setIdentityValues((prev) => ({ ...prev, [key]: value }));
+    setIdentityValues((prev) => {
+      const next = { ...prev, [key]: value };
+      if (user?.email) {
+        saveSubmitterProfile(user.email, {
+          submitterType,
+          identityValues: next,
+        });
+      }
+      return next;
+    });
   };
 
   // Step 2 — Grievance Details
@@ -107,62 +136,147 @@ export default function SubmitGrievancePage() {
   const [kebele, setKebele] = useState("");
   const [description, setDescription] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  // The attachment's backend identity — lifted up here (not kept local to
-  // GrievanceDetailsCard) for two reasons: page.tsx conditionally unmounts
-  // that component on every Step 1<->2 navigation (`{currentStep === 2 &&
-  // <GrievanceDetailsCard .../>}`), which would otherwise reset this on
-  // every Back/Next; and Step 3's review card needs to know about it too,
-  // including for a resumed draft's attachment, which has no local `File`
-  // blob to read a name off.
+
   const [attachmentId, setAttachmentId] = useState<string | null>(null);
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
   const [attachmentFileName, setAttachmentFileName] = useState<string | null>(null);
 
-  // Guards every draft-dependent action (uploading, saving) until the
-  // initial resume check below has settled. Without this, a fast typist on
-  // a slow connection (the app's explicit target) could pick a file before
-  // `loadDraft()` resolves — that upload would close over the original
-  // throwaway `clientUuid`, then get orphaned the moment the resumed
-  // draft's real one swaps in underneath it.
   const [draftCheckDone, setDraftCheckDone] = useState(false);
 
-  // Resume the caller's saved draft, if one exists, once on mount. Only
-  // `payload` (Step 2's fields, plus whichever attachment was last
-  // uploaded) round-trips through the draft today — Step 1 stays prefilled
-  // from the live user profile above, same as always. A 404 here just
-  // means there's no draft yet, the ordinary case for anyone starting
-  // fresh; only unexpected failures are logged.
+  const resolvedAreaId = useAppSelector((state) =>
+    resolveAdministrativeAreaId(state, kebele, woreda, zone, region)
+  );
+
+  // Resume saved draft on mount
   useEffect(() => {
     let cancelled = false;
     loadDraft()
       .then((draft) => {
-        if (cancelled) return;
-        setClientUuid(draft.client_uuid);
+        if (cancelled || !draft) return;
+        if (draft.client_submission_uuid) setClientUuid(draft.client_submission_uuid);
+        else if (draft.client_uuid) setClientUuid(draft.client_uuid);
+
         const payload = draft.payload ?? {};
-        if (typeof payload.serviceCategory === "string") setServiceCategory(payload.serviceCategory);
-        if (typeof payload.grievanceType === "string") setGrievanceType(payload.grievanceType);
-        if (typeof payload.region === "string") setRegion(payload.region);
-        if (typeof payload.zone === "string") setZone(payload.zone);
-        if (typeof payload.woreda === "string") setWoreda(payload.woreda);
-        if (typeof payload.kebele === "string") setKebele(payload.kebele);
-        if (typeof payload.description === "string") setDescription(payload.description);
-        const validScanStatuses: string[] = Object.values(SCAN_STATUS);
-        if (
+        const cat = draft.service_category || (typeof payload.serviceCategory === "string" ? payload.serviceCategory : "");
+        const type = draft.grievance_type || (typeof payload.grievanceType === "string" ? payload.grievanceType : "");
+        const desc = draft.description || (typeof payload.description === "string" ? payload.description : "");
+
+        if (cat) setServiceCategory(cat);
+        if (type) setGrievanceType(type);
+        if (desc) setDescription(desc);
+
+        const h = draft.administrative_hierarchy;
+        if (h) {
+          if (h.region) setRegion(h.region);
+          if (h.zone) setZone(h.zone);
+          if (h.woreda) setWoreda(h.woreda);
+          if (h.kebele) setKebele(h.kebele);
+
+          if (h.region_id) {
+            void dispatch(fetchChildAreasThunk({ parent: h.region_id, level_name: "Zone" }));
+            void dispatch(fetchChildAreasThunk({ parent: h.region_id, level_name: "Woreda" }));
+          }
+          if (h.zone_id) {
+            void dispatch(fetchChildAreasThunk({ parent: h.zone_id, level_name: "Woreda" }));
+          }
+          if (h.woreda_id) {
+            void dispatch(fetchChildAreasThunk({ parent: h.woreda_id, level_name: "Kebele" }));
+          }
+        } else if (draft.administrative_area) {
+          fetchAdministrativeAreaAncestors(draft.administrative_area)
+            .then((res) => {
+              if (cancelled) return;
+              const crumbs = res.breadcrumbs || [];
+              let rNode: { area_id: string; area_name: string } | undefined;
+              let zNode: { area_id: string; area_name: string } | undefined;
+              let wNode: { area_id: string; area_name: string } | undefined;
+
+              for (const b of crumbs) {
+                const lvl = (b.level_name || "").toLowerCase();
+                if (lvl === "region") {
+                  setRegion(b.area_name);
+                  rNode = b;
+                } else if (lvl === "zone") {
+                  setZone(b.area_name);
+                  zNode = b;
+                } else if (lvl === "woreda") {
+                  setWoreda(b.area_name);
+                  wNode = b;
+                } else if (lvl === "kebele") {
+                  setKebele(b.area_name);
+                }
+              }
+
+              if (rNode?.area_id) {
+                void dispatch(fetchChildAreasThunk({ parent: rNode.area_id, level_name: "Zone" }));
+                void dispatch(fetchChildAreasThunk({ parent: rNode.area_id, level_name: "Woreda" }));
+              }
+              if (zNode?.area_id) {
+                void dispatch(fetchChildAreasThunk({ parent: zNode.area_id, level_name: "Woreda" }));
+              }
+              if (wNode?.area_id) {
+                void dispatch(fetchChildAreasThunk({ parent: wNode.area_id, level_name: "Kebele" }));
+              }
+            })
+            .catch((err) => {
+              logger.warn("Failed to fetch ancestors for administrative area:", err);
+            });
+        } else {
+          if (typeof payload.region === "string") setRegion(payload.region);
+          if (typeof payload.zone === "string") setZone(payload.zone);
+          if (typeof payload.woreda === "string") setWoreda(payload.woreda);
+          if (typeof payload.kebele === "string") setKebele(payload.kebele);
+        }
+        if (draft.administrative_unit && !h?.woreda && !payload.woreda) setWoreda(draft.administrative_unit);
+
+        if (draft.submitter_type) {
+          const norm = normalizeSubmitterType(draft.submitter_type);
+          setSubmitterType(norm);
+        }
+        if (draft.submission_channel) {
+          setSubmissionChannel(normalizeSubmissionChannel(draft.submission_channel));
+        }
+
+        if (payload.identityValues && typeof payload.identityValues === "object") {
+          setIdentityValues((prev) => ({
+            ...prev,
+            ...(payload.identityValues as Record<string, string>),
+          }));
+        } else if (draft.submitter_name || draft.contact_mobile || draft.contact_email) {
+          const parsed = draft.contact_mobile ? splitPhoneNumber(draft.contact_mobile) : null;
+          setIdentityValues((prev) => ({
+            ...prev,
+            fullName: draft.submitter_name || prev.fullName || '',
+            phoneCode: parsed?.phoneCode || prev.phoneCode || '+251',
+            phoneNumber: parsed?.phoneNumber || prev.phoneNumber || '',
+            email: draft.contact_email || prev.email || '',
+          }));
+        }
+
+        if (draft.attachments && draft.attachments.length > 0) {
+          const first = draft.attachments[0];
+          if (first) {
+            setAttachmentId(first.name);
+            setAttachmentFileName(first.file_name);
+            setScanStatus(SCAN_STATUS.CLEAN);
+          }
+        } else if (
           typeof payload.attachmentId === "string" &&
-          typeof payload.attachmentFileName === "string" &&
-          typeof payload.scanStatus === "string" &&
-          validScanStatuses.includes(payload.scanStatus)
+          typeof payload.attachmentFileName === "string"
         ) {
           setAttachmentId(payload.attachmentId);
           setAttachmentFileName(payload.attachmentFileName);
-          setScanStatus(payload.scanStatus as ScanStatus);
+          const validScanStatuses: string[] = Object.values(SCAN_STATUS);
+          if (typeof payload.scanStatus === "string" && validScanStatuses.includes(payload.scanStatus)) {
+            setScanStatus(payload.scanStatus as ScanStatus);
+          }
         }
-        if (draft.step_reached >= 2) setCurrentStep(2);
+
         setResumedDraft(true);
       })
       .catch((error) => {
         if (cancelled) return;
-        if (error instanceof ApiError && error.status === 404) return; // no saved draft — the normal case
+        if (error instanceof ApiError && error.status === 404) return;
         logger.error("Failed to load saved draft:", error);
       })
       .finally(() => {
@@ -173,23 +287,118 @@ export default function SubmitGrievancePage() {
     };
   }, []);
 
-  const handleNext = () => {
-    setCurrentStep((prev) => Math.min(prev + 1, 3));
+  const getFullDraftPayload = (): SaveDraftPayload => {
+    const submitterName =
+      identityValues.fullName ||
+      identityValues.representativeName ||
+      identityValues.cooperativeName ||
+      identityValues.ngoName ||
+      identityValues.bodyName ||
+      identityValues.agentName ||
+      user?.full_name ||
+      "";
+    const rawMobile = identityValues.phoneNumber || user?.mobile_no || "";
+    const contactMobile = formatToE164(rawMobile, identityValues.phoneCode || "+251");
+    const contactEmail = identityValues.email || user?.email || "";
+    const area = resolvedAreaId || kebele || woreda || zone || region || "";
+
+    return {
+      client_submission_uuid: clientUuid,
+      submitter_type: submitterType ? (labelFor(submitterTypes, submitterType) || submitterType) : undefined,
+      submission_channel: submissionChannel ? (labelFor(submissionChannels, submissionChannel) || submissionChannel) : "Web Portal",
+      submitter_name: submitterName || undefined,
+      contact_mobile: contactMobile || undefined,
+      contact_email: contactEmail || undefined,
+      administrative_area: area || undefined,
+      service_category: serviceCategory || undefined,
+      grievance_type: grievanceType || undefined,
+      description: description || undefined,
+    };
+  };
+
+  const persistSubmitterProfile = () => {
+    if (user?.email) {
+      saveSubmitterProfile(user.email, {
+        submitterType,
+        identityValues,
+      });
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setDraftSaveState("saving");
+    persistSubmitterProfile();
+    try {
+      await saveDraft(getFullDraftPayload());
+      setDraftSaveState("saved");
+    } catch (saveError) {
+      setDraftSaveState("error");
+      logger.error("Failed to save draft:", saveError);
+    }
+  };
+
+  const handleStep1Next = () => {
+    persistSubmitterProfile();
+    try {
+      void saveDraft(getFullDraftPayload());
+    } catch {
+      // background best-effort save
+    }
+    goToStep(2);
+  };
+
+  const handleStep2Next = () => {
+    persistSubmitterProfile();
+    try {
+      void saveDraft(getFullDraftPayload());
+    } catch {
+      // background best-effort save
+    }
+    goToStep(3);
   };
 
   const handleBack = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
+    goToStep(Math.max(currentStep - 1, 1));
   };
 
-  const handleSubmit = () => {
-    setIsSubmitted(true);
-    // In a real application, you would scroll to top here or handle routing
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Guard: if user opens step 2 or 3 directly before step 1 is filled, return to step 1
+  useEffect(() => {
+    if (draftCheckDone && currentStep > 1 && !submitterType) {
+      goToStep(1, true);
+    }
+  }, [draftCheckDone, currentStep, submitterType, goToStep]);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    persistSubmitterProfile();
+    try {
+      const payload = {
+        ...getFullDraftPayload(),
+        consent_given: 1,
+      };
+      const result = await submitDraft(payload);
+      setSubmittedTicketNumber(result.ticket_number);
+      setIsSubmitted(true);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("step");
+      const targetUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+      router.replace(targetUrl, { scroll: false });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: unknown) {
+      logger.error("Failed to submit grievance:", err);
+      const msg = err instanceof Error ? err.message : "Failed to submit grievance. Please check required fields.";
+      setSubmitError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {
     setIsSubmitted(false);
-    setCurrentStep(1);
+    setSubmittedTicketNumber(null);
+    setSubmitError(null);
+    goToStep(1, true);
     setSubmitterType("");
     setSubmissionChannel("");
     setIdentityValues({});
@@ -204,9 +413,6 @@ export default function SubmitGrievancePage() {
     setAttachmentId(null);
     setScanStatus(null);
     setAttachmentFileName(null);
-    // A fresh draft for the next grievance — reusing the old clientUuid
-    // would let the new, supposedly-empty wizard resume the previous
-    // grievance's already-submitted draft.
     setClientUuid(crypto.randomUUID());
     setResumedDraft(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -215,14 +421,11 @@ export default function SubmitGrievancePage() {
   if (isSubmitted) {
     return (
       <div className="font-sans pb-2">
-        <GrievanceSubmittedCard onReset={handleReset} />
+        <GrievanceSubmittedCard onReset={handleReset} ticketNumber={submittedTicketNumber} />
       </div>
     );
   }
 
-  // Held back until the resume check above settles — see `draftCheckDone`'s
-  // doc comment for the race this closes. One fast API call, so this is
-  // never more than a brief flash in practice.
   if (!draftCheckDone) {
     return (
       <div className="flex flex-col gap-6 font-sans pb-2">
@@ -238,11 +441,7 @@ export default function SubmitGrievancePage() {
       {currentStep > 1 && (
         <div className="flex items-center -mb-2">
           <button 
-            onClick={() => {
-               if (currentStep > 1) {
-                  handleBack();
-               }
-            }}
+            onClick={handleBack}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-semibold text-[15px] transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600" />
@@ -274,7 +473,7 @@ export default function SubmitGrievancePage() {
       <div className="space-y-6">
         {currentStep === 1 && (
           <SubmitterIdentityCard
-            onNext={handleNext}
+            onNext={handleStep1Next}
             submitterType={submitterType}
             setSubmitterType={handleSubmitterTypeChange}
             submissionChannel={submissionChannel}
@@ -285,7 +484,7 @@ export default function SubmitGrievancePage() {
         )}
         {currentStep === 2 && (
           <GrievanceDetailsCard
-            onNext={handleNext}
+            onNext={handleStep2Next}
             onBack={handleBack}
             clientUuid={clientUuid}
             serviceCategory={serviceCategory}
@@ -316,6 +515,10 @@ export default function SubmitGrievancePage() {
           <ReviewAndSubmitCard
             onBack={handleBack}
             onSubmit={handleSubmit}
+            onSaveDraft={handleSaveDraft}
+            draftSaveState={draftSaveState}
+            isSubmitting={isSubmitting}
+            submitError={submitError}
             submitterType={submitterType}
             submissionChannel={submissionChannel}
             identityValues={identityValues}

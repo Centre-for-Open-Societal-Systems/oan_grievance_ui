@@ -55,11 +55,17 @@ export function SubmitterIdentityCard({
     const missing = [...missingTopLevel, ...getMissingRequiredFields(submitterType, identityValues)];
     if (missing.length > 0) {
       setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
+      setTimeout(() => {
+        document.getElementById("submitter-identity-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
     const invalid = getFieldFormatErrors(submitterType, identityValues);
     if (invalid.length > 0) {
       setError(t("invalidFields", { count: invalid.length, fields: invalid.join(", ") }));
+      setTimeout(() => {
+        document.getElementById("submitter-identity-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
     setError(null);

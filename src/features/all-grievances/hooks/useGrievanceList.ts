@@ -112,10 +112,11 @@ export function useGrievanceList({
     )
       .then((data) => {
         if (controller.signal.aborted) return;
+        const nonDraftItems = (data?.items ?? []).filter((item) => item.status !== 'Draft');
         setResult({
           key: queryKey,
-          grievances: (data?.items ?? []).map(mapGrievanceListItem),
-          totalItems: data?.pagination?.total_count ?? 0,
+          grievances: nonDraftItems.map(mapGrievanceListItem),
+          totalItems: data?.pagination?.total_count ?? nonDraftItems.length,
           totalPages: Math.max(1, data?.pagination?.total_pages ?? 1),
           error: null,
         });

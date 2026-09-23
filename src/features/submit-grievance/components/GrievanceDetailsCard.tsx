@@ -21,6 +21,7 @@ import {
   selectKebeleStatus,
   findZoneNode,
   findWoredaNode,
+  resolveAdministrativeAreaId,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import { uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
@@ -107,6 +108,9 @@ export function GrievanceDetailsCard({
   const rawRegions = useAppSelector((state) => state.metadata.regions);
   const zoneNode = useAppSelector((state) => findZoneNode(state, zone, region));
   const woredaNode = useAppSelector((state) => findWoredaNode(state, woreda, zone, region));
+  const resolvedAreaId = useAppSelector((state) =>
+    resolveAdministrativeAreaId(state, kebele, woreda, zone, region)
+  );
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
@@ -270,6 +274,7 @@ export function GrievanceDetailsCard({
     scanStatus: ScanStatus | null;
   }) => ({
     ...latestFieldsRef.current,
+    administrative_area: resolvedAreaId || undefined,
     attachmentId: attachmentOverride ? attachmentOverride.attachmentId : attachmentId,
     attachmentFileName: attachmentOverride ? attachmentOverride.fileName : (uploadedFile?.name ?? attachmentFileName),
     scanStatus: attachmentOverride ? attachmentOverride.scanStatus : scanStatus,
@@ -298,6 +303,9 @@ export function GrievanceDetailsCard({
 
     if (missing.length > 0) {
       setError(t("missingFields", { count: missing.length, fields: missing.join(", ") }));
+      setTimeout(() => {
+        document.getElementById("grievance-details-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
     // Matches oan_grievance_service/services/identity.py's
@@ -308,10 +316,16 @@ export function GrievanceDetailsCard({
     const MIN_DESCRIPTION_LENGTH = 20;
     if (description.trim().length < MIN_DESCRIPTION_LENGTH) {
       setError(t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count: description.trim().length }));
+      setTimeout(() => {
+        document.getElementById("grievance-details-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
     if (scanStatus === SCAN_STATUS.INFECTED) {
       setError("Remove the attachment that failed the malware scan before continuing.");
+      setTimeout(() => {
+        document.getElementById("grievance-details-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
     setError(null);

@@ -102,7 +102,7 @@ export function getFieldFormatErrors(
     } else if (field.key === "email" && !EMAIL_PATTERN.test(value)) {
       errors.push(`${field.label} (not a valid email address)`);
     } else if (field.key === "phoneNumber" && !isValidPhoneNumber(value)) {
-      errors.push(`${field.label} (10 digits, e.g. 0912345678)`);
+      errors.push(`${field.label} (9-10 digits, e.g. 0912345678 or 912345678)`);
     }
   }
   return errors;

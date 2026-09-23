@@ -76,7 +76,7 @@ export function RegisterForm() {
     event.preventDefault();
 
     if (!PHONE_NUMBER_REGEX.test(phoneNumber)) {
-      setError('Phone number must be exactly 10 digits.');
+      setError('Phone number must be 9 or 10 digits.');
       return;
     }
 
