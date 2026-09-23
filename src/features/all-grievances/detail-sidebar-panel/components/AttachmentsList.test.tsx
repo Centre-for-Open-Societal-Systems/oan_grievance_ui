@@ -48,6 +48,14 @@ describe('AttachmentsList', () => {
     expect(getAttachments).toHaveBeenCalledWith('GRV-0001');
   });
 
+  it('shows a distinct "Scan failed" badge for a Failed scan, not the Scanning… state', async () => {
+    getAttachments.mockResolvedValue([{ ...ROW, scan_status: 'Failed' }]);
+    render(<AttachmentsList grievance="GRV-0001" canManageCase={false} />);
+
+    await waitFor(() => expect(screen.getByText('Scan failed')).toBeInTheDocument());
+    expect(screen.queryByText('Scanning…')).not.toBeInTheDocument();
+  });
+
   it('shows an empty state when the case has no attachments', async () => {
     getAttachments.mockResolvedValue([]);
     render(<AttachmentsList grievance="GRV-0001" canManageCase={false} />);

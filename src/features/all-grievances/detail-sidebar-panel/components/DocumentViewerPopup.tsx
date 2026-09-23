@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Download, FileText, Loader2, Trash2 } from "lucide-react";
-import { deleteAttachment, type AttachmentRow } from "@/lib/attachments";
+import { deleteAttachment, getAttachmentDownloadInfo, fetchAttachmentBlobUrl, type AttachmentRow } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
-import { ATTACHMENT_BYTES_UNAVAILABLE_REASON, formatAttachmentSize, scanStatusBadge } from "./attachmentDisplay";
+import {
+  ATTACHMENT_BYTES_UNAVAILABLE_REASON,
+  ATTACHMENT_DOWNLOAD_DISABLED,
+  formatAttachmentSize,
+  scanStatusBadge,
+} from "./attachmentDisplay";
 
 interface DocumentViewerPopupProps {
   attachment: AttachmentRow;
@@ -19,6 +24,20 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // `onClose` (backdrop/X click, or a successful delete) unmounts this popup
+  // immediately — AttachmentsList only renders it while a row is selected.
+  // Guards the async handlers below against setting state after that, which
+  // React logs a no-op warning for and, for the delete failure path
+  // specifically, would otherwise silently swallow the error (the dialog is
+  // already gone, so nothing shows it).
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -29,10 +48,34 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
       onClose();
     } catch (error) {
       logger.error("Failed to delete attachment:", error);
+      if (!mountedRef.current) return;
       // The backend refuses once the case is Closed/Rejected/Resolved — surface
       // its own reason rather than a generic "something went wrong".
       setDeleteError(error instanceof Error ? error.message : "Could not delete this file. Please try again.");
       setIsDeleting(false);
+    }
+  };
+
+  // Dead while ATTACHMENT_DOWNLOAD_DISABLED is true (the button below stays
+  // disabled), but wired to the real APIs now rather than left as an inline
+  // comment — flipping that one flag is then the only change needed to bring
+  // Download back, instead of also having to rediscover and rewrite this.
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const info = await getAttachmentDownloadInfo(attachment.name);
+      const blobUrl = await fetchAttachmentBlobUrl(info.file_url);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = info.file_name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      logger.error("Failed to download attachment:", error);
+    } finally {
+      if (mountedRef.current) setIsDownloading(false);
     }
   };
 
@@ -58,11 +101,12 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              disabled
-              title={ATTACHMENT_BYTES_UNAVAILABLE_REASON}
-              className="p-2 text-gray-300 rounded-lg cursor-not-allowed"
+              onClick={() => void handleDownload()}
+              disabled={ATTACHMENT_DOWNLOAD_DISABLED || isDownloading}
+              title={ATTACHMENT_DOWNLOAD_DISABLED ? ATTACHMENT_BYTES_UNAVAILABLE_REASON : "Download"}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
-              <Download className="h-5 w-5" />
+              {isDownloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
             </button>
             {canDelete && (
               <>

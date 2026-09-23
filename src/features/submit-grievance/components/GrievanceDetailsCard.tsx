@@ -542,8 +542,17 @@ export function GrievanceDetailsCard({
 
     let cancelled = false;
     let attempts = 0;
+    // Guards against a round-trip that outlives one interval tick — this app
+    // explicitly targets slow/unreliable connections (see UPLOAD_TIMEOUT_MS's
+    // own comment above), where a single `getAttachments` call can easily run
+    // longer than SCAN_POLL_INTERVAL_MS. Without this, a slow tick doesn't
+    // pause the interval, so the next tick's call stacks another identical
+    // request on top of it instead of waiting.
+    let inFlight = false;
 
     const poll = async () => {
+      if (inFlight) return;
+      inFlight = true;
       attempts += 1;
       try {
         const rows = await getAttachments(clientUuid);
@@ -555,6 +564,8 @@ export function GrievanceDetailsCard({
         }
       } catch (pollError) {
         logger.error("Failed to check attachment scan status:", pollError);
+      } finally {
+        inFlight = false;
       }
       if (!cancelled && attempts >= SCAN_POLL_MAX_ATTEMPTS) {
         logger.error(`Scan status still Pending for ${attachmentId} after ${attempts} checks — giving up.`);
