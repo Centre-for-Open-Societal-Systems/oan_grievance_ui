@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { selectUser } from "@/features/auth/store/authSlice";
@@ -124,8 +124,17 @@ export default function SubmitGrievancePage() {
   // initial resume check below has settled.
   const [draftCheckDone, setDraftCheckDone] = useState(false);
 
-  // Resume the caller's saved draft, if one exists, once on mount.
+  const hasLoadedDraftRef = useRef(false);
+  const goToStepRef = useRef(goToStep);
   useEffect(() => {
+    goToStepRef.current = goToStep;
+  });
+
+  // Resume the caller's saved draft, if one exists, strictly once on mount.
+  useEffect(() => {
+    if (hasLoadedDraftRef.current) return;
+    hasLoadedDraftRef.current = true;
+
     let cancelled = false;
     loadDraft()
       .then((draft) => {
@@ -165,7 +174,7 @@ export default function SubmitGrievancePage() {
           }
         }
         if (!stepParam && (h?.region || h?.woreda || draft.service_category || draft.description)) {
-          goToStep(2, true);
+          goToStepRef.current(2, true);
         }
         setResumedDraft(true);
       })
@@ -180,7 +189,8 @@ export default function SubmitGrievancePage() {
     return () => {
       cancelled = true;
     };
-  }, [goToStep, stepParam]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleNext = () => {
     goToStep(Math.min(currentStep + 1, 3));

@@ -111,4 +111,15 @@ describe('SubmitGrievancePage URL step filter', () => {
 
     expect(pushMock).toHaveBeenCalledWith('/submit-grievance?step=1', { scroll: false });
   });
+
+  it('runs loadDraft only once on mount and does not refetch during step navigation', async () => {
+    const { loadDraft } = await import('@/lib/drafts');
+    currentSearch = 'step=1';
+    renderPage();
+
+    const nextBtn = await screen.findByRole('button', { name: /Save & Continue/i });
+    fireEvent.click(nextBtn);
+
+    expect(loadDraft).toHaveBeenCalledTimes(1);
+  });
 });
