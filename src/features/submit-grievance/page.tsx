@@ -15,7 +15,7 @@ import { buildInitialIdentityValues, identityAfterReset, resolveInitialSubmitter
 import { buildSaveDraftPayload } from "./draftPayload";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
 import { discardDraft, loadDraft } from "@/lib/drafts";
-import { SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
+import { SCAN_STATUS, type ScanStatus, type WizardAttachment } from "@/lib/attachments";
 import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
 import type { RootState } from "@/store";
@@ -124,17 +124,14 @@ export default function SubmitGrievancePage() {
   const [description, setDescription] = useState("");
   const [desiredOutcome, setDesiredOutcome] = useState("");
   const [serviceProvider, setServiceProvider] = useState("");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  // The attachment's backend identity — lifted up here (not kept local to
+  // The attachment list — lifted up here (not kept local to
   // GrievanceDetailsCard) for two reasons: page.tsx conditionally unmounts
   // that component on every Step 1<->2 navigation (`{currentStep === 2 &&
   // <GrievanceDetailsCard .../>}`), which would otherwise reset this on
   // every Back/Next; and Step 3's review card needs to know about it too,
-  // including for a resumed draft's attachment, which has no local `File`
+  // including for a resumed draft's attachments, which have no local `File`
   // blob to read a name off.
-  const [attachmentId, setAttachmentId] = useState<string | null>(null);
-  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
-  const [attachmentFileName, setAttachmentFileName] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<WizardAttachment[]>([]);
 
   // Guards every draft-dependent action (uploading, saving) until the
   // initial resume check below has settled. Without this, a fast typist on
@@ -181,13 +178,19 @@ export default function SubmitGrievancePage() {
         if (draft.desired_outcome) setDesiredOutcome(draft.desired_outcome);
         if (draft.associated_service_provider) setServiceProvider(draft.associated_service_provider);
         if (draft.attachments && draft.attachments.length > 0) {
-          const first = draft.attachments[0];
           const validScanStatuses: string[] = Object.values(SCAN_STATUS);
-          if (first && validScanStatuses.includes(first.scan_status)) {
-            setAttachmentId(first.name);
-            setAttachmentFileName(first.file_name);
-            setScanStatus(first.scan_status as ScanStatus);
-          }
+          const resumedAttachments: WizardAttachment[] = draft.attachments
+            .filter((a) => validScanStatuses.includes(a.scan_status))
+            .map((a) => ({
+              key: a.name,
+              attachmentId: a.name,
+              file: null,
+              fileName: a.file_name,
+              scanStatus: a.scan_status as ScanStatus,
+              uploadState: "idle",
+              error: null,
+            }));
+          if (resumedAttachments.length > 0) setAttachments(resumedAttachments);
         }
         if (h?.region || h?.woreda) setCurrentStep(2);
         setResumedDraft(true);
@@ -233,10 +236,7 @@ export default function SubmitGrievancePage() {
     setDescription("");
     setDesiredOutcome("");
     setServiceProvider("");
-    setUploadedFile(null);
-    setAttachmentId(null);
-    setScanStatus(null);
-    setAttachmentFileName(null);
+    setAttachments([]);
     // A fresh draft for the next grievance — reusing the old clientUuid
     // would let the new, supposedly-empty wizard resume the previous
     // grievance's already-submitted draft.
@@ -445,14 +445,8 @@ export default function SubmitGrievancePage() {
             setDesiredOutcome={setDesiredOutcome}
             serviceProvider={serviceProvider}
             setServiceProvider={setServiceProvider}
-            uploadedFile={uploadedFile}
-            setUploadedFile={setUploadedFile}
-            attachmentId={attachmentId}
-            setAttachmentId={setAttachmentId}
-            scanStatus={scanStatus}
-            setScanStatus={setScanStatus}
-            attachmentFileName={attachmentFileName}
-            setAttachmentFileName={setAttachmentFileName}
+            attachments={attachments}
+            setAttachments={setAttachments}
           />
         )}
         {currentStep === 3 && (
@@ -472,8 +466,7 @@ export default function SubmitGrievancePage() {
             description={description}
             desiredOutcome={desiredOutcome}
             serviceProvider={serviceProvider}
-            uploadedFile={uploadedFile}
-            attachmentFileName={attachmentFileName}
+            attachments={attachments}
           />
         )}
       </div>

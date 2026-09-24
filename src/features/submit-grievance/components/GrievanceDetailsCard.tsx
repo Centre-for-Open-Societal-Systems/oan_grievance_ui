@@ -29,16 +29,29 @@ import {
   findWoredaNode,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
-import { getAttachments, uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
+import {
+  getAttachments,
+  uploadAttachments,
+  SCAN_STATUS,
+  MAX_ATTACHMENTS_PER_CASE,
+  type WizardAttachment,
+} from "@/lib/attachments";
 import { saveDraft } from "@/lib/drafts";
 import { buildSaveDraftPayload } from "../draftPayload";
 import { logger } from "@/lib/logger";
 import type { RootState } from "@/store";
 
-type UploadState = "idle" | "uploading" | "persisting" | "error";
-
-/** The line under the uploaded file's name — mirrors `scanStatusBadge`'s if-chain shape rather than a nested ternary. */
-function attachmentStatusIndicator(uploadState: UploadState, scanStatus: ScanStatus | null): ReactElement {
+/** The line under an uploaded file's name — mirrors `scanStatusBadge`'s if-chain shape rather than a nested ternary. */
+function attachmentStatusIndicator(item: WizardAttachment): ReactElement {
+  const { uploadState, scanStatus } = item;
+  if (uploadState === "error") {
+    return (
+      <>
+        <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+        <span className="text-red-600">{item.error ?? "Upload failed"}</span>
+      </>
+    );
+  }
   if (uploadState === "uploading") {
     return <span className="text-gray-500">Uploading…</span>;
   }
@@ -115,23 +128,13 @@ interface GrievanceDetailsCardProps {
   /** The store, cooperative, bank or market the grievance is about — optional. Sent as `associated_service_provider`. */
   serviceProvider: string;
   setServiceProvider: (value: string) => void;
-  uploadedFile: File | null;
-  setUploadedFile: (file: File | null) => void;
-  // The attachment's backend identity — owned by page.tsx, not local state
-  // here, so it survives this component unmounting on every Step 1<->2
-  // navigation and so Step 3's review card can see it too. See page.tsx's
-  // doc comment on its `attachmentId` state for why: `draft.load`'s own
-  // attachment list can't see an attachment uploaded through this wizard
-  // (files attach to the Grievance Attachment doc, not directly to the
-  // Grievance Draft), so a resumed draft's attachment comes back through
-  // this same `payload`-persisted metadata instead, with no local `File`
-  // blob to read a name off or preview.
-  attachmentId: string | null;
-  setAttachmentId: (id: string | null) => void;
-  scanStatus: ScanStatus | null;
-  setScanStatus: (status: ScanStatus | null) => void;
-  attachmentFileName: string | null;
-  setAttachmentFileName: (name: string | null) => void;
+  // The attachment list — owned by page.tsx, not local state here, so it
+  // survives this component unmounting on every Step 1<->2 navigation and so
+  // Step 3's review card can see it too. A resumed draft's attachments come
+  // back through this same lifted state, with no local `File` blob to read a
+  // name off or preview.
+  attachments: WizardAttachment[];
+  setAttachments: (updater: WizardAttachment[] | ((prev: WizardAttachment[]) => WizardAttachment[])) => void;
 }
 
 /** The required fields on this step, in form order — where "focus the first invalid field" looks. */
@@ -184,14 +187,8 @@ export function GrievanceDetailsCard({
   setDesiredOutcome,
   serviceProvider,
   setServiceProvider,
-  uploadedFile,
-  setUploadedFile,
-  attachmentId,
-  setAttachmentId,
-  scanStatus,
-  setScanStatus,
-  attachmentFileName,
-  setAttachmentFileName,
+  attachments,
+  setAttachments,
 }: GrievanceDetailsCardProps) {
   const t = useTranslations("submitGrievance.detailsStep");
   const dispatch = useAppDispatch();
@@ -279,30 +276,18 @@ export function GrievanceDetailsCard({
     }
   }, [dispatch, woreda, woredaNode]);
 
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  // `error` is for problems that aren't tied to one field (an upload failure,
-  // an attachment that failed the malware scan). A missing or malformed field
-  // is shown under that field instead — see `fieldErrors`.
+  // Which attachment's preview modal is open, if any — null when closed.
+  const [previewItem, setPreviewItem] = useState<WizardAttachment | null>(null);
+  // `error` is for problems that aren't tied to one field (too many files
+  // picked at once, a whole-batch upload failure). A missing or malformed
+  // field is shown under that field instead — see `fieldErrors`; a single
+  // file's own upload/scan problem is shown on that file's row instead — see
+  // `attachmentStatusIndicator`.
   const [error, setError] = useState<string | null>(null);
   const fieldErrors = useFieldErrors<DetailsField>();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // attachmentId/scanStatus/attachmentFileName are owned by page.tsx now —
-  // see this component's props doc comment. `scanStatus` mirrors the
-  // backend's verdict (Pending/Clean/Infected) rather than the earlier
-  // hardcoded placeholder text, since the file isn't actually servable
-  // until it comes back Clean.
-  // "persisting" covers the brief extra window between the upload itself
-  // finishing and its attachment-identity being saved onto the draft (see
-  // handleFileChange) — kept distinct from "uploading" so Preview and the
-  // "Uploaded · scan clean/pending" status, both already correct the
-  // instant the upload itself resolves, don't sit showing "Uploading…" for
-  // a round-trip they have no reason to wait on. Remove and Save & Continue
-  // both still need to block on it too, same as "uploading" — an in-flight
-  // persist-save losing a race against either would resurrect a removed
-  // attachment or leave a draft record that doesn't yet know about it.
-  const [uploadState, setUploadState] = useState<UploadState>("idle");
   // `submit_document` with a `client_uuid` requires the Grievance Draft to
   // already exist server-side — this fires once, right before the first
   // upload, rather than on every file selection.
@@ -336,14 +321,15 @@ export function GrievanceDetailsCard({
   // this apart from the "derived state" anti-pattern it's guarding against.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!uploadedFile || !uploadedFile.type.startsWith("image/")) {
+    const file = previewItem?.file;
+    if (!file || !file.type.startsWith("image/")) {
       setPreviewUrl(null);
       return;
     }
-    const url = URL.createObjectURL(uploadedFile);
+    const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
-  }, [uploadedFile]);
+  }, [previewItem]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // "Saved"/"Retry Save" is a snapshot of the save that already happened —
@@ -356,13 +342,13 @@ export function GrievanceDetailsCard({
   // would just cause an extra render pass to do the same thing) by
   // comparing against a snapshot of the last render's tracked fields. Only
   // resets away from a settled state (saved/error); doesn't touch "saving"
-  // itself. `attachmentFileName`, not `attachmentId`/`scanStatus`, is the
-  // attachment signal here — it changes exactly when a file is picked,
-  // removed, or the draft resumes one, without also firing mid-upload as
+  // itself. The joined file names, not `attachmentId`/`scanStatus`, are the
+  // attachment signal here — that changes exactly when a file is picked,
+  // removed, or the draft resumes some, without also firing mid-upload as
   // `scanStatus` transitioning Pending -> Clean would.
   const draftPayloadSnapshot = JSON.stringify([
     serviceCategory, grievanceType, region, zone, woreda, kebele, description, desiredOutcome, serviceProvider,
-    attachmentFileName,
+    attachments.map((a) => a.fileName),
   ]);
   const [lastDraftPayloadSnapshot, setLastDraftPayloadSnapshot] = useState(draftPayloadSnapshot);
   if (draftPayloadSnapshot !== lastDraftPayloadSnapshot) {
@@ -378,7 +364,7 @@ export function GrievanceDetailsCard({
   // own closure — see that ref's doc comment for why. The attachment itself
   // is never part of this: the backend tracks it separately (Grievance
   // Attachment rows keyed by `client_uuid`), associated the moment
-  // `uploadAttachment` succeeds, not through this draft-save payload.
+  // `uploadAttachments` succeeds, not through this draft-save payload.
   const currentDraftPayload = () => {
     const fields = latestFieldsRef.current;
     const filingArea = findFilingArea({ metadata } as RootState, {
@@ -445,16 +431,18 @@ export function GrievanceDetailsCard({
       focusFirstError(DETAILS_FIELD_ORDER, errors);
       return;
     }
-    if (scanStatus === SCAN_STATUS.INFECTED) {
-      setError("Remove the attachment that failed the malware scan before continuing.");
+    const infected = attachments.find((a) => a.scanStatus === SCAN_STATUS.INFECTED);
+    if (infected) {
+      setError(`Remove "${infected.fileName}" — it failed the malware scan — before continuing.`);
       return;
     }
-    if (scanStatus === SCAN_STATUS.FAILED) {
-      setError("The attachment's malware scan couldn't complete. Remove it and try uploading again.");
+    const failedScan = attachments.find((a) => a.scanStatus === SCAN_STATUS.FAILED);
+    if (failedScan) {
+      setError(`"${failedScan.fileName}"'s malware scan couldn't complete. Remove it and try uploading again.`);
       return;
     }
-    if (scanStatus === SCAN_STATUS.PENDING) {
-      setError("Still scanning the attachment for malware — this takes a few seconds, please wait.");
+    if (attachments.some((a) => a.scanStatus === SCAN_STATUS.PENDING)) {
+      setError("Still scanning attachment(s) for malware — this takes a few seconds, please wait.");
       return;
     }
     setError(null);
@@ -481,15 +469,36 @@ export function GrievanceDetailsCard({
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (files.length === 0) return;
 
-    setUploadedFile(file);
-    setAttachmentId(null);
-    setScanStatus(null);
-    setAttachmentFileName(file.name);
-    setUploadState("uploading");
-    setError(null);
+    // The backend caps a case at MAX_ATTACHMENTS_PER_CASE total — trim a
+    // bulk selection that would blow past it rather than sending it and
+    // letting the whole batch 400.
+    const remainingSlots = MAX_ATTACHMENTS_PER_CASE - attachments.length;
+    if (remainingSlots <= 0) {
+      setError(`You can attach up to ${MAX_ATTACHMENTS_PER_CASE} files per grievance. Remove one before adding another.`);
+      return;
+    }
+    const filesToUpload = files.slice(0, remainingSlots);
+    setError(
+      files.length > filesToUpload.length
+        ? `Only ${remainingSlots} more file(s) could be added (max ${MAX_ATTACHMENTS_PER_CASE} per grievance) — the rest were skipped.`
+        : null
+    );
+
+    const pending: WizardAttachment[] = filesToUpload.map((file) => ({
+      key: crypto.randomUUID(),
+      attachmentId: null,
+      file,
+      fileName: file.name,
+      scanStatus: null,
+      uploadState: "uploading",
+      error: null,
+    }));
+    const pendingKeys = new Set(pending.map((item) => item.key));
+    setAttachments((prev) => [...prev, ...pending]);
 
     try {
       if (!draftEnsuredRef.current) {
@@ -497,58 +506,54 @@ export function GrievanceDetailsCard({
         draftEnsuredRef.current = true;
       }
 
-      const result = await uploadAttachment({ file, clientUuid });
-      setAttachmentId(result.attachment);
-      setScanStatus(result.scan_status);
-      // The upload itself is done — Preview and the scan-status line are
-      // already correct, so let them stop showing "Uploading…" now instead
-      // of waiting on the persist-save below too.
-      setUploadState("idle");
+      const results = await uploadAttachments({ files: filesToUpload, clientUuid });
+      // The backend returns one result per file, in the same order it
+      // received them — matched back to `pending` by position.
+      setAttachments((prev) =>
+        prev.map((item) => {
+          const idx = pending.findIndex((p) => p.key === item.key);
+          if (idx === -1) return item;
+          const result = results[idx];
+          if (!result) return item;
+          return { ...item, attachmentId: result.attachment, scanStatus: result.scan_status, uploadState: "idle" };
+        })
+      );
 
-      // Persist the attachment's identity onto the draft right away, not
+      // Persist the attachments' identities onto the draft right away, not
       // only when the user separately clicks Save Draft — otherwise
       // reloading right after an upload (the common case) would resume the
-      // form fields but "forget" the file was ever attached. Awaited
+      // form fields but "forget" the files were ever attached. Awaited
       // (uploadState becomes "persisting", keeping Remove and Save &
-      // Continue disabled) rather than fire-and-forget: Remove issues its
-      // own saveDraft to clear the attachment, and if that resolved before
-      // this one, this call's later-arriving response would silently
-      // re-establish the pointer the user just removed. Sequencing the two
-      // removes the race instead of trying to win it.
+      // Continue disabled for this batch) rather than fire-and-forget:
+      // Remove issues its own saveDraft to clear an attachment, and if that
+      // resolved before this one, this call's later-arriving response could
+      // race it. Sequencing the two removes the race instead of trying to
+      // win it.
       draftEnsuredRef.current = true;
-      setUploadState("persisting");
+      setAttachments((prev) =>
+        prev.map((item) => (pendingKeys.has(item.key) ? { ...item, uploadState: "persisting" } : item))
+      );
       try {
         await saveDraft(currentDraftPayload());
       } catch (saveError) {
-        logger.error("Failed to persist the attachment onto the draft:", saveError);
+        logger.error("Failed to persist the attachments onto the draft:", saveError);
       } finally {
-        setUploadState("idle");
+        setAttachments((prev) =>
+          prev.map((item) => (pendingKeys.has(item.key) ? { ...item, uploadState: "idle" } : item))
+        );
       }
     } catch (uploadError) {
-      setUploadState("error");
-      setUploadedFile(null);
-      setAttachmentFileName(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      setError(
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Could not upload the file. Please try again."
+      const message =
+        uploadError instanceof Error ? uploadError.message : "Could not upload the file(s). Please try again.";
+      setAttachments((prev) =>
+        prev.map((item) => (pendingKeys.has(item.key) ? { ...item, uploadState: "error", error: message } : item))
       );
     }
   };
 
-  const handleRemoveFile = (e: React.MouseEvent) => {
+  const handleRemoveAttachment = (key: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
-    const hadAttachment = attachmentId !== null;
-    setUploadedFile(null);
-    setAttachmentId(null);
-    setScanStatus(null);
-    setAttachmentFileName(null);
-    setUploadState("idle");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    if (!hadAttachment) return;
+    setAttachments((prev) => prev.filter((item) => item.key !== key));
 
     // NOT calling deleteAttachment here — needs its own verification pass
     // against the current backend (the doctype consolidation that made a
@@ -562,22 +567,20 @@ export function GrievanceDetailsCard({
     // this component saves.
   };
 
-  // `attachmentFileName` (page.tsx's lifted state) is kept in sync with
-  // `uploadedFile` by this component at every point that changes either —
-  // pick, upload, remove — so it alone is what the "already uploaded" card
-  // needs, whether the name came from a just-picked file or a resumed
-  // draft with no local blob to read one off.
-  const displayFileName = attachmentFileName;
-  const hasLocalPreview = uploadedFile !== null;
+  // Polls while any attachment's scan is still in flight — see
+  // SCAN_POLL_INTERVAL_MS's doc comment for why this can't just wait for a
+  // push. One `getAttachments` call per tick covers every pending item at
+  // once. Stops itself once nothing is left Pending, or this step unmounts;
+  // a resumed draft's already-scanned attachments never start this at all,
+  // since their scanStatus arrives non-Pending from page.tsx's draft-load in
+  // the first place.
+  const pendingAttachmentIds = attachments
+    .filter((a) => a.scanStatus === SCAN_STATUS.PENDING && a.attachmentId)
+    .map((a) => a.attachmentId as string);
+  const pendingAttachmentKey = pendingAttachmentIds.join(",");
 
-  // Polls while the scan is still in flight — see SCAN_POLL_INTERVAL_MS's
-  // doc comment for why this can't just wait for a push. Stops itself once
-  // the status leaves Pending (Clean/Infected/Failed), the attachment is
-  // removed, or this step unmounts; a resumed draft's already-scanned
-  // attachment never starts this at all, since its scanStatus arrives
-  // non-Pending from page.tsx's draft-load in the first place.
   useEffect(() => {
-    if (scanStatus !== SCAN_STATUS.PENDING || !attachmentId) return;
+    if (pendingAttachmentIds.length === 0) return;
 
     let cancelled = false;
     let attempts = 0;
@@ -596,9 +599,23 @@ export function GrievanceDetailsCard({
       try {
         const rows = await getAttachments(clientUuid);
         if (cancelled) return;
-        const row = rows.find((r) => r.name === attachmentId);
-        if (row && row.scan_status !== SCAN_STATUS.PENDING) {
-          setScanStatus(row.scan_status);
+        setAttachments((prev) =>
+          prev.map((item) => {
+            if (item.scanStatus !== SCAN_STATUS.PENDING || !item.attachmentId) return item;
+            const row = rows.find((r) => r.name === item.attachmentId);
+            return row && row.scan_status !== SCAN_STATUS.PENDING ? { ...item, scanStatus: row.scan_status } : item;
+          })
+        );
+        // Whether to keep polling — derived from `rows` (this tick's fetch)
+        // against the id set this effect started watching, not from the
+        // `setAttachments` updater above: React doesn't guarantee that
+        // callback runs synchronously, so a flag set inside it can't be
+        // trusted immediately after the call.
+        const stillPending = pendingAttachmentIds.some((id) => {
+          const row = rows.find((r) => r.name === id);
+          return !row || row.scan_status === SCAN_STATUS.PENDING;
+        });
+        if (!stillPending) {
           clearInterval(intervalId);
           return;
         }
@@ -608,13 +625,15 @@ export function GrievanceDetailsCard({
         inFlight = false;
       }
       if (!cancelled && attempts >= SCAN_POLL_MAX_ATTEMPTS) {
-        logger.error(`Scan status still Pending for ${attachmentId} after ${attempts} checks — giving up.`);
+        logger.error(`Scan status still Pending for [${pendingAttachmentKey}] after ${attempts} checks — giving up.`);
         // Otherwise the wizard is stuck showing "Scanning for malware…" and a
         // disabled Continue forever, with no explanation — treating a scan
         // that never resolved the same as one that failed reuses the
         // existing Failed messaging/remove-and-retry guidance rather than
         // adding a third "stuck" state nobody built UI for.
-        setScanStatus(SCAN_STATUS.FAILED);
+        setAttachments((prev) =>
+          prev.map((item) => (item.scanStatus === SCAN_STATUS.PENDING ? { ...item, scanStatus: SCAN_STATUS.FAILED } : item))
+        );
         clearInterval(intervalId);
       }
     };
@@ -625,7 +644,8 @@ export function GrievanceDetailsCard({
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [scanStatus, attachmentId, clientUuid, setScanStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the pending id set (pendingAttachmentKey), not the attachments array itself, so a scan resolving elsewhere doesn't restart this poll loop.
+  }, [pendingAttachmentKey, clientUuid, setAttachments]);
 
   return (
     <>
@@ -872,9 +892,9 @@ export function GrievanceDetailsCard({
           {/* Supporting Documents / Evidence */}
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Supporting Documents / Evidence
+              Supporting Documents / Evidence {attachments.length > 0 && `(${attachments.length}/${MAX_ATTACHMENTS_PER_CASE})`}
             </label>
-            {!displayFileName && (
+            {attachments.length < MAX_ATTACHMENTS_PER_CASE && (
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full bg-[#F9FAFB] border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-[#f0fcf3] transition-colors cursor-pointer"
@@ -886,10 +906,10 @@ export function GrievanceDetailsCard({
                   Attach photos, voice recordings, or documents
                 </p>
                 <p className="text-[13px] text-slate-500 mb-4 font-medium">
-                  Max 10 MB · JPG, PNG, PDF, MP3
+                  Max 10 MB each · JPG, PNG, PDF, MP3 · up to {MAX_ATTACHMENTS_PER_CASE} files
                 </p>
                 <button className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F0FDF4] text-[#16A34A] rounded-lg text-sm font-semibold hover:bg-green-100 transition-colors border border-green-300 hover:border-green-300">
-                  + Browse Files
+                  {attachments.length > 0 ? "+ Add More Files" : "+ Browse Files"}
                 </button>
               </div>
             )}
@@ -900,54 +920,62 @@ export function GrievanceDetailsCard({
               onChange={handleFileChange}
               className="hidden"
               accept=".jpg,.jpeg,.png,.pdf,.mp3"
+              multiple
             />
 
-            {/* Uploaded File */}
-            {displayFileName && (
-              <div className="flex items-center justify-between bg-[#F0FDF4] hover:bg-[#e5fbeb] border border-green-300 p-4 rounded-xl mt-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#D1FAE5] rounded-xl flex items-center justify-center">
-                    {uploadState === "uploading" ? (
-                      <Loader2 className="w-6 h-6 text-[#16A34A] animate-spin" />
-                    ) : (
-                      <IdCard className="w-6 h-6 text-[#16A34A]" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-[15px] font-bold text-gray-900 leading-snug">
-                      {displayFileName}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-0.5 text-[13px] font-medium">
-                      {attachmentStatusIndicator(uploadState, scanStatus)}
+            {/* Uploaded files */}
+            {attachments.length > 0 && (
+              <div className="space-y-3 mt-4">
+                {attachments.map((item) => (
+                  <div
+                    key={item.key}
+                    className="flex items-center justify-between bg-[#F0FDF4] hover:bg-[#e5fbeb] border border-green-300 p-4 rounded-xl"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-[#D1FAE5] rounded-xl flex items-center justify-center">
+                        {item.uploadState === "uploading" ? (
+                          <Loader2 className="w-6 h-6 text-[#16A34A] animate-spin" />
+                        ) : (
+                          <IdCard className="w-6 h-6 text-[#16A34A]" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[15px] font-bold text-gray-900 leading-snug">
+                          {item.fileName}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[13px] font-medium">
+                          {attachmentStatusIndicator(item)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewItem(item);
+                        }}
+                        disabled={item.uploadState === "uploading" || !item.file}
+                        title={!item.file ? "Preview isn't available after a reload — only for a file you just picked" : undefined}
+                        className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Eye className="w-5 h-5 text-blue-500" />
+                      </button>
+                      <button
+                        onClick={handleRemoveAttachment(item.key)}
+                        disabled={item.uploadState === "uploading" || item.uploadState === "persisting"}
+                        aria-label={`Remove ${item.fileName}`}
+                        title={
+                          item.uploadState === "uploading" || item.uploadState === "persisting"
+                            ? "Wait for the upload to finish before removing it"
+                            : undefined
+                        }
+                        className="p-2.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-5 h-5 text-red-500" />
+                      </button>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsPreviewOpen(true);
-                    }}
-                    disabled={uploadState === "uploading" || !hasLocalPreview}
-                    title={!hasLocalPreview ? "Preview isn't available after a reload — only for a file you just picked" : undefined}
-                    className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Eye className="w-5 h-5 text-blue-500" />
-                  </button>
-                  <button
-                    onClick={handleRemoveFile}
-                    disabled={uploadState === "uploading" || uploadState === "persisting"}
-                    aria-label="Remove attachment"
-                    title={
-                      uploadState === "uploading" || uploadState === "persisting"
-                        ? "Wait for the upload to finish before removing it"
-                        : undefined
-                    }
-                    className="p-2.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 className="w-5 h-5 text-red-500" />
-                  </button>
-                </div>
+                ))}
               </div>
             )}
           </div>
@@ -983,13 +1011,14 @@ export function GrievanceDetailsCard({
               </button>
               <button
                 onClick={handleNext}
-                disabled={
-                  uploadState === "uploading" ||
-                  uploadState === "persisting" ||
-                  scanStatus === SCAN_STATUS.INFECTED ||
-                  scanStatus === SCAN_STATUS.FAILED ||
-                  scanStatus === SCAN_STATUS.PENDING
-                }
+                disabled={attachments.some(
+                  (a) =>
+                    a.uploadState === "uploading" ||
+                    a.uploadState === "persisting" ||
+                    a.scanStatus === SCAN_STATUS.INFECTED ||
+                    a.scanStatus === SCAN_STATUS.FAILED ||
+                    a.scanStatus === SCAN_STATUS.PENDING
+                )}
                 className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save & Continue
@@ -1001,18 +1030,18 @@ export function GrievanceDetailsCard({
       </div>
 
       {/* Image Preview Modal */}
-      {isPreviewOpen && uploadedFile && (
+      {previewItem && previewItem.file && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h3 className="text-lg font-bold text-gray-900 truncate pr-4">
-                {uploadedFile.name}
+                {previewItem.file.name}
               </h3>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsPreviewOpen(false);
+                  setPreviewItem(null);
                 }}
                 className="p-2 rounded-full hover:bg-gray-100 transition-colors"
               >

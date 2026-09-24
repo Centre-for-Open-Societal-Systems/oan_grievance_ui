@@ -3,6 +3,7 @@ import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, 
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import { saveDraft, type SaveDraftPayload } from "@/lib/drafts";
+import type { WizardAttachment } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
 import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
@@ -33,9 +34,7 @@ interface ReviewAndSubmitCardProps {
   description: string;
   desiredOutcome?: string;
   serviceProvider?: string;
-  uploadedFile: File | null;
-  /** A resumed draft's attachment has no local `File` blob to read a name off — see page.tsx's lifted attachment state. */
-  attachmentFileName?: string | null;
+  attachments: WizardAttachment[];
 }
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
@@ -79,11 +78,9 @@ export function ReviewAndSubmitCard({
   description,
   desiredOutcome,
   serviceProvider,
-  uploadedFile,
-  attachmentFileName,
+  attachments,
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
-  const displayFileName = uploadedFile?.name ?? attachmentFileName;
   // Same national-ID field set fields.ts validates as a Fayda ID (imported
   // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
   // action pattern as SIMaskedIdField and the Profile page's MaskedField.
@@ -262,9 +259,19 @@ export function ReviewAndSubmitCard({
               </div>
               <div className="md:col-span-2">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Attachments {displayFileName ? "(1)" : "(0)"}
+                  Attachments ({attachments.length})
                 </p>
-                <p className="text-[15px] font-semibold text-gray-900">{displayFileName ?? "No file attached"}</p>
+                {attachments.length > 0 ? (
+                  <ul className="space-y-0.5">
+                    {attachments.map((a) => (
+                      <li key={a.key} className="text-[15px] font-semibold text-gray-900">
+                        {a.fileName}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[15px] font-semibold text-gray-900">No files attached</p>
+                )}
               </div>
             </div>
           </div>
