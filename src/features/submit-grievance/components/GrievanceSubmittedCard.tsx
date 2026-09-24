@@ -28,8 +28,9 @@ export function formatSlaDate(value: string | null | undefined): string | null {
 export function GrievanceSubmittedCard({
   result,
   onReset,
+  ticketNumber: propsTicketNumber,
 }: GrievanceSubmittedCardProps) {
-  const ticketNumber = result.ticket_number;
+  const ticketNumber = result.ticket_number || propsTicketNumber || "";
   const respondBy = formatSlaDate(result.sla_due_date);
   const similar = result.possible_duplicates ?? [];
   return (

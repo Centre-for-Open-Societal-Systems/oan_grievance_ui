@@ -29,15 +29,18 @@ export function FilterDropdown({
   selected,
   onChange,
   isLoading = false,
+  disabled = false,
+  disabledMessage,
 }: {
   label: string;
   options: FilterOption[];
   selected: string[];
   onChange: (val: string[]) => void;
   isLoading?: boolean;
+  disabled?: boolean;
+  disabledMessage?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Deduplicate options by value
@@ -53,19 +56,10 @@ export function FilterDropdown({
     return result;
   }, [options]);
 
-  const filteredOptions = React.useMemo(() => {
-    if (!searchQuery.trim()) return uniqueOptions;
-    const q = searchQuery.toLowerCase().trim();
-    return uniqueOptions.filter(
-      (opt) => opt.label.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q)
-    );
-  }, [uniqueOptions, searchQuery]);
-
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
-        setSearchQuery('');
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -88,18 +82,28 @@ export function FilterDropdown({
     }
   };
 
+  const selectedLabels = selected
+    .map(val => uniqueOptions.find(opt => opt.value === val)?.label || val)
+    .join(', ');
+
   const summary = isLoading
     ? 'Loading…'
-    : selected.length > 0
-      ? `${selected.length} selected`
-      : `Select ${label}`;
+    : disabled && disabledMessage
+      ? disabledMessage
+      : selected.length > 0
+        ? selectedLabels
+        : `Select ${label}`;
 
   return (
     <div className="flex flex-col gap-1.5 mb-4 relative" ref={dropdownRef}>
       <label className="text-sm font-semibold text-gray-700">{label}</label>
       <div
-        className="flex items-center justify-between px-3 py-2.5 border border-gray-200 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
-        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center justify-between px-3 py-2.5 border rounded-lg transition-colors ${
+          disabled
+            ? 'bg-gray-50 border-gray-100 cursor-not-allowed opacity-70'
+            : 'border-gray-200 cursor-pointer bg-white hover:bg-gray-50'
+        }`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <span className="text-sm text-gray-500 line-clamp-1">{summary}</span>
         <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -107,27 +111,15 @@ export function FilterDropdown({
 
       {isOpen && (
         <div className="absolute top-full left-0 right-0 z-20 mt-1 border border-gray-100 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white overflow-hidden max-h-60 overflow-y-auto transform origin-top transition-all duration-200 opacity-100 scale-100 flex flex-col">
-          {uniqueOptions.length > 6 && (
-            <div className="p-2 border-b border-gray-100 sticky top-0 bg-white z-10">
-              <input
-                type="text"
-                placeholder={`Search ${label}…`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full px-2.5 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:border-[#1E8E3E] text-gray-800 placeholder:text-gray-400"
-              />
-            </div>
-          )}
           <div className="overflow-y-auto max-h-48">
-            {filteredOptions.length === 0 ? (
+            {uniqueOptions.length === 0 ? (
               <div className="px-3 py-3 text-sm text-gray-400 text-center">
-                {isLoading ? 'Loading options…' : 'No matching options'}
+                {isLoading ? 'Loading options…' : 'No options available'}
               </div>
             ) : (
               [
-                ...(!searchQuery ? [{ value: '__all__', label: 'All' }] : []),
-                ...filteredOptions,
+                { value: '__all__', label: 'All' },
+                ...uniqueOptions,
               ].map((option, idx) => {
                 const isAllRow = option.value === '__all__';
                 const isChecked = isAllRow ? isAllSelected : selected.includes(option.value);
@@ -395,15 +387,30 @@ export function AdvancedFiltersSidebar({
             label="Regions"
             options={regionOptions}
             selected={filters.regions}
-            onChange={(val) => setFilters((f) => ({ ...f, regions: val }))}
+            onChange={(val) => setFilters((f) => {
+              const next = { ...f, regions: val };
+              if (val.length === 0) {
+                next.woredas = [];
+                next.kebeles = [];
+              }
+              return next;
+            })}
             isLoading={regionsStatus === 'loading'}
           />
           <FilterDropdown
             label="Woredas"
             options={woredaOptions}
             selected={filters.woredas}
-            onChange={(val) => setFilters((f) => ({ ...f, woredas: val }))}
+            onChange={(val) => setFilters((f) => {
+              const next = { ...f, woredas: val };
+              if (val.length === 0) {
+                next.kebeles = [];
+              }
+              return next;
+            })}
             isLoading={woredasStatus === 'loading'}
+            disabled={filters.regions.length === 0}
+            disabledMessage="Select region first"
           />
           <FilterDropdown
             label="Kebeles"
@@ -411,6 +418,8 @@ export function AdvancedFiltersSidebar({
             selected={filters.kebeles}
             onChange={(val) => setFilters((f) => ({ ...f, kebeles: val }))}
             isLoading={kebelesStatus === 'loading'}
+            disabled={filters.woredas.length === 0}
+            disabledMessage="Select woreda first"
           />
 
           <div className="mt-2 mb-6 relative">
