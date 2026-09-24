@@ -428,7 +428,7 @@ export const selectGrievanceTypeOptions = createSelector(
       state.metadata.grievanceOptions?.grievance_types,
     (_state: RootState, selectedCategory?: string) => selectedCategory,
   ],
-  (backendTypes, selectedCategory): Array<{ value: string; label: string; id?: string }> => {
+  (backendTypes, selectedCategory): Array<{ value: string; label: string }> => {
     if (backendTypes && backendTypes.length > 0) {
       let filtered = backendTypes;
       if (selectedCategory) {
@@ -437,10 +437,18 @@ export const selectGrievanceTypeOptions = createSelector(
           (t) => t.service_category.toLowerCase() === matchCat
         );
       }
+      // Unlike submission channel/submitter type/service category (each of
+      // those doctypes autonames on its own display field, so the name IS the
+      // label), Grievance Type autonames "format:GTYPE-{#####}" — its `name`
+      // is a generated id, never the type_name. Sending the display text as
+      // `grievance_type` (a Link field to Grievance Type) makes the backend
+      // 404 with "Could not find Grievance Type: <label>" the moment a draft
+      // is saved or the case is submitted, since Frappe validates a Link
+      // field's value against the target doctype's actual `name`, not any of
+      // its other fields.
       return filtered.map((t) => ({
-        value: t.grievance_type_id || t.type_name,
+        value: t.grievance_type_id,
         label: t.type_name,
-        id: t.grievance_type_id,
       }));
     }
 

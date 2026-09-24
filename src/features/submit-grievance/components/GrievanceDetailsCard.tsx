@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, type ReactElement } from "react";
 import { useTranslations } from "next-intl";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -29,11 +29,50 @@ import {
   findWoredaNode,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
-import { uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
+import { getAttachments, uploadAttachment, SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
 import { saveDraft } from "@/lib/drafts";
 import { buildSaveDraftPayload } from "../draftPayload";
 import { logger } from "@/lib/logger";
 import type { RootState } from "@/store";
+
+type UploadState = "idle" | "uploading" | "persisting" | "error";
+
+/** The line under the uploaded file's name — mirrors `scanStatusBadge`'s if-chain shape rather than a nested ternary. */
+function attachmentStatusIndicator(uploadState: UploadState, scanStatus: ScanStatus | null): ReactElement {
+  if (uploadState === "uploading") {
+    return <span className="text-gray-500">Uploading…</span>;
+  }
+  if (scanStatus === SCAN_STATUS.CLEAN) {
+    return (
+      <>
+        <div className="w-2 h-2 rounded-full bg-[#16A34A]"></div>
+        <span className="text-[#16A34A]">Uploaded · scan clean</span>
+      </>
+    );
+  }
+  if (scanStatus === SCAN_STATUS.INFECTED) {
+    return (
+      <>
+        <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+        <span className="text-red-600">Failed malware scan · not usable as evidence</span>
+      </>
+    );
+  }
+  if (scanStatus === SCAN_STATUS.FAILED) {
+    return (
+      <>
+        <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+        <span className="text-red-600">Scan didn&apos;t complete · remove and try again</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
+      <span className="text-amber-600">Scanning for malware…</span>
+    </>
+  );
+}
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
   return (
@@ -106,6 +145,16 @@ const DETAILS_FIELD_ORDER: ReadonlyArray<{ key: DetailsField; id: string }> = [
   { key: "woreda", id: "grievance-woreda" },
   { key: "description", id: "grievance-description" },
 ];
+
+// The malware scan is asynchronous (queued for ClamAV, see scanning.py's
+// `enqueue_scan_attachment`) — the upload response's "Pending" never updates
+// itself, so something has to ask again. ClamAV's own scan is fast; this just
+// needs to catch up with a background queue, not a slow external service.
+const SCAN_POLL_INTERVAL_MS = 3000;
+// ~2 minutes: long enough to ride out a busy queue, short enough that a
+// truly stuck scan (a down/unconfigured scanner — see scanning.py's
+// "fail closed" note) doesn't poll forever in an abandoned tab.
+const SCAN_POLL_MAX_ATTEMPTS = 40;
 
 export function GrievanceDetailsCard({
   onNext,
@@ -253,7 +302,7 @@ export function GrievanceDetailsCard({
   // both still need to block on it too, same as "uploading" — an in-flight
   // persist-save losing a race against either would resurrect a removed
   // attachment or leave a draft record that doesn't yet know about it.
-  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "persisting" | "error">("idle");
+  const [uploadState, setUploadState] = useState<UploadState>("idle");
   // `submit_document` with a `client_uuid` requires the Grievance Draft to
   // already exist server-side — this fires once, right before the first
   // upload, rather than on every file selection.
@@ -400,6 +449,14 @@ export function GrievanceDetailsCard({
       setError("Remove the attachment that failed the malware scan before continuing.");
       return;
     }
+    if (scanStatus === SCAN_STATUS.FAILED) {
+      setError("The attachment's malware scan couldn't complete. Remove it and try uploading again.");
+      return;
+    }
+    if (scanStatus === SCAN_STATUS.PENDING) {
+      setError("Still scanning the attachment for malware — this takes a few seconds, please wait.");
+      return;
+    }
     setError(null);
     // "Save & Continue" saves: without this a reload or a closed tab on the
     // next step lost everything typed here unless Save Draft had been clicked
@@ -512,6 +569,63 @@ export function GrievanceDetailsCard({
   // draft with no local blob to read one off.
   const displayFileName = attachmentFileName;
   const hasLocalPreview = uploadedFile !== null;
+
+  // Polls while the scan is still in flight — see SCAN_POLL_INTERVAL_MS's
+  // doc comment for why this can't just wait for a push. Stops itself once
+  // the status leaves Pending (Clean/Infected/Failed), the attachment is
+  // removed, or this step unmounts; a resumed draft's already-scanned
+  // attachment never starts this at all, since its scanStatus arrives
+  // non-Pending from page.tsx's draft-load in the first place.
+  useEffect(() => {
+    if (scanStatus !== SCAN_STATUS.PENDING || !attachmentId) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    // Guards against a round-trip that outlives one interval tick — this app
+    // explicitly targets slow/unreliable connections (see UPLOAD_TIMEOUT_MS's
+    // own comment above), where a single `getAttachments` call can easily run
+    // longer than SCAN_POLL_INTERVAL_MS. Without this, a slow tick doesn't
+    // pause the interval, so the next tick's call stacks another identical
+    // request on top of it instead of waiting.
+    let inFlight = false;
+
+    const poll = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      attempts += 1;
+      try {
+        const rows = await getAttachments(clientUuid);
+        if (cancelled) return;
+        const row = rows.find((r) => r.name === attachmentId);
+        if (row && row.scan_status !== SCAN_STATUS.PENDING) {
+          setScanStatus(row.scan_status);
+          clearInterval(intervalId);
+          return;
+        }
+      } catch (pollError) {
+        logger.error("Failed to check attachment scan status:", pollError);
+      } finally {
+        inFlight = false;
+      }
+      if (!cancelled && attempts >= SCAN_POLL_MAX_ATTEMPTS) {
+        logger.error(`Scan status still Pending for ${attachmentId} after ${attempts} checks — giving up.`);
+        // Otherwise the wizard is stuck showing "Scanning for malware…" and a
+        // disabled Continue forever, with no explanation — treating a scan
+        // that never resolved the same as one that failed reuses the
+        // existing Failed messaging/remove-and-retry guidance rather than
+        // adding a third "stuck" state nobody built UI for.
+        setScanStatus(SCAN_STATUS.FAILED);
+        clearInterval(intervalId);
+      }
+    };
+
+    const intervalId = setInterval(() => void poll(), SCAN_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [scanStatus, attachmentId, clientUuid, setScanStatus]);
 
   return (
     <>
@@ -804,24 +918,7 @@ export function GrievanceDetailsCard({
                       {displayFileName}
                     </p>
                     <div className="flex items-center gap-1.5 mt-0.5 text-[13px] font-medium">
-                      {uploadState === "uploading" ? (
-                        <span className="text-gray-500">Uploading…</span>
-                      ) : scanStatus === SCAN_STATUS.CLEAN ? (
-                        <>
-                          <div className="w-2 h-2 rounded-full bg-[#16A34A]"></div>
-                          <span className="text-[#16A34A]">Uploaded · scan clean</span>
-                        </>
-                      ) : scanStatus === SCAN_STATUS.INFECTED ? (
-                        <>
-                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
-                          <span className="text-red-600">Failed malware scan · not usable as evidence</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                          <span className="text-amber-600">Uploaded · pending scan</span>
-                        </>
-                      )}
+                      {attachmentStatusIndicator(uploadState, scanStatus)}
                     </div>
                   </div>
                 </div>
@@ -840,6 +937,7 @@ export function GrievanceDetailsCard({
                   <button
                     onClick={handleRemoveFile}
                     disabled={uploadState === "uploading" || uploadState === "persisting"}
+                    aria-label="Remove attachment"
                     title={
                       uploadState === "uploading" || uploadState === "persisting"
                         ? "Wait for the upload to finish before removing it"
@@ -888,7 +986,9 @@ export function GrievanceDetailsCard({
                 disabled={
                   uploadState === "uploading" ||
                   uploadState === "persisting" ||
-                  scanStatus === SCAN_STATUS.INFECTED
+                  scanStatus === SCAN_STATUS.INFECTED ||
+                  scanStatus === SCAN_STATUS.FAILED ||
+                  scanStatus === SCAN_STATUS.PENDING
                 }
                 className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50 disabled:opacity-50 disabled:cursor-not-allowed"
               >

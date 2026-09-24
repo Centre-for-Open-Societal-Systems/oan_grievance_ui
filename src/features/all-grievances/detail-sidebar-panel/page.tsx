@@ -105,7 +105,10 @@ export function GrievanceDetailSidebar({
                 <SubmitterDetails grievance={grievance} timelineData={timelineData} />
               ) : null}
               <ThreadSummary canManageCase={canManageCase} timelineData={timelineData} />
-              <AttachmentsList grievance={timelineData?.name || grievance?.id || activeTicket} />
+              <AttachmentsList
+                grievance={timelineData?.name || grievance?.id || activeTicket}
+                canManageCase={canManageCase}
+              />
             </div>
           </div>
         </div>

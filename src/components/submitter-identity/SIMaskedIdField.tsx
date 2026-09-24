@@ -32,11 +32,17 @@ export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, des
         id={id}
         type={revealed ? "text" : "password"}
         autoComplete="off"
-        // Not `inputMode="numeric"`/a numeric maxLength: a signed-in account's
-        // own Fayda ID can come back in the backend's issued shape (letters and
-        // hyphens, up to 60 chars — see ISSUED_FAYDA_ID_PATTERN in fields.ts),
-        // not just the 16-digit shape a user types by hand.
-        maxLength={60}
+        // Caps hand-typing at 16 (the shape FAYDA_PATTERN in fields.ts
+        // requires from someone typing their own ID). A signed-in account's
+        // own Fayda ID can come back longer, in the backend's issued shape
+        // (letters and hyphens, up to 60 chars — see ISSUED_FAYDA_ID_PATTERN)
+        // — but `maxLength` only constrains what the user can type, not a
+        // longer value set programmatically by a prefill, so capping it here
+        // doesn't truncate that case; it only stops someone hand-typing past
+        // the 16 digits the pattern actually accepts (this was 60 before,
+        // which let the Register screen's brand-new, never-prefilled field
+        // accept far more than a valid Fayda ID's length).
+        maxLength={16}
         value={value}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
