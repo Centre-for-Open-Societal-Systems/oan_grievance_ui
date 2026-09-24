@@ -67,7 +67,13 @@ export interface BuildSaveDraftPayloadInput extends WizardIdentitySource {
   kebele?: string;
   /** Display label, e.g. "Inputs" — not the wizard's internal slug. */
   serviceCategoryLabel?: string;
-  /** Already a name (see `selectGrievanceTypeOptions`), not an id. */
+  /**
+   * `grievance_type_id` (e.g. "GTYPE-00001"), not the type's display name —
+   * see `selectGrievanceTypeOptions`'s own doc comment. Unlike submission
+   * channel/submitter type/service category, Grievance Type autonames on a
+   * generated id, not its own name field, so the Link field this becomes
+   * needs the id.
+   */
   grievanceType?: string;
   associatedServiceProvider?: string;
   description?: string;
