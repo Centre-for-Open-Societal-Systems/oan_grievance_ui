@@ -10,7 +10,10 @@ interface SubmitterDetailsProps {
 }
 
 export function SubmitterDetails({ grievance, timelineData }: SubmitterDetailsProps) {
-  const isAnonymous = grievance.isAnonymous || Boolean(timelineData?.submitter?.is_anonymous);
+  const isAnonymous =
+    timelineData?.submitter?.is_anonymous !== undefined
+      ? Boolean(timelineData.submitter.is_anonymous)
+      : grievance.isAnonymous;
   const submitterName =
     (isAnonymous
       ? 'Anonymous'
@@ -28,16 +31,24 @@ export function SubmitterDetails({ grievance, timelineData }: SubmitterDetailsPr
     timelineData?.administrative_hierarchy;
   const hierarchyLocation = hierarchy
     ? [hierarchy.woreda, hierarchy.region].filter(Boolean).join(' / ') ||
-      [hierarchy.kebele, hierarchy.woreda, hierarchy.zone, hierarchy.region].filter(Boolean).join(', ')
+      hierarchy.woreda ||
+      hierarchy.region ||
+      (hierarchy.kebele && hierarchy.zone ? `${hierarchy.kebele} / ${hierarchy.zone}` : null) ||
+      hierarchy.kebele ||
+      null
     : null;
   const location =
     hierarchyLocation ||
-    grievance.location ||
     timelineData?.summary?.location ||
     timelineData?.location ||
     timelineData?.summary?.administrative_area ||
+    grievance.location ||
     'N/A';
-  const unit = timelineData?.summary?.administrative_unit || grievance.administrativeUnit || 'N/A';
+  const unit =
+    timelineData?.summary?.administrative_unit ||
+    hierarchy?.kebele ||
+    grievance.administrativeUnit ||
+    'N/A';
   const channel = timelineData?.summary?.submission_channel || grievance.submissionChannel || 'Web Portal';
   const submittedAt = grievance.submittedAt || 'N/A';
   const initials = getInitials(submitterName);

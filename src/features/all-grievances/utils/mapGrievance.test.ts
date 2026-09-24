@@ -72,7 +72,7 @@ describe('mapGrievanceListItem', () => {
       location: 'Kebele 01, Basona Werana, North Shewa, Oromia, Ethiopia',
     });
 
-    expect(grievance.location).toBe('Kebele 01 / Oromia');
+    expect(grievance.location).toBe('Basona Werana / Oromia');
   });
 
   it('formats location from administrative_area dotted path', () => {

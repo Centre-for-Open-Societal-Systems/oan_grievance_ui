@@ -982,13 +982,44 @@ export const selectRegionFilterOptions = createSelector(
 
 export const selectWoredaFilterOptions = createSelector(
   [
-    (state: RootState) => state.metadata.woredas,
-    (state: RootState) => state.metadata.childAreasByParent,
+    (state: RootState) => state.metadata,
+    (_state: RootState, selectedRegions?: string[]) => selectedRegions,
   ],
-  (allWoredas, childAreasByParent): Array<{ value: string; label: string }> => {
+  (metadata, selectedRegions): Array<{ value: string; label: string }> => {
     const woredaMap = new Map<string, string>();
 
-    for (const areas of Object.values(childAreasByParent)) {
+    if (selectedRegions && selectedRegions.length > 0) {
+      for (const regName of selectedRegions) {
+        const norm = regName.toLowerCase().trim();
+        const regNode = metadata.regions.find(
+          (r) =>
+            r.area_name.toLowerCase() === norm ||
+            r.area_id.toLowerCase() === norm ||
+            (r.code && r.code.toLowerCase() === norm) ||
+            (r.path_code && r.path_code.toLowerCase() === norm)
+        );
+        const parentKey = regNode?.area_id || regName;
+        const areas =
+          metadata.childAreasByParent[`${parentKey}_Woreda`] ||
+          metadata.childAreasByParent[parentKey] ||
+          (regNode?.path_code ? metadata.childAreasByParent[`${regNode.path_code}_Woreda`] : undefined) ||
+          (regNode?.path_code ? metadata.childAreasByParent[regNode.path_code] : undefined);
+
+        if (areas) {
+          for (const area of areas) {
+            if (!area.level_name || area.level_name === 'Woreda') {
+              woredaMap.set(area.area_name, area.area_name);
+            }
+          }
+        }
+      }
+
+      return Array.from(woredaMap.values())
+        .sort((a, b) => a.localeCompare(b))
+        .map((name) => ({ value: name, label: name }));
+    }
+
+    for (const areas of Object.values(metadata.childAreasByParent)) {
       for (const area of areas) {
         if (!area.level_name || area.level_name === 'Woreda') {
           woredaMap.set(area.area_name, area.area_name);
@@ -996,8 +1027,8 @@ export const selectWoredaFilterOptions = createSelector(
       }
     }
 
-    if (allWoredas) {
-      for (const area of allWoredas) {
+    if (metadata.woredas) {
+      for (const area of metadata.woredas) {
         if (!area.level_name || area.level_name === 'Woreda') {
           woredaMap.set(area.area_name, area.area_name);
         }
@@ -1012,13 +1043,38 @@ export const selectWoredaFilterOptions = createSelector(
 
 export const selectKebeleFilterOptions = createSelector(
   [
-    (state: RootState) => state.metadata.kebeles,
-    (state: RootState) => state.metadata.childAreasByParent,
+    (state: RootState) => state.metadata,
+    (_state: RootState, selectedWoredas?: string[]) => selectedWoredas,
   ],
-  (allKebeles, childAreasByParent): Array<{ value: string; label: string }> => {
+  (metadata, selectedWoredas): Array<{ value: string; label: string }> => {
     const kebeleMap = new Map<string, string>();
 
-    for (const areas of Object.values(childAreasByParent)) {
+    if (selectedWoredas && selectedWoredas.length > 0) {
+      const state = { metadata } as RootState;
+      for (const woredaName of selectedWoredas) {
+        const woredaNode = findWoredaNode(state, woredaName);
+        const parentKey = woredaNode?.area_id || woredaName;
+        const areas =
+          metadata.childAreasByParent[`${parentKey}_Kebele`] ||
+          metadata.childAreasByParent[parentKey] ||
+          (woredaNode?.path_code ? metadata.childAreasByParent[`${woredaNode.path_code}_Kebele`] : undefined) ||
+          (woredaNode?.path_code ? metadata.childAreasByParent[woredaNode.path_code] : undefined);
+
+        if (areas) {
+          for (const area of areas) {
+            if (!area.level_name || area.level_name === 'Kebele') {
+              kebeleMap.set(area.area_name, area.area_name);
+            }
+          }
+        }
+      }
+
+      return Array.from(kebeleMap.values())
+        .sort((a, b) => a.localeCompare(b))
+        .map((name) => ({ value: name, label: name }));
+    }
+
+    for (const areas of Object.values(metadata.childAreasByParent)) {
       for (const area of areas) {
         if (!area.level_name || area.level_name === 'Kebele') {
           kebeleMap.set(area.area_name, area.area_name);
@@ -1026,8 +1082,8 @@ export const selectKebeleFilterOptions = createSelector(
       }
     }
 
-    if (allKebeles) {
-      for (const area of allKebeles) {
+    if (metadata.kebeles) {
+      for (const area of metadata.kebeles) {
         if (!area.level_name || area.level_name === 'Kebele') {
           kebeleMap.set(area.area_name, area.area_name);
         }

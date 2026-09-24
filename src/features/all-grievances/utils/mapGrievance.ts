@@ -54,16 +54,20 @@ export function formatLocation(item: GrievanceListItem): string {
     const loc = item.location.trim();
     if (loc.includes('/')) return loc;
     const parts = loc.split(',').map((p) => p.trim()).filter(Boolean);
-    if (parts.length >= 2) {
-      const nonCountry = parts.filter((p) => p.toLowerCase() !== 'ethiopia');
-      if (nonCountry.length === 2) {
-        return `${nonCountry[0]} / ${nonCountry[1]}`;
-      }
-      if (nonCountry.length >= 3) {
-        const woreda = nonCountry[0];
-        const region = nonCountry[nonCountry.length - 1];
-        return `${woreda} / ${region}`;
-      }
+    const nonCountry = parts.filter((p) => p.toLowerCase() !== 'ethiopia');
+    if (nonCountry.length === 2) {
+      // [woreda, region]
+      return `${nonCountry[0]} / ${nonCountry[1]}`;
+    }
+    if (nonCountry.length === 3) {
+      // [woreda, zone, region]
+      return `${nonCountry[0]} / ${nonCountry[2]}`;
+    }
+    if (nonCountry.length >= 4) {
+      // [kebele, woreda, zone, region] -> woreda / region
+      const woreda = nonCountry[1];
+      const region = nonCountry[nonCountry.length - 1];
+      return `${woreda} / ${region}`;
     }
     return loc;
   }

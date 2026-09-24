@@ -4,8 +4,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchGrievanceOptionsThunk,
   fetchRegionsThunk,
-  fetchWoredasThunk,
-  fetchKebelesThunk,
   fetchChildAreasThunk,
   selectCategoryFilterOptions,
   selectRegionFilterOptions,
@@ -260,12 +258,38 @@ export function AdvancedFiltersSidebar({
   const statusOptions = useAppSelector(selectStatusFilterOptions);
   const categoryOptions = useAppSelector(selectCategoryFilterOptions);
   const regionOptions = useAppSelector(selectRegionFilterOptions);
-  const woredaOptions = useAppSelector(selectWoredaFilterOptions);
-  const kebeleOptions = useAppSelector(selectKebeleFilterOptions);
+  const woredaOptions = useAppSelector((state) =>
+    selectWoredaFilterOptions(state, filters.regions.length > 0 ? filters.regions : undefined)
+  );
+  const kebeleOptions = useAppSelector((state) =>
+    selectKebeleFilterOptions(state, filters.woredas.length > 0 ? filters.woredas : undefined)
+  );
   const grievanceStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
-  const woredasStatus = useAppSelector((state) => state.metadata.woredasStatus);
-  const kebelesStatus = useAppSelector((state) => state.metadata.kebelesStatus);
+
+  const isWoredasLoading = useAppSelector((state) => {
+    if (filters.regions.length === 0) return false;
+    return filters.regions.some((regionName) => {
+      const region = regionOptions.find((r) => r.label === regionName || r.value === regionName);
+      const parentKey = region?.value || regionName;
+      return (
+        state.metadata.childAreasStatus[`${parentKey}_Woreda`] === 'loading' ||
+        state.metadata.childAreasStatus[parentKey] === 'loading'
+      );
+    });
+  });
+
+  const isKebelesLoading = useAppSelector((state) => {
+    if (filters.woredas.length === 0) return false;
+    return filters.woredas.some((woredaName) => {
+      const woreda = woredaOptions.find((w) => w.label === woredaName || w.value === woredaName);
+      const parentKey = woreda?.value || woredaName;
+      return (
+        state.metadata.childAreasStatus[`${parentKey}_Kebele`] === 'loading' ||
+        state.metadata.childAreasStatus[parentKey] === 'loading'
+      );
+    });
+  });
 
   useEffect(() => {
     if (grievanceStatus === "idle") {
@@ -274,13 +298,7 @@ export function AdvancedFiltersSidebar({
     if (regionsStatus === "idle") {
       void dispatch(fetchRegionsThunk());
     }
-    if (woredasStatus === "idle") {
-      void dispatch(fetchWoredasThunk());
-    }
-    if (kebelesStatus === "idle") {
-      void dispatch(fetchKebelesThunk());
-    }
-  }, [dispatch, grievanceStatus, regionsStatus, woredasStatus, kebelesStatus]);
+  }, [dispatch, grievanceStatus, regionsStatus]);
 
   useEffect(() => {
     if (filters.regions.length > 0) {
@@ -288,7 +306,6 @@ export function AdvancedFiltersSidebar({
         const region = regionOptions.find((r) => r.label === regionName || r.value === regionName);
         if (region) {
           void dispatch(fetchChildAreasThunk({ parent: region.value, level_name: 'Woreda' }));
-          void dispatch(fetchChildAreasThunk({ parent: region.value, level_name: 'Kebele' }));
         }
       });
     }
@@ -408,7 +425,7 @@ export function AdvancedFiltersSidebar({
               }
               return next;
             })}
-            isLoading={woredasStatus === 'loading'}
+            isLoading={isWoredasLoading}
             disabled={filters.regions.length === 0}
             disabledMessage="Select region first"
           />
@@ -417,7 +434,7 @@ export function AdvancedFiltersSidebar({
             options={kebeleOptions}
             selected={filters.kebeles}
             onChange={(val) => setFilters((f) => ({ ...f, kebeles: val }))}
-            isLoading={kebelesStatus === 'loading'}
+            isLoading={isKebelesLoading}
             disabled={filters.woredas.length === 0}
             disabledMessage="Select woreda first"
           />
