@@ -33,6 +33,7 @@ export interface DraftState {
   name: string;
   ticket_number: string | null;
   client_submission_uuid: string;
+  client_uuid?: string;
   status: string;
   workflow_state: string;
   submission_channel: string | null;
