@@ -137,8 +137,8 @@ export default function SubmitGrievancePage() {
         if (cancelled) return;
         if (draft.client_submission_uuid) {
           setClientUuid(draft.client_submission_uuid);
-        } else if ((draft as any).client_uuid) {
-          setClientUuid((draft as any).client_uuid);
+        } else if ((draft as Record<string, unknown>).client_uuid) {
+          setClientUuid((draft as Record<string, unknown>).client_uuid as string);
         }
         if (draft.submitter_type) setSubmitterType(normalizeSubmitterType(draft.submitter_type));
         if (draft.submission_channel) setSubmissionChannel(normalizeSubmissionChannel(draft.submission_channel));
