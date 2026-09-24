@@ -32,9 +32,11 @@ import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import {
   getAttachments,
   uploadAttachments,
+  activeWizardAttachments,
   SCAN_STATUS,
   MAX_ATTACHMENTS_PER_CASE,
   type WizardAttachment,
+  type AttachmentRow,
 } from "@/lib/attachments";
 import { saveDraft } from "@/lib/drafts";
 import { buildSaveDraftPayload } from "../draftPayload";
@@ -79,10 +81,24 @@ function attachmentStatusIndicator(item: WizardAttachment): ReactElement {
       </>
     );
   }
+  if (scanStatus === SCAN_STATUS.PENDING) {
+    return (
+      <>
+        <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
+        <span className="text-amber-600">Scanning for malware…</span>
+      </>
+    );
+  }
+  // `scanStatus` is null: a resumed draft attachment whose backend
+  // scan_status wasn't one this build recognizes (see page.tsx's draft-load
+  // mapping) — not "Pending", so it never enters the poll loop and must not
+  // claim to be scanning; that loop would never resolve or time it out,
+  // leaving a spinner running forever for a status this UI simply doesn't
+  // know how to read.
   return (
     <>
-      <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
-      <span className="text-amber-600">Scanning for malware…</span>
+      <Info className="w-3.5 h-3.5 text-gray-400" />
+      <span className="text-gray-500">Status unavailable · reload to check again</span>
     </>
   );
 }
@@ -475,8 +491,10 @@ export function GrievanceDetailsCard({
 
     // The backend caps a case at MAX_ATTACHMENTS_PER_CASE total — trim a
     // bulk selection that would blow past it rather than sending it and
-    // letting the whole batch 400.
-    const remainingSlots = MAX_ATTACHMENTS_PER_CASE - attachments.length;
+    // letting the whole batch 400. A row stuck at uploadState "error" never
+    // reached the backend, so it doesn't hold a slot here either — see
+    // activeWizardAttachments.
+    const remainingSlots = MAX_ATTACHMENTS_PER_CASE - activeWizardAttachments(attachments).length;
     if (remainingSlots <= 0) {
       setError(`You can attach up to ${MAX_ATTACHMENTS_PER_CASE} files per grievance. Remove one before adding another.`);
       return;
@@ -494,6 +512,7 @@ export function GrievanceDetailsCard({
       file,
       fileName: file.name,
       scanStatus: null,
+      scanPollAttempts: 0,
       uploadState: "uploading",
       error: null,
     }));
@@ -508,16 +527,31 @@ export function GrievanceDetailsCard({
 
       const results = await uploadAttachments({ files: filesToUpload, clientUuid });
       // The backend returns one result per file, in the same order it
-      // received them — matched back to `pending` by position.
+      // received them — matched back to `pending` by position. A missing
+      // entry (the response array came back shorter than the files sent)
+      // is treated as a failure for that file rather than left at
+      // "uploading" forever with no error and no way to recover but a
+      // reload.
+      const succeededKeys = new Set<string>();
       setAttachments((prev) =>
         prev.map((item) => {
           const idx = pending.findIndex((p) => p.key === item.key);
           if (idx === -1) return item;
           const result = results[idx];
-          if (!result) return item;
-          return { ...item, attachmentId: result.attachment, scanStatus: result.scan_status, uploadState: "idle" };
+          if (!result) {
+            return { ...item, uploadState: "error", error: "The server didn't confirm this upload — try again." };
+          }
+          succeededKeys.add(item.key);
+          return {
+            ...item,
+            attachmentId: result.attachment,
+            scanStatus: result.scan_status,
+            scanPollAttempts: 0,
+            uploadState: "idle",
+          };
         })
       );
+      if (succeededKeys.size === 0) return;
 
       // Persist the attachments' identities onto the draft right away, not
       // only when the user separately clicks Save Draft — otherwise
@@ -528,10 +562,13 @@ export function GrievanceDetailsCard({
       // Remove issues its own saveDraft to clear an attachment, and if that
       // resolved before this one, this call's later-arriving response could
       // race it. Sequencing the two removes the race instead of trying to
-      // win it.
+      // win it. Only the entries that actually succeeded above go through
+      // this — one that came back errored has no attachmentId to persist,
+      // and must keep showing its error rather than being flipped through
+      // "persisting" back to a silent "idle".
       draftEnsuredRef.current = true;
       setAttachments((prev) =>
-        prev.map((item) => (pendingKeys.has(item.key) ? { ...item, uploadState: "persisting" } : item))
+        prev.map((item) => (succeededKeys.has(item.key) ? { ...item, uploadState: "persisting" } : item))
       );
       try {
         await saveDraft(currentDraftPayload());
@@ -539,7 +576,7 @@ export function GrievanceDetailsCard({
         logger.error("Failed to persist the attachments onto the draft:", saveError);
       } finally {
         setAttachments((prev) =>
-          prev.map((item) => (pendingKeys.has(item.key) ? { ...item, uploadState: "idle" } : item))
+          prev.map((item) => (succeededKeys.has(item.key) ? { ...item, uploadState: "idle" } : item))
         );
       }
     } catch (uploadError) {
@@ -567,6 +604,12 @@ export function GrievanceDetailsCard({
     // this component saves.
   };
 
+  // A failed upload never reached the backend, so it shouldn't count toward
+  // the cap or the badge — see activeWizardAttachments. Rendered separately
+  // below from `attachments` itself so the failed row still shows in the
+  // picker's own list for the user to see and remove.
+  const activeAttachments = activeWizardAttachments(attachments);
+
   // Polls while any attachment's scan is still in flight — see
   // SCAN_POLL_INTERVAL_MS's doc comment for why this can't just wait for a
   // push. One `getAttachments` call per tick covers every pending item at
@@ -583,57 +626,96 @@ export function GrievanceDetailsCard({
     if (pendingAttachmentIds.length === 0) return;
 
     let cancelled = false;
-    let attempts = 0;
     // Guards against a round-trip that outlives one interval tick — this app
     // explicitly targets slow/unreliable connections (see UPLOAD_TIMEOUT_MS's
     // own comment above), where a single `getAttachments` call can easily run
     // longer than SCAN_POLL_INTERVAL_MS. Without this, a slow tick doesn't
     // pause the interval, so the next tick's call stacks another identical
-    // request on top of it instead of waiting.
+    // request on top of it instead of waiting. It also means a slow
+    // connection completes fewer checks per minute, so the real wall-clock
+    // time before SCAN_POLL_MAX_ATTEMPTS gives up self-extends, rather than
+    // being a fixed deadline regardless of how many checks actually ran.
     let inFlight = false;
+    // Counted here, synchronously in plain JS, not purely through repeated
+    // setAttachments round-trips — a tick's count has to be reliably known
+    // before the *next* tick fires (as soon as SCAN_POLL_INTERVAL_MS later),
+    // which a value only ever read back out of React state can't guarantee
+    // land before then. Seeded once, from each attachment's own
+    // `scanPollAttempts` (see its doc comment) as of right now, and written
+    // back onto the lifted attachment every tick — so a remount (page.tsx
+    // unmounts this component on every Step 1<->2 navigation) picks up
+    // close to where this run left off instead of restarting at 0, without
+    // the counting itself depending on state timing.
+    const attemptsById = new Map(
+      attachments
+        .filter((a) => a.attachmentId && pendingAttachmentIds.includes(a.attachmentId))
+        .map((a) => [a.attachmentId as string, a.scanPollAttempts])
+    );
 
     const poll = async () => {
       if (inFlight) return;
       inFlight = true;
-      attempts += 1;
+
+      let rows: AttachmentRow[] | null = null;
       try {
-        const rows = await getAttachments(clientUuid);
-        if (cancelled) return;
-        setAttachments((prev) =>
-          prev.map((item) => {
-            if (item.scanStatus !== SCAN_STATUS.PENDING || !item.attachmentId) return item;
-            const row = rows.find((r) => r.name === item.attachmentId);
-            return row && row.scan_status !== SCAN_STATUS.PENDING ? { ...item, scanStatus: row.scan_status } : item;
-          })
-        );
-        // Whether to keep polling — derived from `rows` (this tick's fetch)
-        // against the id set this effect started watching, not from the
-        // `setAttachments` updater above: React doesn't guarantee that
-        // callback runs synchronously, so a flag set inside it can't be
-        // trusted immediately after the call.
-        const stillPending = pendingAttachmentIds.some((id) => {
-          const row = rows.find((r) => r.name === id);
-          return !row || row.scan_status === SCAN_STATUS.PENDING;
-        });
-        if (!stillPending) {
-          clearInterval(intervalId);
-          return;
-        }
+        rows = await getAttachments(clientUuid);
       } catch (pollError) {
         logger.error("Failed to check attachment scan status:", pollError);
       } finally {
         inFlight = false;
       }
-      if (!cancelled && attempts >= SCAN_POLL_MAX_ATTEMPTS) {
-        logger.error(`Scan status still Pending for [${pendingAttachmentKey}] after ${attempts} checks — giving up.`);
-        // Otherwise the wizard is stuck showing "Scanning for malware…" and a
-        // disabled Continue forever, with no explanation — treating a scan
-        // that never resolved the same as one that failed reuses the
-        // existing Failed messaging/remove-and-retry guidance rather than
-        // adding a third "stuck" state nobody built UI for.
-        setAttachments((prev) =>
-          prev.map((item) => (item.scanStatus === SCAN_STATUS.PENDING ? { ...item, scanStatus: SCAN_STATUS.FAILED } : item))
-        );
+      if (cancelled) return;
+
+      // Derived from `rows` (this tick's fetch) against the id set this
+      // effect started watching, not from the `setAttachments` updater
+      // below: React doesn't guarantee that callback runs synchronously, so
+      // a flag set inside it can't be trusted immediately after. A failed
+      // fetch (rows still null) leaves every watched id "still pending" —
+      // unknown, not resolved — so it still counts as a completed check
+      // toward giving up, rather than stalling the count.
+      const stillPendingIds = pendingAttachmentIds.filter((id) => {
+        if (!rows) return true;
+        const row = rows.find((r) => r.name === id);
+        return !row || row.scan_status === SCAN_STATUS.PENDING;
+      });
+      const timedOutIds: string[] = [];
+      for (const id of stillPendingIds) {
+        const next = (attemptsById.get(id) ?? 0) + 1;
+        attemptsById.set(id, next);
+        if (next >= SCAN_POLL_MAX_ATTEMPTS) timedOutIds.push(id);
+      }
+      if (timedOutIds.length > 0) {
+        logger.error(`Scan status still Pending for [${timedOutIds.join(",")}] after ${SCAN_POLL_MAX_ATTEMPTS} checks — giving up.`);
+      }
+
+      setAttachments((prev) =>
+        prev.map((item) => {
+          if (
+            item.scanStatus !== SCAN_STATUS.PENDING ||
+            !item.attachmentId ||
+            !pendingAttachmentIds.includes(item.attachmentId)
+          ) {
+            return item;
+          }
+          if (timedOutIds.includes(item.attachmentId)) {
+            // Otherwise the wizard is stuck showing "Scanning for
+            // malware…" and a disabled Continue forever, with no
+            // explanation — treating a scan that never resolved the same
+            // as one that failed reuses the existing Failed
+            // messaging/remove-and-retry guidance rather than adding a
+            // third "stuck" state nobody built UI for.
+            return { ...item, scanStatus: SCAN_STATUS.FAILED };
+          }
+          const row = rows?.find((r) => r.name === item.attachmentId);
+          if (row && row.scan_status !== SCAN_STATUS.PENDING) {
+            return { ...item, scanStatus: row.scan_status };
+          }
+          const attempts = attemptsById.get(item.attachmentId);
+          return attempts != null ? { ...item, scanPollAttempts: attempts } : item;
+        })
+      );
+
+      if (stillPendingIds.every((id) => timedOutIds.includes(id))) {
         clearInterval(intervalId);
       }
     };
@@ -892,9 +974,9 @@ export function GrievanceDetailsCard({
           {/* Supporting Documents / Evidence */}
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Supporting Documents / Evidence {attachments.length > 0 && `(${attachments.length}/${MAX_ATTACHMENTS_PER_CASE})`}
+              Supporting Documents / Evidence {activeAttachments.length > 0 && `(${activeAttachments.length}/${MAX_ATTACHMENTS_PER_CASE})`}
             </label>
-            {attachments.length < MAX_ATTACHMENTS_PER_CASE && (
+            {activeAttachments.length < MAX_ATTACHMENTS_PER_CASE && (
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full bg-[#F9FAFB] border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-[#f0fcf3] transition-colors cursor-pointer"
@@ -909,7 +991,7 @@ export function GrievanceDetailsCard({
                   Max 10 MB each · JPG, PNG, PDF, MP3 · up to {MAX_ATTACHMENTS_PER_CASE} files
                 </p>
                 <button className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F0FDF4] text-[#16A34A] rounded-lg text-sm font-semibold hover:bg-green-100 transition-colors border border-green-300 hover:border-green-300">
-                  {attachments.length > 0 ? "+ Add More Files" : "+ Browse Files"}
+                  {activeAttachments.length > 0 ? "+ Add More Files" : "+ Browse Files"}
                 </button>
               </div>
             )}

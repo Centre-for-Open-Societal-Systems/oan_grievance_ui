@@ -69,6 +69,7 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
             file: null,
             fileName: initial.attachmentFileName ?? '',
             scanStatus: initial.scanStatus ?? null,
+            scanPollAttempts: 0,
             uploadState: 'idle',
             error: null,
           },

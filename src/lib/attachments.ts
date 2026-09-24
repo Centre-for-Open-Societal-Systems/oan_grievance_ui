@@ -60,9 +60,37 @@ export interface WizardAttachment {
   file: File | null;
   fileName: string;
   scanStatus: ScanStatus | null;
+  /**
+   * How many completed scan-poll checks this attachment has been through
+   * while "Pending" — drives GrievanceDetailsCard's give-up timeout. Reset
+   * to 0 whenever `scanStatus` (re-)becomes "Pending"; meaningless
+   * otherwise. Lives here, not in a ref local to that component, because
+   * page.tsx conditionally unmounts/remounts GrievanceDetailsCard on every
+   * Step 1<->2 navigation; a component-local counter would reset on every
+   * Back/Next, defeating the timeout. Counting actual completed checks
+   * (not elapsed wall-clock time) matters too: on a slow connection where a
+   * single check can outlast the poll interval, fewer checks complete per
+   * minute, so the real time before giving up self-extends — the same
+   * "this app targets slow/unreliable connections" reasoning the poll
+   * effect's own comments describe elsewhere.
+   */
+  scanPollAttempts: number;
   uploadState: AttachmentUploadState;
   /** Set only on uploadState "error" — why this particular file failed. */
   error: string | null;
+}
+
+/**
+ * The attachments that actually count as evidence on the case — everything
+ * except a row stuck at uploadState "error". A failed upload never made it
+ * to the backend (no `attachmentId`), so it must not count toward
+ * `MAX_ATTACHMENTS_PER_CASE`, block the dropzone from reopening, or be
+ * listed as a real attachment on the Review step; it stays visible in the
+ * picker's own list (via the full, unfiltered array) only so the user can
+ * see it failed and remove it.
+ */
+export function activeWizardAttachments(attachments: WizardAttachment[]): WizardAttachment[] {
+  return attachments.filter((a) => a.uploadState !== 'error');
 }
 
 /**

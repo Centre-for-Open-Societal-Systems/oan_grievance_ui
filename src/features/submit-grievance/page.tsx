@@ -179,18 +179,32 @@ export default function SubmitGrievancePage() {
         if (draft.associated_service_provider) setServiceProvider(draft.associated_service_provider);
         if (draft.attachments && draft.attachments.length > 0) {
           const validScanStatuses: string[] = Object.values(SCAN_STATUS);
-          const resumedAttachments: WizardAttachment[] = draft.attachments
-            .filter((a) => validScanStatuses.includes(a.scan_status))
-            .map((a) => ({
+          // Every resumed attachment is kept, not just the ones with a
+          // scan_status this build recognizes — it still exists (and still
+          // counts toward the backend's MAX_ATTACHMENTS_PER_CASE) either
+          // way. Dropping the unrecognized ones used to undercount what the
+          // backend actually has, letting the user pick more files than the
+          // real remaining capacity allowed.
+          const resumedAttachments: WizardAttachment[] = draft.attachments.map((a) => {
+            const scanStatus = validScanStatuses.includes(a.scan_status) ? (a.scan_status as ScanStatus) : null;
+            return {
               key: a.name,
               attachmentId: a.name,
               file: null,
               fileName: a.file_name,
-              scanStatus: a.scan_status as ScanStatus,
+              scanStatus,
+              // The backend doesn't report how many checks a scan has
+              // already been through, so a resumed Pending attachment's
+              // give-up count restarts at 0 here rather than picking up
+              // wherever it really was — a best-effort baseline rather than
+              // nothing, still bounded going forward. See
+              // scanPollAttempts's doc comment.
+              scanPollAttempts: 0,
               uploadState: "idle",
               error: null,
-            }));
-          if (resumedAttachments.length > 0) setAttachments(resumedAttachments);
+            };
+          });
+          setAttachments(resumedAttachments);
         }
         if (h?.region || h?.woreda) setCurrentStep(2);
         setResumedDraft(true);

@@ -3,7 +3,7 @@ import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, 
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import { saveDraft, type SaveDraftPayload } from "@/lib/drafts";
-import type { WizardAttachment } from "@/lib/attachments";
+import { activeWizardAttachments, type WizardAttachment } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
 import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
@@ -81,6 +81,10 @@ export function ReviewAndSubmitCard({
   attachments,
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
+  // A failed upload never reached the backend and isn't part of what gets
+  // submitted — see activeWizardAttachments. Computed once and reused below
+  // rather than re-filtering the same array at each call site.
+  const activeAttachments = activeWizardAttachments(attachments);
   // Same national-ID field set fields.ts validates as a Fayda ID (imported
   // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
   // action pattern as SIMaskedIdField and the Profile page's MaskedField.
@@ -259,11 +263,11 @@ export function ReviewAndSubmitCard({
               </div>
               <div className="md:col-span-2">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Attachments ({attachments.length})
+                  Attachments ({activeAttachments.length})
                 </p>
-                {attachments.length > 0 ? (
+                {activeAttachments.length > 0 ? (
                   <ul className="space-y-0.5">
-                    {attachments.map((a) => (
+                    {activeAttachments.map((a) => (
                       <li key={a.key} className="text-[15px] font-semibold text-gray-900">
                         {a.fileName}
                       </li>
