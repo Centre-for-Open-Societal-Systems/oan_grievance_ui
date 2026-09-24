@@ -325,128 +325,141 @@ export function normalizeSubmissionChannel(raw: string): string {
   return lower.replace(/\s+/g, '_');
 }
 
-export const selectSubmitterTypeOptions = (state: RootState): Array<{ value: string; label: string }> => {
-  const backendTypes = state.metadata.submitterOptions?.submitter_types;
-  if (backendTypes && backendTypes.length > 0) {
-    return backendTypes.map((t) => ({
-      value: normalizeSubmitterType(t.type_name || t.code),
-      label: t.type_name,
-    }));
+export const selectSubmitterTypeOptions = createSelector(
+  [(state: RootState) => state.metadata.submitterOptions?.submitter_types],
+  (backendTypes): Array<{ value: string; label: string }> => {
+    if (backendTypes && backendTypes.length > 0) {
+      return backendTypes.map((t) => ({
+        value: normalizeSubmitterType(t.type_name || t.code),
+        label: t.type_name,
+      }));
+    }
+    return [];
   }
-  return [];
-};
+);
 
-export const selectPreferredLanguageOptions = (
-  state: RootState
-): Array<{ code: string; label: string; flag: string; flagUrl: string }> => {
-  const backendLangs = state.metadata.submitterOptions?.preferred_languages;
-  if (backendLangs && backendLangs.length > 0) {
-    const flagMap: Record<string, string> = {
-      en: '🇺🇸',
-      am: '🇪🇹',
-      om: '🇪🇹',
-      ti: '🇪🇹',
-      so: '🇸🇴',
-      ar: '🇸🇦',
-    };
-    const flagUrlMap: Record<string, string> = {
-      en: '/images/flags/us.svg',
-      am: '/images/flags/et.svg',
-      om: '/images/flags/et.svg',
-      ti: '/images/flags/et.svg',
-      so: '/images/flags/et.svg',
-      ar: '/images/flags/et.svg',
-    };
-    return backendLangs.map((lang) => {
-      const codeLower = lang.code.toLowerCase();
-      return {
-        code: lang.code,
-        label: lang.label,
-        flag: flagMap[codeLower] || '🌐',
-        flagUrl: flagUrlMap[codeLower] || '/images/flags/et.svg',
+export const selectPreferredLanguageOptions = createSelector(
+  [(state: RootState) => state.metadata.submitterOptions?.preferred_languages],
+  (backendLangs): Array<{ code: string; label: string; flag: string; flagUrl: string }> => {
+    if (backendLangs && backendLangs.length > 0) {
+      const flagMap: Record<string, string> = {
+        en: '🇺🇸',
+        am: '🇪🇹',
+        om: '🇪🇹',
+        ti: '🇪🇹',
+        so: '🇸🇴',
+        ar: '🇸🇦',
       };
-    });
-  }
-  return [];
-};
-
-export const selectSubmissionChannelOptions = (state: RootState): Array<{ value: string; label: string }> => {
-  const backendChannels =
-    state.metadata.submitterOptions?.submission_types ??
-    state.metadata.grievanceOptions?.submission_channels;
-
-  if (backendChannels && backendChannels.length > 0) {
-    const seen = new Set<string>();
-    const options: Array<{ value: string; label: string }> = [];
-
-    for (const c of backendChannels) {
-      const name = typeof c === 'string' ? c : c.type_name;
-      const code = typeof c === 'object' && c.code ? c.code : undefined;
-      const baseVal = normalizeSubmissionChannel(code || name);
-      let val = baseVal;
-      let counter = 1;
-      while (seen.has(val)) {
-        val = `${baseVal}_${counter++}`;
-      }
-      seen.add(val);
-      options.push({
-        value: val,
-        label: name,
+      const flagUrlMap: Record<string, string> = {
+        en: '/images/flags/us.svg',
+        am: '/images/flags/et.svg',
+        om: '/images/flags/et.svg',
+        ti: '/images/flags/et.svg',
+        so: '/images/flags/et.svg',
+        ar: '/images/flags/et.svg',
+      };
+      return backendLangs.map((lang) => {
+        const codeLower = lang.code.toLowerCase();
+        return {
+          code: lang.code,
+          label: lang.label,
+          flag: flagMap[codeLower] || '🌐',
+          flagUrl: flagUrlMap[codeLower] || '/images/flags/et.svg',
+        };
       });
     }
-    return options;
+    return [];
   }
-  return [];
-};
+);
 
-export const selectServiceCategoryOptions = (state: RootState): Array<{ value: string; label: string }> => {
-  const backendCategories =
-    state.metadata.submitterOptions?.service_categories ??
-    state.metadata.grievanceOptions?.service_categories;
+export const selectSubmissionChannelOptions = createSelector(
+  [
+    (state: RootState) =>
+      state.metadata.submitterOptions?.submission_types ??
+      state.metadata.grievanceOptions?.submission_channels,
+  ],
+  (backendChannels): Array<{ value: string; label: string }> => {
+    if (backendChannels && backendChannels.length > 0) {
+      const seen = new Set<string>();
+      const options: Array<{ value: string; label: string }> = [];
 
-  if (backendCategories && backendCategories.length > 0) {
-    return backendCategories.map((c) => ({
-      value: c.category_name,
-      label: c.category_name,
-    }));
-  }
-  return [];
-};
-
-export const selectGrievanceTypeOptions = (
-  state: RootState,
-  selectedCategory?: string
-): Array<{ value: string; label: string }> => {
-  const backendTypes =
-    state.metadata.submitterOptions?.grievance_types ??
-    state.metadata.grievanceOptions?.grievance_types;
-
-  if (backendTypes && backendTypes.length > 0) {
-    let filtered = backendTypes;
-    if (selectedCategory) {
-      const matchCat = selectedCategory.toLowerCase();
-      filtered = backendTypes.filter(
-        (t) => t.service_category.toLowerCase() === matchCat
-      );
+      for (const c of backendChannels) {
+        const name = typeof c === 'string' ? c : c.type_name;
+        const code = typeof c === 'object' && c.code ? c.code : undefined;
+        const baseVal = normalizeSubmissionChannel(code || name);
+        let val = baseVal;
+        let counter = 1;
+        while (seen.has(val)) {
+          val = `${baseVal}_${counter++}`;
+        }
+        seen.add(val);
+        options.push({
+          value: val,
+          label: name,
+        });
+      }
+      return options;
     }
-    return filtered.map((t) => ({
-      value: t.type_name,
-      label: t.type_name,
-    }));
+    return [];
   }
+);
 
-  return [];
-};
-
-export const selectRegionOptions = (state: RootState): Array<{ value: string; label: string }> => {
-  if (state.metadata.regions.length > 0) {
-    return state.metadata.regions.map((r) => ({
-      value: r.area_name,
-      label: r.area_name,
-    }));
+export const selectServiceCategoryOptions = createSelector(
+  [
+    (state: RootState) =>
+      state.metadata.submitterOptions?.service_categories ??
+      state.metadata.grievanceOptions?.service_categories,
+  ],
+  (backendCategories): Array<{ value: string; label: string }> => {
+    if (backendCategories && backendCategories.length > 0) {
+      return backendCategories.map((c) => ({
+        value: c.category_name,
+        label: c.category_name,
+      }));
+    }
+    return [];
   }
-  return [];
-};
+);
+
+export const selectGrievanceTypeOptions = createSelector(
+  [
+    (state: RootState) =>
+      state.metadata.submitterOptions?.grievance_types ??
+      state.metadata.grievanceOptions?.grievance_types,
+    (_state: RootState, selectedCategory?: string) => selectedCategory,
+  ],
+  (backendTypes, selectedCategory): Array<{ value: string; label: string; id?: string }> => {
+    if (backendTypes && backendTypes.length > 0) {
+      let filtered = backendTypes;
+      if (selectedCategory) {
+        const matchCat = selectedCategory.toLowerCase();
+        filtered = backendTypes.filter(
+          (t) => t.service_category.toLowerCase() === matchCat
+        );
+      }
+      return filtered.map((t) => ({
+        value: t.grievance_type_id || t.type_name,
+        label: t.type_name,
+        id: t.grievance_type_id,
+      }));
+    }
+
+    return [];
+  }
+);
+
+export const selectRegionOptions = createSelector(
+  [(state: RootState) => state.metadata.regions],
+  (regions): Array<{ value: string; label: string }> => {
+    if (regions && regions.length > 0) {
+      return regions.map((r) => ({
+        value: r.area_name,
+        label: r.area_name,
+      }));
+    }
+    return [];
+  }
+);
 
 export const selectChildAreaOptions = (
   state: RootState,
@@ -463,39 +476,42 @@ export const selectChildAreaOptions = (
   return [];
 };
 
-export const selectZoneOptions = (
-  state: RootState,
-  regionValue?: string
-): Array<{ value: string; label: string }> => {
-  if (!regionValue) return [];
+export const selectZoneOptions = createSelector(
+  [
+    (state: RootState) => state.metadata,
+    (_state: RootState, regionValue?: string) => regionValue,
+  ],
+  (metadata, regionValue): Array<{ value: string; label: string }> => {
+    if (!regionValue) return [];
 
-  const normalizedRegion = regionValue.toLowerCase().trim();
-  const regionNode = state.metadata.regions.find(
-    (r) =>
-      r.area_id.toLowerCase() === normalizedRegion ||
-      r.area_name.toLowerCase() === normalizedRegion ||
-      (r.code && r.code.toLowerCase() === normalizedRegion) ||
-      (r.path_code && r.path_code.toLowerCase() === normalizedRegion)
-  );
+    const normalizedRegion = regionValue.toLowerCase().trim();
+    const regionNode = metadata.regions.find(
+      (r) =>
+        r.area_id.toLowerCase() === normalizedRegion ||
+        r.area_name.toLowerCase() === normalizedRegion ||
+        (r.code && r.code.toLowerCase() === normalizedRegion) ||
+        (r.path_code && r.path_code.toLowerCase() === normalizedRegion)
+    );
 
-  const parentKey = regionNode?.area_id || regionValue;
-  const childAreas =
-    state.metadata.childAreasByParent[`${parentKey}_Zone`] ||
-    state.metadata.childAreasByParent[parentKey] ||
-    (regionNode?.path_code ? state.metadata.childAreasByParent[`${regionNode.path_code}_Zone`] : undefined) ||
-    (regionNode?.path_code ? state.metadata.childAreasByParent[regionNode.path_code] : undefined);
+    const parentKey = regionNode?.area_id || regionValue;
+    const childAreas =
+      metadata.childAreasByParent[`${parentKey}_Zone`] ||
+      metadata.childAreasByParent[parentKey] ||
+      (regionNode?.path_code ? metadata.childAreasByParent[`${regionNode.path_code}_Zone`] : undefined) ||
+      (regionNode?.path_code ? metadata.childAreasByParent[regionNode.path_code] : undefined);
 
-  if (childAreas && childAreas.length > 0) {
-    return childAreas
-      .filter((a) => !a.level_name || a.level_name === 'Zone')
-      .map((a) => ({
-        value: a.area_name,
-        label: a.area_name,
-      }));
+    if (childAreas && childAreas.length > 0) {
+      return childAreas
+        .filter((a) => !a.level_name || a.level_name === 'Zone')
+        .map((a) => ({
+          value: a.area_name,
+          label: a.area_name,
+        }));
+    }
+
+    return [];
   }
-
-  return [];
-};
+);
 
 export const selectZoneStatus = (
   state: RootState,
@@ -536,12 +552,14 @@ export function findZoneNode(
     const regionChildren =
       state.metadata.childAreasByParent[`${parentKey}_Zone`] ||
       state.metadata.childAreasByParent[parentKey] ||
+      (regionNode?.path_code ? state.metadata.childAreasByParent[`${regionNode.path_code}_Zone`] : undefined) ||
       (regionNode?.path_code ? state.metadata.childAreasByParent[regionNode.path_code] : undefined);
     const found = regionChildren?.find(
       (a) =>
         a.area_name.toLowerCase() === normZone ||
         a.area_id.toLowerCase() === normZone ||
-        (a.code && a.code.toLowerCase() === normZone)
+        (a.code && a.code.toLowerCase() === normZone) ||
+        (a.path_code && a.path_code.toLowerCase() === normZone)
     );
     if (found) return found;
   }
@@ -551,7 +569,8 @@ export function findZoneNode(
       (a) =>
         a.area_name.toLowerCase() === normZone ||
         a.area_id.toLowerCase() === normZone ||
-        (a.code && a.code.toLowerCase() === normZone)
+        (a.code && a.code.toLowerCase() === normZone) ||
+        (a.path_code && a.path_code.toLowerCase() === normZone)
     );
     if (found) return found;
   }
@@ -559,49 +578,55 @@ export function findZoneNode(
   return undefined;
 }
 
-export const selectWoredaOptions = (
-  state: RootState,
-  zoneValue?: string,
-  regionValue?: string
-): Array<{ value: string; label: string }> => {
-  let childAreas: AdministrativeArea[] | undefined;
+export const selectWoredaOptions = createSelector(
+  [
+    (state: RootState) => state.metadata,
+    (_state: RootState, zoneValue?: string) => zoneValue,
+    (_state: RootState, _zoneValue?: string, regionValue?: string) => regionValue,
+  ],
+  (metadata, zoneValue, regionValue): Array<{ value: string; label: string }> => {
+    let childAreas: AdministrativeArea[] | undefined;
+    const state = { metadata } as RootState;
 
-  if (zoneValue) {
-    const zoneNode = findZoneNode(state, zoneValue, regionValue);
-    const parentKey = zoneNode?.area_id || zoneValue;
-    childAreas =
-      state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
-      state.metadata.childAreasByParent[parentKey] ||
-      (zoneNode?.path_code ? state.metadata.childAreasByParent[`${zoneNode.path_code}_Woreda`] : undefined) ||
-      (zoneNode?.path_code ? state.metadata.childAreasByParent[zoneNode.path_code] : undefined);
+    if (zoneValue) {
+      const zoneNode = findZoneNode(state, zoneValue, regionValue);
+      const parentKey = zoneNode?.area_id || zoneValue;
+      childAreas =
+        metadata.childAreasByParent[`${parentKey}_Woreda`] ||
+        metadata.childAreasByParent[parentKey] ||
+        (zoneNode?.path_code ? metadata.childAreasByParent[`${zoneNode.path_code}_Woreda`] : undefined) ||
+        (zoneNode?.path_code ? metadata.childAreasByParent[zoneNode.path_code] : undefined);
+    }
+
+    if ((!childAreas || childAreas.length === 0) && regionValue) {
+      const normalizedRegion = regionValue.toLowerCase().trim();
+      const regionNode = metadata.regions.find(
+        (r) =>
+          r.area_id.toLowerCase() === normalizedRegion ||
+          r.area_name.toLowerCase() === normalizedRegion ||
+          (r.code && r.code.toLowerCase() === normalizedRegion) ||
+          (r.path_code && r.path_code.toLowerCase() === normalizedRegion)
+      );
+      const parentKey = regionNode?.area_id || regionValue;
+      childAreas =
+        metadata.childAreasByParent[`${parentKey}_Woreda`] ||
+        metadata.childAreasByParent[parentKey] ||
+        (regionNode?.path_code ? metadata.childAreasByParent[`${regionNode.path_code}_Woreda`] : undefined) ||
+        (regionNode?.path_code ? metadata.childAreasByParent[regionNode.path_code] : undefined);
+    }
+
+    if (childAreas && childAreas.length > 0) {
+      return childAreas
+        .filter((a) => !a.level_name || a.level_name === 'Woreda')
+        .map((a) => ({
+          value: a.area_name,
+          label: a.area_name,
+        }));
+    }
+
+    return [];
   }
-
-  if ((!childAreas || childAreas.length === 0) && regionValue) {
-    const normalizedRegion = regionValue.toLowerCase().trim();
-    const regionNode = state.metadata.regions.find(
-      (r) =>
-        r.area_id.toLowerCase() === normalizedRegion ||
-        r.area_name.toLowerCase() === normalizedRegion ||
-        (r.code && r.code.toLowerCase() === normalizedRegion) ||
-        (r.path_code && r.path_code.toLowerCase() === normalizedRegion)
-    );
-    const parentKey = regionNode?.area_id || regionValue;
-    childAreas =
-      state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
-      state.metadata.childAreasByParent[parentKey];
-  }
-
-  if (childAreas && childAreas.length > 0) {
-    return childAreas
-      .filter((a) => !a.level_name || a.level_name === 'Woreda')
-      .map((a) => ({
-        value: a.area_name,
-        label: a.area_name,
-      }));
-  }
-
-  return [];
-};
+);
 
 export const selectWoredaStatus = (
   state: RootState,
@@ -647,12 +672,15 @@ export function findWoredaNode(
     const parentKey = zoneNode?.area_id || zoneValue;
     const zoneChildren =
       state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
-      state.metadata.childAreasByParent[parentKey];
+      state.metadata.childAreasByParent[parentKey] ||
+      (zoneNode?.path_code ? state.metadata.childAreasByParent[`${zoneNode.path_code}_Woreda`] : undefined) ||
+      (zoneNode?.path_code ? state.metadata.childAreasByParent[zoneNode.path_code] : undefined);
     const found = zoneChildren?.find(
       (a) =>
         a.area_name.toLowerCase() === normWoreda ||
         a.area_id.toLowerCase() === normWoreda ||
-        (a.code && a.code.toLowerCase() === normWoreda)
+        (a.code && a.code.toLowerCase() === normWoreda) ||
+        (a.path_code && a.path_code.toLowerCase() === normWoreda)
     );
     if (found) return found;
   }
@@ -662,17 +690,33 @@ export function findWoredaNode(
     const regionNode = state.metadata.regions.find(
       (r) =>
         r.area_id.toLowerCase() === normalizedRegion ||
-        r.area_name.toLowerCase() === normalizedRegion
+        r.area_name.toLowerCase() === normalizedRegion ||
+        (r.code && r.code.toLowerCase() === normalizedRegion) ||
+        (r.path_code && r.path_code.toLowerCase() === normalizedRegion)
     );
     const parentKey = regionNode?.area_id || regionValue;
     const regionChildren =
       state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
-      state.metadata.childAreasByParent[parentKey];
+      state.metadata.childAreasByParent[parentKey] ||
+      (regionNode?.path_code ? state.metadata.childAreasByParent[`${regionNode.path_code}_Woreda`] : undefined) ||
+      (regionNode?.path_code ? state.metadata.childAreasByParent[regionNode.path_code] : undefined);
     const found = regionChildren?.find(
       (a) =>
         a.area_name.toLowerCase() === normWoreda ||
         a.area_id.toLowerCase() === normWoreda ||
-        (a.code && a.code.toLowerCase() === normWoreda)
+        (a.code && a.code.toLowerCase() === normWoreda) ||
+        (a.path_code && a.path_code.toLowerCase() === normWoreda)
+    );
+    if (found) return found;
+  }
+
+  if (state.metadata.woredas?.length > 0) {
+    const found = state.metadata.woredas.find(
+      (a) =>
+        a.area_name.toLowerCase() === normWoreda ||
+        a.area_id.toLowerCase() === normWoreda ||
+        (a.code && a.code.toLowerCase() === normWoreda) ||
+        (a.path_code && a.path_code.toLowerCase() === normWoreda)
     );
     if (found) return found;
   }
@@ -682,7 +726,8 @@ export function findWoredaNode(
       (a) =>
         a.area_name.toLowerCase() === normWoreda ||
         a.area_id.toLowerCase() === normWoreda ||
-        (a.code && a.code.toLowerCase() === normWoreda)
+        (a.code && a.code.toLowerCase() === normWoreda) ||
+        (a.path_code && a.path_code.toLowerCase() === normWoreda)
     );
     if (found) return found;
   }
@@ -755,17 +800,32 @@ export function findFilingArea(
   selection: { region?: string; zone?: string; woreda?: string; kebele?: string }
 ): AdministrativeArea | undefined {
   const { region, zone, woreda, kebele } = selection;
-  if (!woreda) return undefined;
+  if (!woreda && !kebele) return undefined;
 
-  const woredaNode = findWoredaNode(state, woreda, zone, region);
-  if (!woredaNode) return undefined;
-  if (!kebele) return woredaNode;
+  if (woreda) {
+    const woredaNode = findWoredaNode(state, woreda, zone, region);
+    if (woredaNode) {
+      if (!kebele) return woredaNode;
 
-  const normKebele = kebele.toLowerCase().trim();
-  const kebeleNode = kebeleChildren(state, woredaNode, woreda)?.find(
-    (a) => (!a.level_name || a.level_name === 'Kebele') && a.area_name.toLowerCase() === normKebele
-  );
-  return kebeleNode ?? woredaNode;
+      const normKebele = kebele.toLowerCase().trim();
+      const kebeleNode = kebeleChildren(state, woredaNode, woreda)?.find(
+        (a) =>
+          (!a.level_name || a.level_name === 'Kebele') &&
+          (a.area_name.toLowerCase() === normKebele ||
+            a.area_id.toLowerCase() === normKebele ||
+            (a.code && a.code.toLowerCase() === normKebele) ||
+            (a.path_code && a.path_code.toLowerCase() === normKebele))
+      );
+      return kebeleNode ?? woredaNode;
+    }
+  }
+
+  if (kebele) {
+    const kebeleNode = findKebeleNode(state, kebele, woreda, zone, region);
+    if (kebeleNode) return kebeleNode;
+  }
+
+  return undefined;
 }
 
 export const selectKebeleStatus = (
@@ -879,8 +939,15 @@ export function resolveAdministrativeAreaId(
  */
 export const selectStatusFilterOptions = createSelector(
   [(state: RootState) => state.metadata.grievanceOptions?.statuses],
-  (statuses): Array<{ value: string; label: string }> =>
-    (statuses ?? []).map((s) => ({ value: s.status, label: s.label || s.status }))
+  (statuses): Array<{ value: string; label: string }> => {
+    const map = new Map<string, string>();
+    for (const s of statuses ?? []) {
+      if (s.status && !map.has(s.status)) {
+        map.set(s.status, s.label || s.status);
+      }
+    }
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }
 );
 
 export const selectCategoryFilterOptions = createSelector(
@@ -889,14 +956,28 @@ export const selectCategoryFilterOptions = createSelector(
       state.metadata.submitterOptions?.service_categories ??
       state.metadata.grievanceOptions?.service_categories,
   ],
-  (categories): Array<{ value: string; label: string }> =>
-    (categories ?? []).map((c) => ({ value: c.category_name, label: c.category_name }))
+  (categories): Array<{ value: string; label: string }> => {
+    const map = new Map<string, string>();
+    for (const c of categories ?? []) {
+      if (c.category_name && !map.has(c.category_name)) {
+        map.set(c.category_name, c.category_name);
+      }
+    }
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }
 );
 
 export const selectRegionFilterOptions = createSelector(
   [(state: RootState) => state.metadata.regions],
-  (regions): Array<{ value: string; label: string }> =>
-    regions.map((r) => ({ value: r.area_name, label: r.area_name }))
+  (regions): Array<{ value: string; label: string }> => {
+    const map = new Map<string, string>();
+    for (const r of regions ?? []) {
+      if (r.area_name && !map.has(r.area_name)) {
+        map.set(r.area_name, r.area_name);
+      }
+    }
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }
 );
 
 export const selectWoredaFilterOptions = createSelector(

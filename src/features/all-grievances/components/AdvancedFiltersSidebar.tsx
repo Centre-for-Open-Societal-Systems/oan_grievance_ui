@@ -37,12 +37,35 @@ export function FilterDropdown({
   isLoading?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Deduplicate options by value
+  const uniqueOptions = React.useMemo(() => {
+    const seen = new Set<string>();
+    const result: FilterOption[] = [];
+    for (const opt of options) {
+      if (opt.value && !seen.has(opt.value)) {
+        seen.add(opt.value);
+        result.push(opt);
+      }
+    }
+    return result;
+  }, [options]);
+
+  const filteredOptions = React.useMemo(() => {
+    if (!searchQuery.trim()) return uniqueOptions;
+    const q = searchQuery.toLowerCase().trim();
+    return uniqueOptions.filter(
+      (opt) => opt.label.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q)
+    );
+  }, [uniqueOptions, searchQuery]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setSearchQuery('');
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -83,37 +106,57 @@ export function FilterDropdown({
       </div>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-20 mt-1 border border-gray-100 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white overflow-hidden max-h-60 overflow-y-auto transform origin-top transition-all duration-200 opacity-100 scale-100">
-          {options.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-gray-400">
-              {isLoading ? 'Loading options…' : 'No options available'}
+        <div className="absolute top-full left-0 right-0 z-20 mt-1 border border-gray-100 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white overflow-hidden max-h-60 overflow-y-auto transform origin-top transition-all duration-200 opacity-100 scale-100 flex flex-col">
+          {uniqueOptions.length > 6 && (
+            <div className="p-2 border-b border-gray-100 sticky top-0 bg-white z-10">
+              <input
+                type="text"
+                placeholder={`Search ${label}…`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full px-2.5 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:border-[#1E8E3E] text-gray-800 placeholder:text-gray-400"
+              />
             </div>
-          ) : (
-            [{ value: '__all__', label: 'All' }, ...options].map((option) => {
-              const isAllRow = option.value === '__all__';
-              const isChecked = isAllRow ? isAllSelected : selected.includes(option.value);
-              return (
-                <label key={option.value} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0">
-                  <div className="relative flex items-center justify-center">
-                    <input
-                      type="checkbox"
-                      className="peer appearance-none w-[18px] h-[18px] border border-gray-300 rounded-[3px] bg-white checked:bg-[#1E8E3E] checked:border-[#1E8E3E] transition-all duration-200 cursor-pointer"
-                      checked={isChecked}
-                      onChange={(e) =>
-                        isAllRow ? handleToggleAll() : handleToggle(option.value, e.target.checked)
-                      }
-                    />
-                    <svg
-                      className={`absolute w-3 h-3 text-white pointer-events-none transition-transform duration-300 ${isChecked ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-gray-600">{option.label}</span>
-                </label>
-              );
-            })
           )}
+          <div className="overflow-y-auto max-h-48">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-3 text-sm text-gray-400 text-center">
+                {isLoading ? 'Loading options…' : 'No matching options'}
+              </div>
+            ) : (
+              [
+                ...(!searchQuery ? [{ value: '__all__', label: 'All' }] : []),
+                ...filteredOptions,
+              ].map((option, idx) => {
+                const isAllRow = option.value === '__all__';
+                const isChecked = isAllRow ? isAllSelected : selected.includes(option.value);
+                return (
+                  <label
+                    key={`${option.value}-${idx}`}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
+                  >
+                    <div className="relative flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        className="peer appearance-none w-[18px] h-[18px] border border-gray-300 rounded-[3px] bg-white checked:bg-[#1E8E3E] checked:border-[#1E8E3E] transition-all duration-200 cursor-pointer"
+                        checked={isChecked}
+                        onChange={(e) =>
+                          isAllRow ? handleToggleAll() : handleToggle(option.value, e.target.checked)
+                        }
+                      />
+                      <svg
+                        className={`absolute w-3 h-3 text-white pointer-events-none transition-transform duration-300 ${isChecked ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-gray-600 truncate">{option.label}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -66,7 +66,7 @@ export function buildSubmitGrievancePayload(input: BuildSaveDraftPayloadInput): 
 
 /** POST /api/v1/grievances — files the case and returns its ticket number. Authenticated submitters only. */
 export async function submitGrievance(payload: SubmitGrievancePayload): Promise<SubmitGrievanceResult> {
-  return fetchApi<SubmitGrievanceResult>('api/v1/grievances', {
+  return fetchApi<SubmitGrievanceResult>('/api/v1/grievances', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
