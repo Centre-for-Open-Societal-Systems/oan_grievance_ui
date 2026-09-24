@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, type ReactElement } from "react";
 import { useTranslations } from "next-intl";
 import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -34,6 +34,45 @@ import { saveDraft } from "@/lib/drafts";
 import { buildSaveDraftPayload } from "../draftPayload";
 import { logger } from "@/lib/logger";
 import type { RootState } from "@/store";
+
+type UploadState = "idle" | "uploading" | "persisting" | "error";
+
+/** The line under the uploaded file's name — mirrors `scanStatusBadge`'s if-chain shape rather than a nested ternary. */
+function attachmentStatusIndicator(uploadState: UploadState, scanStatus: ScanStatus | null): ReactElement {
+  if (uploadState === "uploading") {
+    return <span className="text-gray-500">Uploading…</span>;
+  }
+  if (scanStatus === SCAN_STATUS.CLEAN) {
+    return (
+      <>
+        <div className="w-2 h-2 rounded-full bg-[#16A34A]"></div>
+        <span className="text-[#16A34A]">Uploaded · scan clean</span>
+      </>
+    );
+  }
+  if (scanStatus === SCAN_STATUS.INFECTED) {
+    return (
+      <>
+        <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+        <span className="text-red-600">Failed malware scan · not usable as evidence</span>
+      </>
+    );
+  }
+  if (scanStatus === SCAN_STATUS.FAILED) {
+    return (
+      <>
+        <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+        <span className="text-red-600">Scan didn&apos;t complete · remove and try again</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
+      <span className="text-amber-600">Scanning for malware…</span>
+    </>
+  );
+}
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
   return (
@@ -263,7 +302,7 @@ export function GrievanceDetailsCard({
   // both still need to block on it too, same as "uploading" — an in-flight
   // persist-save losing a race against either would resurrect a removed
   // attachment or leave a draft record that doesn't yet know about it.
-  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "persisting" | "error">("idle");
+  const [uploadState, setUploadState] = useState<UploadState>("idle");
   // `submit_document` with a `client_uuid` requires the Grievance Draft to
   // already exist server-side — this fires once, right before the first
   // upload, rather than on every file selection.
@@ -879,29 +918,7 @@ export function GrievanceDetailsCard({
                       {displayFileName}
                     </p>
                     <div className="flex items-center gap-1.5 mt-0.5 text-[13px] font-medium">
-                      {uploadState === "uploading" ? (
-                        <span className="text-gray-500">Uploading…</span>
-                      ) : scanStatus === SCAN_STATUS.CLEAN ? (
-                        <>
-                          <div className="w-2 h-2 rounded-full bg-[#16A34A]"></div>
-                          <span className="text-[#16A34A]">Uploaded · scan clean</span>
-                        </>
-                      ) : scanStatus === SCAN_STATUS.INFECTED ? (
-                        <>
-                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
-                          <span className="text-red-600">Failed malware scan · not usable as evidence</span>
-                        </>
-                      ) : scanStatus === SCAN_STATUS.FAILED ? (
-                        <>
-                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
-                          <span className="text-red-600">Scan didn&apos;t complete · remove and try again</span>
-                        </>
-                      ) : (
-                        <>
-                          <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
-                          <span className="text-amber-600">Scanning for malware…</span>
-                        </>
-                      )}
+                      {attachmentStatusIndicator(uploadState, scanStatus)}
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { Paperclip, Loader2, AlertTriangle, FileText } from "lucide-react";
 import { getAttachments, type AttachmentRow } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
@@ -16,7 +16,7 @@ import { DocumentViewerPopup } from "./DocumentViewerPopup";
  * `DocumentViewerPopup`, which carries preview/download/delete — see its own
  * doc comment for why download and preview are still disabled there.
  */
-export function AttachmentsList({ grievance, canManageCase }: { grievance: string; canManageCase: boolean }) {
+export function AttachmentsList({ grievance, canManageCase }: { grievance: string; canManageCase: boolean }): ReactElement {
   const [rows, setRows] = useState<AttachmentRow[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [selectedAttachment, setSelectedAttachment] = useState<AttachmentRow | null>(null);

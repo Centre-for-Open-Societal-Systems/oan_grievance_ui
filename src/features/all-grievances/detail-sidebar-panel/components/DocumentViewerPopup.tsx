@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { X, Download, FileText, Loader2, Trash2 } from "lucide-react";
 import {
   deleteAttachment,
@@ -26,7 +26,7 @@ interface DocumentViewerPopupProps {
   onDeleted: (attachmentName: string) => void;
 }
 
-export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted }: DocumentViewerPopupProps) {
+export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted }: DocumentViewerPopupProps): ReactElement {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -94,10 +94,12 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       {/* A misclick here mid-confirmation should read as "I didn't mean that" — cancel the
           confirm step, not silently close the whole dialog as if nothing had been asked. */}
-      <div
-        className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+      <button
+        type="button"
+        aria-label="Close"
         onClick={confirmingDelete ? () => setConfirmingDelete(false) : onClose}
-      ></div>
+        className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm cursor-default"
+      ></button>
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/50">
