@@ -49,6 +49,21 @@ export interface GrievanceListData {
   pagination: GrievanceListPagination;
 }
 
+/** One KPI card from GET /api/v1/grievances/summary */
+export interface GrievanceSummaryCard {
+  status: string;
+  label: string;
+  order: number;
+  is_open: number;
+  is_terminal: number;
+  count: number;
+}
+
+/** Payload returned by GET /api/v1/grievances/summary */
+export interface GrievanceSummaryData {
+  cards: GrievanceSummaryCard[];
+}
+
 export interface GrievanceListQueryParams {
   page?: number;
   page_size?: number;

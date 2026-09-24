@@ -4,6 +4,7 @@ import type {
   GrievanceActionResult,
   GrievanceListData,
   GrievanceListQueryParams,
+  GrievanceSummaryData,
   GrievanceTimelineData,
   GrievanceTimelineQueryParams,
 } from '../types';
@@ -85,7 +86,6 @@ export async function fetchGrievances(
 
 /**
  * Total number of grievances matching `params`, without transferring the rows.
- * Used for the metric cards, which need counts per status bucket.
  */
 export async function fetchGrievanceCount(
   params: GrievanceListQueryParams = {},
@@ -93,6 +93,21 @@ export async function fetchGrievanceCount(
 ): Promise<number> {
   const data = await fetchGrievances({ ...params, page: 1, page_size: 1 }, options);
   return data?.pagination?.total_count ?? 0;
+}
+
+/**
+ * Status KPI card counts for the All Grievances page header metrics.
+ * Labels and ordering come from the backend so the UI does not hard-code statuses.
+ *
+ * Corresponding REST endpoint: GET /api/v1/grievances/summary
+ */
+export async function fetchGrievanceSummary(
+  options: RequestOptions = {}
+): Promise<GrievanceSummaryData> {
+  return fetchApi<GrievanceSummaryData>('/api/v1/grievances/summary', {
+    method: 'GET',
+    signal: options.signal,
+  });
 }
 
 /**
@@ -193,6 +208,7 @@ export async function executeGrievanceAction(
 export const grievanceService = {
   listGrievances: fetchGrievances,
   countGrievances: fetchGrievanceCount,
+  getSummary: fetchGrievanceSummary,
   getTimeline: fetchGrievanceTimeline,
   postMessage: postGrievanceMessage,
   addNote: addGrievanceNote,

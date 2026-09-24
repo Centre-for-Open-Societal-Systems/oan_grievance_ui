@@ -96,6 +96,7 @@ describe('grievanceService', () => {
   it('exposes all grievance service helpers', () => {
     expect(typeof grievanceService.listGrievances).toBe('function');
     expect(typeof grievanceService.countGrievances).toBe('function');
+    expect(typeof grievanceService.getSummary).toBe('function');
     expect(typeof grievanceService.getTimeline).toBe('function');
     expect(typeof grievanceService.postMessage).toBe('function');
     expect(typeof grievanceService.addNote).toBe('function');
@@ -153,6 +154,26 @@ describe('grievanceService', () => {
     expect(url).toContain('page=1');
     expect(url).toContain('page_size=1');
     expect(url).toContain('status=Resolved');
+  });
+
+  it('fetches the grievance status summary for KPI cards', async () => {
+    const summaryPayload = {
+      cards: [
+        { status: 'All', label: 'All', order: 1, is_open: 1, is_terminal: 0, count: 42 },
+        { status: 'In Progress', label: 'In Progress', order: 2, is_open: 1, is_terminal: 0, count: 20 },
+        { status: 'Require More Info', label: 'Require More Info', order: 3, is_open: 1, is_terminal: 0, count: 4 },
+        { status: 'Rejected', label: 'Rejected', order: 4, is_open: 0, is_terminal: 1, count: 3 },
+        { status: 'Resolved', label: 'Resolved', order: 5, is_open: 1, is_terminal: 0, count: 8 },
+        { status: 'Closed', label: 'Closed', order: 6, is_open: 0, is_terminal: 1, count: 7 },
+      ],
+    };
+    mockJsonResponse(summaryPayload);
+
+    const result = await grievanceService.getSummary();
+
+    expect(result).toEqual(summaryPayload);
+    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/summary');
+    expect(calledOptions().method).toBe('GET');
   });
 
   it('fetches timeline details with optional query params', async () => {

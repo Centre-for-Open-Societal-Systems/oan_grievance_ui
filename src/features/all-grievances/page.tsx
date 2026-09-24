@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -98,8 +98,7 @@ export default function AllGrievancesPage() {
     pageSize: rowsPerPage,
   });
 
-  const allStatusValues = useMemo(() => statusOptions.map((s) => s.value), [statusOptions]);
-  const { metrics } = useGrievanceMetrics(allStatusValues);
+  const { cards, totalCount } = useGrievanceMetrics();
 
   // Reset to page 1 whenever the query changes (search term or filters),
   // so pagination cannot point past the end of a narrowed result set.
@@ -132,8 +131,8 @@ export default function AllGrievancesPage() {
 
   return (
     <div className="flex flex-col gap-6 h-full font-sans">
-      <TopHeader totalCount={metrics.all} />
-      <MetricCardsComponent metrics={metrics} />
+      <TopHeader totalCount={totalCount} />
+      <MetricCardsComponent cards={cards} />
       <GrievanceTable
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
