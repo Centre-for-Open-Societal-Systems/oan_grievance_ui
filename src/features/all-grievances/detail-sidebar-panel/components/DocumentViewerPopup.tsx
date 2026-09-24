@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X, Download, FileText, Loader2, Trash2 } from "lucide-react";
-import { deleteAttachment, getAttachmentDownloadInfo, fetchAttachmentBlobUrl, type AttachmentRow } from "@/lib/attachments";
+import {
+  deleteAttachment,
+  getAttachmentDownloadInfo,
+  fetchAttachmentBlobUrl,
+  SCAN_STATUS,
+  type AttachmentRow,
+} from "@/lib/attachments";
 import { logger } from "@/lib/logger";
 import {
   ATTACHMENT_BYTES_UNAVAILABLE_REASON,
@@ -25,6 +31,8 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const isClean = attachment.scan_status === SCAN_STATUS.CLEAN;
 
   // `onClose` (backdrop/X click, or a successful delete) unmounts this popup
   // immediately — AttachmentsList only renders it while a row is selected.
@@ -62,6 +70,7 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
   // Download back, instead of also having to rediscover and rewrite this.
   const handleDownload = async () => {
     setIsDownloading(true);
+    setDownloadError(null);
     try {
       const info = await getAttachmentDownloadInfo(attachment.name);
       const blobUrl = await fetchAttachmentBlobUrl(info.file_url);
@@ -74,6 +83,8 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
       logger.error("Failed to download attachment:", error);
+      if (!mountedRef.current) return;
+      setDownloadError("Could not download this file right now.");
     } finally {
       if (mountedRef.current) setIsDownloading(false);
     }
@@ -81,7 +92,12 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={onClose}></div>
+      {/* A misclick here mid-confirmation should read as "I didn't mean that" — cancel the
+          confirm step, not silently close the whole dialog as if nothing had been asked. */}
+      <div
+        className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+        onClick={confirmingDelete ? () => setConfirmingDelete(false) : onClose}
+      ></div>
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/50">
@@ -102,8 +118,14 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => void handleDownload()}
-              disabled={ATTACHMENT_DOWNLOAD_DISABLED || isDownloading}
-              title={ATTACHMENT_DOWNLOAD_DISABLED ? ATTACHMENT_BYTES_UNAVAILABLE_REASON : "Download"}
+              disabled={ATTACHMENT_DOWNLOAD_DISABLED || !isClean || isDownloading}
+              title={
+                ATTACHMENT_DOWNLOAD_DISABLED
+                  ? ATTACHMENT_BYTES_UNAVAILABLE_REASON
+                  : isClean
+                    ? "Download"
+                    : "Not available until the scan completes"
+              }
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
               {isDownloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
@@ -146,9 +168,9 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
           </div>
         </div>
 
-        {deleteError && (
+        {(deleteError || downloadError) && (
           <div role="alert" className="px-6 py-2 bg-red-50 text-red-600 text-sm border-b border-red-100">
-            {deleteError}
+            {deleteError || downloadError}
           </div>
         )}
 

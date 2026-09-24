@@ -397,4 +397,46 @@ describe('Step 2 — attachment scan status', () => {
       vi.useRealTimers();
     }
   });
+
+  it('gives up after the scan stays Pending too long, and unblocks with the same message a failed scan shows', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      // Never resolves — simulates a stuck scan queue (the worker down, not
+      // ClamAV itself, which fails closed to Failed quickly on its own).
+      getAttachments.mockResolvedValue([
+        {
+          name: ATTACHMENT_ID,
+          file_name: 'evidence.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          document_type: null,
+          response: null,
+          scan_status: 'Pending',
+          scanned_at: null,
+          uploaded_by_user: null,
+          uploaded_by_submitter: null,
+          creation: '2026-09-23T09:59:00Z',
+        },
+      ]);
+
+      renderStep({
+        ...COMPLETE,
+        attachmentId: ATTACHMENT_ID,
+        scanStatus: 'Pending',
+        attachmentFileName: 'evidence.pdf',
+      });
+
+      // 40 attempts * 3s = 120s before the poll gives up. Advanced in
+      // smaller steps (rather than one big jump) so each tick's async
+      // getAttachments round-trip fully resolves before the next timer fires.
+      for (let i = 0; i < 41; i++) {
+        await vi.advanceTimersByTimeAsync(3000);
+      }
+
+      expect(screen.getByText(/Scan didn.t complete/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Save & Continue/ })).toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 15_000);
 });

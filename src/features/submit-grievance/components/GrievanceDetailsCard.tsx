@@ -560,6 +560,7 @@ export function GrievanceDetailsCard({
         const row = rows.find((r) => r.name === attachmentId);
         if (row && row.scan_status !== SCAN_STATUS.PENDING) {
           setScanStatus(row.scan_status);
+          clearInterval(intervalId);
           return;
         }
       } catch (pollError) {
@@ -569,16 +570,17 @@ export function GrievanceDetailsCard({
       }
       if (!cancelled && attempts >= SCAN_POLL_MAX_ATTEMPTS) {
         logger.error(`Scan status still Pending for ${attachmentId} after ${attempts} checks — giving up.`);
+        // Otherwise the wizard is stuck showing "Scanning for malware…" and a
+        // disabled Continue forever, with no explanation — treating a scan
+        // that never resolved the same as one that failed reuses the
+        // existing Failed messaging/remove-and-retry guidance rather than
+        // adding a third "stuck" state nobody built UI for.
+        setScanStatus(SCAN_STATUS.FAILED);
+        clearInterval(intervalId);
       }
     };
 
-    const intervalId = setInterval(() => {
-      if (attempts >= SCAN_POLL_MAX_ATTEMPTS) {
-        clearInterval(intervalId);
-        return;
-      }
-      void poll();
-    }, SCAN_POLL_INTERVAL_MS);
+    const intervalId = setInterval(() => void poll(), SCAN_POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;

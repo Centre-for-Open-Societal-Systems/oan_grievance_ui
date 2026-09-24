@@ -119,4 +119,22 @@ describe('AttachmentsList', () => {
     expect(await screen.findByText('Evidence cannot be removed once the grievance is Resolved.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'id-card.pdf' })).toBeInTheDocument();
   });
+
+  it('a backdrop click while confirming delete cancels the confirmation, not the whole dialog', async () => {
+    getAttachments.mockResolvedValue([ROW]);
+    const { container } = render(<AttachmentsList grievance="GRV-0001" canManageCase={true} />);
+
+    await waitFor(() => screen.getByText('id-card.pdf'));
+    fireEvent.click(screen.getByText('id-card.pdf'));
+    fireEvent.click(screen.getByTitle('Delete this attachment'));
+    expect(screen.getByRole('button', { name: 'Yes, delete' })).toBeInTheDocument();
+
+    const backdrop = container.querySelector('.backdrop-blur-sm')!;
+    fireEvent.click(backdrop);
+
+    // Confirmation is cancelled (back to the plain delete icon)...
+    expect(screen.queryByRole('button', { name: 'Yes, delete' })).not.toBeInTheDocument();
+    // ...but the dialog itself is still open, not dismissed outright.
+    expect(screen.getByRole('heading', { name: 'id-card.pdf' })).toBeInTheDocument();
+  });
 });
