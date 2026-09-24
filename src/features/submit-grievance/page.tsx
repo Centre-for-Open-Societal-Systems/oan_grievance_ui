@@ -124,7 +124,6 @@ export default function SubmitGrievancePage() {
   // initial resume check below has settled.
   const [draftCheckDone, setDraftCheckDone] = useState(false);
 
-  const hasLoadedDraftRef = useRef(false);
   const goToStepRef = useRef(goToStep);
   useEffect(() => {
     goToStepRef.current = goToStep;
@@ -132,14 +131,15 @@ export default function SubmitGrievancePage() {
 
   // Resume the caller's saved draft, if one exists, strictly once on mount.
   useEffect(() => {
-    if (hasLoadedDraftRef.current) return;
-    hasLoadedDraftRef.current = true;
-
     let cancelled = false;
     loadDraft()
       .then((draft) => {
         if (cancelled) return;
-        setClientUuid(draft.client_submission_uuid);
+        if (draft.client_submission_uuid) {
+          setClientUuid(draft.client_submission_uuid);
+        } else if ((draft as any).client_uuid) {
+          setClientUuid((draft as any).client_uuid);
+        }
         if (draft.submitter_type) setSubmitterType(normalizeSubmitterType(draft.submitter_type));
         if (draft.submission_channel) setSubmissionChannel(normalizeSubmissionChannel(draft.submission_channel));
         setIdentityValues((prev) => {
