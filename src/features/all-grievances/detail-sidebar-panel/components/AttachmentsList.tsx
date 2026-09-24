@@ -1,56 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Paperclip, Download, Loader2, AlertTriangle, FileText } from "lucide-react";
-import {
-  getAttachments,
-  getAttachmentDownloadInfo,
-  fetchAttachmentBlobUrl,
-  SCAN_STATUS,
-  type AttachmentRow,
-} from "@/lib/attachments";
+import { useEffect, useState, type ReactElement } from "react";
+import { Paperclip, Loader2, AlertTriangle, FileText } from "lucide-react";
+import { getAttachments, type AttachmentRow } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
-
-// Flip this once fetchAttachmentBlobUrl's known 401 gap (see attachments.ts)
-// is actually fixed server-side — a single point to re-enable the control
-// rather than deleting/re-adding the disabled prop by hand.
-const DOWNLOAD_DISABLED = true;
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function scanBadge(row: AttachmentRow) {
-  if (row.scan_status === SCAN_STATUS.CLEAN) {
-    return <span className="text-[11px] font-semibold text-[#16A34A] bg-green-50 px-2 py-0.5 rounded-full">Clean</span>;
-  }
-  if (row.scan_status === SCAN_STATUS.INFECTED) {
-    return <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Infected</span>;
-  }
-  return <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Scanning…</span>;
-}
+import { formatAttachmentSize, scanStatusBadge } from "./attachmentDisplay";
+import { DocumentViewerPopup } from "./DocumentViewerPopup";
 
 /**
- * Real attachment list + download, wired to the backend's REST routes
- * (GET /api/v1/grievances/<id>/attachments, GET /api/v1/attachments/<id>/download).
- * `grievance` is the real backend document name — the surrounding detail
- * sidebar is backend-driven too (see `mapGrievance.ts`'s `id: item.name`),
- * not mock data, so this is live against production data as soon as it
- * mounts.
- *
- * Download is disabled unconditionally right now (not just gated on scan
- * status): `fetchAttachmentBlobUrl` always 401s, a known backend gap (see
- * its own doc comment in attachments.ts) — showing an enabled control for
- * an action that cannot currently succeed would just make every user hit
- * "Could not download this file right now."
+ * Real attachment list, wired to the backend's REST routes
+ * (GET /api/v1/grievances/<id>/attachments). `grievance` is the real backend
+ * document name — the surrounding detail sidebar is backend-driven too (see
+ * `mapGrievance.ts`'s `id: item.name`), not mock data, so this is live
+ * against production data as soon as it mounts. Clicking a row opens
+ * `DocumentViewerPopup`, which carries preview/download/delete — see its own
+ * doc comment for why download and preview are still disabled there.
  */
-export function AttachmentsList({ grievance }: { grievance: string }) {
+export function AttachmentsList({ grievance, canManageCase }: { grievance: string; canManageCase: boolean }): ReactElement {
   const [rows, setRows] = useState<AttachmentRow[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<AttachmentRow | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,28 +45,8 @@ export function AttachmentsList({ grievance }: { grievance: string }) {
     };
   }, [grievance]);
 
-  const handleDownload = async (row: AttachmentRow) => {
-    setDownloadingId(row.name);
-    setDownloadError(null);
-    try {
-      const info = await getAttachmentDownloadInfo(row.name);
-      const blobUrl = await fetchAttachmentBlobUrl(info.file_url);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = info.file_name;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      logger.error("Failed to download attachment:", error);
-      // See the KNOWN GAP note on `fetchAttachmentBlobUrl` — this currently
-      // always fails, since `/private/files/*` isn't reachable with this
-      // app's Bearer auth yet. Surfaced here rather than failing silently.
-      setDownloadError("Could not download this file right now.");
-    } finally {
-      setDownloadingId(null);
-    }
+  const handleDeleted = (attachmentName: string) => {
+    setRows((prev) => prev.filter((row) => row.name !== attachmentName));
   };
 
   return (
@@ -128,52 +77,40 @@ export function AttachmentsList({ grievance }: { grievance: string }) {
           <p role="status" className="py-4 text-sm text-gray-500">No attachments on this case.</p>
         )}
 
-        {downloadError && (
-          <div role="alert" className="flex items-center gap-2 py-2 text-red-600 text-xs">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            {downloadError}
-          </div>
-        )}
-
+        {/* One click target per row (opens DocumentViewerPopup, which offers Download/Delete)
+            rather than a second, separately-clickable download icon inside it — a button
+            nested inside a button isn't valid, and the download action lives just as well
+            one click deeper, in the popup that already carries it. */}
         {status === "ready" &&
           rows.map((row) => (
-            <div
+            <button
               key={row.name}
-              className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0"
+              type="button"
+              onClick={() => setSelectedAttachment(row)}
+              className="w-full flex items-center gap-3 py-3 border-b border-gray-100 last:border-b-0 text-left hover:bg-gray-50 rounded-lg transition-colors -mx-2 px-2"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
-                  <FileText className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{row.file_name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-gray-500">{formatSize(row.size_bytes)}</span>
-                    {scanBadge(row)}
-                  </div>
+              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">{row.file_name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-gray-500">{formatAttachmentSize(row.size_bytes)}</span>
+                  {scanStatusBadge(row)}
                 </div>
               </div>
-              <button
-                onClick={() => handleDownload(row)}
-                disabled={!row.servable || downloadingId === row.name || DOWNLOAD_DISABLED}
-                title={
-                  DOWNLOAD_DISABLED
-                    ? "Download isn't available yet (backend gap — file bytes aren't reachable through this app's auth)"
-                    : row.servable
-                      ? "Download"
-                      : "Not available until the scan completes"
-                }
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-              >
-                {downloadingId === row.name ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-              </button>
-            </div>
+            </button>
           ))}
       </div>
+
+      {selectedAttachment && (
+        <DocumentViewerPopup
+          attachment={selectedAttachment}
+          onClose={() => setSelectedAttachment(null)}
+          canDelete={canManageCase}
+          onDeleted={handleDeleted}
+        />
+      )}
     </div>
   );
 }
