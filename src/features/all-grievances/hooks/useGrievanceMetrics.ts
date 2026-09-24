@@ -15,7 +15,7 @@ export interface UseGrievanceMetricsResult {
 
 /**
  * KPI card counts from GET /api/v1/grievances/summary.
- * Labels and order come from the backend; the UI only maps icons by card order.
+ * Labels and order come from the backend; icons are matched by status, not position.
  */
 export function useGrievanceMetrics(): UseGrievanceMetricsResult {
   const [cards, setCards] = useState<GrievanceSummaryCard[]>([]);
