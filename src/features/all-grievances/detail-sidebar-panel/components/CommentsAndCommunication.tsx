@@ -301,10 +301,17 @@ export function CommentsAndCommunication({
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (att.file_url) {
-                                    window.open(att.file_url, '_blank', 'noopener,noreferrer');
-                                  } else if (att.name || att.file_name) {
-                                    setSelectedDoc(att.name || att.file_name || '');
+                                  const attId = att.name || att.id;
+                                  if (attId) {
+                                    const viewUrl = `/api/proxy/api/v1/attachments/${encodeURIComponent(attId)}/view`;
+                                    window.open(viewUrl, '_blank', 'noopener,noreferrer');
+                                  } else if (att.file_url) {
+                                    const proxyUrl = att.file_url.startsWith('/api/proxy')
+                                      ? att.file_url
+                                      : `/api/proxy${att.file_url.startsWith('/') ? '' : '/'}${att.file_url}`;
+                                    window.open(proxyUrl, '_blank', 'noopener,noreferrer');
+                                  } else if (att.file_name) {
+                                    setSelectedDoc(att.file_name);
                                   }
                                 }}
                                 className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 font-medium transition-colors shadow-2xs group"

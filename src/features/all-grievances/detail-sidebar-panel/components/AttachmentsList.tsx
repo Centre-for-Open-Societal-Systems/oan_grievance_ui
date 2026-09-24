@@ -4,17 +4,11 @@ import { useEffect, useState } from "react";
 import { Paperclip, Download, Loader2, AlertTriangle, FileText } from "lucide-react";
 import {
   getAttachments,
-  getAttachmentDownloadInfo,
   fetchAttachmentBlobUrl,
   SCAN_STATUS,
   type AttachmentRow,
 } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
-
-// Flip this once fetchAttachmentBlobUrl's known 401 gap (see attachments.ts)
-// is actually fixed server-side — a single point to re-enable the control
-// rather than deleting/re-adding the disabled prop by hand.
-const DOWNLOAD_DISABLED = true;
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -34,17 +28,11 @@ function scanBadge(row: AttachmentRow) {
 
 /**
  * Real attachment list + download, wired to the backend's REST routes
- * (GET /api/v1/grievances/<id>/attachments, GET /api/v1/attachments/<id>/download).
+ * (GET /api/v1/grievances/<id>/attachments, GET /api/v1/attachments/<id>/view).
  * `grievance` is the real backend document name — the surrounding detail
  * sidebar is backend-driven too (see `mapGrievance.ts`'s `id: item.name`),
  * not mock data, so this is live against production data as soon as it
  * mounts.
- *
- * Download is disabled unconditionally right now (not just gated on scan
- * status): `fetchAttachmentBlobUrl` always 401s, a known backend gap (see
- * its own doc comment in attachments.ts) — showing an enabled control for
- * an action that cannot currently succeed would just make every user hit
- * "Could not download this file right now."
  */
 export function AttachmentsList({ grievance }: { grievance: string }) {
   const [rows, setRows] = useState<AttachmentRow[]>([]);
@@ -80,20 +68,16 @@ export function AttachmentsList({ grievance }: { grievance: string }) {
     setDownloadingId(row.name);
     setDownloadError(null);
     try {
-      const info = await getAttachmentDownloadInfo(row.name);
-      const blobUrl = await fetchAttachmentBlobUrl(info.file_url);
+      const blobUrl = await fetchAttachmentBlobUrl(row.name);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = info.file_name;
+      link.download = row.file_name;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
       logger.error("Failed to download attachment:", error);
-      // See the KNOWN GAP note on `fetchAttachmentBlobUrl` — this currently
-      // always fails, since `/private/files/*` isn't reachable with this
-      // app's Bearer auth yet. Surfaced here rather than failing silently.
       setDownloadError("Could not download this file right now.");
     } finally {
       setDownloadingId(null);
@@ -155,13 +139,11 @@ export function AttachmentsList({ grievance }: { grievance: string }) {
               </div>
               <button
                 onClick={() => handleDownload(row)}
-                disabled={!row.servable || downloadingId === row.name || DOWNLOAD_DISABLED}
+                disabled={!row.servable || downloadingId === row.name}
                 title={
-                  DOWNLOAD_DISABLED
-                    ? "Download isn't available yet (backend gap — file bytes aren't reachable through this app's auth)"
-                    : row.servable
-                      ? "Download"
-                      : "Not available until the scan completes"
+                  row.servable
+                    ? "Download"
+                    : "Not available until the scan completes"
                 }
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
               >

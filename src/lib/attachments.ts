@@ -121,32 +121,26 @@ export async function deleteAttachment(attachment: string): Promise<void> {
 }
 
 /**
- * Fetches an attachment's bytes through the auth proxy and returns an object
- * URL. The caller owns it and must `URL.revokeObjectURL` it once done — same
- * lifecycle as the existing local image-preview URLs in `GrievanceDetailsCard`.
- *
- * KNOWN GAP (verified live, not yet fixed): this currently 401s. `file_url`
- * points at Frappe's `/private/files/*`, which `frappe/app.py` routes to
- * `download_private_file` *before* the request ever reaches `frappe.api.handle`
- * — the JWT middleware `oan_auth_service` registers only validates requests
- * whose path matches a registered namespace prefix (see `register_namespace`
- * in that app's `api/middleware.py`), and `/private/files` isn't one. Frappe
- * falls back to its own cookie-session auth for that path, which this app
- * never establishes (it's JWT-only, no `sid` cookie). The metadata calls
- * above (`getAttachments`, `getAttachmentDownloadInfo`) go through the REST
- * router instead, so they work fine — only the raw bytes are blocked. Fixing
- * this needs a backend change (e.g. a whitelisted streaming endpoint that
- * serves the bytes through the already-protected router) — out of scope for
- * this PR.
- *
- * Re-checked after pulling oan_grievance_service 611aee2→185a508 (2026-09-19):
- * still open. That pull's `has_permission` hook on Grievance Attachment closes
- * a different bug (an unscanned/infected file being servable to anyone with a
- * valid Frappe session) — it doesn't register `/private/files` under the JWT
- * middleware, so this app still can't authenticate against it at all.
+ * Returns the authenticated proxy URL to stream an attachment's bytes inline or as download.
+ * Backend route: GET /api/v1/attachments/<id>/view(?download=1)
  */
-export async function fetchAttachmentBlobUrl(fileUrl: string): Promise<string> {
-  const response = await fetch(`/api/proxy${fileUrl}`);
+export function getAttachmentViewUrl(attachment: string, download = false): string {
+  const enc = encodeURIComponent(attachment);
+  return `/api/proxy/api/v1/attachments/${enc}/view${download ? '?download=1' : ''}`;
+}
+
+/**
+ * Fetches an attachment's bytes through the auth proxy and returns an object
+ * URL for download or inline preview.
+ */
+export async function fetchAttachmentBlobUrl(attachmentOrUrl: string, download = true): Promise<string> {
+  const url = attachmentOrUrl.startsWith('/api/proxy')
+    ? attachmentOrUrl
+    : attachmentOrUrl.startsWith('/')
+      ? `/api/proxy${attachmentOrUrl}`
+      : getAttachmentViewUrl(attachmentOrUrl, download);
+
+  const response = await fetch(url);
   if (!response.ok) {
     throw new ApiError('Failed to download the file.', null, response.status);
   }
