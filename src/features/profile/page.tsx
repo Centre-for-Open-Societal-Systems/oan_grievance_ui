@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { selectUser } from "@/features/auth/store/authSlice";
-import { getFullProfile, type BackendAuthMeData } from "@/features/auth/api/authApi";
+import { getFullProfile, resolveFaydaId, type BackendAuthMeData } from "@/features/auth/api/authApi";
 import { logger } from "@/lib/logger";
 import { UserCircle, Loader2, AlertTriangle, Info, Eye, EyeOff } from "lucide-react";
 
@@ -104,6 +104,7 @@ export default function ProfilePage() {
   // kept in sync so this page doesn't show "Not provided" for a value the
   // header/rest of the app already displays correctly for the same account.
   const mobileNo = profile?.mobile_no || grievanceProfile?.contact_mobile;
+  const faydaId = resolveFaydaId(grievanceProfile?.identities);
 
   return (
     <div className="flex flex-col gap-6 font-sans pb-2">
@@ -169,7 +170,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <Field label="Account Type" value={grievanceProfile.type} />
                 <Field label="Role" value={grievanceProfile.role} />
-                {grievanceProfile.fayda_id && <MaskedField label="Fayda ID" value={grievanceProfile.fayda_id} />}
+                {faydaId && <MaskedField label="Fayda ID" value={faydaId} />}
                 {grievanceProfile.registration_number && (
                   <Field label="Registration Number" value={grievanceProfile.registration_number} />
                 )}
