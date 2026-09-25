@@ -15,6 +15,15 @@ import type {
   SubmitterOptionsQueryParams,
 } from '../types';
 
+/**
+ * The only part of the store these selectors read. Typing them against this
+ * instead of the whole `RootState` lets a caller holding just the metadata
+ * slice pass `{ metadata }` without an `as RootState` cast — a cast that would
+ * hide a selector later reaching into another slice. A full `RootState` still
+ * satisfies it, so `useSelector(selectX)` call sites are unaffected.
+ */
+export type MetadataRootState = Pick<RootState, 'metadata'>;
+
 export interface MetadataState {
   submitterOptions: SubmitterOptionsData | null;
   submitterOptionsStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
@@ -214,7 +223,7 @@ export const metadataReducer = metadataSlice.reducer;
 
 // --- Selectors ---
 
-export const selectSelectedLanguage = (state: RootState): string =>
+export const selectSelectedLanguage = (state: MetadataRootState): string =>
   state.metadata.selectedLanguage || 'en';
 
 /** Normalizes backend submitter type string to internal key if needed */
@@ -239,7 +248,7 @@ export function normalizeSubmissionChannel(raw: string): string {
   return lower.replace(/\s+/g, '_');
 }
 
-export const selectSubmitterTypeOptions = (state: RootState): Array<{ value: string; label: string }> => {
+export const selectSubmitterTypeOptions = (state: MetadataRootState): Array<{ value: string; label: string }> => {
   const backendTypes = state.metadata.submitterOptions?.submitter_types;
   if (backendTypes && backendTypes.length > 0) {
     return backendTypes.map((t) => ({
@@ -251,7 +260,7 @@ export const selectSubmitterTypeOptions = (state: RootState): Array<{ value: str
 };
 
 export const selectPreferredLanguageOptions = (
-  state: RootState
+  state: MetadataRootState
 ): Array<{ code: string; label: string; flag: string; flagUrl: string }> => {
   const backendLangs = state.metadata.submitterOptions?.preferred_languages;
   if (backendLangs && backendLangs.length > 0) {
@@ -284,7 +293,7 @@ export const selectPreferredLanguageOptions = (
   return [];
 };
 
-export const selectSubmissionChannelOptions = (state: RootState): Array<{ value: string; label: string }> => {
+export const selectSubmissionChannelOptions = (state: MetadataRootState): Array<{ value: string; label: string }> => {
   const backendChannels =
     state.metadata.submitterOptions?.submission_types ??
     state.metadata.grievanceOptions?.submission_channels;
@@ -313,7 +322,7 @@ export const selectSubmissionChannelOptions = (state: RootState): Array<{ value:
   return [];
 };
 
-export const selectServiceCategoryOptions = (state: RootState): Array<{ value: string; label: string }> => {
+export const selectServiceCategoryOptions = (state: MetadataRootState): Array<{ value: string; label: string }> => {
   const backendCategories =
     state.metadata.submitterOptions?.service_categories ??
     state.metadata.grievanceOptions?.service_categories;
@@ -328,7 +337,7 @@ export const selectServiceCategoryOptions = (state: RootState): Array<{ value: s
 };
 
 export const selectGrievanceTypeOptions = (
-  state: RootState,
+  state: MetadataRootState,
   selectedCategory?: string
 ): Array<{ value: string; label: string }> => {
   const backendTypes =
@@ -361,7 +370,7 @@ export const selectGrievanceTypeOptions = (
   return [];
 };
 
-export const selectRegionOptions = (state: RootState): Array<{ value: string; label: string }> => {
+export const selectRegionOptions = (state: MetadataRootState): Array<{ value: string; label: string }> => {
   if (state.metadata.regions.length > 0) {
     return state.metadata.regions.map((r) => ({
       value: r.area_name,
@@ -372,7 +381,7 @@ export const selectRegionOptions = (state: RootState): Array<{ value: string; la
 };
 
 export const selectChildAreaOptions = (
-  state: RootState,
+  state: MetadataRootState,
   parentId?: string
 ): Array<{ value: string; label: string }> => {
   if (!parentId) return [];
@@ -387,7 +396,7 @@ export const selectChildAreaOptions = (
 };
 
 export const selectZoneOptions = (
-  state: RootState,
+  state: MetadataRootState,
   regionValue?: string
 ): Array<{ value: string; label: string }> => {
   if (!regionValue) return [];
@@ -421,7 +430,7 @@ export const selectZoneOptions = (
 };
 
 export const selectZoneStatus = (
-  state: RootState,
+  state: MetadataRootState,
   regionValue?: string
 ): 'idle' | 'loading' | 'succeeded' | 'failed' => {
   if (!regionValue) return 'idle';
@@ -439,7 +448,7 @@ export const selectZoneStatus = (
 };
 
 export function findZoneNode(
-  state: RootState,
+  state: MetadataRootState,
   zoneValue?: string,
   regionValue?: string
 ): AdministrativeArea | undefined {
@@ -483,7 +492,7 @@ export function findZoneNode(
 }
 
 export const selectWoredaOptions = (
-  state: RootState,
+  state: MetadataRootState,
   zoneValue?: string,
   regionValue?: string
 ): Array<{ value: string; label: string }> => {
@@ -527,7 +536,7 @@ export const selectWoredaOptions = (
 };
 
 export const selectWoredaStatus = (
-  state: RootState,
+  state: MetadataRootState,
   zoneValue?: string,
   regionValue?: string
 ): 'idle' | 'loading' | 'succeeded' | 'failed' => {
@@ -557,7 +566,7 @@ export const selectWoredaStatus = (
 };
 
 export function findWoredaNode(
-  state: RootState,
+  state: MetadataRootState,
   woredaValue?: string,
   zoneValue?: string,
   regionValue?: string
@@ -614,7 +623,7 @@ export function findWoredaNode(
 }
 
 function kebeleChildren(
-  state: RootState,
+  state: MetadataRootState,
   woredaNode: AdministrativeArea | undefined,
   woredaValue: string
 ): AdministrativeArea[] | undefined {
@@ -634,15 +643,15 @@ function kebeleChildren(
  */
 export const selectKebeleOptions = createSelector(
   [
-    (state: RootState) => state.metadata,
-    (_state: RootState, woredaValue?: string) => woredaValue,
-    (_state: RootState, _woredaValue?: string, zoneValue?: string) => zoneValue,
-    (_state: RootState, _woredaValue?: string, _zoneValue?: string, regionValue?: string) => regionValue,
+    (state: MetadataRootState) => state.metadata,
+    (_state: MetadataRootState, woredaValue?: string) => woredaValue,
+    (_state: MetadataRootState, _woredaValue?: string, zoneValue?: string) => zoneValue,
+    (_state: MetadataRootState, _woredaValue?: string, _zoneValue?: string, regionValue?: string) => regionValue,
   ],
   (metadata, woredaValue, zoneValue, regionValue): Array<{ value: string; label: string }> => {
     if (!woredaValue) return [];
 
-    const state = { metadata } as RootState;
+    const state = { metadata };
     const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
     const childAreas = kebeleChildren(state, woredaNode, woredaValue);
 
@@ -674,7 +683,7 @@ export const selectKebeleOptions = createSelector(
  * Returns undefined when the woreda hasn't been resolved to a node yet.
  */
 export function findFilingArea(
-  state: RootState,
+  state: MetadataRootState,
   selection: { region?: string; zone?: string; woreda?: string; kebele?: string }
 ): AdministrativeArea | undefined {
   const { region, zone, woreda, kebele } = selection;
@@ -692,7 +701,7 @@ export function findFilingArea(
 }
 
 export const selectKebeleStatus = (
-  state: RootState,
+  state: MetadataRootState,
   woredaValue?: string,
   zoneValue?: string,
   regionValue?: string
@@ -708,7 +717,7 @@ export const selectKebeleStatus = (
 };
 
 export function findKebeleNode(
-  state: RootState,
+  state: MetadataRootState,
   kebeleValue?: string,
   woredaValue?: string,
   zoneValue?: string,
@@ -750,7 +759,7 @@ export function findKebeleNode(
 }
 
 export function resolveAdministrativeAreaId(
-  state: RootState,
+  state: MetadataRootState,
   kebele?: string,
   woreda?: string,
   zone?: string,
@@ -801,14 +810,14 @@ export function resolveAdministrativeAreaId(
  * Memoized with `createSelector` so the array identity stays stable across renders.
  */
 export const selectStatusFilterOptions = createSelector(
-  [(state: RootState) => state.metadata.grievanceOptions?.statuses],
+  [(state: MetadataRootState) => state.metadata.grievanceOptions?.statuses],
   (statuses): Array<{ value: string; label: string }> =>
     (statuses ?? []).map((s) => ({ value: s.status, label: s.label || s.status }))
 );
 
 export const selectCategoryFilterOptions = createSelector(
   [
-    (state: RootState) =>
+    (state: MetadataRootState) =>
       state.metadata.submitterOptions?.service_categories ??
       state.metadata.grievanceOptions?.service_categories,
   ],
@@ -817,7 +826,7 @@ export const selectCategoryFilterOptions = createSelector(
 );
 
 export const selectRegionFilterOptions = createSelector(
-  [(state: RootState) => state.metadata.regions],
+  [(state: MetadataRootState) => state.metadata.regions],
   (regions): Array<{ value: string; label: string }> =>
     regions.map((r) => ({ value: r.area_name, label: r.area_name }))
 );
