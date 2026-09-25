@@ -15,6 +15,15 @@ import type {
   SubmitterOptionsQueryParams,
 } from '../types';
 
+/**
+ * The only part of the store these selectors read. Typing them against this
+ * instead of the whole `RootState` lets a caller holding just the metadata
+ * slice pass `{ metadata }` without an `as RootState` cast — a cast that would
+ * hide a selector later reaching into another slice. A full `RootState` still
+ * satisfies it, so `useSelector(selectX)` call sites are unaffected.
+ */
+export type MetadataRootState = Pick<RootState, 'metadata'>;
+
 export interface MetadataState {
   submitterOptions: SubmitterOptionsData | null;
   submitterOptionsStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
@@ -300,7 +309,7 @@ export const metadataReducer = metadataSlice.reducer;
 
 // --- Selectors ---
 
-export const selectSelectedLanguage = (state: RootState): string =>
+export const selectSelectedLanguage = (state: MetadataRootState): string =>
   state.metadata.selectedLanguage || 'en';
 
 /** Normalizes backend submitter type string to internal key if needed */
@@ -326,7 +335,7 @@ export function normalizeSubmissionChannel(raw: string): string {
 }
 
 export const selectSubmitterTypeOptions = createSelector(
-  [(state: RootState) => state.metadata.submitterOptions?.submitter_types],
+  [(state: MetadataRootState) => state.metadata.submitterOptions?.submitter_types],
   (backendTypes): Array<{ value: string; label: string }> => {
     if (backendTypes && backendTypes.length > 0) {
       return backendTypes.map((t) => ({
@@ -339,7 +348,7 @@ export const selectSubmitterTypeOptions = createSelector(
 );
 
 export const selectPreferredLanguageOptions = createSelector(
-  [(state: RootState) => state.metadata.submitterOptions?.preferred_languages],
+  [(state: MetadataRootState) => state.metadata.submitterOptions?.preferred_languages],
   (backendLangs): Array<{ code: string; label: string; flag: string; flagUrl: string }> => {
     if (backendLangs && backendLangs.length > 0) {
       const flagMap: Record<string, string> = {
@@ -374,7 +383,7 @@ export const selectPreferredLanguageOptions = createSelector(
 
 export const selectSubmissionChannelOptions = createSelector(
   [
-    (state: RootState) =>
+    (state: MetadataRootState) =>
       state.metadata.submitterOptions?.submission_types ??
       state.metadata.grievanceOptions?.submission_channels,
   ],
@@ -406,7 +415,7 @@ export const selectSubmissionChannelOptions = createSelector(
 
 export const selectServiceCategoryOptions = createSelector(
   [
-    (state: RootState) =>
+    (state: MetadataRootState) =>
       state.metadata.submitterOptions?.service_categories ??
       state.metadata.grievanceOptions?.service_categories,
   ],
@@ -423,10 +432,10 @@ export const selectServiceCategoryOptions = createSelector(
 
 export const selectGrievanceTypeOptions = createSelector(
   [
-    (state: RootState) =>
+    (state: MetadataRootState) =>
       state.metadata.submitterOptions?.grievance_types ??
       state.metadata.grievanceOptions?.grievance_types,
-    (_state: RootState, selectedCategory?: string) => selectedCategory,
+    (_state: MetadataRootState, selectedCategory?: string) => selectedCategory,
   ],
   (backendTypes, selectedCategory): Array<{ value: string; label: string }> => {
     if (backendTypes && backendTypes.length > 0) {
@@ -457,7 +466,7 @@ export const selectGrievanceTypeOptions = createSelector(
 );
 
 export const selectRegionOptions = createSelector(
-  [(state: RootState) => state.metadata.regions],
+  [(state: MetadataRootState) => state.metadata.regions],
   (regions): Array<{ value: string; label: string }> => {
     if (regions && regions.length > 0) {
       return regions.map((r) => ({
@@ -470,7 +479,7 @@ export const selectRegionOptions = createSelector(
 );
 
 export const selectChildAreaOptions = (
-  state: RootState,
+  state: MetadataRootState,
   parentId?: string
 ): Array<{ value: string; label: string }> => {
   if (!parentId) return [];
@@ -486,8 +495,8 @@ export const selectChildAreaOptions = (
 
 export const selectZoneOptions = createSelector(
   [
-    (state: RootState) => state.metadata,
-    (_state: RootState, regionValue?: string) => regionValue,
+    (state: MetadataRootState) => state.metadata,
+    (_state: MetadataRootState, regionValue?: string) => regionValue,
   ],
   (metadata, regionValue): Array<{ value: string; label: string }> => {
     if (!regionValue) return [];
@@ -522,7 +531,7 @@ export const selectZoneOptions = createSelector(
 );
 
 export const selectZoneStatus = (
-  state: RootState,
+  state: MetadataRootState,
   regionValue?: string
 ): 'idle' | 'loading' | 'succeeded' | 'failed' => {
   if (!regionValue) return 'idle';
@@ -540,7 +549,7 @@ export const selectZoneStatus = (
 };
 
 export function findZoneNode(
-  state: RootState,
+  state: MetadataRootState,
   zoneValue?: string,
   regionValue?: string
 ): AdministrativeArea | undefined {
@@ -588,13 +597,13 @@ export function findZoneNode(
 
 export const selectWoredaOptions = createSelector(
   [
-    (state: RootState) => state.metadata,
-    (_state: RootState, zoneValue?: string) => zoneValue,
-    (_state: RootState, _zoneValue?: string, regionValue?: string) => regionValue,
+    (state: MetadataRootState) => state.metadata,
+    (_state: MetadataRootState, zoneValue?: string) => zoneValue,
+    (_state: MetadataRootState, _zoneValue?: string, regionValue?: string) => regionValue,
   ],
   (metadata, zoneValue, regionValue): Array<{ value: string; label: string }> => {
     let childAreas: AdministrativeArea[] | undefined;
-    const state = { metadata } as RootState;
+    const state = { metadata };
 
     if (zoneValue) {
       const zoneNode = findZoneNode(state, zoneValue, regionValue);
@@ -637,7 +646,7 @@ export const selectWoredaOptions = createSelector(
 );
 
 export const selectWoredaStatus = (
-  state: RootState,
+  state: MetadataRootState,
   zoneValue?: string,
   regionValue?: string
 ): 'idle' | 'loading' | 'succeeded' | 'failed' => {
@@ -667,7 +676,7 @@ export const selectWoredaStatus = (
 };
 
 export function findWoredaNode(
-  state: RootState,
+  state: MetadataRootState,
   woredaValue?: string,
   zoneValue?: string,
   regionValue?: string
@@ -744,7 +753,7 @@ export function findWoredaNode(
 }
 
 function kebeleChildren(
-  state: RootState,
+  state: MetadataRootState,
   woredaNode: AdministrativeArea | undefined,
   woredaValue: string
 ): AdministrativeArea[] | undefined {
@@ -764,15 +773,15 @@ function kebeleChildren(
  */
 export const selectKebeleOptions = createSelector(
   [
-    (state: RootState) => state.metadata,
-    (_state: RootState, woredaValue?: string) => woredaValue,
-    (_state: RootState, _woredaValue?: string, zoneValue?: string) => zoneValue,
-    (_state: RootState, _woredaValue?: string, _zoneValue?: string, regionValue?: string) => regionValue,
+    (state: MetadataRootState) => state.metadata,
+    (_state: MetadataRootState, woredaValue?: string) => woredaValue,
+    (_state: MetadataRootState, _woredaValue?: string, zoneValue?: string) => zoneValue,
+    (_state: MetadataRootState, _woredaValue?: string, _zoneValue?: string, regionValue?: string) => regionValue,
   ],
   (metadata, woredaValue, zoneValue, regionValue): Array<{ value: string; label: string }> => {
     if (!woredaValue) return [];
 
-    const state = { metadata } as RootState;
+    const state = { metadata };
     const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
     const childAreas = kebeleChildren(state, woredaNode, woredaValue);
 
@@ -804,7 +813,7 @@ export const selectKebeleOptions = createSelector(
  * Returns undefined when the woreda hasn't been resolved to a node yet.
  */
 export function findFilingArea(
-  state: RootState,
+  state: MetadataRootState,
   selection: { region?: string; zone?: string; woreda?: string; kebele?: string }
 ): AdministrativeArea | undefined {
   const { region, zone, woreda, kebele } = selection;
@@ -837,7 +846,7 @@ export function findFilingArea(
 }
 
 export const selectKebeleStatus = (
-  state: RootState,
+  state: MetadataRootState,
   woredaValue?: string,
   zoneValue?: string,
   regionValue?: string
@@ -853,7 +862,7 @@ export const selectKebeleStatus = (
 };
 
 export function findKebeleNode(
-  state: RootState,
+  state: MetadataRootState,
   kebeleValue?: string,
   woredaValue?: string,
   zoneValue?: string,
@@ -895,7 +904,7 @@ export function findKebeleNode(
 }
 
 export function resolveAdministrativeAreaId(
-  state: RootState,
+  state: MetadataRootState,
   kebele?: string,
   woreda?: string,
   zone?: string,
@@ -946,7 +955,7 @@ export function resolveAdministrativeAreaId(
  * Memoized with `createSelector` so the array identity stays stable across renders.
  */
 export const selectStatusFilterOptions = createSelector(
-  [(state: RootState) => state.metadata.grievanceOptions?.statuses],
+  [(state: MetadataRootState) => state.metadata.grievanceOptions?.statuses],
   (statuses): Array<{ value: string; label: string }> => {
     const map = new Map<string, string>();
     for (const s of statuses ?? []) {
@@ -960,7 +969,7 @@ export const selectStatusFilterOptions = createSelector(
 
 export const selectCategoryFilterOptions = createSelector(
   [
-    (state: RootState) =>
+    (state: MetadataRootState) =>
       state.metadata.submitterOptions?.service_categories ??
       state.metadata.grievanceOptions?.service_categories,
   ],
@@ -976,7 +985,7 @@ export const selectCategoryFilterOptions = createSelector(
 );
 
 export const selectRegionFilterOptions = createSelector(
-  [(state: RootState) => state.metadata.regions],
+  [(state: MetadataRootState) => state.metadata.regions],
   (regions): Array<{ value: string; label: string }> => {
     const map = new Map<string, string>();
     for (const r of regions ?? []) {
@@ -990,8 +999,8 @@ export const selectRegionFilterOptions = createSelector(
 
 export const selectWoredaFilterOptions = createSelector(
   [
-    (state: RootState) => state.metadata,
-    (_state: RootState, selectedRegions?: string[]) => selectedRegions,
+    (state: MetadataRootState) => state.metadata,
+    (_state: MetadataRootState, selectedRegions?: string[]) => selectedRegions,
   ],
   (metadata, selectedRegions): Array<{ value: string; label: string }> => {
     const woredaMap = new Map<string, string>();
@@ -1051,14 +1060,14 @@ export const selectWoredaFilterOptions = createSelector(
 
 export const selectKebeleFilterOptions = createSelector(
   [
-    (state: RootState) => state.metadata,
-    (_state: RootState, selectedWoredas?: string[]) => selectedWoredas,
+    (state: MetadataRootState) => state.metadata,
+    (_state: MetadataRootState, selectedWoredas?: string[]) => selectedWoredas,
   ],
   (metadata, selectedWoredas): Array<{ value: string; label: string }> => {
     const kebeleMap = new Map<string, string>();
 
     if (selectedWoredas && selectedWoredas.length > 0) {
-      const state = { metadata } as RootState;
+      const state = { metadata };
       for (const woredaName of selectedWoredas) {
         const woredaNode = findWoredaNode(state, woredaName);
         const parentKey = woredaNode?.area_id || woredaName;

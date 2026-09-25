@@ -25,7 +25,8 @@ export interface BackendAuthMeData {
       contact_email?: string | null;
       contact_mobile?: string | null;
       department?: string | null;
-      fayda_id?: string | null;
+      /** e.g. `[{ scheme: "fayda", value: "3214..." }]` — see `resolveFaydaId`. */
+      identities?: Array<{ scheme?: string | null; value?: string | null }> | null;
       full_name?: string | null;
       identity_scheme?: string | null;
       identity_value?: string | null;
@@ -40,6 +41,20 @@ export interface BackendAuthMeData {
     [key: string]: unknown;
   };
   [key: string]: unknown;
+}
+
+/**
+ * The backend never sends a flat `fayda_id` — a submitter's national ID
+ * comes back as one entry in `profiles.grievance.identities` (the same
+ * scheme/value pairs `dedupe_key` is built from; see
+ * `grievance_submitter_profile.py`'s `split_dedupe_key`). Not every
+ * submitter has one: a Development Agent or a phone-only registrant's
+ * `identities` array simply won't contain a `"fayda"` entry.
+ */
+export function resolveFaydaId(
+  identities: Array<{ scheme?: string | null; value?: string | null }> | null | undefined
+): string | undefined {
+  return identities?.find((i) => i.scheme === 'fayda')?.value ?? undefined;
 }
 
 export async function loginUser({ usr, pwd, rememberMe = false }: LoginCredentials): Promise<User> {
@@ -197,7 +212,7 @@ export async function getMe(): Promise<User> {
     mobile_no: d.mobile_no || grievanceProfile?.contact_mobile || undefined,
     type,
     profile_id: grievanceProfile?.profile_id || undefined,
-    fayda_id: grievanceProfile?.fayda_id || undefined,
+    fayda_id: resolveFaydaId(grievanceProfile?.identities),
     administrative_area: grievanceProfile?.administrative_area || undefined,
     administrative_unit: grievanceProfile?.administrative_unit || undefined,
     preferred_language: grievanceProfile?.preferred_language || undefined,

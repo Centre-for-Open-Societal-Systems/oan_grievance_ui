@@ -41,7 +41,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCa
         woreda="Basona Werana"
         kebele="Kebele 01"
         description={DESCRIPTION}
-        uploadedFile={null}
+        attachments={[]}
         {...props}
       />
     </Provider>

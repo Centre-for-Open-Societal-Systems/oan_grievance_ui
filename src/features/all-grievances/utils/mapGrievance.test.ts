@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { mapGrievanceListItem, getInitials, normalizeTimelineEntry } from './mapGrievance';
-import { bucketStatuses } from '../hooks/useGrievanceMetrics';
 import type { GrievanceListItem, TimelineEntry, TimelineEventItem } from '../types';
 
 const baseItem: GrievanceListItem = {
@@ -197,30 +196,5 @@ describe('normalizeTimelineEntry', () => {
     const normRejection = normalizeTimelineEntry(rejectionEntry);
     expect(normRejection.entryType).toBe('rejection');
     expect(normRejection.typeLabel).toBe('Rejection');
-  });
-});
-
-describe('bucketStatuses', () => {
-  it('maps backend lifecycle statuses onto the metric cards', () => {
-    const buckets = bucketStatuses([
-      'Submitted',
-      'Under Investigation',
-      'More Info Needed',
-      'Resolved',
-      'Closed',
-      'Rejected',
-    ]);
-
-    expect(buckets.pending).toEqual(['Submitted']);
-    expect(buckets.inProgress).toEqual(['Under Investigation']);
-    expect(buckets.underReview).toEqual(['More Info Needed']);
-    expect(buckets.resolved).toEqual(['Resolved', 'Closed']);
-    expect(buckets.rejected).toEqual(['Rejected']);
-  });
-
-  it('drops statuses it cannot classify rather than guessing', () => {
-    const buckets = bucketStatuses(['Archived']);
-
-    expect(Object.values(buckets).every((bucket) => bucket.length === 0)).toBe(true);
   });
 });

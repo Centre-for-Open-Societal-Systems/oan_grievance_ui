@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AttachmentRow, ScanStatus } from '@/lib/attachments';
+import type { AttachmentRow, ScanStatus, WizardAttachment } from '@/lib/attachments';
 import en from '../../../../messages/en.json';
 import { makeStore } from '../testFixtures';
 
@@ -60,10 +60,22 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
   const [description, setDescription] = useState(initial.description ?? '');
   const [desiredOutcome, setDesiredOutcome] = useState('');
   const [serviceProvider, setServiceProvider] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [attachmentId, setAttachmentId] = useState<string | null>(initial.attachmentId ?? null);
-  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(initial.scanStatus ?? null);
-  const [attachmentFileName, setAttachmentFileName] = useState<string | null>(initial.attachmentFileName ?? null);
+  const [attachments, setAttachments] = useState<WizardAttachment[]>(() =>
+    initial.attachmentId
+      ? [
+          {
+            key: initial.attachmentId,
+            attachmentId: initial.attachmentId,
+            file: null,
+            fileName: initial.attachmentFileName ?? '',
+            scanStatus: initial.scanStatus ?? null,
+            scanPollAttempts: 0,
+            uploadState: 'idle',
+            error: null,
+          },
+        ]
+      : []
+  );
   return (
     <GrievanceDetailsCard
       onNext={onNext}
@@ -90,14 +102,8 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
       setDesiredOutcome={setDesiredOutcome}
       serviceProvider={serviceProvider}
       setServiceProvider={setServiceProvider}
-      uploadedFile={uploadedFile}
-      setUploadedFile={setUploadedFile}
-      attachmentId={attachmentId}
-      setAttachmentId={setAttachmentId}
-      scanStatus={scanStatus}
-      setScanStatus={setScanStatus}
-      attachmentFileName={attachmentFileName}
-      setAttachmentFileName={setAttachmentFileName}
+      attachments={attachments}
+      setAttachments={setAttachments}
     />
   );
 }
@@ -383,7 +389,7 @@ describe('Step 2 — attachment scan status', () => {
         attachmentFileName: 'evidence.pdf',
       });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Remove attachment' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Remove evidence.pdf' }));
       expect(screen.queryByText('evidence.pdf')).not.toBeInTheDocument();
 
       // If the effect's cleanup didn't run, this tick's poll would still fire

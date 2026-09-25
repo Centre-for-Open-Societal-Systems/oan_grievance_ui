@@ -40,6 +40,59 @@ export const SCAN_STATUS = {
 
 export type ScanStatus = (typeof SCAN_STATUS)[keyof typeof SCAN_STATUS];
 
+/** Mirrors the backend's `MAX_ATTACHMENTS_PER_CASE` (attachment.py) — a case may carry at most this many files, resumed draft attachments included. */
+export const MAX_ATTACHMENTS_PER_CASE = 10;
+
+export type AttachmentUploadState = 'idle' | 'uploading' | 'persisting' | 'error';
+
+/**
+ * One row in the submission wizard's attachment list — either a file just
+ * picked in this session or one resumed from a saved draft. `key` is a
+ * stable client-side id for React lists and for matching a still-uploading
+ * item to its eventual response; it is independent of `attachmentId`, which
+ * doesn't exist yet while `uploadState` is "uploading".
+ */
+export interface WizardAttachment {
+  key: string;
+  /** The backend Grievance Attachment id, once known. Null while the upload is still in flight. */
+  attachmentId: string | null;
+  /** The local blob, for image preview — null for an attachment resumed from a saved draft, which has no local File to read one off. */
+  file: File | null;
+  fileName: string;
+  scanStatus: ScanStatus | null;
+  /**
+   * How many completed scan-poll checks this attachment has been through
+   * while "Pending" — drives GrievanceDetailsCard's give-up timeout. Reset
+   * to 0 whenever `scanStatus` (re-)becomes "Pending"; meaningless
+   * otherwise. Lives here, not in a ref local to that component, because
+   * page.tsx conditionally unmounts/remounts GrievanceDetailsCard on every
+   * Step 1<->2 navigation; a component-local counter would reset on every
+   * Back/Next, defeating the timeout. Counting actual completed checks
+   * (not elapsed wall-clock time) matters too: on a slow connection where a
+   * single check can outlast the poll interval, fewer checks complete per
+   * minute, so the real time before giving up self-extends — the same
+   * "this app targets slow/unreliable connections" reasoning the poll
+   * effect's own comments describe elsewhere.
+   */
+  scanPollAttempts: number;
+  uploadState: AttachmentUploadState;
+  /** Set only on uploadState "error" — why this particular file failed. */
+  error: string | null;
+}
+
+/**
+ * The attachments that actually count as evidence on the case — everything
+ * except a row stuck at uploadState "error". A failed upload never made it
+ * to the backend (no `attachmentId`), so it must not count toward
+ * `MAX_ATTACHMENTS_PER_CASE`, block the dropzone from reopening, or be
+ * listed as a real attachment on the Review step; it stays visible in the
+ * picker's own list (via the full, unfiltered array) only so the user can
+ * see it failed and remove it.
+ */
+export function activeWizardAttachments(attachments: WizardAttachment[]): WizardAttachment[] {
+  return attachments.filter((a) => a.uploadState !== 'error');
+}
+
 /**
  * A row from `GET /api/v1/grievances/<id>/attachments` — exactly the field
  * list `get_attachments`'s `frappe.get_all(..., fields=[...])` selects on the
@@ -83,27 +136,35 @@ export interface AttachmentDownloadInfo {
 
 /**
  * Either `grievance` or `clientUuid` is required. `grievance` uploads
- * directly to a filed case (POST /api/v1/grievances/<grievance>/attachments);
- * `clientUuid` uploads to an open draft before the case exists
- * (POST /api/v1/drafts/attachments) — see `submit_document` on the backend
- * for why the draft path stays open to a guest and the grievance path
- * doesn't.
+ * directly to a filed case; `clientUuid` uploads to an open draft before the
+ * case exists — both hit the same
+ * `POST /api/v1/grievances/<grievance>/attachments` route (see
+ * `submit_documents` on the backend, `oan_grievance_service/api/v1/attachment.py`),
+ * which resolves `<grievance>` against `client_submission_uuid` too.
+ *
+ * `files` may hold more than one file — the backend accepts several under
+ * repeated `file` fields in one multipart request (`get_uploaded_files`),
+ * validates and stores them together, and always responds with one result
+ * per file, in the same order. Capped server-side at
+ * `MAX_ATTACHMENTS_PER_CASE` per case.
  */
-export async function uploadAttachment(params: {
-  file: File;
+export async function uploadAttachments(params: {
+  files: File[];
   grievance?: string;
   clientUuid?: string;
   documentType?: string;
   response?: string;
-}): Promise<UploadAttachmentResult> {
+}): Promise<UploadAttachmentResult[]> {
   const form = new FormData();
-  form.append('file', params.file);
+  for (const file of params.files) {
+    form.append('file', file);
+  }
   if (params.documentType) form.append('document_type', params.documentType);
   if (params.response) form.append('response', params.response);
 
   const targetId = params.grievance || params.clientUuid;
   if (!targetId) {
-    throw new Error('uploadAttachment requires either a grievance or a clientUuid.');
+    throw new Error('uploadAttachments requires either a grievance or a clientUuid.');
   }
 
   form.append('grievance', targetId);
@@ -115,10 +176,7 @@ export async function uploadAttachment(params: {
     UPLOAD_TIMEOUT_MS
   );
 
-  if (Array.isArray(rawResult)) {
-    return rawResult[0] as UploadAttachmentResult;
-  }
-  return rawResult;
+  return Array.isArray(rawResult) ? rawResult : [rawResult];
 }
 
 /** GET /api/v1/grievances/<grievance>/attachments — every attachment on a case, including pending/infected ones. */

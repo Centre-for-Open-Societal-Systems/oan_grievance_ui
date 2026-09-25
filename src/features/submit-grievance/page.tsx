@@ -16,10 +16,9 @@ import { buildInitialIdentityValues, identityAfterReset, resolveInitialSubmitter
 import { buildSaveDraftPayload } from "./draftPayload";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
 import { discardDraft, loadDraft } from "@/lib/drafts";
-import { SCAN_STATUS, type ScanStatus } from "@/lib/attachments";
+import { SCAN_STATUS, type ScanStatus, type WizardAttachment } from "@/lib/attachments";
 import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
-import type { RootState } from "@/store";
 import { useAppSelector } from "@/store/hooks";
 import type { SubmitGrievanceResult } from "./api/submitGrievanceApi";
 import { Stepper } from "./components/Stepper";
@@ -115,10 +114,14 @@ export default function SubmitGrievancePage() {
   const [description, setDescription] = useState("");
   const [desiredOutcome, setDesiredOutcome] = useState("");
   const [serviceProvider, setServiceProvider] = useState("");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [attachmentId, setAttachmentId] = useState<string | null>(null);
-  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
-  const [attachmentFileName, setAttachmentFileName] = useState<string | null>(null);
+  // The attachment list — lifted up here (not kept local to
+  // GrievanceDetailsCard) for two reasons: page.tsx conditionally unmounts
+  // that component on every Step 1<->2 navigation (`{currentStep === 2 &&
+  // <GrievanceDetailsCard .../>}`), which would otherwise reset this on
+  // every Back/Next; and Step 3's review card needs to know about it too,
+  // including for a resumed draft's attachments, which have no local `File`
+  // blob to read a name off.
+  const [attachments, setAttachments] = useState<WizardAttachment[]>([]);
 
   // Guards every draft-dependent action (uploading, saving) until the
   // initial resume check below has settled.
@@ -165,13 +168,33 @@ export default function SubmitGrievancePage() {
         if (draft.desired_outcome) setDesiredOutcome(draft.desired_outcome);
         if (draft.associated_service_provider) setServiceProvider(draft.associated_service_provider);
         if (draft.attachments && draft.attachments.length > 0) {
-          const first = draft.attachments[0];
           const validScanStatuses: string[] = Object.values(SCAN_STATUS);
-          if (first && validScanStatuses.includes(first.scan_status)) {
-            setAttachmentId(first.name);
-            setAttachmentFileName(first.file_name);
-            setScanStatus(first.scan_status as ScanStatus);
-          }
+          // Every resumed attachment is kept, not just the ones with a
+          // scan_status this build recognizes — it still exists (and still
+          // counts toward the backend's MAX_ATTACHMENTS_PER_CASE) either
+          // way. Dropping the unrecognized ones used to undercount what the
+          // backend actually has, letting the user pick more files than the
+          // real remaining capacity allowed.
+          const resumedAttachments: WizardAttachment[] = draft.attachments.map((a) => {
+            const scanStatus = validScanStatuses.includes(a.scan_status) ? (a.scan_status as ScanStatus) : null;
+            return {
+              key: a.name,
+              attachmentId: a.name,
+              file: null,
+              fileName: a.file_name,
+              scanStatus,
+              // The backend doesn't report how many checks a scan has
+              // already been through, so a resumed Pending attachment's
+              // give-up count restarts at 0 here rather than picking up
+              // wherever it really was — a best-effort baseline rather than
+              // nothing, still bounded going forward. See
+              // scanPollAttempts's doc comment.
+              scanPollAttempts: 0,
+              uploadState: "idle",
+              error: null,
+            };
+          });
+          setAttachments(resumedAttachments);
         }
         if (!stepParam && (h?.region || h?.woreda || draft.service_category || draft.description)) {
           goToStepRef.current(2, true);
@@ -215,10 +238,10 @@ export default function SubmitGrievancePage() {
     setDescription("");
     setDesiredOutcome("");
     setServiceProvider("");
-    setUploadedFile(null);
-    setAttachmentId(null);
-    setScanStatus(null);
-    setAttachmentFileName(null);
+    setAttachments([]);
+    // A fresh draft for the next grievance — reusing the old clientUuid
+    // would let the new, supposedly-empty wizard resume the previous
+    // grievance's already-submitted draft.
     setClientUuid(crypto.randomUUID());
     setResumedDraft(false);
   };
@@ -254,7 +277,7 @@ export default function SubmitGrievancePage() {
   const serviceCategories = useAppSelector(selectServiceCategoryOptions);
   const metadata = useAppSelector((state) => state.metadata);
   const filingArea = useMemo(
-    () => findFilingArea({ metadata } as RootState, { region, zone, woreda, kebele }),
+    () => findFilingArea({ metadata }, { region, zone, woreda, kebele }),
     [metadata, region, zone, woreda, kebele]
   );
 
@@ -409,14 +432,8 @@ export default function SubmitGrievancePage() {
             setDesiredOutcome={setDesiredOutcome}
             serviceProvider={serviceProvider}
             setServiceProvider={setServiceProvider}
-            uploadedFile={uploadedFile}
-            setUploadedFile={setUploadedFile}
-            attachmentId={attachmentId}
-            setAttachmentId={setAttachmentId}
-            scanStatus={scanStatus}
-            setScanStatus={setScanStatus}
-            attachmentFileName={attachmentFileName}
-            setAttachmentFileName={setAttachmentFileName}
+            attachments={attachments}
+            setAttachments={setAttachments}
           />
         )}
         {currentStep === 3 && (
@@ -436,8 +453,7 @@ export default function SubmitGrievancePage() {
             description={description}
             desiredOutcome={desiredOutcome}
             serviceProvider={serviceProvider}
-            uploadedFile={uploadedFile}
-            attachmentFileName={attachmentFileName}
+            attachments={attachments}
           />
         )}
       </div>
