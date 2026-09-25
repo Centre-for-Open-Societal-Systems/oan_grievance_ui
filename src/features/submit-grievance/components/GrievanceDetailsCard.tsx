@@ -41,7 +41,6 @@ import {
 import { saveDraft } from "@/lib/drafts";
 import { buildSaveDraftPayload } from "../draftPayload";
 import { logger } from "@/lib/logger";
-import type { RootState } from "@/store";
 
 /** The line under an uploaded file's name — mirrors `scanStatusBadge`'s if-chain shape rather than a nested ternary. */
 function attachmentStatusIndicator(item: WizardAttachment): ReactElement {
@@ -383,7 +382,7 @@ export function GrievanceDetailsCard({
   // `uploadAttachments` succeeds, not through this draft-save payload.
   const currentDraftPayload = () => {
     const fields = latestFieldsRef.current;
-    const filingArea = findFilingArea({ metadata } as RootState, {
+    const filingArea = findFilingArea({ metadata }, {
       region: fields.region,
       zone: fields.zone,
       woreda: fields.woreda,
@@ -990,7 +989,7 @@ export function GrievanceDetailsCard({
                 <p className="text-[13px] text-slate-500 mb-4 font-medium">
                   Max 10 MB each · JPG, PNG, PDF, MP3 · up to {MAX_ATTACHMENTS_PER_CASE} files
                 </p>
-                <button className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F0FDF4] text-[#16A34A] rounded-lg text-sm font-semibold hover:bg-green-100 transition-colors border border-green-300 hover:border-green-300">
+                <button type="button" className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F0FDF4] text-[#16A34A] rounded-lg text-sm font-semibold hover:bg-green-100 transition-colors border border-green-300 hover:border-green-300">
                   {activeAttachments.length > 0 ? "+ Add More Files" : "+ Browse Files"}
                 </button>
               </div>

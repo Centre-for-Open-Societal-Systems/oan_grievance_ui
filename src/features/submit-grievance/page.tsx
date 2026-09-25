@@ -18,7 +18,6 @@ import { discardDraft, loadDraft } from "@/lib/drafts";
 import { SCAN_STATUS, type ScanStatus, type WizardAttachment } from "@/lib/attachments";
 import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
-import type { RootState } from "@/store";
 import { useAppSelector } from "@/store/hooks";
 import type { SubmitGrievanceResult } from "./api/submitGrievanceApi";
 import { Stepper } from "./components/Stepper";
@@ -295,7 +294,7 @@ export default function SubmitGrievancePage() {
   // is a resolved node and not the display names held in region/woreda/kebele.
   const metadata = useAppSelector((state) => state.metadata);
   const filingArea = useMemo(
-    () => findFilingArea({ metadata } as RootState, { region, zone, woreda, kebele }),
+    () => findFilingArea({ metadata }, { region, zone, woreda, kebele }),
     [metadata, region, zone, woreda, kebele]
   );
 
