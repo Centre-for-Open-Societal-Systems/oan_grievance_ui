@@ -85,17 +85,6 @@ export async function fetchGrievances(
 }
 
 /**
- * Total number of grievances matching `params`, without transferring the rows.
- */
-export async function fetchGrievanceCount(
-  params: GrievanceListQueryParams = {},
-  options: RequestOptions = {}
-): Promise<number> {
-  const data = await fetchGrievances({ ...params, page: 1, page_size: 1 }, options);
-  return data?.pagination?.total_count ?? 0;
-}
-
-/**
  * Status KPI card counts for the All Grievances page header metrics.
  * Labels and ordering come from the backend so the UI does not hard-code statuses.
  *
@@ -207,7 +196,6 @@ export async function executeGrievanceAction(
 /** Service object matching the OAN A2C enterprise standard */
 export const grievanceService = {
   listGrievances: fetchGrievances,
-  countGrievances: fetchGrievanceCount,
   getSummary: fetchGrievanceSummary,
   getTimeline: fetchGrievanceTimeline,
   postMessage: postGrievanceMessage,

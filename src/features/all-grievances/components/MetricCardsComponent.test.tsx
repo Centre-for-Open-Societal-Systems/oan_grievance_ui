@@ -114,6 +114,15 @@ describe('MetricCardsComponent', () => {
     expect(view.getByText('0')).toBeTruthy();
   });
 
+  it('shows skeleton cards while the summary is loading instead of a zero count', () => {
+    const { container } = render(<MetricCardsComponent cards={[]} isLoading />);
+    const view = within(container);
+
+    expect(view.getByRole('status', { name: 'Loading grievance summary' })).toBeTruthy();
+    expect(container.querySelectorAll('[data-visual]')).toHaveLength(0);
+    expect(view.queryByText('0')).toBeNull();
+  });
+
   it('shows the summary error and retries instead of an empty card row', () => {
     const onRetry = vi.fn();
     const { container } = render(

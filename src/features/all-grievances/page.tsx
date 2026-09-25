@@ -101,9 +101,11 @@ export default function AllGrievancesPage() {
   const {
     cards,
     totalCount,
+    isLoading: metricsLoading,
     error: metricsError,
     refetch: refetchMetrics,
   } = useGrievanceMetrics();
+  const metricsPending = metricsLoading && cards.length === 0;
 
   // Reset to page 1 whenever the query changes (search term or filters),
   // so pagination cannot point past the end of a narrowed result set.
@@ -136,8 +138,17 @@ export default function AllGrievancesPage() {
 
   return (
     <div className="flex flex-col gap-6 h-full font-sans">
-      <TopHeader totalCount={totalCount} summaryUnavailable={Boolean(metricsError)} />
-      <MetricCardsComponent cards={cards} error={metricsError} onRetry={refetchMetrics} />
+      <TopHeader
+        totalCount={totalCount}
+        summaryLoading={metricsPending}
+        summaryUnavailable={Boolean(metricsError)}
+      />
+      <MetricCardsComponent
+        cards={cards}
+        isLoading={metricsLoading}
+        error={metricsError}
+        onRetry={refetchMetrics}
+      />
       <GrievanceTable
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}

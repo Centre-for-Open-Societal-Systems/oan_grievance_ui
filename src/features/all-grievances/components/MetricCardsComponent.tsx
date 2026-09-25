@@ -103,13 +103,35 @@ function visualForCard(card: GrievanceSummaryCard): MetricVisual {
 
 export function MetricCardsComponent({
   cards,
+  isLoading = false,
   error,
   onRetry,
 }: {
   cards: GrievanceSummaryCard[];
+  isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
 }) {
+  if (isLoading && cards.length === 0) {
+    return (
+      <div
+        role="status"
+        aria-label="Loading grievance summary"
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+      >
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="bg-white p-4 border border-[#F1F3F4] rounded-xl animate-pulse flex flex-col justify-between min-h-[108px]"
+          >
+            <div className="h-4 w-24 bg-gray-100 rounded" />
+            <div className="mt-6 h-7 w-12 bg-gray-100 rounded" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div

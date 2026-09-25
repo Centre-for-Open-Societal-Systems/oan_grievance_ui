@@ -95,7 +95,6 @@ describe('grievanceService', () => {
 
   it('exposes all grievance service helpers', () => {
     expect(typeof grievanceService.listGrievances).toBe('function');
-    expect(typeof grievanceService.countGrievances).toBe('function');
     expect(typeof grievanceService.getSummary).toBe('function');
     expect(typeof grievanceService.getTimeline).toBe('function');
     expect(typeof grievanceService.postMessage).toBe('function');
@@ -142,18 +141,6 @@ describe('grievanceService', () => {
     expect(url).not.toContain('from_date=');
     expect(url).toContain('search=fertiliser');
     expect(url).toContain('to_date=2026-05-31');
-  });
-
-  it('reads the total count without transferring rows', async () => {
-    mockJsonResponse(listPayload);
-
-    const count = await grievanceService.countGrievances({ status: ['Resolved'] });
-
-    expect(count).toBe(42);
-    const url = decodeURIComponent(calledUrl());
-    expect(url).toContain('page=1');
-    expect(url).toContain('page_size=1');
-    expect(url).toContain('status=Resolved');
   });
 
   it('fetches the grievance status summary for KPI cards', async () => {
