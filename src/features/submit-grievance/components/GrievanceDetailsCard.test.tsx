@@ -16,9 +16,13 @@ vi.mock('@/lib/drafts', async (importOriginal) => ({
 }));
 
 const getAttachments = vi.fn<(grievance: string) => Promise<AttachmentRow[]>>();
+const deleteAttachment = vi.fn<(attachment: string) => Promise<void>>();
+const fetchAttachmentBlobUrl = vi.fn<(attachment: string, download?: boolean) => Promise<string>>();
 vi.mock('@/lib/attachments', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/attachments')>()),
   getAttachments: (...args: [string]) => getAttachments(...args),
+  deleteAttachment: (...args: [string]) => deleteAttachment(...args),
+  fetchAttachmentBlobUrl: (...args: [string, boolean?]) => fetchAttachmentBlobUrl(...args),
 }));
 
 import { GrievanceDetailsCard } from './GrievanceDetailsCard';
@@ -252,6 +256,8 @@ describe('Step 2 — attachment scan status', () => {
     saveDraft.mockReset();
     saveDraft.mockResolvedValue({});
     getAttachments.mockReset();
+    deleteAttachment.mockReset();
+    deleteAttachment.mockResolvedValue(undefined);
   });
 
   // The button is `disabled` for Pending/Failed/Infected, so clicking it is a
@@ -391,6 +397,7 @@ describe('Step 2 — attachment scan status', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Remove evidence.pdf' }));
       expect(screen.queryByText('evidence.pdf')).not.toBeInTheDocument();
+      expect(deleteAttachment).toHaveBeenCalledWith(ATTACHMENT_ID);
 
       // If the effect's cleanup didn't run, this tick's poll would still fire
       // and (harmlessly, since nothing renders it) call getAttachments again —
@@ -445,4 +452,68 @@ describe('Step 2 — attachment scan status', () => {
       vi.useRealTimers();
     }
   }, 15_000);
+});
+
+describe('Step 2 — attachment preview', () => {
+  const ATTACHMENT_ID = 'ATT-0001';
+
+  beforeEach(() => {
+    fetchAttachmentBlobUrl.mockReset();
+    fetchAttachmentBlobUrl.mockResolvedValue('blob:http://localhost/mock-preview-url');
+    global.URL.createObjectURL = vi.fn(() => 'blob:http://localhost/mock-local-url');
+    global.URL.revokeObjectURL = vi.fn();
+  });
+
+  it('allows previewing a clean resumed attachment and displays the preview modal', async () => {
+    renderStep({
+      ...COMPLETE,
+      attachmentId: ATTACHMENT_ID,
+      scanStatus: 'Clean',
+      attachmentFileName: 'receipt.png',
+    });
+
+    const previewButton = screen.getByRole('button', { name: 'Preview receipt.png' });
+    expect(previewButton).toBeEnabled();
+
+    fireEvent.click(previewButton);
+
+    expect(screen.getByRole('dialog', { name: 'receipt.png' })).toBeInTheDocument();
+    await waitFor(() => expect(fetchAttachmentBlobUrl).toHaveBeenCalledWith('ATT-0001', false));
+    expect(await screen.findByAltText('receipt.png')).toHaveAttribute('src', 'blob:http://localhost/mock-preview-url');
+
+    // Close preview modal
+    const closeButton = screen.getByRole('button', { name: 'Close preview' });
+    fireEvent.click(closeButton);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:http://localhost/mock-preview-url');
+  });
+
+  it('disables preview for a pending or infected scan', () => {
+    renderStep({
+      ...COMPLETE,
+      attachmentId: ATTACHMENT_ID,
+      scanStatus: 'Pending',
+      attachmentFileName: 'evidence.pdf',
+    });
+
+    const previewButton = screen.getByRole('button', { name: 'Preview evidence.pdf' });
+    expect(previewButton).toBeDisabled();
+    expect(previewButton).toHaveAttribute('title', 'Scanning for malware… preview will be available once clean');
+  });
+
+  it('renders a PDF iframe preview when the clean resumed file is a PDF', async () => {
+    renderStep({
+      ...COMPLETE,
+      attachmentId: ATTACHMENT_ID,
+      scanStatus: 'Clean',
+      attachmentFileName: 'contract.pdf',
+    });
+
+    const previewButton = screen.getByRole('button', { name: 'Preview contract.pdf' });
+    fireEvent.click(previewButton);
+
+    const iframe = await screen.findByTitle('contract.pdf');
+    expect(iframe).toBeInTheDocument();
+    expect(iframe).toHaveAttribute('src', 'blob:http://localhost/mock-preview-url');
+  });
 });

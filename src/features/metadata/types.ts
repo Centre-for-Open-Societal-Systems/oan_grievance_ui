@@ -71,12 +71,12 @@ export interface AdministrativeArea {
 export interface AdministrativeAreasData {
   areas: AdministrativeArea[];
   count: number;
-  parent?: string | null;
+  parent?: string | string[] | null;
   level_name?: string | null;
 }
 
 export interface AdministrativeAreasQueryParams {
-  parent?: string;
+  parent?: string | string[];
   level_name?: 'Region' | 'Zone' | 'Woreda' | 'Kebele' | string;
   search?: string;
   ancestors_of?: string;

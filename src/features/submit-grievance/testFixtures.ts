@@ -39,6 +39,12 @@ export function makeStore(overrides: Partial<MetadataState> = {}) {
     regions: [region],
     regionsStatus: 'succeeded',
     regionsError: null,
+    woredas: [woreda],
+    woredasStatus: 'succeeded',
+    woredasError: null,
+    kebeles: [kebele],
+    kebelesStatus: 'succeeded',
+    kebelesError: null,
     childAreasByParent: {
       'region-ET04_Zone': [zone],
       'zone-ET0401_Woreda': [woreda],

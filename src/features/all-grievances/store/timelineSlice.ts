@@ -165,9 +165,44 @@ export const timelineSlice = createSlice({
         state.isSubmitting = true;
         state.submitError = null;
       })
-      .addCase(executeTimelineActionThunk.fulfilled, (state) => {
+      .addCase(executeTimelineActionThunk.fulfilled, (state, action) => {
         state.isSubmitting = false;
         state.submitError = null;
+
+        const result = action.payload;
+        if (state.timelineData) {
+          if (result.current_state) {
+            state.timelineData.status = result.current_state.status;
+            state.timelineData.current_status = result.current_state.status;
+            state.timelineData.escalated = result.current_state.escalated;
+            if (result.current_state.available_actions) {
+              state.timelineData.available_actions = result.current_state.available_actions;
+            }
+            if (state.timelineData.assignment) {
+              if (result.current_state.assigned_to !== undefined) {
+                state.timelineData.assignment.assigned_to = result.current_state.assigned_to;
+              }
+              if (result.current_state.department !== undefined) {
+                state.timelineData.assignment.department = result.current_state.department;
+              }
+            }
+          } else if (result.status) {
+            state.timelineData.status = result.status;
+            state.timelineData.current_status = result.status;
+            if (result.available_actions) {
+              state.timelineData.available_actions = result.available_actions;
+            }
+          }
+
+          if (result.timeline_event) {
+            const list = state.timelineData.timeline || [];
+            const eventId = result.timeline_event.id || result.timeline_event.name;
+            const exists = list.some((e) => (e.id && e.id === eventId) || (e.name && e.name === eventId));
+            if (!exists) {
+              state.timelineData.timeline = [...list, result.timeline_event];
+            }
+          }
+        }
       })
       .addCase(executeTimelineActionThunk.rejected, (state, action) => {
         state.isSubmitting = false;

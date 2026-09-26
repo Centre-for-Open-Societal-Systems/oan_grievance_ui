@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import { SidebarHeader } from './components/SidebarHeader';
 import { CommentsAndCommunication } from './components/CommentsAndCommunication';
 import { SLATracker } from './components/SLATracker';
@@ -24,6 +25,7 @@ export function GrievanceDetailSidebar({
   const activeTicket = ticketNumber || grievance?.ticketNumber || grievance?.ticketId || null;
   const userRoles = useAppSelector((state) => state.auth.user?.roles ?? []);
   const canManageCase = userRoles.includes('Grievance Officer') || userRoles.includes('Grievance Admin');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Load live timeline, conversation, and case state from Redux
   const {
@@ -51,9 +53,9 @@ export function GrievanceDetailSidebar({
       />
 
       <div
-        className={`fixed inset-y-0 right-0 w-[1100px] max-w-[100vw] bg-[#F8F9FA] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
-          activeTicket ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed inset-y-0 right-0 max-w-[100vw] bg-[#F8F9FA] shadow-2xl z-50 transform transition-all duration-300 ease-in-out flex flex-col ${
+          isFullscreen ? 'w-full' : 'w-[1100px]'
+        } ${activeTicket ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {/* Header */}
         <SidebarHeader
@@ -61,6 +63,8 @@ export function GrievanceDetailSidebar({
           timelineData={timelineData}
           grievance={grievance}
           onClose={onClose}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
         />
 
         <div className="flex-1 overflow-y-auto p-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
@@ -103,7 +107,6 @@ export function GrievanceDetailSidebar({
               <ThreadSummary canManageCase={canManageCase} timelineData={timelineData} />
               <AttachmentsList
                 grievance={timelineData?.name || grievance?.id || activeTicket}
-                canManageCase={canManageCase}
               />
             </div>
           </div>

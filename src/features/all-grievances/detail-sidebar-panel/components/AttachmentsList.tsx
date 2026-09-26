@@ -16,7 +16,7 @@ import { DocumentViewerPopup } from "./DocumentViewerPopup";
  * `DocumentViewerPopup`, which carries preview/download/delete — see its own
  * doc comment for why download and preview are still disabled there.
  */
-export function AttachmentsList({ grievance, canManageCase }: { grievance: string; canManageCase: boolean }): ReactElement {
+export function AttachmentsList({ grievance }: { grievance: string }): ReactElement {
   const [rows, setRows] = useState<AttachmentRow[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [selectedAttachment, setSelectedAttachment] = useState<AttachmentRow | null>(null);
@@ -44,10 +44,6 @@ export function AttachmentsList({ grievance, canManageCase }: { grievance: strin
       cancelled = true;
     };
   }, [grievance]);
-
-  const handleDeleted = (attachmentName: string) => {
-    setRows((prev) => prev.filter((row) => row.name !== attachmentName));
-  };
 
   return (
     <div className="bg-white rounded-xl border border-[#F1F3F4] shadow-sm overflow-hidden flex flex-col">
@@ -77,7 +73,7 @@ export function AttachmentsList({ grievance, canManageCase }: { grievance: strin
           <p role="status" className="py-4 text-sm text-gray-500">No attachments on this case.</p>
         )}
 
-        {/* One click target per row (opens DocumentViewerPopup, which offers Download/Delete)
+        {/* One click target per row (opens DocumentViewerPopup, which offers Download)
             rather than a second, separately-clickable download icon inside it — a button
             nested inside a button isn't valid, and the download action lives just as well
             one click deeper, in the popup that already carries it. */}
@@ -107,8 +103,6 @@ export function AttachmentsList({ grievance, canManageCase }: { grievance: strin
         <DocumentViewerPopup
           attachment={selectedAttachment}
           onClose={() => setSelectedAttachment(null)}
-          canDelete={canManageCase}
-          onDeleted={handleDeleted}
         />
       )}
     </div>
