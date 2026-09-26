@@ -56,7 +56,7 @@ export interface WizardAttachment {
   key: string;
   /** The backend Grievance Attachment id, once known. Null while the upload is still in flight. */
   attachmentId: string | null;
-  /** The local blob, for image preview — null for an attachment resumed from a saved draft, which has no local File to read one off. */
+  /** The local blob for newly picked files. Null for an attachment resumed from a saved draft, which streams its preview from the backend. */
   file: File | null;
   fileName: string;
   scanStatus: ScanStatus | null;
