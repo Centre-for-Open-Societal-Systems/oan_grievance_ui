@@ -32,6 +32,7 @@ import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import {
   getAttachments,
   uploadAttachments,
+  deleteAttachment,
   activeWizardAttachments,
   SCAN_STATUS,
   MAX_ATTACHMENTS_PER_CASE,
@@ -249,9 +250,10 @@ export function GrievanceDetailsCard({
       (r) =>
         r.area_name.toLowerCase() === region.toLowerCase() ||
         r.area_id.toLowerCase() === region.toLowerCase() ||
-        (r.code && r.code.toLowerCase() === region.toLowerCase())
+        (r.code && r.code.toLowerCase() === region.toLowerCase()) ||
+        (r.path_code && r.path_code.toLowerCase() === region.toLowerCase())
     );
-    const parentId = selectedRegionNode?.area_id || selectedRegionNode?.path_code;
+    const parentId = selectedRegionNode?.area_id || selectedRegionNode?.path_code || region;
     if (!parentId) return;
 
     const zoneKey = `${parentId}_Zone`;
@@ -270,7 +272,7 @@ export function GrievanceDetailsCard({
   // Fetch Woredas when Zone changes (called at most once per zone parent)
   useEffect(() => {
     if (!zone) return;
-    const parentId = zoneNode?.area_id || zoneNode?.path_code;
+    const parentId = zoneNode?.area_id || zoneNode?.path_code || zone;
     if (!parentId) return;
     const woredaKey = `${parentId}_Woreda`;
     if (!fetchedKeysRef.current.has(woredaKey)) {
@@ -282,7 +284,7 @@ export function GrievanceDetailsCard({
   // Fetch Kebeles when Woreda changes (called at most once per woreda parent)
   useEffect(() => {
     if (!woreda) return;
-    const parentId = woredaNode?.area_id || woredaNode?.path_code;
+    const parentId = woredaNode?.area_id || woredaNode?.path_code || woreda;
     if (!parentId) return;
     const kebeleKey = `${parentId}_Kebele`;
     if (!fetchedKeysRef.current.has(kebeleKey)) {
@@ -587,20 +589,18 @@ export function GrievanceDetailsCard({
     }
   };
 
-  const handleRemoveAttachment = (key: string) => (e: React.MouseEvent) => {
+  const handleRemoveAttachment = (key: string) => async (e: React.MouseEvent) => {
     e.stopPropagation();
+    const itemToRemove = attachments.find((item) => item.key === key);
     setAttachments((prev) => prev.filter((item) => item.key !== key));
 
-    // NOT calling deleteAttachment here — needs its own verification pass
-    // against the current backend (the doctype consolidation that made a
-    // draft a Grievance document itself, done in this same change, may have
-    // already fixed the 404 this used to hit; not confirmed). The file is
-    // orphaned server-side until the draft expires and gets purged,
-    // acceptable for now, same as any other abandoned draft. Nothing to
-    // clear on the draft record itself either: unlike the old JSON-payload
-    // draft, a resumed draft's attachment list now always comes straight
-    // from the backend's own Grievance Attachment rows, not from anything
-    // this component saves.
+    if (itemToRemove?.attachmentId) {
+      try {
+        await deleteAttachment(itemToRemove.attachmentId);
+      } catch (deleteError) {
+        logger.error("Failed to delete attachment from server:", deleteError);
+      }
+    }
   };
 
   // A failed upload never reached the backend, so it shouldn't count toward
@@ -866,7 +866,7 @@ export function GrievanceDetailsCard({
                 placeholder={
                   !region
                     ? "Select region first"
-                    : woredaStatus === "loading" || Boolean(zone && !zoneNode)
+                    : woredaStatus === "loading"
                     ? "Loading woredas..."
                     : dynamicWoredas.length === 0
                     ? (zone ? "No woredas available" : "Select zone or region first")
@@ -878,7 +878,7 @@ export function GrievanceDetailsCard({
                   setKebele("");
                   fieldErrors.setError("woreda", null);
                 }}
-                disabled={!region || woredaStatus === "loading" || Boolean(zone && !zoneNode)}
+                disabled={!region || woredaStatus === "loading"}
                 invalid={!!fieldErrors.errors.woreda}
                 describedBy={fieldErrors.errors.woreda ? errorIdFor("grievance-woreda") : undefined}
               />
@@ -898,7 +898,7 @@ export function GrievanceDetailsCard({
                 placeholder={
                   !woreda
                     ? "Select woreda first"
-                    : kebeleStatus === "loading" || Boolean(woreda && !woredaNode)
+                    : kebeleStatus === "loading"
                     ? "Loading kebeles..."
                     : dynamicKebeles.length === 0
                     ? "No kebeles available"
@@ -906,7 +906,7 @@ export function GrievanceDetailsCard({
                 }
                 value={kebele}
                 onChange={setKebele}
-                disabled={!woreda || kebeleStatus === "loading" || Boolean(woreda && !woredaNode)}
+                disabled={!woreda || kebeleStatus === "loading"}
               />
             </div>
           </div>

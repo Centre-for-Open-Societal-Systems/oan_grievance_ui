@@ -139,14 +139,29 @@ export const fetchKebelesThunk = createAsyncThunk<
 });
 
 export const fetchChildAreasThunk = createAsyncThunk<
-  { key: string; parent: string; level_name?: string; data: AdministrativeAreasData },
-  AdministrativeAreasQueryParams & { parent: string },
+  {
+    key: string;
+    parent: string | string[];
+    parentKeys: string[];
+    level_name?: string;
+    data: AdministrativeAreasData;
+  },
+  AdministrativeAreasQueryParams & { parent: string | string[] },
   { rejectValue: string }
 >('metadata/fetchChildAreas', async (params, { rejectWithValue }) => {
   try {
     const data = await fetchAdministrativeAreas(params);
-    const key = params.level_name ? `${params.parent}_${params.level_name}` : params.parent;
-    return { key, parent: params.parent, level_name: params.level_name, data };
+    const parentList = Array.isArray(params.parent)
+      ? params.parent.filter(Boolean).map(String)
+      : params.parent
+      ? String(params.parent)
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean)
+      : [];
+    const parentStr = Array.isArray(params.parent) ? params.parent.join(',') : String(params.parent);
+    const key = params.level_name ? `${parentStr}_${params.level_name}` : parentStr;
+    return { key, parent: params.parent, parentKeys: parentList, level_name: params.level_name, data };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch child areas';
     return rejectWithValue(msg);
@@ -253,24 +268,159 @@ const metadataSlice = createSlice({
     // Child Areas
     builder.addCase(fetchChildAreasThunk.pending, (state, action) => {
       const parent = action.meta.arg.parent;
-      const key = action.meta.arg.level_name ? `${parent}_${action.meta.arg.level_name}` : parent;
-      state.childAreasStatus[parent] = 'loading';
+      const parentList = Array.isArray(parent)
+        ? parent
+        : typeof parent === 'string' && parent.includes(',')
+        ? parent.split(',').map((p) => p.trim())
+        : [parent];
+      const parentStr = Array.isArray(parent) ? parent.join(',') : String(parent);
+      const levelName = action.meta.arg.level_name;
+      const key = levelName ? `${parentStr}_${levelName}` : parentStr;
+
+      state.childAreasStatus[parentStr] = 'loading';
       state.childAreasStatus[key] = 'loading';
+      for (const p of parentList) {
+        state.childAreasStatus[p] = 'loading';
+        if (levelName) {
+          state.childAreasStatus[`${p}_${levelName}`] = 'loading';
+        }
+      }
     });
     builder.addCase(fetchChildAreasThunk.fulfilled, (state, action) => {
-      const { key, parent, data } = action.payload;
-      state.childAreasStatus[parent] = 'succeeded';
+      const { key, parent, parentKeys, level_name, data } = action.payload;
+      const parentStr = Array.isArray(parent) ? parent.join(',') : String(parent);
+      const areas = data.areas || [];
+
+      state.childAreasStatus[parentStr] = 'succeeded';
       state.childAreasStatus[key] = 'succeeded';
-      state.childAreasByParent[key] = data.areas;
-      if (!state.childAreasByParent[parent] || state.childAreasByParent[parent].length === 0) {
-        state.childAreasByParent[parent] = data.areas;
+      for (const p of parentKeys) {
+        state.childAreasStatus[p] = 'succeeded';
+        if (level_name) {
+          state.childAreasStatus[`${p}_${level_name}`] = 'succeeded';
+        }
+      }
+
+      // 1. Store under composite key and parent string
+      state.childAreasByParent[key] = areas;
+      state.childAreasByParent[parentStr] = areas;
+
+      // 2. If data returned a parent in response (e.g. data.parent: "zone-ET1401" or ["zone-ET1401"])
+      if (data.parent) {
+        const respParents = Array.isArray(data.parent) ? data.parent : [data.parent];
+        for (const rp of respParents) {
+          state.childAreasStatus[rp] = 'succeeded';
+          state.childAreasByParent[rp] = areas;
+          if (level_name) {
+            state.childAreasStatus[`${rp}_${level_name}`] = 'succeeded';
+            state.childAreasByParent[`${rp}_${level_name}`] = areas;
+          }
+        }
+      }
+
+      // 3. Group and index by each area's parent_administrative_area
+      const groupedByParent = new Map<string, AdministrativeArea[]>();
+      for (const area of areas) {
+        if (area.parent_administrative_area) {
+          const list = groupedByParent.get(area.parent_administrative_area) || [];
+          list.push(area);
+          groupedByParent.set(area.parent_administrative_area, list);
+        }
+      }
+      for (const [parentAreaId, childList] of groupedByParent.entries()) {
+        state.childAreasStatus[parentAreaId] = 'succeeded';
+        state.childAreasByParent[parentAreaId] = childList;
+        if (level_name) {
+          state.childAreasStatus[`${parentAreaId}_${level_name}`] = 'succeeded';
+          state.childAreasByParent[`${parentAreaId}_${level_name}`] = childList;
+        }
+      }
+
+      // 4. Also index by ancestor codes / path prefixes from area.path_code
+      for (const area of areas) {
+        if (area.path_code) {
+          const parts = area.path_code.split('.');
+          let runningPath = '';
+          for (let i = 0; i < parts.length - 1; i++) {
+            const part = parts[i];
+            if (!part) continue;
+            runningPath = runningPath ? `${runningPath}.${part}` : part;
+            const lvl = area.level_name || level_name;
+
+            // Index by path segment code (e.g. ET1401)
+            const listByCode: AdministrativeArea[] = state.childAreasByParent[part] || [];
+            if (!listByCode.some((a) => a.area_id === area.area_id)) {
+              state.childAreasByParent[part] = [...listByCode, area];
+            }
+            if (lvl) {
+              const listByCodeLvl: AdministrativeArea[] = state.childAreasByParent[`${part}_${lvl}`] || [];
+              if (!listByCodeLvl.some((a) => a.area_id === area.area_id)) {
+                state.childAreasByParent[`${part}_${lvl}`] = [...listByCodeLvl, area];
+              }
+            }
+
+            // Index by running prefix path (e.g. ET.ET14.ET1401)
+            const listByPath: AdministrativeArea[] = state.childAreasByParent[runningPath] || [];
+            if (!listByPath.some((a) => a.area_id === area.area_id)) {
+              state.childAreasByParent[runningPath] = [...listByPath, area];
+            }
+            if (lvl) {
+              const listByPathLvl: AdministrativeArea[] = state.childAreasByParent[`${runningPath}_${lvl}`] || [];
+              if (!listByPathLvl.some((a) => a.area_id === area.area_id)) {
+                state.childAreasByParent[`${runningPath}_${lvl}`] = [...listByPathLvl, area];
+              }
+            }
+          }
+        }
+      }
+
+      // 5. Index aliases for known region nodes
+      for (const p of parentKeys) {
+        const normP = p.toLowerCase().trim();
+        const regNode = state.regions.find(
+          (r) =>
+            r.area_id.toLowerCase() === normP ||
+            r.area_name.toLowerCase() === normP ||
+            (r.code && r.code.toLowerCase() === normP) ||
+            (r.path_code && r.path_code.toLowerCase() === normP)
+        );
+        if (regNode) {
+          const matchingAreas = parentKeys.length === 1 ? areas : areas.filter(
+            (a) =>
+              a.parent_administrative_area === regNode.area_id ||
+              (regNode.code && a.path_code?.includes(regNode.code)) ||
+              (regNode.path_code && a.path_code?.startsWith(regNode.path_code))
+          );
+          if (matchingAreas.length > 0) {
+            const keysToSet = [regNode.area_name, regNode.area_id, regNode.code, regNode.path_code].filter(Boolean) as string[];
+            for (const k of keysToSet) {
+              state.childAreasByParent[k] = matchingAreas;
+              if (level_name) {
+                state.childAreasByParent[`${k}_${level_name}`] = matchingAreas;
+              }
+            }
+          }
+        }
       }
     });
     builder.addCase(fetchChildAreasThunk.rejected, (state, action) => {
       const parent = action.meta.arg.parent;
-      const key = action.meta.arg.level_name ? `${parent}_${action.meta.arg.level_name}` : parent;
-      state.childAreasStatus[parent] = 'failed';
+      const parentList = Array.isArray(parent)
+        ? parent
+        : typeof parent === 'string' && parent.includes(',')
+        ? parent.split(',').map((p) => p.trim())
+        : [parent];
+      const parentStr = Array.isArray(parent) ? parent.join(',') : String(parent);
+      const levelName = action.meta.arg.level_name;
+      const key = levelName ? `${parentStr}_${levelName}` : parentStr;
+
+      state.childAreasStatus[parentStr] = 'failed';
       state.childAreasStatus[key] = 'failed';
+      for (const p of parentList) {
+        state.childAreasStatus[p] = 'failed';
+        if (levelName) {
+          state.childAreasStatus[`${p}_${levelName}`] = 'failed';
+        }
+      }
     });
 
     // Grievance Options
@@ -493,6 +643,15 @@ export const selectChildAreaOptions = (
   return [];
 };
 
+function filterAreasByLevel(
+  list: AdministrativeArea[] | undefined,
+  level: string
+): AdministrativeArea[] | undefined {
+  if (!list || list.length === 0) return undefined;
+  const filtered = list.filter((a) => !a.level_name || a.level_name === level);
+  return filtered.length > 0 ? filtered : undefined;
+}
+
 export const selectZoneOptions = createSelector(
   [
     (state: MetadataRootState) => state.metadata,
@@ -511,19 +670,61 @@ export const selectZoneOptions = createSelector(
     );
 
     const parentKey = regionNode?.area_id || regionValue;
-    const childAreas =
-      metadata.childAreasByParent[`${parentKey}_Zone`] ||
-      metadata.childAreasByParent[parentKey] ||
-      (regionNode?.path_code ? metadata.childAreasByParent[`${regionNode.path_code}_Zone`] : undefined) ||
-      (regionNode?.path_code ? metadata.childAreasByParent[regionNode.path_code] : undefined);
+    const candidates = [
+      metadata.childAreasByParent[`${parentKey}_Zone`],
+      metadata.childAreasByParent[`${regionNode?.path_code}_Zone`],
+      metadata.childAreasByParent[`${regionNode?.code}_Zone`],
+      metadata.childAreasByParent[`${regionNode?.area_name}_Zone`],
+      metadata.childAreasByParent[`${regionValue}_Zone`],
+      metadata.childAreasByParent[parentKey],
+      regionNode?.path_code ? metadata.childAreasByParent[regionNode.path_code] : undefined,
+      regionNode?.code ? metadata.childAreasByParent[regionNode.code] : undefined,
+      regionNode?.area_name ? metadata.childAreasByParent[regionNode.area_name] : undefined,
+      metadata.childAreasByParent[regionValue],
+    ];
+
+    let childAreas: AdministrativeArea[] | undefined;
+    for (const c of candidates) {
+      const match = filterAreasByLevel(c, 'Zone');
+      if (match) {
+        childAreas = match;
+        break;
+      }
+    }
+
+    if (!childAreas || childAreas.length === 0) {
+      const matched: AdministrativeArea[] = [];
+      for (const list of Object.values(metadata.childAreasByParent)) {
+        for (const a of list) {
+          if (
+            (!a.level_name || a.level_name === 'Zone') &&
+            (a.parent_administrative_area === parentKey ||
+              (regionNode && a.parent_administrative_area === regionNode.area_id) ||
+              (regionNode?.code && a.path_code?.includes(regionNode.code)) ||
+              (regionNode?.path_code && a.path_code?.startsWith(regionNode.path_code)) ||
+              a.parent_administrative_area?.toLowerCase() === normalizedRegion)
+          ) {
+            if (!matched.some((m) => m.area_id === a.area_id)) {
+              matched.push(a);
+            }
+          }
+        }
+      }
+      if (matched.length > 0) {
+        childAreas = matched;
+      }
+    }
 
     if (childAreas && childAreas.length > 0) {
-      return childAreas
-        .filter((a) => !a.level_name || a.level_name === 'Zone')
-        .map((a) => ({
-          value: a.area_name,
-          label: a.area_name,
-        }));
+      const seen = new Set<string>();
+      const result: Array<{ value: string; label: string }> = [];
+      for (const a of childAreas) {
+        if (!seen.has(a.area_name)) {
+          seen.add(a.area_name);
+          result.push({ value: a.area_name, label: a.area_name });
+        }
+      }
+      return result;
     }
 
     return [];
@@ -544,6 +745,8 @@ export const selectZoneStatus = (
   return (
     state.metadata.childAreasStatus[`${parentKey}_Zone`] ||
     state.metadata.childAreasStatus[parentKey] ||
+    state.metadata.childAreasStatus[`${regionValue}_Zone`] ||
+    state.metadata.childAreasStatus[regionValue] ||
     'idle'
   );
 };
@@ -570,7 +773,11 @@ export function findZoneNode(
       state.metadata.childAreasByParent[`${parentKey}_Zone`] ||
       state.metadata.childAreasByParent[parentKey] ||
       (regionNode?.path_code ? state.metadata.childAreasByParent[`${regionNode.path_code}_Zone`] : undefined) ||
-      (regionNode?.path_code ? state.metadata.childAreasByParent[regionNode.path_code] : undefined);
+      (regionNode?.path_code ? state.metadata.childAreasByParent[regionNode.path_code] : undefined) ||
+      (regionNode?.code ? state.metadata.childAreasByParent[`${regionNode.code}_Zone`] : undefined) ||
+      (regionNode?.code ? state.metadata.childAreasByParent[regionNode.code] : undefined) ||
+      (regionNode?.area_name ? state.metadata.childAreasByParent[`${regionNode.area_name}_Zone`] : undefined) ||
+      (regionNode?.area_name ? state.metadata.childAreasByParent[regionNode.area_name] : undefined);
     const found = regionChildren?.find(
       (a) =>
         a.area_name.toLowerCase() === normZone ||
@@ -608,11 +815,50 @@ export const selectWoredaOptions = createSelector(
     if (zoneValue) {
       const zoneNode = findZoneNode(state, zoneValue, regionValue);
       const parentKey = zoneNode?.area_id || zoneValue;
-      childAreas =
-        metadata.childAreasByParent[`${parentKey}_Woreda`] ||
-        metadata.childAreasByParent[parentKey] ||
-        (zoneNode?.path_code ? metadata.childAreasByParent[`${zoneNode.path_code}_Woreda`] : undefined) ||
-        (zoneNode?.path_code ? metadata.childAreasByParent[zoneNode.path_code] : undefined);
+      const candidates = [
+        metadata.childAreasByParent[`${parentKey}_Woreda`],
+        metadata.childAreasByParent[`${zoneNode?.path_code}_Woreda`],
+        metadata.childAreasByParent[`${zoneNode?.code}_Woreda`],
+        metadata.childAreasByParent[`${zoneNode?.area_name}_Woreda`],
+        metadata.childAreasByParent[`${zoneValue}_Woreda`],
+        metadata.childAreasByParent[parentKey],
+        zoneNode?.path_code ? metadata.childAreasByParent[zoneNode.path_code] : undefined,
+        zoneNode?.code ? metadata.childAreasByParent[zoneNode.code] : undefined,
+        zoneNode?.area_name ? metadata.childAreasByParent[zoneNode.area_name] : undefined,
+        metadata.childAreasByParent[zoneValue],
+      ];
+
+      for (const c of candidates) {
+        const match = filterAreasByLevel(c, 'Woreda');
+        if (match) {
+          childAreas = match;
+          break;
+        }
+      }
+
+      if (!childAreas || childAreas.length === 0) {
+        const normZone = zoneValue.toLowerCase().trim();
+        const matched: AdministrativeArea[] = [];
+        for (const list of Object.values(metadata.childAreasByParent)) {
+          for (const a of list) {
+            if (
+              (!a.level_name || a.level_name === 'Woreda') &&
+              (a.parent_administrative_area === parentKey ||
+                (zoneNode && a.parent_administrative_area === zoneNode.area_id) ||
+                (zoneNode?.code && a.path_code?.includes(zoneNode.code)) ||
+                (zoneNode?.path_code && a.path_code?.startsWith(zoneNode.path_code)) ||
+                a.parent_administrative_area?.toLowerCase() === normZone)
+            ) {
+              if (!matched.some((m) => m.area_id === a.area_id)) {
+                matched.push(a);
+              }
+            }
+          }
+        }
+        if (matched.length > 0) {
+          childAreas = matched;
+        }
+      }
     }
 
     if ((!childAreas || childAreas.length === 0) && regionValue) {
@@ -625,20 +871,64 @@ export const selectWoredaOptions = createSelector(
           (r.path_code && r.path_code.toLowerCase() === normalizedRegion)
       );
       const parentKey = regionNode?.area_id || regionValue;
-      childAreas =
-        metadata.childAreasByParent[`${parentKey}_Woreda`] ||
-        metadata.childAreasByParent[parentKey] ||
-        (regionNode?.path_code ? metadata.childAreasByParent[`${regionNode.path_code}_Woreda`] : undefined) ||
-        (regionNode?.path_code ? metadata.childAreasByParent[regionNode.path_code] : undefined);
+      const regionCandidates = [
+        metadata.childAreasByParent[`${parentKey}_Woreda`],
+        metadata.childAreasByParent[`${regionNode?.path_code}_Woreda`],
+        metadata.childAreasByParent[`${regionNode?.code}_Woreda`],
+        metadata.childAreasByParent[`${regionNode?.area_name}_Woreda`],
+        metadata.childAreasByParent[`${regionValue}_Woreda`],
+        metadata.childAreasByParent[parentKey],
+        regionNode?.path_code ? metadata.childAreasByParent[regionNode.path_code] : undefined,
+        regionNode?.code ? metadata.childAreasByParent[regionNode.code] : undefined,
+        regionNode?.area_name ? metadata.childAreasByParent[regionNode.area_name] : undefined,
+        metadata.childAreasByParent[regionValue],
+      ];
+
+      for (const c of regionCandidates) {
+        const match = filterAreasByLevel(c, 'Woreda');
+        if (match) {
+          childAreas = match;
+          break;
+        }
+      }
+
+      if (!childAreas || childAreas.length === 0) {
+        const matched: AdministrativeArea[] = [];
+        for (const list of Object.values(metadata.childAreasByParent)) {
+          for (const a of list) {
+            if (
+              (!a.level_name || a.level_name === 'Woreda') &&
+              (a.parent_administrative_area === parentKey ||
+                (regionNode && a.parent_administrative_area === regionNode.area_id) ||
+                (regionNode?.code && a.path_code?.includes(regionNode.code)) ||
+                (regionNode?.path_code && a.path_code?.startsWith(regionNode.path_code)) ||
+                a.parent_administrative_area?.toLowerCase() === normalizedRegion)
+            ) {
+              if (!matched.some((m) => m.area_id === a.area_id)) {
+                matched.push(a);
+              }
+            }
+          }
+        }
+        if (matched.length > 0) {
+          childAreas = matched;
+        }
+      }
     }
 
     if (childAreas && childAreas.length > 0) {
-      return childAreas
-        .filter((a) => !a.level_name || a.level_name === 'Woreda')
-        .map((a) => ({
-          value: a.area_name,
-          label: a.area_name,
-        }));
+      const seen = new Set<string>();
+      const result: Array<{ value: string; label: string }> = [];
+      for (const a of childAreas) {
+        if (!seen.has(a.area_name)) {
+          seen.add(a.area_name);
+          result.push({
+            value: a.area_name,
+            label: a.area_name,
+          });
+        }
+      }
+      return result;
     }
 
     return [];
@@ -656,6 +946,8 @@ export const selectWoredaStatus = (
     return (
       state.metadata.childAreasStatus[`${parentKey}_Woreda`] ||
       state.metadata.childAreasStatus[parentKey] ||
+      state.metadata.childAreasStatus[`${zoneValue}_Woreda`] ||
+      state.metadata.childAreasStatus[zoneValue] ||
       'idle'
     );
   }
@@ -669,6 +961,8 @@ export const selectWoredaStatus = (
     return (
       state.metadata.childAreasStatus[`${parentKey}_Woreda`] ||
       state.metadata.childAreasStatus[parentKey] ||
+      state.metadata.childAreasStatus[`${regionValue}_Woreda`] ||
+      state.metadata.childAreasStatus[regionValue] ||
       'idle'
     );
   }
@@ -691,7 +985,11 @@ export function findWoredaNode(
       state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
       state.metadata.childAreasByParent[parentKey] ||
       (zoneNode?.path_code ? state.metadata.childAreasByParent[`${zoneNode.path_code}_Woreda`] : undefined) ||
-      (zoneNode?.path_code ? state.metadata.childAreasByParent[zoneNode.path_code] : undefined);
+      (zoneNode?.path_code ? state.metadata.childAreasByParent[zoneNode.path_code] : undefined) ||
+      (zoneNode?.code ? state.metadata.childAreasByParent[`${zoneNode.code}_Woreda`] : undefined) ||
+      (zoneNode?.code ? state.metadata.childAreasByParent[zoneNode.code] : undefined) ||
+      (zoneNode?.area_name ? state.metadata.childAreasByParent[`${zoneNode.area_name}_Woreda`] : undefined) ||
+      (zoneNode?.area_name ? state.metadata.childAreasByParent[zoneNode.area_name] : undefined);
     const found = zoneChildren?.find(
       (a) =>
         a.area_name.toLowerCase() === normWoreda ||
@@ -716,7 +1014,11 @@ export function findWoredaNode(
       state.metadata.childAreasByParent[`${parentKey}_Woreda`] ||
       state.metadata.childAreasByParent[parentKey] ||
       (regionNode?.path_code ? state.metadata.childAreasByParent[`${regionNode.path_code}_Woreda`] : undefined) ||
-      (regionNode?.path_code ? state.metadata.childAreasByParent[regionNode.path_code] : undefined);
+      (regionNode?.path_code ? state.metadata.childAreasByParent[regionNode.path_code] : undefined) ||
+      (regionNode?.code ? state.metadata.childAreasByParent[`${regionNode.code}_Woreda`] : undefined) ||
+      (regionNode?.code ? state.metadata.childAreasByParent[regionNode.code] : undefined) ||
+      (regionNode?.area_name ? state.metadata.childAreasByParent[`${regionNode.area_name}_Woreda`] : undefined) ||
+      (regionNode?.area_name ? state.metadata.childAreasByParent[regionNode.area_name] : undefined);
     const found = regionChildren?.find(
       (a) =>
         a.area_name.toLowerCase() === normWoreda ||
@@ -758,12 +1060,45 @@ function kebeleChildren(
   woredaValue: string
 ): AdministrativeArea[] | undefined {
   const parentKey = woredaNode?.area_id || woredaValue;
-  return (
-    state.metadata.childAreasByParent[`${parentKey}_Kebele`] ||
-    state.metadata.childAreasByParent[parentKey] ||
-    (woredaNode?.path_code ? state.metadata.childAreasByParent[`${woredaNode.path_code}_Kebele`] : undefined) ||
-    (woredaNode?.path_code ? state.metadata.childAreasByParent[woredaNode.path_code] : undefined)
-  );
+  const candidates = [
+    state.metadata.childAreasByParent[`${parentKey}_Kebele`],
+    state.metadata.childAreasByParent[`${woredaNode?.path_code}_Kebele`],
+    state.metadata.childAreasByParent[`${woredaNode?.code}_Kebele`],
+    state.metadata.childAreasByParent[`${woredaNode?.area_name}_Kebele`],
+    state.metadata.childAreasByParent[`${woredaValue}_Kebele`],
+    state.metadata.childAreasByParent[parentKey],
+    woredaNode?.path_code ? state.metadata.childAreasByParent[woredaNode.path_code] : undefined,
+    woredaNode?.code ? state.metadata.childAreasByParent[woredaNode.code] : undefined,
+    woredaNode?.area_name ? state.metadata.childAreasByParent[woredaNode.area_name] : undefined,
+    state.metadata.childAreasByParent[woredaValue],
+  ];
+
+  for (const c of candidates) {
+    const match = filterAreasByLevel(c, 'Kebele');
+    if (match) {
+      return match;
+    }
+  }
+
+  const normWoreda = woredaValue.toLowerCase().trim();
+  const matched: AdministrativeArea[] = [];
+  for (const list of Object.values(state.metadata.childAreasByParent)) {
+    for (const a of list) {
+      if (
+        (!a.level_name || a.level_name === 'Kebele') &&
+        (a.parent_administrative_area === parentKey ||
+          (woredaNode && a.parent_administrative_area === woredaNode.area_id) ||
+          (woredaNode?.code && a.path_code?.includes(woredaNode.code)) ||
+          (woredaNode?.path_code && a.path_code?.startsWith(woredaNode.path_code)) ||
+          a.parent_administrative_area?.toLowerCase() === normWoreda)
+      ) {
+        if (!matched.some((m) => m.area_id === a.area_id)) {
+          matched.push(a);
+        }
+      }
+    }
+  }
+  return matched.length > 0 ? matched : undefined;
 }
 
 /**
@@ -786,12 +1121,20 @@ export const selectKebeleOptions = createSelector(
     const childAreas = kebeleChildren(state, woredaNode, woredaValue);
 
     if (childAreas && childAreas.length > 0) {
-      return childAreas
-        .filter((a) => !a.level_name || a.level_name === 'Kebele')
-        .map((a) => ({
-          value: a.area_name,
-          label: a.area_name,
-        }));
+      const seen = new Set<string>();
+      const result: Array<{ value: string; label: string }> = [];
+      for (const a of childAreas) {
+        if (!a.level_name || a.level_name === 'Kebele') {
+          if (!seen.has(a.area_name)) {
+            seen.add(a.area_name);
+            result.push({
+              value: a.area_name,
+              label: a.area_name,
+            });
+          }
+        }
+      }
+      return result;
     }
 
     return [];
@@ -857,6 +1200,8 @@ export const selectKebeleStatus = (
   return (
     state.metadata.childAreasStatus[`${parentKey}_Kebele`] ||
     state.metadata.childAreasStatus[parentKey] ||
+    state.metadata.childAreasStatus[`${woredaValue}_Kebele`] ||
+    state.metadata.childAreasStatus[woredaValue] ||
     'idle'
   );
 };
@@ -874,12 +1219,16 @@ export function findKebeleNode(
   if (woredaValue) {
     const woredaNode = findWoredaNode(state, woredaValue, zoneValue, regionValue);
     const parentKey = woredaNode?.area_id || woredaValue;
-    const kebeleChildren =
+    const kebeleChildrenList =
       state.metadata.childAreasByParent[`${parentKey}_Kebele`] ||
       state.metadata.childAreasByParent[parentKey] ||
       (woredaNode?.path_code ? state.metadata.childAreasByParent[`${woredaNode.path_code}_Kebele`] : undefined) ||
-      (woredaNode?.path_code ? state.metadata.childAreasByParent[woredaNode.path_code] : undefined);
-    const found = kebeleChildren?.find(
+      (woredaNode?.path_code ? state.metadata.childAreasByParent[woredaNode.path_code] : undefined) ||
+      (woredaNode?.code ? state.metadata.childAreasByParent[`${woredaNode.code}_Kebele`] : undefined) ||
+      (woredaNode?.code ? state.metadata.childAreasByParent[woredaNode.code] : undefined) ||
+      (woredaNode?.area_name ? state.metadata.childAreasByParent[`${woredaNode.area_name}_Kebele`] : undefined) ||
+      (woredaNode?.area_name ? state.metadata.childAreasByParent[woredaNode.area_name] : undefined);
+    const found = kebeleChildrenList?.find(
       (a) =>
         a.area_name.toLowerCase() === normKebele ||
         a.area_id.toLowerCase() === normKebele ||
@@ -1020,12 +1369,35 @@ export const selectWoredaFilterOptions = createSelector(
           metadata.childAreasByParent[`${parentKey}_Woreda`] ||
           metadata.childAreasByParent[parentKey] ||
           (regNode?.path_code ? metadata.childAreasByParent[`${regNode.path_code}_Woreda`] : undefined) ||
-          (regNode?.path_code ? metadata.childAreasByParent[regNode.path_code] : undefined);
+          (regNode?.path_code ? metadata.childAreasByParent[regNode.path_code] : undefined) ||
+          (regNode?.code ? metadata.childAreasByParent[`${regNode.code}_Woreda`] : undefined) ||
+          (regNode?.code ? metadata.childAreasByParent[regNode.code] : undefined) ||
+          (regNode?.area_name ? metadata.childAreasByParent[`${regNode.area_name}_Woreda`] : undefined) ||
+          (regNode?.area_name ? metadata.childAreasByParent[regNode.area_name] : undefined) ||
+          metadata.childAreasByParent[`${regName}_Woreda`] ||
+          metadata.childAreasByParent[regName];
 
         if (areas) {
           for (const area of areas) {
             if (!area.level_name || area.level_name === 'Woreda') {
               woredaMap.set(area.area_name, area.area_name);
+            }
+          }
+        }
+
+        // Also check all child areas for matching region code or path
+        for (const childList of Object.values(metadata.childAreasByParent)) {
+          for (const area of childList) {
+            if (!area.level_name || area.level_name === 'Woreda') {
+              if (
+                area.parent_administrative_area === parentKey ||
+                (regNode && area.parent_administrative_area === regNode.area_id) ||
+                (regNode?.code && area.path_code?.includes(regNode.code)) ||
+                (regNode?.path_code && area.path_code?.startsWith(regNode.path_code)) ||
+                area.parent_administrative_area?.toLowerCase() === norm
+              ) {
+                woredaMap.set(area.area_name, area.area_name);
+              }
             }
           }
         }
@@ -1075,12 +1447,35 @@ export const selectKebeleFilterOptions = createSelector(
           metadata.childAreasByParent[`${parentKey}_Kebele`] ||
           metadata.childAreasByParent[parentKey] ||
           (woredaNode?.path_code ? metadata.childAreasByParent[`${woredaNode.path_code}_Kebele`] : undefined) ||
-          (woredaNode?.path_code ? metadata.childAreasByParent[woredaNode.path_code] : undefined);
+          (woredaNode?.path_code ? metadata.childAreasByParent[woredaNode.path_code] : undefined) ||
+          (woredaNode?.code ? metadata.childAreasByParent[`${woredaNode.code}_Kebele`] : undefined) ||
+          (woredaNode?.code ? metadata.childAreasByParent[woredaNode.code] : undefined) ||
+          (woredaNode?.area_name ? metadata.childAreasByParent[`${woredaNode.area_name}_Kebele`] : undefined) ||
+          (woredaNode?.area_name ? metadata.childAreasByParent[woredaNode.area_name] : undefined) ||
+          metadata.childAreasByParent[`${woredaName}_Kebele`] ||
+          metadata.childAreasByParent[woredaName];
 
         if (areas) {
           for (const area of areas) {
             if (!area.level_name || area.level_name === 'Kebele') {
               kebeleMap.set(area.area_name, area.area_name);
+            }
+          }
+        }
+
+        const normWoreda = woredaName.toLowerCase().trim();
+        for (const childList of Object.values(metadata.childAreasByParent)) {
+          for (const area of childList) {
+            if (!area.level_name || area.level_name === 'Kebele') {
+              if (
+                area.parent_administrative_area === parentKey ||
+                (woredaNode && area.parent_administrative_area === woredaNode.area_id) ||
+                (woredaNode?.code && area.path_code?.includes(woredaNode.code)) ||
+                (woredaNode?.path_code && area.path_code?.startsWith(woredaNode.path_code)) ||
+                area.parent_administrative_area?.toLowerCase() === normWoreda
+              ) {
+                kebeleMap.set(area.area_name, area.area_name);
+              }
             }
           }
         }

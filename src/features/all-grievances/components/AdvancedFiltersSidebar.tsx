@@ -5,6 +5,7 @@ import {
   fetchGrievanceOptionsThunk,
   fetchRegionsThunk,
   fetchChildAreasThunk,
+  findWoredaNode,
   selectCategoryFilterOptions,
   selectRegionFilterOptions,
   selectStatusFilterOptions,
@@ -257,6 +258,8 @@ export function AdvancedFiltersSidebar({
   const dispatch = useAppDispatch();
   const statusOptions = useAppSelector(selectStatusFilterOptions);
   const categoryOptions = useAppSelector(selectCategoryFilterOptions);
+  const rawRegions = useAppSelector((state) => state.metadata.regions);
+  const metadata = useAppSelector((state) => state.metadata);
   const regionOptions = useAppSelector(selectRegionFilterOptions);
   const woredaOptions = useAppSelector((state) =>
     selectWoredaFilterOptions(state, filters.regions.length > 0 ? filters.regions : undefined)
@@ -270,11 +273,19 @@ export function AdvancedFiltersSidebar({
   const isWoredasLoading = useAppSelector((state) => {
     if (filters.regions.length === 0) return false;
     return filters.regions.some((regionName) => {
-      const region = regionOptions.find((r) => r.label === regionName || r.value === regionName);
-      const parentKey = region?.value || regionName;
+      const regNode = rawRegions.find(
+        (r) =>
+          r.area_name.toLowerCase() === regionName.toLowerCase() ||
+          r.area_id.toLowerCase() === regionName.toLowerCase() ||
+          (r.code && r.code.toLowerCase() === regionName.toLowerCase()) ||
+          (r.path_code && r.path_code.toLowerCase() === regionName.toLowerCase())
+      );
+      const parentKey = regNode?.area_id || regionName;
       return (
         state.metadata.childAreasStatus[`${parentKey}_Woreda`] === 'loading' ||
-        state.metadata.childAreasStatus[parentKey] === 'loading'
+        state.metadata.childAreasStatus[parentKey] === 'loading' ||
+        state.metadata.childAreasStatus[`${regionName}_Woreda`] === 'loading' ||
+        state.metadata.childAreasStatus[regionName] === 'loading'
       );
     });
   });
@@ -282,11 +293,13 @@ export function AdvancedFiltersSidebar({
   const isKebelesLoading = useAppSelector((state) => {
     if (filters.woredas.length === 0) return false;
     return filters.woredas.some((woredaName) => {
-      const woreda = woredaOptions.find((w) => w.label === woredaName || w.value === woredaName);
-      const parentKey = woreda?.value || woredaName;
+      const woredaNode = findWoredaNode({ metadata: state.metadata }, woredaName);
+      const parentKey = woredaNode?.area_id || woredaName;
       return (
         state.metadata.childAreasStatus[`${parentKey}_Kebele`] === 'loading' ||
-        state.metadata.childAreasStatus[parentKey] === 'loading'
+        state.metadata.childAreasStatus[parentKey] === 'loading' ||
+        state.metadata.childAreasStatus[`${woredaName}_Kebele`] === 'loading' ||
+        state.metadata.childAreasStatus[woredaName] === 'loading'
       );
     });
   });
@@ -302,25 +315,41 @@ export function AdvancedFiltersSidebar({
 
   useEffect(() => {
     if (filters.regions.length > 0) {
+      const parentIds: string[] = [];
       filters.regions.forEach((regionName) => {
-        const region = regionOptions.find((r) => r.label === regionName || r.value === regionName);
-        if (region) {
-          void dispatch(fetchChildAreasThunk({ parent: region.value, level_name: 'Woreda' }));
+        const regNode = rawRegions.find(
+          (r) =>
+            r.area_name.toLowerCase() === regionName.toLowerCase() ||
+            r.area_id.toLowerCase() === regionName.toLowerCase() ||
+            (r.code && r.code.toLowerCase() === regionName.toLowerCase()) ||
+            (r.path_code && r.path_code.toLowerCase() === regionName.toLowerCase())
+        );
+        const id = regNode?.area_id || regNode?.path_code || regionName;
+        if (id && !parentIds.includes(id)) {
+          parentIds.push(id);
         }
       });
+      if (parentIds.length > 0) {
+        void dispatch(fetchChildAreasThunk({ parent: parentIds, level_name: 'Woreda' }));
+      }
     }
-  }, [dispatch, filters.regions, regionOptions]);
+  }, [dispatch, filters.regions, rawRegions]);
 
   useEffect(() => {
     if (filters.woredas.length > 0) {
+      const parentIds: string[] = [];
       filters.woredas.forEach((woredaName) => {
-        const woreda = woredaOptions.find((w) => w.label === woredaName || w.value === woredaName);
-        if (woreda) {
-          void dispatch(fetchChildAreasThunk({ parent: woreda.value, level_name: 'Kebele' }));
+        const woredaNode = findWoredaNode({ metadata }, woredaName);
+        const id = woredaNode?.area_id || woredaNode?.path_code || woredaName;
+        if (id && !parentIds.includes(id)) {
+          parentIds.push(id);
         }
       });
+      if (parentIds.length > 0) {
+        void dispatch(fetchChildAreasThunk({ parent: parentIds, level_name: 'Kebele' }));
+      }
     }
-  }, [dispatch, filters.woredas, woredaOptions]);
+  }, [dispatch, filters.woredas, metadata]);
 
   const [isFromCalendarOpen, setIsFromCalendarOpen] = useState(false);
   const [isToCalendarOpen, setIsToCalendarOpen] = useState(false);

@@ -16,9 +16,11 @@ vi.mock('@/lib/drafts', async (importOriginal) => ({
 }));
 
 const getAttachments = vi.fn<(grievance: string) => Promise<AttachmentRow[]>>();
+const deleteAttachment = vi.fn<(attachment: string) => Promise<void>>();
 vi.mock('@/lib/attachments', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/attachments')>()),
   getAttachments: (...args: [string]) => getAttachments(...args),
+  deleteAttachment: (...args: [string]) => deleteAttachment(...args),
 }));
 
 import { GrievanceDetailsCard } from './GrievanceDetailsCard';
@@ -252,6 +254,8 @@ describe('Step 2 — attachment scan status', () => {
     saveDraft.mockReset();
     saveDraft.mockResolvedValue({});
     getAttachments.mockReset();
+    deleteAttachment.mockReset();
+    deleteAttachment.mockResolvedValue(undefined);
   });
 
   // The button is `disabled` for Pending/Failed/Infected, so clicking it is a
@@ -391,6 +395,7 @@ describe('Step 2 — attachment scan status', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Remove evidence.pdf' }));
       expect(screen.queryByText('evidence.pdf')).not.toBeInTheDocument();
+      expect(deleteAttachment).toHaveBeenCalledWith(ATTACHMENT_ID);
 
       // If the effect's cleanup didn't run, this tick's poll would still fire
       // and (harmlessly, since nothing renders it) call getAttachments again —

@@ -267,3 +267,108 @@ describe('selectGrievanceTypeOptions', () => {
     ]);
   });
 });
+
+describe('Multi-parent administrative areas and Sub-city woredas', () => {
+  const addisAbabaRegion: AdministrativeArea = {
+    area_id: 'region-ET14',
+    area_name: 'Addis Ababa',
+    code: 'ET14',
+    path_code: 'ET.ET14',
+    level_name: 'Region',
+    is_group: 1,
+    depth: 2,
+  };
+
+  const addisZone: AdministrativeArea = {
+    area_id: 'zone-ET1401',
+    area_name: 'Addis Ababa Zone',
+    code: 'ET1401',
+    path_code: 'ET.ET14.ET1401',
+    level_name: 'Zone',
+    parent_administrative_area: 'region-ET14',
+    is_group: 1,
+    depth: 3,
+  };
+
+  const addisKetemaWoreda: AdministrativeArea = {
+    area_id: 'woreda-ET140108',
+    area_name: 'Addis Ketema Sub City',
+    code: 'ET140108',
+    depth: 4,
+    is_group: 1,
+    level_name: 'Woreda',
+    parent_administrative_area: 'zone-ET1401',
+    path_code: 'ET.ET14.ET1401.ET140108',
+  };
+
+  const boleWoreda: AdministrativeArea = {
+    area_id: 'woreda-ET140104',
+    area_name: 'Bole Sub City',
+    code: 'ET140104',
+    depth: 4,
+    is_group: 1,
+    level_name: 'Woreda',
+    parent_administrative_area: 'zone-ET1401',
+    path_code: 'ET.ET14.ET1401.ET140104',
+  };
+
+  it('resolves woreda options when areas are indexed under zone or region path', () => {
+    const state = createMockRootState({
+      regions: [mockRegion, addisAbabaRegion],
+      childAreasByParent: {
+        'zone-ET1401_Woreda': [addisKetemaWoreda, boleWoreda],
+        'zone-ET1401': [addisKetemaWoreda, boleWoreda],
+        'region-ET14_Zone': [addisZone],
+        'region-ET14': [addisZone],
+      },
+    });
+
+    const woredasWithZone = selectWoredaOptions(state, 'Addis Ababa Zone', 'Addis Ababa');
+    expect(woredasWithZone).toContainEqual({ value: 'Addis Ketema Sub City', label: 'Addis Ketema Sub City' });
+    expect(woredasWithZone).toContainEqual({ value: 'Bole Sub City', label: 'Bole Sub City' });
+
+    const woredasByRegion = selectWoredaOptions(state, undefined, 'Addis Ababa');
+    expect(woredasByRegion).toContainEqual({ value: 'Addis Ketema Sub City', label: 'Addis Ketema Sub City' });
+  });
+
+  it('selects multi-region filter woredas across multiple selected regions', () => {
+    const state = createMockRootState({
+      regions: [mockRegion, addisAbabaRegion],
+      childAreasByParent: {
+        'reg-oromia_Woreda': [mockWoreda],
+        'zone-ET1401_Woreda': [addisKetemaWoreda, boleWoreda],
+      },
+    });
+
+    const filterOptions = selectWoredaFilterOptions(state, ['Oromia', 'Addis Ababa']);
+    expect(filterOptions).toContainEqual({ value: 'Basona Werana', label: 'Basona Werana' });
+    expect(filterOptions).toContainEqual({ value: 'Addis Ketema Sub City', label: 'Addis Ketema Sub City' });
+    expect(filterOptions).toContainEqual({ value: 'Bole Sub City', label: 'Bole Sub City' });
+  });
+
+  it('selects multi-woreda filter kebeles across multiple selected woredas', () => {
+    const addisKebele01: AdministrativeArea = {
+      area_id: 'keb-ak-01',
+      area_name: 'Woreda 01 Kebele',
+      code: 'K01',
+      path_code: 'ET.ET14.ET1401.ET140108.K01',
+      level_name: 'Kebele',
+      parent_administrative_area: 'woreda-ET140108',
+      is_group: 0,
+      depth: 5,
+    };
+
+    const state = createMockRootState({
+      regions: [mockRegion, addisAbabaRegion],
+      childAreasByParent: {
+        'wor-basona_Kebele': [mockKebele],
+        'woreda-ET140108_Kebele': [addisKebele01],
+        'zone-ET1401_Woreda': [addisKetemaWoreda],
+      },
+    });
+
+    const kebeles = selectKebeleFilterOptions(state, ['Basona Werana', 'Addis Ketema Sub City']);
+    expect(kebeles).toContainEqual({ value: 'Kebele 01', label: 'Kebele 01' });
+    expect(kebeles).toContainEqual({ value: 'Woreda 01 Kebele', label: 'Woreda 01 Kebele' });
+  });
+});
