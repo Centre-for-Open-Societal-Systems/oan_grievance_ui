@@ -7,7 +7,8 @@ import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentRow, ScanStatus, WizardAttachment } from '@/lib/attachments';
 import en from '../../../../messages/en.json';
-import { makeStore } from '../testFixtures';
+import type { AreaRef } from '@/features/metadata';
+import { makeStore, regionRef, woredaRef, zoneRef } from '../testFixtures';
 
 const saveDraft = vi.fn();
 vi.mock('@/lib/drafts', async (importOriginal) => ({
@@ -35,9 +36,9 @@ const DESCRIPTION = 'Fertilizer allocated for the season has not reached the keb
 interface Initial {
   serviceCategory?: string;
   grievanceType?: string;
-  region?: string;
-  zone?: string;
-  woreda?: string;
+  region?: AreaRef;
+  zone?: AreaRef;
+  woreda?: AreaRef;
   description?: string;
   attachmentId?: string;
   scanStatus?: ScanStatus;
@@ -47,9 +48,9 @@ interface Initial {
 const COMPLETE: Initial = {
   serviceCategory: 'inputs',
   grievanceType: 'Fertilizer Shortage',
-  region: 'Oromia',
-  zone: 'North Shewa',
-  woreda: 'Basona Werana',
+  region: regionRef,
+  zone: zoneRef,
+  woreda: woredaRef,
   description: DESCRIPTION,
 };
 
@@ -57,10 +58,10 @@ const COMPLETE: Initial = {
 function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) {
   const [serviceCategory, setServiceCategory] = useState(initial.serviceCategory ?? '');
   const [grievanceType, setGrievanceType] = useState(initial.grievanceType ?? '');
-  const [region, setRegion] = useState(initial.region ?? '');
-  const [zone, setZone] = useState(initial.zone ?? '');
-  const [woreda, setWoreda] = useState(initial.woreda ?? '');
-  const [kebele, setKebele] = useState('');
+  const [region, setRegion] = useState<AreaRef | null>(initial.region ?? null);
+  const [zone, setZone] = useState<AreaRef | null>(initial.zone ?? null);
+  const [woreda, setWoreda] = useState<AreaRef | null>(initial.woreda ?? null);
+  const [kebele, setKebele] = useState<AreaRef | null>(null);
   const [description, setDescription] = useState(initial.description ?? '');
   const [desiredOutcome, setDesiredOutcome] = useState('');
   const [serviceProvider, setServiceProvider] = useState('');

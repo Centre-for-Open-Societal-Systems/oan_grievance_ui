@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeStore } from '../testFixtures';
+import { kebeleRef, makeStore, regionRef, woredaRef, zoneRef } from '../testFixtures';
 import { GrievanceSubmittedCard } from './GrievanceSubmittedCard';
 import { ReviewAndSubmitCard } from './ReviewAndSubmitCard';
 
@@ -36,10 +36,10 @@ function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCa
         identityValues={{}}
         serviceCategory="inputs"
         grievanceType="Fertilizer Shortage"
-        region="Oromia"
-        zone="North Shewa"
-        woreda="Basona Werana"
-        kebele="Kebele 01"
+        region={regionRef}
+        zone={zoneRef}
+        woreda={woredaRef}
+        kebele={kebeleRef}
         description={DESCRIPTION}
         attachments={[]}
         {...props}
@@ -101,7 +101,7 @@ describe('Review step → POST /api/v1/grievances', () => {
   it('files against the woreda when no kebele was chosen', async () => {
     const fetchMock = mockFetch(200, { data: { ticket_number: 'B00100011', status: 'Submitted' }, status: 'success' });
     const { onSubmitted } = renderCard({
-      kebele: '',
+      kebele: null,
       draftPayload: { ...BASE_DRAFT_PAYLOAD, administrative_area: 'woreda-ET040101', administrative_unit: undefined },
     });
 
@@ -158,20 +158,6 @@ describe('Review step → POST /api/v1/grievances', () => {
     expect(await screen.findByText('Description: Description must be at least 20 characters.')).toBeInTheDocument();
     expect(onSubmitted).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: /Submit Grievance/ })).toBeEnabled();
-  });
-
-  it('says so, without calling the backend, when the woreda cannot be resolved to an area', () => {
-    const fetchMock = mockFetch(200, {});
-    renderCard({
-      woreda: 'Not A Real Woreda',
-      kebele: '',
-      draftPayload: { ...BASE_DRAFT_PAYLOAD, administrative_area: undefined, administrative_unit: undefined },
-    });
-
-    consentAndSubmit();
-
-    expect(screen.getByText(/Some required details are missing/)).toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('disables the button while the request is in flight, so a double click cannot file it twice', async () => {

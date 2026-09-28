@@ -80,14 +80,15 @@ describe('SubmitGrievancePage URL step filter', () => {
     expect(screen.getAllByText(/Provide essential details about your grievance/).length).toBeGreaterThan(0);
   });
 
-  it('renders Step 3 (Review & Submit) directly when URL has ?step=3', async () => {
+  it('sends ?step=3 back to Step 2 when the grievance details are still empty', async () => {
     currentSearch = 'step=3';
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText('Review & Submit', { selector: 'h3' })).toBeInTheDocument();
+      expect(screen.getByText('Grievance Details', { selector: 'h3' })).toBeInTheDocument();
     });
-    expect(screen.getByText(/Your ticket number is issued when you submit/)).toBeInTheDocument();
+    expect(screen.queryByText('Review & Submit', { selector: 'h3' })).not.toBeInTheDocument();
+    expect(replaceMock).toHaveBeenCalledWith('/submit-grievance?step=2', { scroll: false });
   });
 
   it('pushes the new step to the URL when Next is clicked', async () => {

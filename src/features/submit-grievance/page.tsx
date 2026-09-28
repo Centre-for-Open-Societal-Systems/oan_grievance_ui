@@ -5,15 +5,16 @@ import { ArrowLeft, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { selectUser } from "@/features/auth/store/authSlice";
 import {
-  findFilingArea,
   normalizeSubmissionChannel,
   normalizeSubmitterType,
   selectServiceCategoryOptions,
   selectSubmissionChannelOptions,
   selectSubmitterTypeOptions,
+  type AreaRef,
 } from "@/features/metadata";
 import { buildInitialIdentityValues, identityAfterReset, resolveInitialSubmitterType } from "./initialIdentity";
 import { buildSaveDraftPayload } from "./draftPayload";
+import { firstIncompleteStep, type WizardStep } from "./wizardSteps";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
 import { discardDraft, loadDraft } from "@/lib/drafts";
 import { SCAN_STATUS, type ScanStatus, type WizardAttachment } from "@/lib/attachments";
@@ -37,6 +38,11 @@ function labelFor(options: { value: string; label: string }[], value: string): s
   );
 }
 
+/** A draft's saved area, as a selection — null when the draft has none at that level. */
+function draftAreaRef(id: string | undefined, name: string | undefined): AreaRef | null {
+  return id && name ? { id, name, pathCode: "" } : null;
+}
+
 export default function SubmitGrievancePage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -46,7 +52,7 @@ export default function SubmitGrievancePage() {
   // so refreshing or sharing preserving current step without defaulting to step 1.
   const stepParam = searchParams.get("step");
   const parsedStep = stepParam ? parseInt(stepParam, 10) : NaN;
-  const currentStep = !isNaN(parsedStep) && parsedStep >= 1 && parsedStep <= 3 ? parsedStep : 1;
+  const requestedStep = (!isNaN(parsedStep) && parsedStep >= 1 && parsedStep <= 3 ? parsedStep : 1) as WizardStep;
 
   const goToStep = useCallback(
     (targetStep: number, replace = false) => {
@@ -107,10 +113,10 @@ export default function SubmitGrievancePage() {
   // Step 2 — Grievance Details
   const [serviceCategory, setServiceCategory] = useState("");
   const [grievanceType, setGrievanceType] = useState("");
-  const [region, setRegion] = useState("");
-  const [zone, setZone] = useState("");
-  const [woreda, setWoreda] = useState("");
-  const [kebele, setKebele] = useState("");
+  const [region, setRegion] = useState<AreaRef | null>(null);
+  const [zone, setZone] = useState<AreaRef | null>(null);
+  const [woreda, setWoreda] = useState<AreaRef | null>(null);
+  const [kebele, setKebele] = useState<AreaRef | null>(null);
   const [description, setDescription] = useState("");
   const [desiredOutcome, setDesiredOutcome] = useState("");
   const [serviceProvider, setServiceProvider] = useState("");
@@ -159,11 +165,10 @@ export default function SubmitGrievancePage() {
         if (draft.service_category) setServiceCategory(draft.service_category);
         if (draft.grievance_type) setGrievanceType(draft.grievance_type);
         const h = draft.administrative_hierarchy;
-        if (h?.region) setRegion(h.region);
-        if (h?.zone) setZone(h.zone);
-        if (h?.woreda) setWoreda(h.woreda);
-        if (h?.kebele) setKebele(h.kebele);
-        else if (draft.administrative_unit) setKebele(draft.administrative_unit);
+        setRegion(draftAreaRef(h?.region_id, h?.region));
+        setZone(draftAreaRef(h?.zone_id, h?.zone));
+        setWoreda(draftAreaRef(h?.woreda_id, h?.woreda));
+        setKebele(draftAreaRef(h?.kebele_id, h?.kebele));
         if (draft.description) setDescription(draft.description);
         if (draft.desired_outcome) setDesiredOutcome(draft.desired_outcome);
         if (draft.associated_service_provider) setServiceProvider(draft.associated_service_provider);
@@ -215,6 +220,24 @@ export default function SubmitGrievancePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The step shown is the URL's, clamped to the furthest one the wizard's
+  // data allows — opening `?step=3` directly, or reloading it once the
+  // in-memory data is gone, lands on the first step that still needs work.
+  const currentStep = Math.min(
+    requestedStep,
+    firstIncompleteStep({
+      submitterType, submissionChannel, identityValues,
+      serviceCategory, grievanceType, region, zone, woreda, description,
+    })
+  ) as WizardStep;
+
+  // Keeps the URL in step with the clamp above, so Back and reload agree with what's shown.
+  useEffect(() => {
+    if (draftCheckDone && !submitted && stepParam && requestedStep !== currentStep) {
+      goToStep(currentStep, true);
+    }
+  }, [draftCheckDone, submitted, stepParam, requestedStep, currentStep, goToStep]);
+
   const handleNext = () => {
     goToStep(Math.min(currentStep + 1, 3));
   };
@@ -225,16 +248,22 @@ export default function SubmitGrievancePage() {
 
   const handleSubmitted = (result: SubmitGrievanceResult) => {
     setSubmitted(result);
+    // The wizard's data is gone once it's filed — drop `?step=` so a reload
+    // starts a fresh Step 1 rather than an empty Review & Submit.
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("step");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const resetDraftFields = () => {
     setServiceCategory("");
     setGrievanceType("");
-    setRegion("");
-    setZone("");
-    setWoreda("");
-    setKebele("");
+    setRegion(null);
+    setZone(null);
+    setWoreda(null);
+    setKebele(null);
     setDescription("");
     setDesiredOutcome("");
     setServiceProvider("");
@@ -275,11 +304,6 @@ export default function SubmitGrievancePage() {
   const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
   const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
   const serviceCategories = useAppSelector(selectServiceCategoryOptions);
-  const metadata = useAppSelector((state) => state.metadata);
-  const filingArea = useMemo(
-    () => findFilingArea({ metadata }, { region, zone, woreda, kebele }),
-    [metadata, region, zone, woreda, kebele]
-  );
 
   const draftPayload = buildSaveDraftPayload({
     clientSubmissionUuid: clientUuid,
@@ -290,8 +314,8 @@ export default function SubmitGrievancePage() {
     userFullName: user?.full_name,
     userMobile: user?.mobile_no,
     userEmail: user?.email,
-    administrativeAreaId: filingArea?.area_id,
-    kebele,
+    administrativeAreaId: (kebele ?? woreda)?.id,
+    kebele: kebele?.name,
     serviceCategoryLabel: serviceCategory ? labelFor(serviceCategories, serviceCategory) : undefined,
     grievanceType,
     associatedServiceProvider: serviceProvider,

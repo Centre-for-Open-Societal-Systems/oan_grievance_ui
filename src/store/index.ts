@@ -2,6 +2,7 @@ import { performLogout } from '@/features/auth/logout';
 import { isProtectedRoute } from '@/features/auth/rbac';
 import { authReducer, getMeThunk } from '@/features/auth/store/authSlice';
 import { metadataReducer } from '@/features/metadata/store/metadataSlice';
+import { areasApi } from '@/features/metadata/api/areasApi';
 import { timelineReducer } from '@/features/all-grievances/store/timelineSlice';
 import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/toolkit';
 
@@ -52,8 +53,9 @@ export const store = configureStore({
     auth: authReducer,
     metadata: metadataReducer,
     timeline: timelineReducer,
+    [areasApi.reducerPath]: areasApi.reducer,
   },
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sessionExpiryMiddleware),
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sessionExpiryMiddleware, areasApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

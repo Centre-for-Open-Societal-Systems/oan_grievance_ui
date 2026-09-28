@@ -15,7 +15,7 @@ import {
   X
 } from 'lucide-react';
 import type { Grievance } from '../types';
-import type { FilterOption } from './AdvancedFiltersSidebar';
+import type { FilterOption } from './FilterDropdown';
 
 /**
  * Lifecycle statuses are configured backend-side, so this map is keyed by the labels we

@@ -9,24 +9,16 @@ import { MIN_DESCRIPTION_LENGTH } from "@/lib/validation/fieldRules";
 import { focusFirstError, useFieldErrors, type FieldErrors } from "@/lib/validation/useFieldErrors";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  fetchChildAreasThunk,
   fetchGrievanceOptionsThunk,
-  fetchRegionsThunk,
   fetchSubmitterOptionsThunk,
-  findFilingArea,
   selectGrievanceTypeOptions,
-  selectRegionOptions,
   selectServiceCategoryOptions,
   selectSubmissionChannelOptions,
   selectSubmitterTypeOptions,
-  selectZoneOptions,
-  selectZoneStatus,
-  selectWoredaOptions,
-  selectWoredaStatus,
-  selectKebeleOptions,
-  selectKebeleStatus,
-  findZoneNode,
-  findWoredaNode,
+  toAreaRef,
+  useAreas,
+  type AdministrativeArea,
+  type AreaRef,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import {
@@ -42,6 +34,7 @@ import {
 } from "@/lib/attachments";
 import { saveDraft } from "@/lib/drafts";
 import { buildSaveDraftPayload } from "../draftPayload";
+import { getDescriptionError, getDetailsErrors, type DetailsField } from "../wizardSteps";
 import { logger } from "@/lib/logger";
 
 function isPdf(item: WizardAttachment): boolean {
@@ -137,6 +130,14 @@ function labelFor(options: { value: string; label: string }[], value: string): s
     value
   );
 }
+function areaOptions(areas: AdministrativeArea[]): Array<{ value: string; label: string }> {
+  return areas.map((a) => ({ value: a.area_id, label: a.area_name }));
+}
+
+function findAreaRef(areas: AdministrativeArea[], id: string): AreaRef | null {
+  const area = areas.find((a) => a.area_id === id);
+  return area ? toAreaRef(area) : null;
+}
 
 interface GrievanceDetailsCardProps {
   onNext: () => void;
@@ -154,14 +155,14 @@ interface GrievanceDetailsCardProps {
   setServiceCategory: (value: string) => void;
   grievanceType: string;
   setGrievanceType: (value: string) => void;
-  region: string;
-  setRegion: (value: string) => void;
-  zone: string;
-  setZone: (value: string) => void;
-  woreda: string;
-  setWoreda: (value: string) => void;
-  kebele: string;
-  setKebele: (value: string) => void;
+  region: AreaRef | null;
+  setRegion: (value: AreaRef | null) => void;
+  zone: AreaRef | null;
+  setZone: (value: AreaRef | null) => void;
+  woreda: AreaRef | null;
+  setWoreda: (value: AreaRef | null) => void;
+  kebele: AreaRef | null;
+  setKebele: (value: AreaRef | null) => void;
   description: string;
   setDescription: (value: string) => void;
   /** What the submitter would like done about it — optional. Sent as `desired_outcome`. */
@@ -179,9 +180,7 @@ interface GrievanceDetailsCardProps {
   setAttachments: (updater: WizardAttachment[] | ((prev: WizardAttachment[]) => WizardAttachment[])) => void;
 }
 
-/** The required fields on this step, in form order — where "focus the first invalid field" looks. */
-type DetailsField = "serviceCategory" | "grievanceType" | "region" | "zone" | "woreda" | "description";
-
+/** Where "focus the first invalid field" looks, in form order. */
 const DETAILS_FIELD_ORDER: ReadonlyArray<{ key: DetailsField; id: string }> = [
   { key: "serviceCategory", id: "service-category" },
   { key: "grievanceType", id: "grievance-type" },
@@ -240,22 +239,13 @@ export function GrievanceDetailsCard({
   const dynamicGrievanceTypes = useAppSelector((state) =>
     selectGrievanceTypeOptions(state, serviceCategory)
   );
-  const dynamicRegions = useAppSelector(selectRegionOptions);
-  const dynamicZones = useAppSelector((state) => selectZoneOptions(state, region));
-  const zoneStatus = useAppSelector((state) => selectZoneStatus(state, region));
-  const dynamicWoredas = useAppSelector((state) => selectWoredaOptions(state, zone, region));
-  const woredaStatus = useAppSelector((state) => selectWoredaStatus(state, zone, region));
-  const dynamicKebeles = useAppSelector((state) => selectKebeleOptions(state, woreda, zone, region));
-  const kebeleStatus = useAppSelector((state) => selectKebeleStatus(state, woreda, zone, region));
-  const rawRegions = useAppSelector((state) => state.metadata.regions);
-  const metadata = useAppSelector((state) => state.metadata);
-  const zoneNode = useAppSelector((state) => findZoneNode(state, zone, region));
-  const woredaNode = useAppSelector((state) => findWoredaNode(state, woreda, zone, region));
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
-  const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
 
-  const fetchedKeysRef = useRef<Set<string>>(new Set());
+  const regions = useAreas({ level: "Region" });
+  const zones = useAreas({ level: "Zone", parents: region ? [region.id] : [] });
+  const woredas = useAreas({ level: "Woreda", parents: zone ? [zone.id] : [] });
+  const kebeles = useAreas({ level: "Kebele", parents: woreda ? [woreda.id] : [] });
 
   useEffect(() => {
     if (metadataStatus === "idle") {
@@ -264,60 +254,7 @@ export function GrievanceDetailsCard({
     if (grievanceOptionsStatus === "idle") {
       void dispatch(fetchGrievanceOptionsThunk());
     }
-    if (regionsStatus === "idle") {
-      void dispatch(fetchRegionsThunk());
-    }
-  }, [dispatch, metadataStatus, grievanceOptionsStatus, regionsStatus]);
-
-  // Fetch Zones and Woredas when Region changes (called at most once per region parent)
-  useEffect(() => {
-    if (!region) return;
-    const selectedRegionNode = rawRegions.find(
-      (r) =>
-        r.area_name.toLowerCase() === region.toLowerCase() ||
-        r.area_id.toLowerCase() === region.toLowerCase() ||
-        (r.code && r.code.toLowerCase() === region.toLowerCase()) ||
-        (r.path_code && r.path_code.toLowerCase() === region.toLowerCase())
-    );
-    const parentId = selectedRegionNode?.area_id || selectedRegionNode?.path_code || region;
-    if (!parentId) return;
-
-    const zoneKey = `${parentId}_Zone`;
-    if (!fetchedKeysRef.current.has(zoneKey)) {
-      fetchedKeysRef.current.add(zoneKey);
-      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Zone" }));
-    }
-
-    const woredaKey = `${parentId}_Woreda`;
-    if (!fetchedKeysRef.current.has(woredaKey)) {
-      fetchedKeysRef.current.add(woredaKey);
-      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Woreda" }));
-    }
-  }, [dispatch, region, rawRegions]);
-
-  // Fetch Woredas when Zone changes (called at most once per zone parent)
-  useEffect(() => {
-    if (!zone) return;
-    const parentId = zoneNode?.area_id || zoneNode?.path_code || zone;
-    if (!parentId) return;
-    const woredaKey = `${parentId}_Woreda`;
-    if (!fetchedKeysRef.current.has(woredaKey)) {
-      fetchedKeysRef.current.add(woredaKey);
-      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Woreda" }));
-    }
-  }, [dispatch, zone, zoneNode]);
-
-  // Fetch Kebeles when Woreda changes (called at most once per woreda parent)
-  useEffect(() => {
-    if (!woreda) return;
-    const parentId = woredaNode?.area_id || woredaNode?.path_code || woreda;
-    if (!parentId) return;
-    const kebeleKey = `${parentId}_Kebele`;
-    if (!fetchedKeysRef.current.has(kebeleKey)) {
-      fetchedKeysRef.current.add(kebeleKey);
-      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Kebele" }));
-    }
-  }, [dispatch, woreda, woredaNode]);
+  }, [dispatch, metadataStatus, grievanceOptionsStatus]);
 
   // Which attachment's preview modal is open, if any — null when closed.
   const [previewItem, setPreviewItem] = useState<WizardAttachment | null>(null);
@@ -445,12 +382,6 @@ export function GrievanceDetailsCard({
   // `uploadAttachments` succeeds, not through this draft-save payload.
   const currentDraftPayload = () => {
     const fields = latestFieldsRef.current;
-    const filingArea = findFilingArea({ metadata }, {
-      region: fields.region,
-      zone: fields.zone,
-      woreda: fields.woreda,
-      kebele: fields.kebele,
-    });
     return buildSaveDraftPayload({
       clientSubmissionUuid: clientUuid,
       submissionChannelLabel: submissionChannel ? labelFor(submissionChannels, submissionChannel) : undefined,
@@ -460,8 +391,8 @@ export function GrievanceDetailsCard({
       userFullName,
       userMobile,
       userEmail,
-      administrativeAreaId: filingArea?.area_id,
-      kebele: fields.kebele,
+      administrativeAreaId: (fields.kebele ?? fields.woreda)?.id,
+      kebele: fields.kebele?.name,
       serviceCategoryLabel: fields.serviceCategory ? labelFor(dynamicServiceCategories, fields.serviceCategory) : undefined,
       grievanceType: fields.grievanceType,
       associatedServiceProvider: fields.serviceProvider,
@@ -484,24 +415,17 @@ export function GrievanceDetailsCard({
 
   // The message for the description field, or null if it's fine. Also used
   // as the user types into a field that is already showing one.
-  const descriptionErrorFor = (value: string): string | null => {
-    const trimmed = value.trim();
-    if (!trimmed) return t("fieldRequired");
-    if (trimmed.length < MIN_DESCRIPTION_LENGTH) {
-      return t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count: trimmed.length });
-    }
-    return null;
+  const detailsMessages = {
+    required: t("fieldRequired"),
+    descriptionTooShort: (count: number) => t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count }),
   };
+  const descriptionErrorFor = (value: string): string | null => getDescriptionError(value, detailsMessages);
 
   const handleNext = () => {
-    const errors: FieldErrors<DetailsField> = {};
-    if (!serviceCategory) errors.serviceCategory = t("fieldRequired");
-    if (!grievanceType) errors.grievanceType = t("fieldRequired");
-    if (!region) errors.region = t("fieldRequired");
-    if (!zone.trim()) errors.zone = t("fieldRequired");
-    if (!woreda.trim()) errors.woreda = t("fieldRequired");
-    const descriptionError = descriptionErrorFor(description);
-    if (descriptionError) errors.description = descriptionError;
+    const errors: FieldErrors<DetailsField> = getDetailsErrors(
+      { serviceCategory, grievanceType, region, zone, woreda, description },
+      detailsMessages
+    );
 
     fieldErrors.setAll(errors);
     if (Object.keys(errors).length > 0) {
@@ -865,14 +789,14 @@ export function GrievanceDetailsCard({
               </label>
               <AnimatedSelect
                 id="grievance-region"
-                options={dynamicRegions}
-                placeholder="Select region"
-                value={region}
-                onChange={(newRegion) => {
-                  setRegion(newRegion);
-                  setZone("");
-                  setWoreda("");
-                  setKebele("");
+                options={areaOptions(regions.areas)}
+                placeholder={regions.isLoading ? "Loading regions..." : "Select region"}
+                value={region?.id ?? ""}
+                onChange={(id) => {
+                  setRegion(findAreaRef(regions.areas, id));
+                  setZone(null);
+                  setWoreda(null);
+                  setKebele(null);
                   fieldErrors.setError("region", null);
                 }}
                 invalid={!!fieldErrors.errors.region}
@@ -890,24 +814,24 @@ export function GrievanceDetailsCard({
               </label>
               <AnimatedSelect
                 id="grievance-zone"
-                options={dynamicZones}
+                options={areaOptions(zones.areas)}
                 placeholder={
                   !region
                     ? "Select region first"
-                    : zoneStatus === "loading"
+                    : zones.isLoading
                     ? "Loading zones..."
-                    : dynamicZones.length === 0
+                    : zones.areas.length === 0
                     ? "No zones available"
                     : "Select Zone / Sub-city"
                 }
-                value={zone}
-                onChange={(newZone) => {
-                  setZone(newZone);
-                  setWoreda("");
-                  setKebele("");
+                value={zone?.id ?? ""}
+                onChange={(id) => {
+                  setZone(findAreaRef(zones.areas, id));
+                  setWoreda(null);
+                  setKebele(null);
                   fieldErrors.setError("zone", null);
                 }}
-                disabled={!region || zoneStatus === "loading"}
+                disabled={!region || zones.isLoading}
                 invalid={!!fieldErrors.errors.zone}
                 describedBy={fieldErrors.errors.zone ? errorIdFor("grievance-zone") : undefined}
               />
@@ -923,23 +847,23 @@ export function GrievanceDetailsCard({
               </label>
               <AnimatedSelect
                 id="grievance-woreda"
-                options={dynamicWoredas}
+                options={areaOptions(woredas.areas)}
                 placeholder={
-                  !region
-                    ? "Select region first"
-                    : woredaStatus === "loading"
+                  !zone
+                    ? "Select zone first"
+                    : woredas.isLoading
                     ? "Loading woredas..."
-                    : dynamicWoredas.length === 0
-                    ? (zone ? "No woredas available" : "Select zone or region first")
+                    : woredas.areas.length === 0
+                    ? "No woredas available"
                     : "Select Woreda"
                 }
-                value={woreda}
-                onChange={(newWoreda) => {
-                  setWoreda(newWoreda);
-                  setKebele("");
+                value={woreda?.id ?? ""}
+                onChange={(id) => {
+                  setWoreda(findAreaRef(woredas.areas, id));
+                  setKebele(null);
                   fieldErrors.setError("woreda", null);
                 }}
-                disabled={!region || woredaStatus === "loading"}
+                disabled={!zone || woredas.isLoading}
                 invalid={!!fieldErrors.errors.woreda}
                 describedBy={fieldErrors.errors.woreda ? errorIdFor("grievance-woreda") : undefined}
               />
@@ -955,19 +879,19 @@ export function GrievanceDetailsCard({
               </label>
               <AnimatedSelect
                 id="grievance-kebele"
-                options={dynamicKebeles}
+                options={areaOptions(kebeles.areas)}
                 placeholder={
                   !woreda
                     ? "Select woreda first"
-                    : kebeleStatus === "loading"
+                    : kebeles.isLoading
                     ? "Loading kebeles..."
-                    : dynamicKebeles.length === 0
+                    : kebeles.areas.length === 0
                     ? "No kebeles available"
                     : "Select Kebele / Village"
                 }
-                value={kebele}
-                onChange={setKebele}
-                disabled={!woreda || kebeleStatus === "loading"}
+                value={kebele?.id ?? ""}
+                onChange={(id) => setKebele(findAreaRef(kebeles.areas, id))}
+                disabled={!woreda || kebeles.isLoading}
               />
             </div>
           </div>

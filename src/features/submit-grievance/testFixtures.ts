@@ -1,6 +1,8 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { authReducer } from '@/features/auth/store/authSlice';
 import { metadataReducer, type MetadataState } from '@/features/metadata/store/metadataSlice';
+import { areaQueryArgs, areasApi } from '@/features/metadata/api/areasApi';
+import { toAreaRef } from '@/features/metadata/areaRef';
 import type { AdministrativeArea } from '@/features/metadata/types';
 
 // Reference data shared by the submit-grievance component tests: the areas
@@ -36,30 +38,30 @@ export function makeStore(overrides: Partial<MetadataState> = {}) {
     },
     submitterOptionsStatus: 'succeeded',
     submitterOptionsError: null,
-    regions: [region],
-    regionsStatus: 'succeeded',
-    regionsError: null,
-    woredas: [woreda],
-    woredasStatus: 'succeeded',
-    woredasError: null,
-    kebeles: [kebele],
-    kebelesStatus: 'succeeded',
-    kebelesError: null,
-    childAreasByParent: {
-      'region-ET04_Zone': [zone],
-      'zone-ET0401_Woreda': [woreda],
-      'woreda-ET040101_Kebele': [kebele],
-    },
-    childAreasStatus: {
-      'region-ET04_Zone': 'succeeded',
-      'zone-ET0401_Woreda': 'succeeded',
-      'woreda-ET040101_Kebele': 'succeeded',
-    },
     grievanceOptions: null,
     grievanceOptionsStatus: 'idle',
     grievanceOptionsError: null,
     selectedLanguage: 'en',
     ...overrides,
   };
-  return configureStore({ reducer: { auth: authReducer, metadata: metadataReducer }, preloadedState: { metadata } });
+  const store = configureStore({
+    reducer: { auth: authReducer, metadata: metadataReducer, [areasApi.reducerPath]: areasApi.reducer },
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(areasApi.middleware),
+    preloadedState: { metadata },
+  });
+  store.dispatch(
+    areasApi.util.upsertQueryEntries([
+      { endpointName: 'getAreas', arg: areaQueryArgs('Region'), value: [region] },
+      { endpointName: 'getAreas', arg: areaQueryArgs('Zone', [region.area_id]), value: [zone] },
+      { endpointName: 'getAreas', arg: areaQueryArgs('Woreda', [zone.area_id]), value: [woreda] },
+      { endpointName: 'getAreas', arg: areaQueryArgs('Kebele', [woreda.area_id]), value: [kebele] },
+    ])
+  );
+  return store;
 }
+
+/** The fixture areas as the wizard holds them once selected. */
+export const regionRef = toAreaRef(region);
+export const zoneRef = toAreaRef(zone);
+export const woredaRef = toAreaRef(woreda);
+export const kebeleRef = toAreaRef(kebele);

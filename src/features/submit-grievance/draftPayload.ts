@@ -62,7 +62,7 @@ export interface BuildSaveDraftPayloadInput extends WizardIdentitySource {
   submissionChannelLabel?: string;
   /** Display label, e.g. "Individual Farmer" — not the wizard's internal slug. */
   submitterTypeLabel?: string;
-  /** Resolved `area_id`/`path_code` from `findFilingArea` — never a display name. Omitted (not sent as "") when not yet resolvable, so an in-flight metadata load can't wipe a previously-saved value. */
+  /** `area_id` of the selected kebele, else the woreda — never a display name. Omitted (not sent as "") when neither is selected yet, so saving an early step can't wipe a previously-saved value. */
   administrativeAreaId?: string;
   kebele?: string;
   /** Display label, e.g. "Inputs" — not the wizard's internal slug. */

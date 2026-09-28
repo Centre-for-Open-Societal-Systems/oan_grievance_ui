@@ -6,6 +6,8 @@
  * is the flattened shape the table and detail sidebar render.
  */
 
+import type { AreaRef } from '@/features/metadata';
+
 export interface GrievanceListItem {
   name: string;
   ticket_number: string;
@@ -119,9 +121,9 @@ export interface Grievance {
 export interface GrievanceFilters {
   status: string[];
   category: string[];
-  regions: string[];
-  woredas: string[];
-  kebeles: string[];
+  regions: AreaRef[];
+  woredas: AreaRef[];
+  kebeles: AreaRef[];
   dateRange: string | null;
   /** `YYYY-MM-DD`, empty when unset. */
   fromDate: string;

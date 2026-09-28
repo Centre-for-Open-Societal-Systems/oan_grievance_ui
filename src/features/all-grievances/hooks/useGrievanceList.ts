@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { fetchGrievances } from '../api/grievanceApi';
 import type { Grievance, GrievanceFilters } from '../types';
 import { mapGrievanceListItem } from '../utils/mapGrievance';
@@ -32,18 +33,6 @@ interface ListResult {
   error: string | null;
 }
 
-/** Debounces a value so keystrokes don't each trigger a request. */
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-
-  return debounced;
-}
-
 /**
  * Server-side listing, filtering, and pagination via GET /api/v1/grievances.
  *
@@ -70,9 +59,9 @@ export function useGrievanceList({
       JSON.stringify({
         status: filters.status,
         category: filters.category,
-        regions: filters.regions,
-        woredas: filters.woredas,
-        kebeles: filters.kebeles,
+        regions: filters.regions.map((a) => a.id),
+        woredas: filters.woredas.map((a) => a.id),
+        kebeles: filters.kebeles.map((a) => a.id),
         fromDate: filters.fromDate,
         toDate: filters.toDate,
         search: debouncedSearch.trim(),

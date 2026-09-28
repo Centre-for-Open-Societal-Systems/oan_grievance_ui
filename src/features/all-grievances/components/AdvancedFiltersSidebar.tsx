@@ -1,158 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, SlidersHorizontal, ChevronDown, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, SlidersHorizontal, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchGrievanceOptionsThunk,
-  fetchRegionsThunk,
-  fetchChildAreasThunk,
-  findWoredaNode,
   selectCategoryFilterOptions,
-  selectRegionFilterOptions,
   selectStatusFilterOptions,
-  selectWoredaFilterOptions,
-  selectKebeleFilterOptions,
 } from '@/features/metadata';
+import { setAreaSelection } from '../utils/areaFilters';
+import { AreaFilterDropdown } from './AreaFilterDropdown';
+import { FilterDropdown } from './FilterDropdown';
 import { EMPTY_GRIEVANCE_FILTERS, type GrievanceFilters } from '../types';
 
 export type { GrievanceFilters };
-
-/** A selectable filter value: `value` goes to the API, `label` is shown to the user. */
-export interface FilterOption {
-  value: string;
-  label: string;
-}
-
-export function FilterDropdown({
-  label,
-  options,
-  selected,
-  onChange,
-  isLoading = false,
-  disabled = false,
-  disabledMessage,
-}: {
-  label: string;
-  options: FilterOption[];
-  selected: string[];
-  onChange: (val: string[]) => void;
-  isLoading?: boolean;
-  disabled?: boolean;
-  disabledMessage?: string;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Deduplicate options by value
-  const uniqueOptions = React.useMemo(() => {
-    const seen = new Set<string>();
-    const result: FilterOption[] = [];
-    for (const opt of options) {
-      if (opt.value && !seen.has(opt.value)) {
-        seen.add(opt.value);
-        result.push(opt);
-      }
-    }
-    return result;
-  }, [options]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Filtering happens server-side, where "no values" means "no constraint" — so an
-  // empty selection is exactly what "All" means, and ticking All just clears it.
-  const isAllSelected = selected.length === 0;
-
-  const handleToggleAll = () => {
-    onChange([]);
-  };
-
-  const handleToggle = (value: string, checked: boolean) => {
-    if (checked) {
-      onChange([...selected, value]);
-    } else {
-      onChange(selected.filter((v) => v !== value));
-    }
-  };
-
-  const selectedLabels = selected
-    .map(val => uniqueOptions.find(opt => opt.value === val)?.label || val)
-    .join(', ');
-
-  const summary = isLoading
-    ? 'Loading…'
-    : disabled && disabledMessage
-      ? disabledMessage
-      : selected.length > 0
-        ? selectedLabels
-        : `Select ${label}`;
-
-  return (
-    <div className="flex flex-col gap-1.5 mb-4 relative" ref={dropdownRef}>
-      <label className="text-sm font-semibold text-gray-700">{label}</label>
-      <div
-        className={`flex items-center justify-between px-3 py-2.5 border rounded-lg transition-colors ${
-          disabled
-            ? 'bg-gray-50 border-gray-100 cursor-not-allowed opacity-70'
-            : 'border-gray-200 cursor-pointer bg-white hover:bg-gray-50'
-        }`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-      >
-        <span className="text-sm text-gray-500 line-clamp-1">{summary}</span>
-        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-20 mt-1 border border-gray-100 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white overflow-hidden max-h-60 overflow-y-auto transform origin-top transition-all duration-200 opacity-100 scale-100 flex flex-col">
-          <div className="overflow-y-auto max-h-48">
-            {uniqueOptions.length === 0 ? (
-              <div className="px-3 py-3 text-sm text-gray-400 text-center">
-                {isLoading ? 'Loading options…' : 'No options available'}
-              </div>
-            ) : (
-              [
-                { value: '__all__', label: 'All' },
-                ...uniqueOptions,
-              ].map((option, idx) => {
-                const isAllRow = option.value === '__all__';
-                const isChecked = isAllRow ? isAllSelected : selected.includes(option.value);
-                return (
-                  <label
-                    key={`${option.value}-${idx}`}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
-                  >
-                    <div className="relative flex items-center justify-center">
-                      <input
-                        type="checkbox"
-                        className="peer appearance-none w-[18px] h-[18px] border border-gray-300 rounded-[3px] bg-white checked:bg-[#1E8E3E] checked:border-[#1E8E3E] transition-all duration-200 cursor-pointer"
-                        checked={isChecked}
-                        onChange={(e) =>
-                          isAllRow ? handleToggleAll() : handleToggle(option.value, e.target.checked)
-                        }
-                      />
-                      <svg
-                        className={`absolute w-3 h-3 text-white pointer-events-none transition-transform duration-300 ${isChecked ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-gray-600 truncate">{option.label}</span>
-                  </label>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /** `YYYY-MM-DD` in local time — the format the list API's date filters expect. */
 function toIsoDate(date: Date): string {
@@ -258,98 +117,13 @@ export function AdvancedFiltersSidebar({
   const dispatch = useAppDispatch();
   const statusOptions = useAppSelector(selectStatusFilterOptions);
   const categoryOptions = useAppSelector(selectCategoryFilterOptions);
-  const rawRegions = useAppSelector((state) => state.metadata.regions);
-  const metadata = useAppSelector((state) => state.metadata);
-  const regionOptions = useAppSelector(selectRegionFilterOptions);
-  const woredaOptions = useAppSelector((state) =>
-    selectWoredaFilterOptions(state, filters.regions.length > 0 ? filters.regions : undefined)
-  );
-  const kebeleOptions = useAppSelector((state) =>
-    selectKebeleFilterOptions(state, filters.woredas.length > 0 ? filters.woredas : undefined)
-  );
   const grievanceStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
-  const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
-
-  const isWoredasLoading = useAppSelector((state) => {
-    if (filters.regions.length === 0) return false;
-    return filters.regions.some((regionName) => {
-      const regNode = rawRegions.find(
-        (r) =>
-          r.area_name.toLowerCase() === regionName.toLowerCase() ||
-          r.area_id.toLowerCase() === regionName.toLowerCase() ||
-          (r.code && r.code.toLowerCase() === regionName.toLowerCase()) ||
-          (r.path_code && r.path_code.toLowerCase() === regionName.toLowerCase())
-      );
-      const parentKey = regNode?.area_id || regionName;
-      return (
-        state.metadata.childAreasStatus[`${parentKey}_Woreda`] === 'loading' ||
-        state.metadata.childAreasStatus[parentKey] === 'loading' ||
-        state.metadata.childAreasStatus[`${regionName}_Woreda`] === 'loading' ||
-        state.metadata.childAreasStatus[regionName] === 'loading'
-      );
-    });
-  });
-
-  const isKebelesLoading = useAppSelector((state) => {
-    if (filters.woredas.length === 0) return false;
-    return filters.woredas.some((woredaName) => {
-      const woredaNode = findWoredaNode({ metadata: state.metadata }, woredaName);
-      const parentKey = woredaNode?.area_id || woredaName;
-      return (
-        state.metadata.childAreasStatus[`${parentKey}_Kebele`] === 'loading' ||
-        state.metadata.childAreasStatus[parentKey] === 'loading' ||
-        state.metadata.childAreasStatus[`${woredaName}_Kebele`] === 'loading' ||
-        state.metadata.childAreasStatus[woredaName] === 'loading'
-      );
-    });
-  });
 
   useEffect(() => {
     if (grievanceStatus === "idle") {
       void dispatch(fetchGrievanceOptionsThunk());
     }
-    if (regionsStatus === "idle") {
-      void dispatch(fetchRegionsThunk());
-    }
-  }, [dispatch, grievanceStatus, regionsStatus]);
-
-  useEffect(() => {
-    if (filters.regions.length > 0) {
-      const parentIds: string[] = [];
-      filters.regions.forEach((regionName) => {
-        const regNode = rawRegions.find(
-          (r) =>
-            r.area_name.toLowerCase() === regionName.toLowerCase() ||
-            r.area_id.toLowerCase() === regionName.toLowerCase() ||
-            (r.code && r.code.toLowerCase() === regionName.toLowerCase()) ||
-            (r.path_code && r.path_code.toLowerCase() === regionName.toLowerCase())
-        );
-        const id = regNode?.area_id || regNode?.path_code || regionName;
-        if (id && !parentIds.includes(id)) {
-          parentIds.push(id);
-        }
-      });
-      if (parentIds.length > 0) {
-        void dispatch(fetchChildAreasThunk({ parent: parentIds, level_name: 'Woreda' }));
-      }
-    }
-  }, [dispatch, filters.regions, rawRegions]);
-
-  useEffect(() => {
-    if (filters.woredas.length > 0) {
-      const parentIds: string[] = [];
-      filters.woredas.forEach((woredaName) => {
-        const woredaNode = findWoredaNode({ metadata }, woredaName);
-        const id = woredaNode?.area_id || woredaNode?.path_code || woredaName;
-        if (id && !parentIds.includes(id)) {
-          parentIds.push(id);
-        }
-      });
-      if (parentIds.length > 0) {
-        void dispatch(fetchChildAreasThunk({ parent: parentIds, level_name: 'Kebele' }));
-      }
-    }
-  }, [dispatch, filters.woredas, metadata]);
+  }, [dispatch, grievanceStatus]);
 
   const [isFromCalendarOpen, setIsFromCalendarOpen] = useState(false);
   const [isToCalendarOpen, setIsToCalendarOpen] = useState(false);
@@ -429,42 +203,26 @@ export function AdvancedFiltersSidebar({
             onChange={(val) => setFilters((f) => ({ ...f, category: val }))}
             isLoading={grievanceStatus === 'loading'}
           />
-          <FilterDropdown
+          <AreaFilterDropdown
             label="Regions"
-            options={regionOptions}
+            level="Region"
             selected={filters.regions}
-            onChange={(val) => setFilters((f) => {
-              const next = { ...f, regions: val };
-              if (val.length === 0) {
-                next.woredas = [];
-                next.kebeles = [];
-              }
-              return next;
-            })}
-            isLoading={regionsStatus === 'loading'}
+            onChange={(val) => setFilters((f) => setAreaSelection(f, 'regions', val))}
           />
-          <FilterDropdown
+          <AreaFilterDropdown
             label="Woredas"
-            options={woredaOptions}
+            level="Woreda"
+            parents={filters.regions}
             selected={filters.woredas}
-            onChange={(val) => setFilters((f) => {
-              const next = { ...f, woredas: val };
-              if (val.length === 0) {
-                next.kebeles = [];
-              }
-              return next;
-            })}
-            isLoading={isWoredasLoading}
-            disabled={filters.regions.length === 0}
+            onChange={(val) => setFilters((f) => setAreaSelection(f, 'woredas', val))}
             disabledMessage="Select region first"
           />
-          <FilterDropdown
+          <AreaFilterDropdown
             label="Kebeles"
-            options={kebeleOptions}
+            level="Kebele"
+            parents={filters.woredas}
             selected={filters.kebeles}
-            onChange={(val) => setFilters((f) => ({ ...f, kebeles: val }))}
-            isLoading={isKebelesLoading}
-            disabled={filters.woredas.length === 0}
+            onChange={(val) => setFilters((f) => setAreaSelection(f, 'kebeles', val))}
             disabledMessage="Select woreda first"
           />
 

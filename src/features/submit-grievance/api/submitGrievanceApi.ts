@@ -18,7 +18,7 @@ export interface SubmitGrievancePayload {
   submitter_name?: string;
   contact_mobile?: string;
   contact_email?: string;
-  /** `area_id` or `path_code` of the woreda or kebele filed against — never a display name (see `findFilingArea`). */
+  /** `area_id` or `path_code` of the woreda or kebele filed against — never a display name (the wizard holds areas as `AreaRef`s). */
   administrative_area?: string;
   administrative_unit?: string;
   service_category?: string;
