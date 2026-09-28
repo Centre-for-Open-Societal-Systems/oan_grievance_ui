@@ -18,7 +18,7 @@ export interface SubmitGrievancePayload {
   submitter_name?: string;
   contact_mobile?: string;
   contact_email?: string;
-  /** `area_id` or `path_code` of the woreda or kebele filed against — never a display name (see `findFilingArea`). */
+  /** `area_id` or `path_code` of the woreda or kebele filed against — never a display name (the wizard holds areas as `AreaRef`s). */
   administrative_area?: string;
   administrative_unit?: string;
   service_category?: string;
@@ -66,7 +66,7 @@ export function buildSubmitGrievancePayload(input: BuildSaveDraftPayloadInput): 
 
 /** POST /api/v1/grievances — files the case and returns its ticket number. Authenticated submitters only. */
 export async function submitGrievance(payload: SubmitGrievancePayload): Promise<SubmitGrievanceResult> {
-  return fetchApi<SubmitGrievanceResult>('api/v1/grievances', {
+  return fetchApi<SubmitGrievanceResult>('/api/v1/grievances', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

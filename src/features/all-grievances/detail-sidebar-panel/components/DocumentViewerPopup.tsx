@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
-import { X, Download, FileText, Loader2, Trash2 } from "lucide-react";
+import { X, Download, FileText, Loader2 } from "lucide-react";
 import {
-  deleteAttachment,
   getAttachmentDownloadInfo,
   fetchAttachmentBlobUrl,
   SCAN_STATUS,
@@ -20,49 +19,20 @@ import {
 interface DocumentViewerPopupProps {
   attachment: AttachmentRow;
   onClose: () => void;
-  /** Whether Delete is offered at all — hidden for a viewer without case-management rights. */
-  canDelete: boolean;
-  /** Called after a successful delete, so the caller can drop this row from its own list. */
-  onDeleted: (attachmentName: string) => void;
 }
 
-export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted }: DocumentViewerPopupProps): ReactElement {
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopupProps): ReactElement {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const isClean = attachment.scan_status === SCAN_STATUS.CLEAN;
 
-  // `onClose` (backdrop/X click, or a successful delete) unmounts this popup
-  // immediately — AttachmentsList only renders it while a row is selected.
-  // Guards the async handlers below against setting state after that, which
-  // React logs a no-op warning for and, for the delete failure path
-  // specifically, would otherwise silently swallow the error (the dialog is
-  // already gone, so nothing shows it).
+  // `onClose` (backdrop/X click) unmounts this popup immediately.
   const mountedRef = useRef(true);
   useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
   }, []);
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    setDeleteError(null);
-    try {
-      await deleteAttachment(attachment.name);
-      onDeleted(attachment.name);
-      onClose();
-    } catch (error) {
-      logger.error("Failed to delete attachment:", error);
-      if (!mountedRef.current) return;
-      // The backend refuses once the case is Closed/Rejected/Resolved — surface
-      // its own reason rather than a generic "something went wrong".
-      setDeleteError(error instanceof Error ? error.message : "Could not delete this file. Please try again.");
-      setIsDeleting(false);
-    }
-  };
 
   // Dead while ATTACHMENT_DOWNLOAD_DISABLED is true (the button below stays
   // disabled), but wired to the real APIs now rather than left as an inline
@@ -92,12 +62,10 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-      {/* A misclick here mid-confirmation should read as "I didn't mean that" — cancel the
-          confirm step, not silently close the whole dialog as if nothing had been asked. */}
       <button
         type="button"
         aria-label="Close"
-        onClick={confirmingDelete ? () => setConfirmingDelete(false) : onClose}
+        onClick={onClose}
         className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm cursor-default"
       ></button>
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -132,47 +100,16 @@ export function DocumentViewerPopup({ attachment, onClose, canDelete, onDeleted 
             >
               {isDownloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
             </button>
-            {canDelete && (
-              <>
-                <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                {confirmingDelete ? (
-                  <>
-                    <button
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      className="px-2.5 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-60"
-                    >
-                      {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Yes, delete"}
-                    </button>
-                    <button
-                      onClick={() => setConfirmingDelete(false)}
-                      disabled={isDeleting}
-                      className="px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setConfirmingDelete(true)}
-                    title="Delete this attachment"
-                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                )}
-              </>
-            )}
             <div className="w-px h-6 bg-gray-300 mx-1"></div>
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+            <button onClick={onClose} aria-label="Close dialog" className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
               <X className="h-6 w-6" />
             </button>
           </div>
         </div>
 
-        {(deleteError || downloadError) && (
+        {downloadError && (
           <div role="alert" className="px-6 py-2 bg-red-50 text-red-600 text-sm border-b border-red-100">
-            {deleteError || downloadError}
+            {downloadError}
           </div>
         )}
 

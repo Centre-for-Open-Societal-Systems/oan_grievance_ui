@@ -49,8 +49,6 @@ describe('DocumentViewerPopup — Download (with the disabled flag off)', () => 
       <DocumentViewerPopup
         attachment={{ ...CLEAN_ROW, scan_status: 'Pending' }}
         onClose={vi.fn()}
-        canDelete={false}
-        onDeleted={vi.fn()}
       />
     );
 
@@ -62,7 +60,7 @@ describe('DocumentViewerPopup — Download (with the disabled flag off)', () => 
     getAttachmentDownloadInfo.mockResolvedValue({ file_name: 'id-card.pdf', file_url: '/private/files/id-card.pdf' });
     fetchAttachmentBlobUrl.mockResolvedValue('blob:mock-url');
 
-    render(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} canDelete={false} onDeleted={vi.fn()} />);
+    render(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
 
     const button = screen.getByTitle('Download');
     expect(button).toBeEnabled();
@@ -75,7 +73,7 @@ describe('DocumentViewerPopup — Download (with the disabled flag off)', () => 
   it('shows an error message, not just a console log, when the download fails', async () => {
     getAttachmentDownloadInfo.mockRejectedValue(new Error('boom'));
 
-    render(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} canDelete={false} onDeleted={vi.fn()} />);
+    render(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
 
     fireEvent.click(screen.getByTitle('Download'));
 

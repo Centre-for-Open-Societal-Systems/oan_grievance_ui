@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchGrievanceOptionsThunk,
-  fetchRegionsThunk,
   selectCategoryFilterOptions,
   selectStatusFilterOptions,
 } from '@/features/metadata';
@@ -79,17 +78,15 @@ export default function AllGrievancesPage() {
     [pathname, router, searchParams]
   );
 
-  // Reference data for the filter dropdowns comes from GET /api/v1/grievances/options
-  // (statuses, categories) and GET /api/v1/administrative-areas (regions).
+  // Reference data for the status/category filters comes from GET /api/v1/grievances/options;
+  // the area filters load their own options (see AreaFilterDropdown).
   const optionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
-  const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
   const statusOptions = useAppSelector(selectStatusFilterOptions);
   const categoryOptions = useAppSelector(selectCategoryFilterOptions);
 
   useEffect(() => {
     if (optionsStatus === 'idle') void dispatch(fetchGrievanceOptionsThunk());
-    if (regionsStatus === 'idle') void dispatch(fetchRegionsThunk());
-  }, [dispatch, optionsStatus, regionsStatus]);
+  }, [dispatch, optionsStatus]);
 
   const { grievances, totalItems, totalPages, isLoading, error, refetch } = useGrievanceList({
     filters,

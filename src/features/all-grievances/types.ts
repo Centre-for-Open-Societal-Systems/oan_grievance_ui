@@ -6,6 +6,8 @@
  * is the flattened shape the table and detail sidebar render.
  */
 
+import type { AreaRef } from '@/features/metadata';
+
 export interface GrievanceListItem {
   name: string;
   ticket_number: string;
@@ -119,7 +121,9 @@ export interface Grievance {
 export interface GrievanceFilters {
   status: string[];
   category: string[];
-  regions: string[];
+  regions: AreaRef[];
+  woredas: AreaRef[];
+  kebeles: AreaRef[];
   dateRange: string | null;
   /** `YYYY-MM-DD`, empty when unset. */
   fromDate: string;
@@ -131,6 +135,8 @@ export const EMPTY_GRIEVANCE_FILTERS: GrievanceFilters = {
   status: [],
   category: [],
   regions: [],
+  woredas: [],
+  kebeles: [],
   dateRange: null,
   fromDate: '',
   toDate: '',
@@ -139,7 +145,8 @@ export const EMPTY_GRIEVANCE_FILTERS: GrievanceFilters = {
 /* --- Grievance Timeline Types --- */
 
 export interface TimelineEntry {
-  name: string;
+  id?: string;
+  name?: string;
   entry_type:
     | 'note'
     | 'message'
@@ -149,6 +156,8 @@ export interface TimelineEntry {
     | 'status_change'
     | 'assignment'
     | 'escalation'
+    | 'resolution'
+    | 'rejection'
     | 'attachment'
     | 'submission'
     | string;
@@ -158,6 +167,10 @@ export interface TimelineEntry {
   author_submitter?: string | null;
   author_type?: 'submitter' | 'officer' | 'system' | string;
   author_name?: string | null;
+  author_role?: string | null;
+  from_status?: string | null;
+  to_status?: string | null;
+  attachments?: GrievanceTimelineAttachment[];
   ref_doctype?: string | null;
   ref_docname?: string | null;
   created_on: string;
@@ -173,6 +186,7 @@ export interface TimelineEventItem {
   communication_channel?: string | null;
   is_internal?: number | boolean;
   creation: string;
+  attachments?: GrievanceTimelineAttachment[];
 }
 
 export interface GrievanceTimelineSummary {
@@ -181,6 +195,8 @@ export interface GrievanceTimelineSummary {
   service_category?: string | null;
   grievance_type?: string | null;
   administrative_area?: string | null;
+  administrative_hierarchy?: Record<string, string> | null;
+  location?: string | null;
   administrative_unit?: string | null;
   submission_channel?: string | null;
 }
@@ -217,6 +233,8 @@ export interface GrievanceAvailableAction {
 
 export interface GrievanceTimelineAttachment {
   name: string;
+  id?: string;
+  timeline_entry?: string | null;
   file_name?: string | null;
   file_url?: string | null;
   file_size?: number | null;
@@ -240,6 +258,8 @@ export interface GrievanceTimelineData {
   service_category?: string | null;
   grievance_type?: string | null;
   administrative_area?: string | null;
+  administrative_hierarchy?: Record<string, string> | null;
+  location?: string | null;
   summary?: GrievanceTimelineSummary;
   submitter?: GrievanceTimelineSubmitter;
   sla?: GrievanceTimelineSla;
@@ -265,6 +285,15 @@ export interface GrievanceActionPayload {
   rating?: number;
 }
 
+export interface GrievanceCurrentState {
+  status: string;
+  escalated: boolean;
+  assigned_to?: string | null;
+  department?: string | null;
+  updated_at?: string | null;
+  available_actions?: GrievanceAvailableAction[];
+}
+
 export interface GrievanceActionResult {
   ticket_number: string;
   status?: string;
@@ -272,4 +301,6 @@ export interface GrievanceActionResult {
   action?: string;
   available_actions?: GrievanceAvailableAction[];
   action_timestamp?: string;
+  current_state?: GrievanceCurrentState;
+  timeline_event?: TimelineEntry | null;
 }

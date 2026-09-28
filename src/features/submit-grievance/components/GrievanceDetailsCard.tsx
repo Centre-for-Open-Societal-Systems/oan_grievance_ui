@@ -9,30 +9,24 @@ import { MIN_DESCRIPTION_LENGTH } from "@/lib/validation/fieldRules";
 import { focusFirstError, useFieldErrors, type FieldErrors } from "@/lib/validation/useFieldErrors";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  fetchChildAreasThunk,
   fetchGrievanceOptionsThunk,
-  fetchRegionsThunk,
   fetchSubmitterOptionsThunk,
-  findFilingArea,
   selectGrievanceTypeOptions,
-  selectRegionOptions,
   selectServiceCategoryOptions,
   selectSubmissionChannelOptions,
   selectSubmitterTypeOptions,
-  selectZoneOptions,
-  selectZoneStatus,
-  selectWoredaOptions,
-  selectWoredaStatus,
-  selectKebeleOptions,
-  selectKebeleStatus,
-  findZoneNode,
-  findWoredaNode,
+  toAreaRef,
+  useAreas,
+  type AdministrativeArea,
+  type AreaRef,
 } from "@/features/metadata";
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import {
   getAttachments,
   uploadAttachments,
+  deleteAttachment,
   activeWizardAttachments,
+  fetchAttachmentBlobUrl,
   SCAN_STATUS,
   MAX_ATTACHMENTS_PER_CASE,
   type WizardAttachment,
@@ -40,7 +34,33 @@ import {
 } from "@/lib/attachments";
 import { saveDraft } from "@/lib/drafts";
 import { buildSaveDraftPayload } from "../draftPayload";
+import { getDescriptionError, getDetailsErrors, type DetailsField } from "../wizardSteps";
 import { logger } from "@/lib/logger";
+
+function isPdf(item: WizardAttachment): boolean {
+  return item.file?.type === "application/pdf" || /\.pdf$/i.test(item.fileName);
+}
+
+function isAudio(item: WizardAttachment): boolean {
+  return Boolean(item.file?.type.startsWith("audio/")) || /\.(mp3|wav|ogg|m4a)$/i.test(item.fileName);
+}
+
+function canPreviewAttachment(item: WizardAttachment): boolean {
+  if (item.uploadState === "uploading" || item.uploadState === "error") return false;
+  if (item.file) return true;
+  return Boolean(item.attachmentId && item.scanStatus === SCAN_STATUS.CLEAN);
+}
+
+function previewTooltip(item: WizardAttachment): string | undefined {
+  if (item.uploadState === "uploading") return "Upload in progress…";
+  if (item.uploadState === "error") return "Upload failed";
+  if (item.scanStatus === SCAN_STATUS.PENDING) return "Scanning for malware… preview will be available once clean";
+  if (item.scanStatus === SCAN_STATUS.INFECTED || item.scanStatus === SCAN_STATUS.FAILED) {
+    return "Preview unavailable for unverified or infected files";
+  }
+  if (!item.file && !item.attachmentId) return "Preview unavailable";
+  return undefined;
+}
 
 /** The line under an uploaded file's name — mirrors `scanStatusBadge`'s if-chain shape rather than a nested ternary. */
 function attachmentStatusIndicator(item: WizardAttachment): ReactElement {
@@ -110,6 +130,14 @@ function labelFor(options: { value: string; label: string }[], value: string): s
     value
   );
 }
+function areaOptions(areas: AdministrativeArea[]): Array<{ value: string; label: string }> {
+  return areas.map((a) => ({ value: a.area_id, label: a.area_name }));
+}
+
+function findAreaRef(areas: AdministrativeArea[], id: string): AreaRef | null {
+  const area = areas.find((a) => a.area_id === id);
+  return area ? toAreaRef(area) : null;
+}
 
 interface GrievanceDetailsCardProps {
   onNext: () => void;
@@ -127,14 +155,14 @@ interface GrievanceDetailsCardProps {
   setServiceCategory: (value: string) => void;
   grievanceType: string;
   setGrievanceType: (value: string) => void;
-  region: string;
-  setRegion: (value: string) => void;
-  zone: string;
-  setZone: (value: string) => void;
-  woreda: string;
-  setWoreda: (value: string) => void;
-  kebele: string;
-  setKebele: (value: string) => void;
+  region: AreaRef | null;
+  setRegion: (value: AreaRef | null) => void;
+  zone: AreaRef | null;
+  setZone: (value: AreaRef | null) => void;
+  woreda: AreaRef | null;
+  setWoreda: (value: AreaRef | null) => void;
+  kebele: AreaRef | null;
+  setKebele: (value: AreaRef | null) => void;
   description: string;
   setDescription: (value: string) => void;
   /** What the submitter would like done about it — optional. Sent as `desired_outcome`. */
@@ -152,9 +180,7 @@ interface GrievanceDetailsCardProps {
   setAttachments: (updater: WizardAttachment[] | ((prev: WizardAttachment[]) => WizardAttachment[])) => void;
 }
 
-/** The required fields on this step, in form order — where "focus the first invalid field" looks. */
-type DetailsField = "serviceCategory" | "grievanceType" | "region" | "zone" | "woreda" | "description";
-
+/** Where "focus the first invalid field" looks, in form order. */
 const DETAILS_FIELD_ORDER: ReadonlyArray<{ key: DetailsField; id: string }> = [
   { key: "serviceCategory", id: "service-category" },
   { key: "grievanceType", id: "grievance-type" },
@@ -213,22 +239,13 @@ export function GrievanceDetailsCard({
   const dynamicGrievanceTypes = useAppSelector((state) =>
     selectGrievanceTypeOptions(state, serviceCategory)
   );
-  const dynamicRegions = useAppSelector(selectRegionOptions);
-  const dynamicZones = useAppSelector((state) => selectZoneOptions(state, region));
-  const zoneStatus = useAppSelector((state) => selectZoneStatus(state, region));
-  const dynamicWoredas = useAppSelector((state) => selectWoredaOptions(state, zone, region));
-  const woredaStatus = useAppSelector((state) => selectWoredaStatus(state, zone, region));
-  const dynamicKebeles = useAppSelector((state) => selectKebeleOptions(state, woreda, zone, region));
-  const kebeleStatus = useAppSelector((state) => selectKebeleStatus(state, woreda, zone, region));
-  const rawRegions = useAppSelector((state) => state.metadata.regions);
-  const metadata = useAppSelector((state) => state.metadata);
-  const zoneNode = useAppSelector((state) => findZoneNode(state, zone, region));
-  const woredaNode = useAppSelector((state) => findWoredaNode(state, woreda, zone, region));
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
-  const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
 
-  const fetchedKeysRef = useRef<Set<string>>(new Set());
+  const regions = useAreas({ level: "Region" });
+  const zones = useAreas({ level: "Zone", parents: region ? [region.id] : [] });
+  const woredas = useAreas({ level: "Woreda", parents: zone ? [zone.id] : [] });
+  const kebeles = useAreas({ level: "Kebele", parents: woreda ? [woreda.id] : [] });
 
   useEffect(() => {
     if (metadataStatus === "idle") {
@@ -237,59 +254,7 @@ export function GrievanceDetailsCard({
     if (grievanceOptionsStatus === "idle") {
       void dispatch(fetchGrievanceOptionsThunk());
     }
-    if (regionsStatus === "idle") {
-      void dispatch(fetchRegionsThunk());
-    }
-  }, [dispatch, metadataStatus, grievanceOptionsStatus, regionsStatus]);
-
-  // Fetch Zones and Woredas when Region changes (called at most once per region parent)
-  useEffect(() => {
-    if (!region) return;
-    const selectedRegionNode = rawRegions.find(
-      (r) =>
-        r.area_name.toLowerCase() === region.toLowerCase() ||
-        r.area_id.toLowerCase() === region.toLowerCase() ||
-        (r.code && r.code.toLowerCase() === region.toLowerCase())
-    );
-    const parentId = selectedRegionNode?.area_id || selectedRegionNode?.path_code;
-    if (!parentId) return;
-
-    const zoneKey = `${parentId}_Zone`;
-    if (!fetchedKeysRef.current.has(zoneKey)) {
-      fetchedKeysRef.current.add(zoneKey);
-      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Zone" }));
-    }
-
-    const woredaKey = `${parentId}_Woreda`;
-    if (!fetchedKeysRef.current.has(woredaKey)) {
-      fetchedKeysRef.current.add(woredaKey);
-      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Woreda" }));
-    }
-  }, [dispatch, region, rawRegions]);
-
-  // Fetch Woredas when Zone changes (called at most once per zone parent)
-  useEffect(() => {
-    if (!zone) return;
-    const parentId = zoneNode?.area_id || zoneNode?.path_code;
-    if (!parentId) return;
-    const woredaKey = `${parentId}_Woreda`;
-    if (!fetchedKeysRef.current.has(woredaKey)) {
-      fetchedKeysRef.current.add(woredaKey);
-      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Woreda" }));
-    }
-  }, [dispatch, zone, zoneNode]);
-
-  // Fetch Kebeles when Woreda changes (called at most once per woreda parent)
-  useEffect(() => {
-    if (!woreda) return;
-    const parentId = woredaNode?.area_id || woredaNode?.path_code;
-    if (!parentId) return;
-    const kebeleKey = `${parentId}_Kebele`;
-    if (!fetchedKeysRef.current.has(kebeleKey)) {
-      fetchedKeysRef.current.add(kebeleKey);
-      void dispatch(fetchChildAreasThunk({ parent: parentId, level_name: "Kebele" }));
-    }
-  }, [dispatch, woreda, woredaNode]);
+  }, [dispatch, metadataStatus, grievanceOptionsStatus]);
 
   // Which attachment's preview modal is open, if any — null when closed.
   const [previewItem, setPreviewItem] = useState<WizardAttachment | null>(null);
@@ -301,6 +266,8 @@ export function GrievanceDetailsCard({
   const [error, setError] = useState<string | null>(null);
   const fieldErrors = useFieldErrors<DetailsField>();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // `submit_document` with a `client_uuid` requires the Grievance Draft to
@@ -327,23 +294,56 @@ export function GrievanceDetailsCard({
     };
   });
 
-  // One object URL per uploaded file, created once and released — not
-  // regenerated (and leaked) on every unrelated re-render. This has to be an
-  // effect, not state derived during render: `createObjectURL` allocates a
-  // real browser resource that must be paired with `revokeObjectURL` in
-  // cleanup, and render must stay side-effect-free (it can run more than
-  // once, or get thrown away, per render). The lint rule below can't tell
-  // this apart from the "derived state" anti-pattern it's guarding against.
+  // Generates an object URL for previewing the selected attachment —
+  // either from an in-memory File for a freshly picked item, or by streaming
+  // the clean attachment bytes from the backend for an item resumed from draft.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    const file = previewItem?.file;
-    if (!file || !file.type.startsWith("image/")) {
+    if (!previewItem) {
       setPreviewUrl(null);
+      setPreviewLoading(false);
+      setPreviewError(null);
       return;
     }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
+
+    let cancelled = false;
+    let activeUrl: string | null = null;
+
+    setPreviewLoading(true);
+    setPreviewError(null);
+
+    if (previewItem.file) {
+      const url = URL.createObjectURL(previewItem.file);
+      activeUrl = url;
+      setPreviewUrl(url);
+      setPreviewLoading(false);
+    } else if (previewItem.attachmentId && previewItem.scanStatus === SCAN_STATUS.CLEAN) {
+      fetchAttachmentBlobUrl(previewItem.attachmentId, false)
+        .then((url) => {
+          if (cancelled) {
+            URL.revokeObjectURL(url);
+            return;
+          }
+          activeUrl = url;
+          setPreviewUrl(url);
+          setPreviewLoading(false);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          logger.error("Failed to fetch attachment preview:", err);
+          setPreviewError("Could not load preview for this attachment.");
+          setPreviewLoading(false);
+        });
+    } else {
+      setPreviewLoading(false);
+    }
+
+    return () => {
+      cancelled = true;
+      if (activeUrl) {
+        URL.revokeObjectURL(activeUrl);
+      }
+    };
   }, [previewItem]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -382,12 +382,6 @@ export function GrievanceDetailsCard({
   // `uploadAttachments` succeeds, not through this draft-save payload.
   const currentDraftPayload = () => {
     const fields = latestFieldsRef.current;
-    const filingArea = findFilingArea({ metadata }, {
-      region: fields.region,
-      zone: fields.zone,
-      woreda: fields.woreda,
-      kebele: fields.kebele,
-    });
     return buildSaveDraftPayload({
       clientSubmissionUuid: clientUuid,
       submissionChannelLabel: submissionChannel ? labelFor(submissionChannels, submissionChannel) : undefined,
@@ -397,8 +391,8 @@ export function GrievanceDetailsCard({
       userFullName,
       userMobile,
       userEmail,
-      administrativeAreaId: filingArea?.area_id,
-      kebele: fields.kebele,
+      administrativeAreaId: (fields.kebele ?? fields.woreda)?.id,
+      kebele: fields.kebele?.name,
       serviceCategoryLabel: fields.serviceCategory ? labelFor(dynamicServiceCategories, fields.serviceCategory) : undefined,
       grievanceType: fields.grievanceType,
       associatedServiceProvider: fields.serviceProvider,
@@ -421,24 +415,17 @@ export function GrievanceDetailsCard({
 
   // The message for the description field, or null if it's fine. Also used
   // as the user types into a field that is already showing one.
-  const descriptionErrorFor = (value: string): string | null => {
-    const trimmed = value.trim();
-    if (!trimmed) return t("fieldRequired");
-    if (trimmed.length < MIN_DESCRIPTION_LENGTH) {
-      return t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count: trimmed.length });
-    }
-    return null;
+  const detailsMessages = {
+    required: t("fieldRequired"),
+    descriptionTooShort: (count: number) => t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count }),
   };
+  const descriptionErrorFor = (value: string): string | null => getDescriptionError(value, detailsMessages);
 
   const handleNext = () => {
-    const errors: FieldErrors<DetailsField> = {};
-    if (!serviceCategory) errors.serviceCategory = t("fieldRequired");
-    if (!grievanceType) errors.grievanceType = t("fieldRequired");
-    if (!region) errors.region = t("fieldRequired");
-    if (!zone.trim()) errors.zone = t("fieldRequired");
-    if (!woreda.trim()) errors.woreda = t("fieldRequired");
-    const descriptionError = descriptionErrorFor(description);
-    if (descriptionError) errors.description = descriptionError;
+    const errors: FieldErrors<DetailsField> = getDetailsErrors(
+      { serviceCategory, grievanceType, region, zone, woreda, description },
+      detailsMessages
+    );
 
     fieldErrors.setAll(errors);
     if (Object.keys(errors).length > 0) {
@@ -587,20 +574,18 @@ export function GrievanceDetailsCard({
     }
   };
 
-  const handleRemoveAttachment = (key: string) => (e: React.MouseEvent) => {
+  const handleRemoveAttachment = (key: string) => async (e: React.MouseEvent) => {
     e.stopPropagation();
+    const itemToRemove = attachments.find((item) => item.key === key);
     setAttachments((prev) => prev.filter((item) => item.key !== key));
 
-    // NOT calling deleteAttachment here — needs its own verification pass
-    // against the current backend (the doctype consolidation that made a
-    // draft a Grievance document itself, done in this same change, may have
-    // already fixed the 404 this used to hit; not confirmed). The file is
-    // orphaned server-side until the draft expires and gets purged,
-    // acceptable for now, same as any other abandoned draft. Nothing to
-    // clear on the draft record itself either: unlike the old JSON-payload
-    // draft, a resumed draft's attachment list now always comes straight
-    // from the backend's own Grievance Attachment rows, not from anything
-    // this component saves.
+    if (itemToRemove?.attachmentId) {
+      try {
+        await deleteAttachment(itemToRemove.attachmentId);
+      } catch (deleteError) {
+        logger.error("Failed to delete attachment from server:", deleteError);
+      }
+    }
   };
 
   // A failed upload never reached the backend, so it shouldn't count toward
@@ -804,14 +789,14 @@ export function GrievanceDetailsCard({
               </label>
               <AnimatedSelect
                 id="grievance-region"
-                options={dynamicRegions}
-                placeholder="Select region"
-                value={region}
-                onChange={(newRegion) => {
-                  setRegion(newRegion);
-                  setZone("");
-                  setWoreda("");
-                  setKebele("");
+                options={areaOptions(regions.areas)}
+                placeholder={regions.isLoading ? "Loading regions..." : "Select region"}
+                value={region?.id ?? ""}
+                onChange={(id) => {
+                  setRegion(findAreaRef(regions.areas, id));
+                  setZone(null);
+                  setWoreda(null);
+                  setKebele(null);
                   fieldErrors.setError("region", null);
                 }}
                 invalid={!!fieldErrors.errors.region}
@@ -829,24 +814,24 @@ export function GrievanceDetailsCard({
               </label>
               <AnimatedSelect
                 id="grievance-zone"
-                options={dynamicZones}
+                options={areaOptions(zones.areas)}
                 placeholder={
                   !region
                     ? "Select region first"
-                    : zoneStatus === "loading"
+                    : zones.isLoading
                     ? "Loading zones..."
-                    : dynamicZones.length === 0
+                    : zones.areas.length === 0
                     ? "No zones available"
                     : "Select Zone / Sub-city"
                 }
-                value={zone}
-                onChange={(newZone) => {
-                  setZone(newZone);
-                  setWoreda("");
-                  setKebele("");
+                value={zone?.id ?? ""}
+                onChange={(id) => {
+                  setZone(findAreaRef(zones.areas, id));
+                  setWoreda(null);
+                  setKebele(null);
                   fieldErrors.setError("zone", null);
                 }}
-                disabled={!region || zoneStatus === "loading"}
+                disabled={!region || zones.isLoading}
                 invalid={!!fieldErrors.errors.zone}
                 describedBy={fieldErrors.errors.zone ? errorIdFor("grievance-zone") : undefined}
               />
@@ -862,23 +847,23 @@ export function GrievanceDetailsCard({
               </label>
               <AnimatedSelect
                 id="grievance-woreda"
-                options={dynamicWoredas}
+                options={areaOptions(woredas.areas)}
                 placeholder={
-                  !region
-                    ? "Select region first"
-                    : woredaStatus === "loading" || Boolean(zone && !zoneNode)
+                  !zone
+                    ? "Select zone first"
+                    : woredas.isLoading
                     ? "Loading woredas..."
-                    : dynamicWoredas.length === 0
-                    ? (zone ? "No woredas available" : "Select zone or region first")
+                    : woredas.areas.length === 0
+                    ? "No woredas available"
                     : "Select Woreda"
                 }
-                value={woreda}
-                onChange={(newWoreda) => {
-                  setWoreda(newWoreda);
-                  setKebele("");
+                value={woreda?.id ?? ""}
+                onChange={(id) => {
+                  setWoreda(findAreaRef(woredas.areas, id));
+                  setKebele(null);
                   fieldErrors.setError("woreda", null);
                 }}
-                disabled={!region || woredaStatus === "loading" || Boolean(zone && !zoneNode)}
+                disabled={!zone || woredas.isLoading}
                 invalid={!!fieldErrors.errors.woreda}
                 describedBy={fieldErrors.errors.woreda ? errorIdFor("grievance-woreda") : undefined}
               />
@@ -894,19 +879,19 @@ export function GrievanceDetailsCard({
               </label>
               <AnimatedSelect
                 id="grievance-kebele"
-                options={dynamicKebeles}
+                options={areaOptions(kebeles.areas)}
                 placeholder={
                   !woreda
                     ? "Select woreda first"
-                    : kebeleStatus === "loading" || Boolean(woreda && !woredaNode)
+                    : kebeles.isLoading
                     ? "Loading kebeles..."
-                    : dynamicKebeles.length === 0
+                    : kebeles.areas.length === 0
                     ? "No kebeles available"
                     : "Select Kebele / Village"
                 }
-                value={kebele}
-                onChange={setKebele}
-                disabled={!woreda || kebeleStatus === "loading" || Boolean(woreda && !woredaNode)}
+                value={kebele?.id ?? ""}
+                onChange={(id) => setKebele(findAreaRef(kebeles.areas, id))}
+                disabled={!woreda || kebeles.isLoading}
               />
             </div>
           </div>
@@ -1031,12 +1016,14 @@ export function GrievanceDetailsCard({
                     </div>
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setPreviewItem(item);
                         }}
-                        disabled={item.uploadState === "uploading" || !item.file}
-                        title={!item.file ? "Preview isn't available after a reload — only for a file you just picked" : undefined}
+                        disabled={!canPreviewAttachment(item)}
+                        aria-label={`Preview ${item.fileName}`}
+                        title={previewTooltip(item)}
                         className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Eye className="w-5 h-5 text-blue-500" />
@@ -1110,16 +1097,23 @@ export function GrievanceDetailsCard({
         </div>
       </div>
 
-      {/* Image Preview Modal */}
-      {previewItem && previewItem.file && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      {/* Attachment Preview Modal */}
+      {previewItem && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="preview-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+        >
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 truncate pr-4">
-                {previewItem.file.name}
+              <h3 id="preview-modal-title" className="text-lg font-bold text-gray-900 truncate pr-4">
+                {previewItem.fileName}
               </h3>
               <button
+                type="button"
+                aria-label="Close preview"
                 onClick={(e) => {
                   e.stopPropagation();
                   setPreviewItem(null);
@@ -1130,19 +1124,43 @@ export function GrievanceDetailsCard({
               </button>
             </div>
 
-            {/* Modal Content - Image */}
-            <div className="p-4 bg-gray-50/50 flex justify-center items-center overflow-auto max-h-[70vh]">
-              {previewUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="max-w-full h-auto rounded-lg shadow-sm border border-gray-200"
-                />
+            {/* Modal Content */}
+            <div className="p-4 bg-gray-50/50 flex justify-center items-center overflow-auto max-h-[75vh]">
+              {previewLoading ? (
+                <div className="py-16 flex flex-col items-center justify-center text-gray-500">
+                  <Loader2 className="w-10 h-10 text-[#16A34A] animate-spin mb-3" />
+                  <p className="text-sm font-medium">Loading preview…</p>
+                </div>
+              ) : previewError ? (
+                <div className="py-12 flex flex-col items-center justify-center text-red-600">
+                  <AlertTriangle className="w-12 h-12 mb-3 text-red-500" />
+                  <p className="text-sm font-semibold">{previewError}</p>
+                </div>
+              ) : previewUrl ? (
+                isPdf(previewItem) ? (
+                  <iframe
+                    src={previewUrl}
+                    title={previewItem.fileName}
+                    className="w-full h-[65vh] rounded-lg border border-gray-200 shadow-sm"
+                  />
+                ) : isAudio(previewItem) ? (
+                  <div className="py-8 w-full flex flex-col items-center justify-center">
+                    <audio controls src={previewUrl} className="w-full max-w-md">
+                      Your browser does not support the audio element.
+                    </audio>
+                  </div>
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={previewUrl}
+                    alt={previewItem.fileName}
+                    className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm border border-gray-200"
+                  />
+                )
               ) : (
                 <div className="py-12 flex flex-col items-center justify-center text-gray-500">
                   <FileText className="w-16 h-16 text-gray-300 mb-4" />
-                  <p>Preview not available for this file type.</p>
+                  <p className="text-sm font-medium">Preview not available for this file type.</p>
                 </div>
               )}
             </div>

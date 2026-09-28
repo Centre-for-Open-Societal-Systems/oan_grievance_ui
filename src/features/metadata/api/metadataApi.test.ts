@@ -72,4 +72,20 @@ describe('metadataService', () => {
     const calledUrl = (global.fetch as any).mock.calls[0][0]; // eslint-disable-line @typescript-eslint/no-explicit-any
     expect(calledUrl).toContain('/api/proxy/api/v1/administrative-areas?level_name=Region&limit=10');
   });
+
+  it('serializes multiple parents as comma-separated list in query params', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { areas: [], count: 0 } }),
+    } as Response);
+
+    await metadataService.getAdministrativeAreas({
+      parent: ['zone-ET1401', 'zone-ET1402'],
+      level_name: 'Woreda',
+    });
+
+    const calledUrl = (global.fetch as any).mock.calls[0][0]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect(calledUrl).toContain('/api/proxy/api/v1/administrative-areas?parent=zone-ET1401%2Czone-ET1402&level_name=Woreda');
+  });
 });

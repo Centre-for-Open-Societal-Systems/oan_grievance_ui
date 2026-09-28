@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeStore } from '../testFixtures';
+import { kebeleRef, makeStore, regionRef, woredaRef, zoneRef } from '../testFixtures';
 import { GrievanceSubmittedCard } from './GrievanceSubmittedCard';
 import { ReviewAndSubmitCard } from './ReviewAndSubmitCard';
 
@@ -36,10 +36,10 @@ function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCa
         identityValues={{}}
         serviceCategory="inputs"
         grievanceType="Fertilizer Shortage"
-        region="Oromia"
-        zone="North Shewa"
-        woreda="Basona Werana"
-        kebele="Kebele 01"
+        region={regionRef}
+        zone={zoneRef}
+        woreda={woredaRef}
+        kebele={kebeleRef}
         description={DESCRIPTION}
         attachments={[]}
         {...props}
@@ -101,7 +101,7 @@ describe('Review step → POST /api/v1/grievances', () => {
   it('files against the woreda when no kebele was chosen', async () => {
     const fetchMock = mockFetch(200, { data: { ticket_number: 'B00100011', status: 'Submitted' }, status: 'success' });
     const { onSubmitted } = renderCard({
-      kebele: '',
+      kebele: null,
       draftPayload: { ...BASE_DRAFT_PAYLOAD, administrative_area: 'woreda-ET040101', administrative_unit: undefined },
     });
 
@@ -160,20 +160,6 @@ describe('Review step → POST /api/v1/grievances', () => {
     expect(screen.getByRole('button', { name: /Submit Grievance/ })).toBeEnabled();
   });
 
-  it('says so, without calling the backend, when the woreda cannot be resolved to an area', () => {
-    const fetchMock = mockFetch(200, {});
-    renderCard({
-      woreda: 'Not A Real Woreda',
-      kebele: '',
-      draftPayload: { ...BASE_DRAFT_PAYLOAD, administrative_area: undefined, administrative_unit: undefined },
-    });
-
-    consentAndSubmit();
-
-    expect(screen.getByText(/Some required details are missing/)).toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
   it('disables the button while the request is in flight, so a double click cannot file it twice', async () => {
     let finish: (value: unknown) => void = () => {};
     global.fetch = vi.fn().mockReturnValue(
@@ -195,15 +181,15 @@ describe('Review step → POST /api/v1/grievances', () => {
 
 describe('Submitted screen', () => {
   it('shows the ticket number the backend issued', () => {
-    render(<GrievanceSubmittedCard result={{ ticket_number: 'B00100010', status: 'Submitted' }} />);
-    expect(screen.getByText('B00100010')).toBeInTheDocument();
+    render(<GrievanceSubmittedCard result={{ ticket_number: 'B-001-0001-0', status: 'Submitted' }} />);
+    expect(screen.getByText('B-001-0001-0')).toBeInTheDocument();
   });
 
   it('shows the status, the date a response is expected by, and who it was assigned to', () => {
     render(
       <GrievanceSubmittedCard
         result={{
-          ticket_number: 'B00100010',
+          ticket_number: 'B-001-0001-0',
           status: 'Submitted',
           sla_due_date: '2026-10-05 12:00:00',
           assigned_department: 'Agriculture Office',
@@ -216,7 +202,7 @@ describe('Submitted screen', () => {
   });
 
   it('leaves out details the backend did not return, rather than showing blanks', () => {
-    render(<GrievanceSubmittedCard result={{ ticket_number: 'B00100010', status: 'Submitted' }} />);
+    render(<GrievanceSubmittedCard result={{ ticket_number: 'B-001-0001-0', status: 'Submitted' }} />);
     expect(screen.queryByText('Expected response by')).not.toBeInTheDocument();
     expect(screen.queryByText('Assigned to')).not.toBeInTheDocument();
   });
@@ -224,18 +210,18 @@ describe('Submitted screen', () => {
   it('warns about similar grievances filed recently, while making clear this one was registered', () => {
     render(
       <GrievanceSubmittedCard
-        result={{ ticket_number: 'B00100010', status: 'Submitted', possible_duplicates: ['B00100001', 'B00100002'] }}
+        result={{ ticket_number: 'B-001-0001-0', status: 'Submitted', possible_duplicates: ['B-001-0000-1', 'B-001-0000-2'] }}
       />
     );
     const notice = screen.getByRole('status');
     expect(notice).toHaveTextContent('2 similar grievances');
-    expect(notice).toHaveTextContent('B00100001, B00100002');
+    expect(notice).toHaveTextContent('B-001-0000-1, B-001-0000-2');
     expect(notice).toHaveTextContent('still registered');
   });
 
   it('says so when this is a resubmit of a grievance that already exists', () => {
     render(
-      <GrievanceSubmittedCard result={{ ticket_number: 'B00100010', status: 'Submitted', duplicate_submission: true }} />
+      <GrievanceSubmittedCard result={{ ticket_number: 'B-001-0001-0', status: 'Submitted', duplicate_submission: true }} />
     );
     expect(screen.getByText(/had already been submitted/)).toBeInTheDocument();
   });

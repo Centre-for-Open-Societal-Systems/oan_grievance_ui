@@ -33,6 +33,7 @@ export interface DraftState {
   name: string;
   ticket_number: string | null;
   client_submission_uuid: string;
+  client_uuid?: string;
   status: string;
   workflow_state: string;
   submission_channel: string | null;
@@ -64,7 +65,7 @@ export interface SaveDraftPayload {
   submitter_name?: string;
   contact_mobile?: string;
   contact_email?: string;
-  /** An area's `area_id` or `path_code` — never a display name (see `findFilingArea`). */
+  /** An area's `area_id` or `path_code` — never a display name (the wizard holds areas as `AreaRef`s). */
   administrative_area?: string;
   administrative_unit?: string;
   service_category?: string;

@@ -9,10 +9,10 @@ import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
 import {
   selectGrievanceTypeOptions,
-  selectRegionOptions,
   selectServiceCategoryOptions,
   selectSubmissionChannelOptions,
   selectSubmitterTypeOptions,
+  type AreaRef,
 } from "@/features/metadata";
 import { submitErrorMessage, submitGrievance, type SubmitGrievanceResult } from "../api/submitGrievanceApi";
 
@@ -27,10 +27,10 @@ interface ReviewAndSubmitCardProps {
   identityValues: Record<string, string>;
   serviceCategory: string;
   grievanceType: string;
-  region: string;
-  zone: string;
-  woreda: string;
-  kebele?: string;
+  region: AreaRef | null;
+  zone: AreaRef | null;
+  woreda: AreaRef | null;
+  kebele: AreaRef | null;
   description: string;
   desiredOutcome?: string;
   serviceProvider?: string;
@@ -107,7 +107,6 @@ export function ReviewAndSubmitCard({
   const grievanceTypes = useAppSelector((state) =>
     selectGrievanceTypeOptions(state, serviceCategory)
   );
-  const regions = useAppSelector(selectRegionOptions);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -117,19 +116,6 @@ export function ReviewAndSubmitCard({
     // The button is already disabled without consent or mid-request; this
     // covers a second click landing before React has re-rendered it disabled.
     if (!consentChecked || isSubmitting) return;
-
-    if (
-      !draftPayload.submission_channel ||
-      !draftPayload.service_category ||
-      !grievanceType ||
-      !description.trim() ||
-      !draftPayload.administrative_area
-    ) {
-      setSubmitError(
-        "Some required details are missing. Go back and complete the earlier steps, including a Woreda."
-      );
-      return;
-    }
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -154,7 +140,7 @@ export function ReviewAndSubmitCard({
     }
   };
 
-  const location = [labelFor(regions, region), zone, woreda, kebele].filter(Boolean).join(", ") || "Not provided";
+  const location = [region, zone, woreda, kebele].flatMap((a) => (a ? [a.name] : [])).join(", ") || "Not provided";
   const identityFields = SI_FIELDS_BY_TYPE[submitterType] || [];
 
   return (

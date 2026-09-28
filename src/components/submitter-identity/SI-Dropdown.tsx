@@ -6,6 +6,7 @@ import { ChevronDown, X } from "lucide-react";
 export interface Option {
   value: string;
   label: string;
+  id?: string;
 }
 
 export interface AnimatedSelectProps {
@@ -54,7 +55,10 @@ export function AnimatedSelect({
   const listRef = useRef<HTMLUListElement>(null);
 
   const selectedOption = options.find(
-    (opt) => opt.value === value || (Boolean(value) && opt.label.toLowerCase() === value.toLowerCase())
+    (opt) =>
+      opt.value === value ||
+      (Boolean(value) && opt.label.toLowerCase() === value.toLowerCase()) ||
+      (Boolean(value) && opt.id?.toLowerCase() === value.toLowerCase())
   );
 
   // Derived display value: if user is actively typing, show typed query;

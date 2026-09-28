@@ -20,7 +20,14 @@ function buildQueryString(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') {
-      searchParams.set(key, String(value));
+      if (Array.isArray(value)) {
+        const filtered = value.filter((v) => v !== undefined && v !== null && v !== '');
+        if (filtered.length > 0) {
+          searchParams.set(key, filtered.join(','));
+        }
+      } else {
+        searchParams.set(key, String(value));
+      }
     }
   }
   const queryString = searchParams.toString();

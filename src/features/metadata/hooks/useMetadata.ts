@@ -3,14 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   fetchAdministrativeAreaAncestors,
-  fetchAdministrativeAreas,
   fetchGrievanceOptions,
   fetchSubmitterOptions,
 } from '../api/metadataApi';
 import type {
   AdministrativeAreaAncestorsData,
-  AdministrativeAreasData,
-  AdministrativeAreasQueryParams,
   GrievanceOptionsData,
   GrievanceOptionsQueryParams,
   SubmitterOptionsData,
@@ -85,73 +82,6 @@ export function useSubmitterOptions(
       setIsLoading(false);
     }
   }, [searchCountry, country, includePhones, serviceCategory]);
-
-  return { data, isLoading, error, refetch };
-}
-
-/**
- * Hook to retrieve administrative areas for cascading dropdowns (e.g. Region -> Zone -> Woreda -> Kebele).
- */
-export function useAdministrativeAreas(
-  params?: AdministrativeAreasQueryParams
-): UseAsyncState<AdministrativeAreasData> {
-  const [data, setData] = useState<AdministrativeAreasData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const parent = params?.parent;
-  const levelName = params?.level_name;
-  const search = params?.search;
-  const ancestorsOf = params?.ancestors_of;
-  const limit = params?.limit;
-
-  useEffect(() => {
-    let ignore = false;
-
-    fetchAdministrativeAreas({
-      parent,
-      level_name: levelName,
-      search,
-      ancestors_of: ancestorsOf,
-      limit,
-    })
-      .then((result) => {
-        if (!ignore) {
-          setData(result);
-          setIsLoading(false);
-          setError(null);
-        }
-      })
-      .catch((err) => {
-        if (!ignore) {
-          setError(err instanceof Error ? err.message : 'Failed to load administrative areas');
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [parent, levelName, search, ancestorsOf, limit]);
-
-  const refetch = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await fetchAdministrativeAreas({
-        parent,
-        level_name: levelName,
-        search,
-        ancestors_of: ancestorsOf,
-        limit,
-      });
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load administrative areas');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [parent, levelName, search, ancestorsOf, limit]);
 
   return { data, isLoading, error, refetch };
 }

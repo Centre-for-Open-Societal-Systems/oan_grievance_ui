@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from 'lucide-react';
+import { X, Maximize, Minimize } from 'lucide-react';
 import type { Grievance, GrievanceTimelineData } from '../../types';
 
 interface SidebarHeaderProps {
@@ -8,9 +8,11 @@ interface SidebarHeaderProps {
   timelineData?: GrievanceTimelineData | null;
   grievance?: Grievance | null;
   onClose: () => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
-export function SidebarHeader({ ticketNumber, timelineData, grievance, onClose }: SidebarHeaderProps) {
+export function SidebarHeader({ ticketNumber, timelineData, grievance, onClose, isFullscreen, onToggleFullscreen }: SidebarHeaderProps) {
   const displayTicket =
     timelineData?.ticket_number_display ||
     timelineData?.ticket_number ||
@@ -52,14 +54,26 @@ export function SidebarHeader({ ticketNumber, timelineData, grievance, onClose }
         </div>
         <h2 className="text-2xl font-bold text-gray-900 leading-tight line-clamp-2">{title}</h2>
       </div>
-      <button
-        type="button"
-        onClick={onClose}
-        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-300 hover:rotate-90 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-2 focus:ring-red-500/30"
-        title="Close"
-      >
-        <X className="h-6 w-6" />
-      </button>
+      <div className="flex items-center gap-2">
+        {onToggleFullscreen && (
+          <button
+            type="button"
+            onClick={onToggleFullscreen}
+            className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-all duration-300 active:scale-95 group focus:outline-none focus:ring-2 focus:ring-gray-300/50"
+            title={isFullscreen ? "Minimize" : "Full Screen"}
+          >
+            {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-300 hover:rotate-90 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-2 focus:ring-red-500/30"
+          title="Close"
+        >
+          <X className="h-6 w-6" />
+        </button>
+      </div>
     </div>
   );
 }

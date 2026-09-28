@@ -1,119 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, SlidersHorizontal, ChevronDown, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, SlidersHorizontal, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchGrievanceOptionsThunk,
-  fetchRegionsThunk,
   selectCategoryFilterOptions,
-  selectRegionFilterOptions,
   selectStatusFilterOptions,
 } from '@/features/metadata';
+import { setAreaSelection } from '../utils/areaFilters';
+import { AreaFilterDropdown } from './AreaFilterDropdown';
+import { FilterDropdown } from './FilterDropdown';
 import { EMPTY_GRIEVANCE_FILTERS, type GrievanceFilters } from '../types';
 
 export type { GrievanceFilters };
-
-/** A selectable filter value: `value` goes to the API, `label` is shown to the user. */
-export interface FilterOption {
-  value: string;
-  label: string;
-}
-
-export function FilterDropdown({
-  label,
-  options,
-  selected,
-  onChange,
-  isLoading = false,
-}: {
-  label: string;
-  options: FilterOption[];
-  selected: string[];
-  onChange: (val: string[]) => void;
-  isLoading?: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Filtering happens server-side, where "no values" means "no constraint" — so an
-  // empty selection is exactly what "All" means, and ticking All just clears it.
-  const isAllSelected = selected.length === 0;
-
-  const handleToggleAll = () => {
-    onChange([]);
-  };
-
-  const handleToggle = (value: string, checked: boolean) => {
-    if (checked) {
-      onChange([...selected, value]);
-    } else {
-      onChange(selected.filter((v) => v !== value));
-    }
-  };
-
-  const summary = isLoading
-    ? 'Loading…'
-    : selected.length > 0
-      ? `${selected.length} selected`
-      : `Select ${label}`;
-
-  return (
-    <div className="flex flex-col gap-1.5 mb-4 relative" ref={dropdownRef}>
-      <label className="text-sm font-semibold text-gray-700">{label}</label>
-      <div
-        className="flex items-center justify-between px-3 py-2.5 border border-gray-200 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="text-sm text-gray-500 line-clamp-1">{summary}</span>
-        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-20 mt-1 border border-gray-100 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white overflow-hidden max-h-60 overflow-y-auto transform origin-top transition-all duration-200 opacity-100 scale-100">
-          {options.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-gray-400">
-              {isLoading ? 'Loading options…' : 'No options available'}
-            </div>
-          ) : (
-            [{ value: '__all__', label: 'All' }, ...options].map((option) => {
-              const isAllRow = option.value === '__all__';
-              const isChecked = isAllRow ? isAllSelected : selected.includes(option.value);
-              return (
-                <label key={option.value} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0">
-                  <div className="relative flex items-center justify-center">
-                    <input
-                      type="checkbox"
-                      className="peer appearance-none w-[18px] h-[18px] border border-gray-300 rounded-[3px] bg-white checked:bg-[#1E8E3E] checked:border-[#1E8E3E] transition-all duration-200 cursor-pointer"
-                      checked={isChecked}
-                      onChange={(e) =>
-                        isAllRow ? handleToggleAll() : handleToggle(option.value, e.target.checked)
-                      }
-                    />
-                    <svg
-                      className={`absolute w-3 h-3 text-white pointer-events-none transition-transform duration-300 ${isChecked ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-gray-600">{option.label}</span>
-                </label>
-              );
-            })
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /** `YYYY-MM-DD` in local time — the format the list API's date filters expect. */
 function toIsoDate(date: Date): string {
@@ -219,23 +117,24 @@ export function AdvancedFiltersSidebar({
   const dispatch = useAppDispatch();
   const statusOptions = useAppSelector(selectStatusFilterOptions);
   const categoryOptions = useAppSelector(selectCategoryFilterOptions);
-  const regionOptions = useAppSelector(selectRegionFilterOptions);
   const grievanceStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
-  const regionsStatus = useAppSelector((state) => state.metadata.regionsStatus);
 
   useEffect(() => {
     if (grievanceStatus === "idle") {
       void dispatch(fetchGrievanceOptionsThunk());
     }
-    if (regionsStatus === "idle") {
-      void dispatch(fetchRegionsThunk());
-    }
-  }, [dispatch, grievanceStatus, regionsStatus]);
+  }, [dispatch, grievanceStatus]);
 
   const [isFromCalendarOpen, setIsFromCalendarOpen] = useState(false);
   const [isToCalendarOpen, setIsToCalendarOpen] = useState(false);
 
-  const totalFilters = filters.status.length + filters.category.length + filters.regions.length + (filters.fromDate || filters.toDate || filters.dateRange ? 1 : 0);
+  const totalFilters =
+    filters.status.length +
+    filters.category.length +
+    filters.regions.length +
+    filters.woredas.length +
+    filters.kebeles.length +
+    (filters.fromDate || filters.toDate || filters.dateRange ? 1 : 0);
 
   const handleReset = () => {
     setFilters({ ...EMPTY_GRIEVANCE_FILTERS });
@@ -304,12 +203,27 @@ export function AdvancedFiltersSidebar({
             onChange={(val) => setFilters((f) => ({ ...f, category: val }))}
             isLoading={grievanceStatus === 'loading'}
           />
-          <FilterDropdown
+          <AreaFilterDropdown
             label="Regions"
-            options={regionOptions}
+            level="Region"
             selected={filters.regions}
-            onChange={(val) => setFilters((f) => ({ ...f, regions: val }))}
-            isLoading={regionsStatus === 'loading'}
+            onChange={(val) => setFilters((f) => setAreaSelection(f, 'regions', val))}
+          />
+          <AreaFilterDropdown
+            label="Woredas"
+            level="Woreda"
+            parents={filters.regions}
+            selected={filters.woredas}
+            onChange={(val) => setFilters((f) => setAreaSelection(f, 'woredas', val))}
+            disabledMessage="Select region first"
+          />
+          <AreaFilterDropdown
+            label="Kebeles"
+            level="Kebele"
+            parents={filters.woredas}
+            selected={filters.kebeles}
+            onChange={(val) => setFilters((f) => setAreaSelection(f, 'kebeles', val))}
+            disabledMessage="Select woreda first"
           />
 
           <div className="mt-2 mb-6 relative">

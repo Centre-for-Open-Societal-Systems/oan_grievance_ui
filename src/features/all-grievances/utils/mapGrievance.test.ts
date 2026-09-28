@@ -9,6 +9,7 @@ const baseItem: GrievanceListItem = {
   escalated: false,
   is_anonymous: false,
   submitter_name: 'Abebe Bekele',
+  administrative_hierarchy: { woreda: 'Basona Werana', region: 'Oromia' },
   administrative_area: 'ET.OR.BSH',
   service_category: 'Inputs',
   grievance_type: 'Fertilizer non-delivery or shortage',
@@ -18,20 +19,20 @@ const baseItem: GrievanceListItem = {
 };
 
 describe('mapGrievanceListItem', () => {
-  it('flattens a list row into the shape the table renders', () => {
+  it('flattens a list row into the shape the table renders with Location as Woreda / Region', () => {
     const grievance = mapGrievanceListItem(baseItem);
 
     expect(grievance.id).toBe('GRV-0001');
     expect(grievance.ticketNumber).toBe('SOMA-JIG-INP-09905');
     expect(grievance.ticketId).toBe('SOMA-JIG-INP-09905');
     expect(grievance.title).toBe('Fertiliser allocation delivered 6 weeks late');
-    expect(grievance.location).toBe('Abebe Bekele - ET / OR / BSH');
+    expect(grievance.location).toBe('Basona Werana / Oromia');
     expect(grievance.category).toBe('Inputs');
     expect(grievance.department).toBe('Agriculture');
     expect(grievance.submittedAt).toMatch(/May 28, 2026/);
   });
 
-  it('withholds submitter identity on anonymous grievances', () => {
+  it('withholds submitter identity on anonymous grievances while keeping location intact', () => {
     const grievance = mapGrievanceListItem({
       ...baseItem,
       is_anonymous: true,
@@ -43,7 +44,7 @@ describe('mapGrievanceListItem', () => {
     expect(grievance.submitterName).toBe('Anonymous');
     expect(grievance.contactMobile).toBe('');
     expect(grievance.contactEmail).toBe('');
-    expect(grievance.location).toBe('Anonymous - ET / OR / BSH');
+    expect(grievance.location).toBe('Basona Werana / Oromia');
   });
 
   it('tolerates missing optional fields', () => {
@@ -60,6 +61,28 @@ describe('mapGrievanceListItem', () => {
     expect(grievance.location).toBe('');
     expect(grievance.submittedAt).toBe('');
     expect(grievance.escalated).toBe(true);
+  });
+
+  it('formats location from comma-separated location string', () => {
+    const grievance = mapGrievanceListItem({
+      ...baseItem,
+      administrative_hierarchy: null,
+      administrative_area: null,
+      location: 'Kebele 01, Basona Werana, North Shewa, Oromia, Ethiopia',
+    });
+
+    expect(grievance.location).toBe('Basona Werana / Oromia');
+  });
+
+  it('formats location from administrative_area dotted path', () => {
+    const grievance = mapGrievanceListItem({
+      ...baseItem,
+      administrative_hierarchy: null,
+      location: null,
+      administrative_area: 'ET.OR.BSH',
+    });
+
+    expect(grievance.location).toBe('BSH / OR');
   });
 
   it('prefers ticket_number_display when provided by the backend', () => {
@@ -125,5 +148,53 @@ describe('normalizeTimelineEntry', () => {
     expect(normalized.authorName).toBe('Tigist Alemu');
     expect(normalized.fromStatus).toBe('Assigned');
     expect(normalized.toStatus).toBe('In Progress');
+  });
+
+  it('normalizes submission, resolution, and rejection entries with attachments', () => {
+    const submissionEntry: TimelineEntry = {
+      name: 'GR-TIME-SUB-01',
+      entry_type: 'submission',
+      is_internal: false,
+      body: 'Description of the grievance filed by farmer.',
+      author_name: 'Abebe Bekele',
+      author_type: 'submitter',
+      created_on: '2026-04-10T10:00:00Z',
+      attachments: [
+        {
+          name: 'ATT-001',
+          file_name: 'receipt.pdf',
+          file_size: 102400,
+          file_url: '/files/receipt.pdf',
+        },
+      ],
+    };
+
+    const normSubmission = normalizeTimelineEntry(submissionEntry);
+    expect(normSubmission.entryType).toBe('submission');
+    expect(normSubmission.typeLabel).toBe('Submission');
+    expect(normSubmission.attachments?.length).toBe(1);
+    expect(normSubmission.attachments?.[0]?.file_name).toBe('receipt.pdf');
+
+    const resolutionEntry: TimelineEntry = {
+      name: 'GR-TIME-RES-01',
+      entry_type: 'resolution',
+      is_internal: false,
+      body: 'Fertilizer delivered successfully.',
+      created_on: '2026-04-15T12:00:00Z',
+    };
+    const normResolution = normalizeTimelineEntry(resolutionEntry);
+    expect(normResolution.entryType).toBe('resolution');
+    expect(normResolution.typeLabel).toBe('Resolution');
+
+    const rejectionEntry: TimelineEntry = {
+      name: 'GR-TIME-REJ-01',
+      entry_type: 'rejection',
+      is_internal: false,
+      body: 'Out of scope.',
+      created_on: '2026-04-16T12:00:00Z',
+    };
+    const normRejection = normalizeTimelineEntry(rejectionEntry);
+    expect(normRejection.entryType).toBe('rejection');
+    expect(normRejection.typeLabel).toBe('Rejection');
   });
 });
