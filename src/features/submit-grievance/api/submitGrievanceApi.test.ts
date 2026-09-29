@@ -26,6 +26,8 @@ describe('buildSubmitGrievancePayload', () => {
       submitter_type: 'Individual Farmer',
       submitter_name: 'Abebe Bikila',
       contact_mobile: '+251911223344',
+      country_code: '+251',
+      phone_number: '0911223344',
       contact_email: 'abebe@example.com',
       service_category: 'Inputs',
       grievance_type: 'Fertilizer Shortage',

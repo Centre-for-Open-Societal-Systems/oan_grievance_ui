@@ -40,6 +40,8 @@ export interface DraftState {
   submitter_type: string | null;
   submitter_name: string | null;
   contact_mobile: string | null;
+  country_code?: string | null;
+  phone_number?: string | null;
   contact_email: string | null;
   administrative_area: string | null;
   /** Region/zone/woreda/kebele names + ids for `administrative_area`, resolved server-side. */
@@ -64,6 +66,8 @@ export interface SaveDraftPayload {
   submitter_type?: string;
   submitter_name?: string;
   contact_mobile?: string;
+  country_code?: string;
+  phone_number?: string;
   contact_email?: string;
   /** An area's `area_id` or `path_code` — never a display name (the wizard holds areas as `AreaRef`s). */
   administrative_area?: string;
@@ -105,7 +109,7 @@ function cleanedBody(body: object): Record<string, unknown> {
     clean[key] = value;
   }
   if (typeof clean.contact_mobile === 'string' && clean.contact_mobile && !clean.contact_mobile.startsWith('+')) {
-    clean.contact_mobile = formatToE164(clean.contact_mobile);
+    clean.contact_mobile = formatToE164(clean.contact_mobile, typeof clean.country_code === 'string' ? clean.country_code : '+251');
   }
   return clean;
 }

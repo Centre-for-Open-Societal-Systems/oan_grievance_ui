@@ -17,6 +17,7 @@ import { buildSaveDraftPayload } from "./draftPayload";
 import { firstIncompleteStep, type WizardStep } from "./wizardSteps";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
 import { discardDraft, loadDraft } from "@/lib/drafts";
+import { splitPhoneNumber } from "@/lib/validation/phone";
 import { SCAN_STATUS, type ScanStatus, type WizardAttachment } from "@/lib/attachments";
 import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
@@ -155,9 +156,13 @@ export default function SubmitGrievancePage() {
           if (!draft.submitter_name && !draft.contact_mobile && !draft.contact_email) return prev;
           const next = { ...prev };
           if (draft.submitter_name) next.fullName = draft.submitter_name;
-          if (draft.contact_mobile) {
-            next.phoneCode = prev.phoneCode || "+251";
-            next.phoneNumber = draft.contact_mobile;
+          if (draft.phone_number) {
+            next.phoneNumber = draft.phone_number;
+            next.phoneCode = draft.country_code || prev.phoneCode || "+251";
+          } else if (draft.contact_mobile) {
+            const parsed = splitPhoneNumber(draft.contact_mobile);
+            next.phoneCode = parsed.phoneCode || prev.phoneCode || "+251";
+            next.phoneNumber = parsed.phoneNumber;
           }
           if (draft.contact_email) next.email = draft.contact_email;
           return next;

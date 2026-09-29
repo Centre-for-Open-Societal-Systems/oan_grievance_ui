@@ -100,6 +100,8 @@ export function buildSaveDraftPayload(input: BuildSaveDraftPayloadInput): SaveDr
     submitter_type: input.submitterTypeLabel ?? "",
     submitter_name: resolveSubmitterName(input),
     contact_mobile: resolveContactMobile(input),
+    country_code: input.identityValues.phoneCode || "+251",
+    phone_number: input.identityValues.phoneNumber || "",
     contact_email: resolveContactEmail(input),
     administrative_area: input.administrativeAreaId || undefined,
     administrative_unit: input.kebele?.trim() ?? "",

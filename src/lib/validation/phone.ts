@@ -2,19 +2,15 @@
 export const PHONE_NUMBER_LENGTH = 10;
 
 /**
- * A local Ethiopian mobile number as typed in the phone box: a leading trunk
- * `0` followed by a 9-digit subscriber number starting with `7` or `9`.
+ * A local Ethiopian mobile number as typed in the phone box: either a 9-digit
+ * national significant number (e.g. 911234567 or 711234567) or a 10-digit
+ * domestic number with a leading trunk `0` (e.g. 0911234567 or 0711234567).
  *
- * Mirrors the backend's own rule exactly — `oan_grievance_service`'s
- * `normalise_mobile` / `MOBILE_PATTERN` (services/submission.py) strips a
- * leading `0` (or `+251`) and then requires exactly `^[79]\d{8}$` on what's
- * left. Before this matched that check, any 10 digits passed here (e.g.
- * "5454444444", no leading 0, first digit 5) — accepted at registration,
- * concatenated with the country code into a number the backend would only
- * ever reject, and surfacing only as a confusing field error the first time
- * a grievance was submitted, nowhere near where the bad number was typed.
+ * Mirrors the backend's own rule — `oan_grievance_service`'s `normalise_mobile` /
+ * `MOBILE_PATTERN` (services/submission.py) strips a leading `0` (or `+251`)
+ * and then requires exactly `^[79]\d{8}$` on what's left.
  */
-export const PHONE_NUMBER_REGEX = /^0[79]\d{8}$/;
+export const PHONE_NUMBER_REGEX = /^0?[79]\d{8}$/;
 
 /** The dial code this app has an actual, backend-confirmed local-number rule for. */
 export const ETHIOPIA_DIAL_CODE = '+251';

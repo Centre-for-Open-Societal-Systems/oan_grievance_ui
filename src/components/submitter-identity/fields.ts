@@ -132,8 +132,8 @@ function formatProblemFor(key: string, value: string, dialCode: string | undefin
   if (key === "phoneNumber" && !isValidPhoneNumber(value, dialCode)) {
     return isEthiopianDialCode(dialCode ?? "+251")
       ? {
-          hint: "Ethiopian mobile, e.g. 0912345678",
-          message: "Enter a valid Ethiopian mobile number, e.g. 0912345678 (starts with 09 or 07).",
+          hint: "Ethiopian mobile, e.g. 0912345678 or 912345678",
+          message: "Enter a valid Ethiopian mobile number, e.g. 0912345678 or 912345678 (starts with 09, 07, 9, or 7).",
         }
       : {
           hint: "not a valid phone number for the selected country",
