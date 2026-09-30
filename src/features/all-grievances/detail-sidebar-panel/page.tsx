@@ -37,6 +37,7 @@ export function GrievanceDetailSidebar({
     postMessage,
     addNote,
     executeAction,
+    reassign,
   } = useGrievanceTimeline({
     ticketNumber: activeTicket,
   });
@@ -98,9 +99,12 @@ export function GrievanceDetailSidebar({
               ) : null}
               <CaseManagement
                 canManageCase={canManageCase}
+                ticketNumber={activeTicket}
                 timelineData={timelineData}
                 onExecuteAction={executeAction}
+                onReassign={reassign}
               />
+
               {grievance ? (
                 <SubmitterDetails grievance={grievance} timelineData={timelineData} />
               ) : null}

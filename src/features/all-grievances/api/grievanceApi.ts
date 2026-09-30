@@ -1,13 +1,22 @@
 import { fetchApi } from '@/lib/api';
 import type {
+  ChangeRequestData,
+  ChangeRequestListData,
+  ChangeRequestListQueryParams,
+  DecideChangeRequestPayload,
+  DeferSLAPayload,
   GrievanceActionPayload,
   GrievanceActionResult,
+  GrievanceChangeResponseData,
   GrievanceListData,
   GrievanceListQueryParams,
   GrievanceSummaryData,
   GrievanceTimelineData,
   GrievanceTimelineQueryParams,
+  RaiseChangeRequestPayload,
+  ReassignGrievancePayload,
 } from '../types';
+
 
 export interface RequestOptions {
   signal?: AbortSignal;
@@ -195,21 +204,70 @@ export async function executeGrievanceAction(
 
 /**
  * Reassigns a grievance to a target department and/or officer.
+ * A shorthand for a change request. It is applied at once when the caller already
+ * stands above the case (supervisor/admin); otherwise it creates a pending change request.
  *
  * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/reassign
  */
 export async function reassignGrievance(
   ticketNumber: string,
-  payload: {
-    target_department: string;
-    target_officer?: string | null;
-    sla_treatment?: 'Continue' | 'Reset' | string;
-    reason?: string | null;
-  },
+  payload: ReassignGrievancePayload,
   options: RequestOptions = {}
-): Promise<GrievanceActionResult> {
-  return fetchApi<GrievanceActionResult>(
+): Promise<GrievanceChangeResponseData> {
+  return fetchApi<GrievanceChangeResponseData>(
     `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/reassign`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        ticket_number: ticketNumber,
+        target_department: payload.target_department,
+        target_officer: payload.target_officer ?? null,
+        reason: payload.reason ?? null,
+        ...(payload.sla_treatment ? { sla_treatment: payload.sla_treatment } : {}),
+      }),
+      signal: options.signal,
+    }
+  );
+}
+
+/**
+ * Extends the SLA deadline for a grievance via approved deferral.
+ * A shorthand for a change request on `sla_due_date`, decided up the hierarchy
+ * unless deferral policy lets officers defer without a supervisor.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/defer-sla
+ */
+export async function deferGrievanceSLA(
+  ticketNumber: string,
+  payload: DeferSLAPayload,
+  options: RequestOptions = {}
+): Promise<GrievanceChangeResponseData> {
+  return fetchApi<GrievanceChangeResponseData>(
+    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/defer-sla`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        ticket_number: ticketNumber,
+        additional_days: payload.additional_days,
+        reason: payload.reason,
+      }),
+      signal: options.signal,
+    }
+  );
+}
+
+/**
+ * Requests field modifications on an active grievance via formal change request.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/change-requests
+ */
+export async function raiseChangeRequest(
+  ticketNumber: string,
+  payload: RaiseChangeRequestPayload,
+  options: RequestOptions = {}
+): Promise<ChangeRequestData> {
+  return fetchApi<ChangeRequestData>(
+    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/change-requests`,
     {
       method: 'POST',
       body: JSON.stringify({
@@ -222,26 +280,60 @@ export async function reassignGrievance(
 }
 
 /**
- * Extends the SLA deadline for a grievance via approved deferral.
+ * Lists change requests visible to the caller (filtered by scope: pending_with_me, raised_by_me, all).
  *
- * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/defer-sla
+ * Corresponding REST endpoint: GET /api/v1/change-requests
  */
-export async function deferGrievanceSLA(
-  ticketNumber: string,
-  payload: {
-    additional_days: number;
-    reason: string;
-  },
+export async function fetchChangeRequests(
+  params: ChangeRequestListQueryParams = {},
   options: RequestOptions = {}
-): Promise<GrievanceActionResult> {
-  return fetchApi<GrievanceActionResult>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/defer-sla`,
+): Promise<ChangeRequestListData> {
+  const searchParams = new URLSearchParams();
+  if (params.status) searchParams.set('status', params.status);
+  if (params.scope) searchParams.set('scope', params.scope);
+  if (params.ticket_number) searchParams.set('ticket_number', params.ticket_number);
+  if (params.limit !== undefined) searchParams.set('limit', String(params.limit));
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+
+  return fetchApi<ChangeRequestListData>(`/api/v1/change-requests${query}`, {
+    method: 'GET',
+    signal: options.signal,
+  });
+}
+
+/**
+ * Retrieves details of a specific change request.
+ *
+ * Corresponding REST endpoint: GET /api/v1/change-requests/:name
+ */
+export async function fetchChangeRequest(
+  name: string,
+  options: RequestOptions = {}
+): Promise<ChangeRequestData> {
+  return fetchApi<ChangeRequestData>(
+    `/api/v1/change-requests/${encodeURIComponent(name)}`,
+    {
+      method: 'GET',
+      signal: options.signal,
+    }
+  );
+}
+
+/**
+ * Decides (Approve/Reject) on a pending change request.
+ *
+ * Corresponding REST endpoint: POST /api/v1/change-requests/:name/decide
+ */
+export async function decideChangeRequest(
+  name: string,
+  payload: DecideChangeRequestPayload,
+  options: RequestOptions = {}
+): Promise<ChangeRequestData> {
+  return fetchApi<ChangeRequestData>(
+    `/api/v1/change-requests/${encodeURIComponent(name)}/decide`,
     {
       method: 'POST',
-      body: JSON.stringify({
-        ticket_number: ticketNumber,
-        ...payload,
-      }),
+      body: JSON.stringify(payload),
       signal: options.signal,
     }
   );
@@ -283,5 +375,10 @@ export const grievanceService = {
   executeAction: executeGrievanceAction,
   reassign: reassignGrievance,
   deferSLA: deferGrievanceSLA,
+  raiseChangeRequest,
+  getChangeRequests: fetchChangeRequests,
+  getChangeRequest: fetchChangeRequest,
+  decideChangeRequest,
   decideAnonymity: decideGrievanceAnonymity,
 };
+

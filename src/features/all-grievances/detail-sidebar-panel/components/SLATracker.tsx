@@ -131,7 +131,13 @@ export function SLATracker({ canManageCase, grievance, timelineData }: SLATracke
         </div>
       </div>
 
-      {canDefer && showPopup && <DeferSLAPopup onClose={() => setShowPopup(false)} />}
+      {canDefer && showPopup && (
+        <DeferSLAPopup
+          ticketNumber={timelineData?.ticket_number || grievance.ticketNumber || grievance.ticketId}
+          onClose={() => setShowPopup(false)}
+        />
+      )}
     </>
   );
 }
+

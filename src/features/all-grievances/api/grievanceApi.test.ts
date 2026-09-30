@@ -100,6 +100,12 @@ describe('grievanceService', () => {
     expect(typeof grievanceService.postMessage).toBe('function');
     expect(typeof grievanceService.addNote).toBe('function');
     expect(typeof grievanceService.executeAction).toBe('function');
+    expect(typeof grievanceService.reassign).toBe('function');
+    expect(typeof grievanceService.deferSLA).toBe('function');
+    expect(typeof grievanceService.raiseChangeRequest).toBe('function');
+    expect(typeof grievanceService.getChangeRequests).toBe('function');
+    expect(typeof grievanceService.getChangeRequest).toBe('function');
+    expect(typeof grievanceService.decideChangeRequest).toBe('function');
   });
 
   it('calls the grievances endpoint and unwraps the data envelope', async () => {
@@ -224,4 +230,109 @@ describe('grievanceService', () => {
     expect(body.action).toBe('Confirm Resolution');
     expect(body.reason).toBe('Issue resolved on site');
   });
+
+  it('reassigns grievance department and officer', async () => {
+    const changeResponse = {
+      ticket_number: 'SOMA-JIG-INP-09905',
+      status: 'Assigned',
+      change_request: {
+        name: 'CR-0001',
+        ticket_number: 'SOMA-JIG-INP-09905',
+        status: 'Pending',
+        requested_by: 'officer@moa.gov.et',
+      },
+      current_state: {
+        status: 'Assigned',
+        escalated: false,
+      },
+    };
+    mockJsonResponse(changeResponse);
+
+    const result = await grievanceService.reassign('SOMA-JIG-INP-09905', {
+      target_department: 'Credit & Financial Services',
+      target_officer: 'officer@example.com',
+      reason: 'Specialized loan dispute',
+    });
+
+    expect(result).toEqual(changeResponse);
+    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/reassign');
+    const options = calledOptions();
+    expect(options.method).toBe('POST');
+    const body = JSON.parse(options.body as string);
+    expect(body.ticket_number).toBe('SOMA-JIG-INP-09905');
+    expect(body.target_department).toBe('Credit & Financial Services');
+    expect(body.target_officer).toBe('officer@example.com');
+    expect(body.reason).toBe('Specialized loan dispute');
+  });
+
+  it('requests SLA deadline deferral', async () => {
+    const deferResponse = {
+      ticket_number: 'SOMA-JIG-INP-09905',
+      status: 'Under Investigation',
+      sla_due_date: '2026-05-17T12:00:00Z',
+      change_request: {
+        name: 'CR-0002',
+        ticket_number: 'SOMA-JIG-INP-09905',
+        status: 'Pending',
+      },
+      current_state: {
+        status: 'Under Investigation',
+        escalated: false,
+      },
+    };
+    mockJsonResponse(deferResponse);
+
+    const result = await grievanceService.deferSLA('SOMA-JIG-INP-09905', {
+      additional_days: 7,
+      reason: 'Awaiting lab soil sample test results from regional research lab',
+    });
+
+    expect(result).toEqual(deferResponse);
+    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/defer-sla');
+    const options = calledOptions();
+    expect(options.method).toBe('POST');
+    const body = JSON.parse(options.body as string);
+    expect(body.ticket_number).toBe('SOMA-JIG-INP-09905');
+    expect(body.additional_days).toBe(7);
+    expect(body.reason).toBe('Awaiting lab soil sample test results from regional research lab');
+  });
+
+  it('raises a formal change request on a grievance', async () => {
+    const crPayload = {
+      name: 'CR-0003',
+      ticket_number: 'SOMA-JIG-INP-09905',
+      subject: 'Update Department',
+      status: 'Pending',
+      changes: [{ fieldname: 'assigned_dept', new_value: 'Inputs Supply' }],
+    };
+    mockJsonResponse(crPayload);
+
+    const result = await grievanceService.raiseChangeRequest('SOMA-JIG-INP-09905', {
+      subject: 'Update Department',
+      reason: 'Misclassified case',
+      changes: [{ fieldname: 'assigned_dept', new_value: 'Inputs Supply' }],
+    });
+
+    expect(result).toEqual(crPayload);
+    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/change-requests');
+    const options = calledOptions();
+    expect(options.method).toBe('POST');
+  });
+
+  it('lists and decides change requests', async () => {
+    mockJsonResponse({ items: [{ name: 'CR-0001', status: 'Pending' }] });
+
+    const list = await grievanceService.getChangeRequests({ scope: 'pending_with_me', status: 'Pending' });
+    expect(list.items).toHaveLength(1);
+    expect(calledUrl()).toContain('/api/proxy/api/v1/change-requests?status=Pending&scope=pending_with_me');
+
+    mockJsonResponse({ name: 'CR-0001', status: 'Approved' });
+    const decided = await grievanceService.decideChangeRequest('CR-0001', {
+      decision: 'Approved',
+      note: 'Verified and approved',
+    });
+    expect(decided.status).toBe('Approved');
+    expect(calledUrl()).toContain('/api/proxy/api/v1/change-requests/CR-0001/decide');
+  });
 });
+

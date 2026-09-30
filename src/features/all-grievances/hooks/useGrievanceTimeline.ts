@@ -7,13 +7,15 @@ import {
   postTimelineMessageThunk,
   addTimelineNoteThunk,
   executeTimelineActionThunk,
+  deferSLAGrievanceThunk,
+  reassignGrievanceThunk,
   setSelectedTicketNumber,
   selectTimelineData,
   selectTimelineLoading,
   selectTimelineIsSubmitting,
   selectTimelineError,
 } from '../store/timelineSlice';
-import type { GrievanceActionPayload } from '../types';
+import type { DeferSLAPayload, GrievanceActionPayload, ReassignGrievancePayload } from '../types';
 
 interface UseGrievanceTimelineOptions {
   ticketNumber: string | null | undefined;
@@ -66,6 +68,22 @@ export function useGrievanceTimeline({ ticketNumber }: UseGrievanceTimelineOptio
     [ticketNumber, dispatch]
   );
 
+  const deferSLA = useCallback(
+    async (payload: DeferSLAPayload) => {
+      if (!ticketNumber) return;
+      return dispatch(deferSLAGrievanceThunk({ ticketNumber, payload })).unwrap();
+    },
+    [ticketNumber, dispatch]
+  );
+
+  const reassign = useCallback(
+    async (payload: ReassignGrievancePayload) => {
+      if (!ticketNumber) return;
+      return dispatch(reassignGrievanceThunk({ ticketNumber, payload })).unwrap();
+    },
+    [ticketNumber, dispatch]
+  );
+
   return {
     timelineData,
     isLoading,
@@ -75,5 +93,8 @@ export function useGrievanceTimeline({ ticketNumber }: UseGrievanceTimelineOptio
     postMessage,
     addNote,
     executeAction,
+    deferSLA,
+    reassign,
   };
 }
+

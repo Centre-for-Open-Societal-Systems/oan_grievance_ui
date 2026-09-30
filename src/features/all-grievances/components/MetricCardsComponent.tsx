@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import {
   AlertCircle,
@@ -11,6 +13,7 @@ import {
   XCircle,
   type LucideIcon,
 } from 'lucide-react';
+import { useCarouselScroll } from '@/hooks/useCarouselScroll';
 import type { GrievanceSummaryCard } from '../types';
 
 /**
@@ -29,49 +32,49 @@ const METRIC_CARD_VISUALS: Record<string, MetricVisual> = {
     key: 'all',
     Icon: Layers,
     iconClassName:
-      'text-blue-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+      'text-blue-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
     bgColor: 'bg-blue-50',
   },
   assigned: {
     key: 'assigned',
     Icon: UserCheck,
     iconClassName:
-      'text-sky-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+      'text-sky-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
     bgColor: 'bg-sky-50',
   },
   'in progress': {
     key: 'in-progress',
     Icon: Loader2,
     iconClassName:
-      'text-indigo-600 w-10 h-10 transition-transform duration-500 ease-in-out group-hover:rotate-[180deg]',
+      'text-indigo-600 w-8 h-8 transition-transform duration-500 ease-in-out group-hover:rotate-[180deg]',
     bgColor: 'bg-indigo-50',
   },
   'require more info': {
     key: 'require-more-info',
     Icon: HelpCircle,
     iconClassName:
-      'text-orange-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+      'text-orange-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
     bgColor: 'bg-orange-50',
   },
   rejected: {
     key: 'rejected',
     Icon: XCircle,
     iconClassName:
-      'text-red-600 w-10 h-10 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1',
+      'text-red-600 w-8 h-8 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1',
     bgColor: 'bg-red-50',
   },
   resolved: {
     key: 'resolved',
     Icon: CheckCircle,
     iconClassName:
-      'text-green-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12',
+      'text-green-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12',
     bgColor: 'bg-green-50',
   },
   closed: {
     key: 'closed',
     Icon: Archive,
     iconClassName:
-      'text-slate-600 w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+      'text-slate-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
     bgColor: 'bg-slate-50',
   },
 };
@@ -84,7 +87,7 @@ const STATUS_ALIASES: Record<string, string> = {
 const FALLBACK_VISUAL: MetricVisual = {
   key: 'fallback',
   Icon: CircleDashed,
-  iconClassName: 'text-gray-400 w-10 h-10',
+  iconClassName: 'text-gray-400 w-8 h-8',
   bgColor: 'bg-gray-50',
 };
 
@@ -112,20 +115,25 @@ export function MetricCardsComponent({
   error?: string | null;
   onRetry?: () => void;
 }) {
+  const { scrollRef, activeIndex, scrollTo } = useCarouselScroll({ enableWheelScroll: true });
+
   if (isLoading && cards.length === 0) {
     return (
       <div
         role="status"
         aria-label="Loading grievance summary"
-        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+        className="flex gap-4 overflow-hidden pb-2 px-1"
       >
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
-            className="bg-white p-4 border border-[#F1F3F4] rounded-xl animate-pulse flex flex-col justify-between min-h-[108px]"
+            className="w-[85vw] sm:w-[280px] shrink-0 bg-white p-5 border border-[#F1F3F4] rounded-xl animate-pulse flex items-center justify-between min-h-[108px]"
           >
-            <div className="h-4 w-24 bg-gray-100 rounded" />
-            <div className="mt-6 h-7 w-12 bg-gray-100 rounded" />
+            <div>
+              <div className="h-4 w-24 bg-gray-100 rounded mb-3" />
+              <div className="h-8 w-12 bg-gray-100 rounded" />
+            </div>
+            <div className="w-16 h-16 bg-gray-100 rounded-xl" />
           </div>
         ))}
       </div>
@@ -156,22 +164,63 @@ export function MetricCardsComponent({
     );
   }
 
+  if (cards.length === 0) {
+    return null;
+  }
+
+  const totalCards = cards.length;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      {cards.map((card) => {
-        const visual = visualForCard(card);
-        const Icon = visual.Icon;
-        return (
-          <MetricCard
-            key={`${card.status}-${card.order}`}
-            title={card.label}
-            count={card.count ?? 0}
-            bgColor={visual.bgColor}
-            visualKey={visual.key}
-            icon={<Icon className={visual.iconClassName} />}
-          />
-        );
-      })}
+    <div className="relative mb-2">
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+        .hide-scrollbar::-webkit-scrollbar-track { display: none !important; }
+        .hide-scrollbar::-webkit-scrollbar-thumb { display: none !important; }
+        .hide-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+      `}</style>
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar pb-2 px-1"
+      >
+        {cards.map((card) => {
+          const visual = visualForCard(card);
+          const Icon = visual.Icon;
+          return (
+            <MetricCard
+              key={`${card.status}-${card.order}`}
+              title={card.label}
+              count={card.count ?? 0}
+              bgColor={visual.bgColor}
+              visualKey={visual.key}
+              icon={<Icon className={visual.iconClassName} />}
+            />
+          );
+        })}
+      </div>
+
+      {/* Pagination Dots */}
+      {totalCards > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-4">
+          {Array.from({ length: Math.min(totalCards, 3) }).map((_, dotIndex) => {
+            const numDots = Math.min(totalCards, 3);
+            const chunkSize = Math.max(1, Math.round(totalCards / numDots));
+            const activeDot = Math.min(numDots - 1, Math.floor(activeIndex / chunkSize));
+            const isActive = activeDot === dotIndex;
+
+            return (
+              <button
+                key={dotIndex}
+                type="button"
+                onClick={() => scrollTo(dotIndex * chunkSize)}
+                className={`transition-all duration-300 rounded-full ${
+                  isActive ? 'bg-[#16A34A] w-6 h-2' : 'bg-gray-300 w-2 h-2 hover:bg-gray-400'
+                }`}
+                aria-label={`Go to page ${dotIndex + 1}`}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -190,16 +239,16 @@ function MetricCard({
   visualKey: string;
 }) {
   return (
-    <div className="bg-white p-4 shadow-sm flex flex-col justify-between cursor-default border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl group">
-      <div className="text-md font-semibold text-gray-500">{title}</div>
-      <div className="flex items-end justify-between">
-        <span className="text-[28px] leading-none font-bold text-gray-900">{count}</span>
-        <div
-          data-visual={visualKey}
-          className={`p-3.5 rounded-2xl ${bgColor} flex items-center justify-center transition-transform duration-300 group-hover:scale-105`}
-        >
-          {icon}
-        </div>
+    <div className="group w-[85vw] sm:w-[280px] shrink-0 snap-center bg-white border border-[#F1F3F4] rounded-xl p-5 flex items-center justify-between shadow-sm shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-default">
+      <div>
+        <p className="text-[14px] font-semibold text-[#6B7280] mb-1">{title}</p>
+        <h4 className="text-[32px] font-bold text-[#1F2937] leading-none">{count}</h4>
+      </div>
+      <div
+        data-visual={visualKey}
+        className={`w-16 h-16 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3 group-hover:shadow-md ${bgColor}`}
+      >
+        {icon}
       </div>
     </div>
   );

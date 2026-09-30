@@ -283,12 +283,16 @@ export interface GrievanceActionPayload {
   reason?: string;
   note?: string;
   rating?: number;
+  comments?: string;
+  body?: string;
 }
 
 export interface GrievanceCurrentState {
   status: string;
-  escalated: boolean;
+  workflow_status?: string;
+  escalated: boolean | number;
   assigned_to?: string | null;
+  assigned_dept?: string | null;
   department?: string | null;
   updated_at?: string | null;
   available_actions?: GrievanceAvailableAction[];
@@ -304,3 +308,95 @@ export interface GrievanceActionResult {
   current_state?: GrievanceCurrentState;
   timeline_event?: TimelineEntry | null;
 }
+
+export interface ChangeItem {
+  fieldname: string;
+  old_value?: string | null;
+  new_value?: string | null;
+}
+
+export interface ApprovalTrailItem {
+  name?: string;
+  step_order?: number;
+  role?: string | null;
+  assigned_user?: string | null;
+  status?: string;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  decision_note?: string | null;
+}
+
+export interface ChangeRequestData {
+  name: string;
+  ticket_number: string;
+  subject: string;
+  reason?: string | null;
+  status: 'Pending' | 'Approved' | 'Rejected' | string;
+  requested_by: string;
+  requested_at?: string | null;
+  pending_with?: string | null;
+  pending_since?: string | null;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  decision_note?: string | null;
+  changes: ChangeItem[];
+  trail: ApprovalTrailItem[];
+}
+
+export interface ChangeRequestListData {
+  items: ChangeRequestData[];
+  total?: number;
+}
+
+export interface ChangeRequestListQueryParams {
+  status?: 'Pending' | 'Approved' | 'Rejected' | string;
+  scope?: 'pending_with_me' | 'raised_by_me' | 'all' | string;
+  ticket_number?: string;
+  limit?: number;
+}
+
+export interface GrievanceChangeResponseData {
+  ticket_number: string;
+  status: string;
+  change_request: ChangeRequestData;
+  current_state: GrievanceCurrentState;
+  timeline_event?: TimelineEntry | null;
+  assigned_dept?: string | null;
+  assigned_to?: string | null;
+  sla_due_date?: string | null;
+  is_anonymous?: boolean | null;
+  anonymity_status?: string | null;
+}
+
+export interface GrievanceChangeResponse {
+  status: 'success' | string;
+  message?: string | null;
+  data: GrievanceChangeResponseData;
+}
+
+export interface DeferSLAPayload {
+  additional_days: number;
+  reason: string;
+}
+
+export interface ReassignGrievancePayload {
+  target_department: string;
+  target_officer?: string | null;
+  reason?: string | null;
+  sla_treatment?: 'Continue' | 'Reset' | string;
+}
+
+export interface RaiseChangeRequestPayload {
+  subject: string;
+  reason?: string | null;
+  changes: Array<{
+    fieldname: string;
+    new_value?: string | null;
+  }>;
+}
+
+export interface DecideChangeRequestPayload {
+  decision: 'Approved' | 'Rejected' | string;
+  note?: string | null;
+}
+

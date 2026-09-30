@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react';
-import { X, CalendarClock, ChevronDown, AlertTriangle, Send } from 'lucide-react';
+import { X, CalendarClock, ChevronDown, AlertTriangle, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useAppDispatch } from '@/store/hooks';
+import { deferSLAGrievanceThunk } from '../../store/timelineSlice';
+import type { GrievanceChangeResponseData } from '../../types';
 
 interface DeferSLAPopupProps {
+  ticketNumber: string;
   onClose: () => void;
+  onSuccess?: (result: GrievanceChangeResponseData) => void;
 }
 
-export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
+export function DeferSLAPopup({ ticketNumber, onClose, onSuccess }: DeferSLAPopupProps) {
+  const dispatch = useAppDispatch();
   const [isOpen, setIsOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [days, setDays] = useState('7');
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Start with Fikadu selected to match the screenshot
+  // Start with Fikadu selected to match the visual reference
   const [selectedApprover, setSelectedApprover] = useState<{ name: string, role: string, email?: string, org?: string, initials?: string } | null>({
     name: 'Fikadu Negash',
     role: 'State Minister for Agricultural Services',
@@ -27,11 +36,6 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
     { name: 'Fikadu Negash', role: 'State Minister for Agricultural Services', email: 'fikadu.negash@moa.gov.et', org: 'Ministry of Agriculture (MoA)', initials: 'FN' },
   ];
 
-  // Trigger open animation on mount. Has to be an effect, not the initial
-  // `useState` value: the CSS transition above only animates when `isOpen`
-  // flips from false to true on a *later* render — starting it already
-  // `true` would render the "open" state on the very first paint with
-  // nothing to transition from.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOpen(true);
@@ -40,6 +44,48 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
   const handleClose = () => {
     setIsOpen(false);
     setTimeout(onClose, 300);
+  };
+
+  const parsedDays = parseInt(days, 10);
+  const isDaysValid = !isNaN(parsedDays) && parsedDays >= 1 && parsedDays <= 30;
+  const isReasonValid = reason.trim().length >= 20;
+  const isFormValid = isDaysValid && isReasonValid && !isSubmitting;
+
+  const handleSubmit = async () => {
+    if (!isFormValid || !ticketNumber) return;
+    setIsSubmitting(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const result = await dispatch(
+        deferSLAGrievanceThunk({
+          ticketNumber,
+          payload: {
+            additional_days: parsedDays,
+            reason: reason.trim(),
+          },
+        })
+      ).unwrap();
+
+      const status = result?.change_request?.status || 'Pending';
+      const msg =
+        status === 'Approved'
+          ? `SLA deadline extended by ${parsedDays} days.`
+          : `SLA deferral request for ${parsedDays} days submitted (pending L2 approval).`;
+
+      setSuccessMsg(msg);
+      onSuccess?.(result);
+
+      setTimeout(() => {
+        handleClose();
+      }, 1500);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Failed to request SLA deferral';
+      setErrorMsg(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -64,8 +110,9 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
             <p className="text-sm text-gray-500">Requires approval from a Senior Nodal Officer (L2)</p>
           </div>
           <button
+            type="button"
             onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors focus:outline-none"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors focus:outline-none cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -73,6 +120,21 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
 
         {/* Content */}
         <div className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
+          {/* Feedback Messages */}
+          {successMsg && (
+            <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-lg font-medium">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {errorMsg && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg font-medium">
+              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           {/* Reason */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-gray-700">Reason for Deferral * <span className="text-gray-400 font-normal">(min. 20 characters)</span></label>
@@ -83,8 +145,8 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
               placeholder="Describe why the SLA requires extension — e.g. awaiting lab results, pending inter-agency coordination, seasonal factor..."
               className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50/50 resize-none"
             />
-            <div className={`text-[11px] font-bold ${reason.length < 20 ? 'text-amber-500' : 'text-emerald-500'}`}>
-              {reason.length} / 20 minimum characters
+            <div className={`text-[11px] font-bold ${reason.trim().length < 20 ? 'text-amber-500' : 'text-emerald-500'}`}>
+              {reason.trim().length} / 20 minimum characters
             </div>
           </div>
 
@@ -93,6 +155,8 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
             <label className="text-sm font-bold text-gray-700">Defer by (additional days) *</label>
             <input
               type="number"
+              min={1}
+              max={30}
               value={days}
               onChange={(e) => setDays(e.target.value)}
               className="w-full border border-gray-200 rounded-lg p-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50/50"
@@ -109,8 +173,9 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
             {/* Selected Value display */}
             {!selectedApprover ? (
               <button
+                type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-500 flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50/50"
+                className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-500 flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50/50 cursor-pointer"
               >
                 <span>Select Senior Nodal Officer</span>
                 <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
@@ -118,8 +183,9 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
             ) : (
               <div className="flex flex-col gap-2">
                 <button
+                  type="button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50/50"
+                  className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50/50 cursor-pointer"
                 >
                   <span className="text-gray-500">Select Senior Nodal Officer</span>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
@@ -145,11 +211,12 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
                 {approvers.map((approver, idx) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => {
                       setSelectedApprover(approver);
                       setDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${selectedApprover?.name === approver.name ? 'bg-emerald-50/50 text-emerald-700 font-medium' : 'text-gray-700'}`}
+                    className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 cursor-pointer ${selectedApprover?.name === approver.name ? 'bg-emerald-50/50 text-emerald-700 font-medium' : 'text-gray-700'}`}
                   >
                     {approver.name} — {approver.role}
                   </button>
@@ -170,19 +237,29 @@ export function DeferSLAPopup({ onClose }: DeferSLAPopupProps) {
         {/* Footer */}
         <div className="p-5 border-t border-gray-100 bg-white flex justify-center gap-4">
           <button
+            type="button"
             onClick={handleClose}
-            className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+            disabled={isSubmitting}
+            className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            className="px-6 py-2.5 bg-[#8ED1A1] text-white font-bold rounded-lg flex items-center gap-2 transition-colors cursor-default"
+            type="button"
+            onClick={handleSubmit}
+            disabled={!isFormValid || isSubmitting}
+            className={`px-6 py-2.5 text-white font-bold rounded-lg flex items-center gap-2 transition-all shadow-sm ${
+              isFormValid && !isSubmitting
+                ? 'bg-[#1ca848] hover:bg-[#1a9c42] cursor-pointer'
+                : 'bg-[#8ED1A1] cursor-not-allowed opacity-75'
+            }`}
           >
-            <Send className="h-4 w-4" />
-            Submit for Approval
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {isSubmitting ? 'Submitting…' : 'Submit for Approval'}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
