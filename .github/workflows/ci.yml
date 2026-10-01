@@ -36,6 +36,17 @@ jobs:
       - name: Security audit
         run: pnpm audit --audit-level=high
 
+      - name: Run Semgrep SAST Scan
+        uses: semgrep/semgrep-action@v1
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        with:
+          config: >-
+            .semgrep/rules.yaml
+            p/typescript
+            p/react
+            p/secrets
+
       - name: Lint
         run: pnpm lint
 

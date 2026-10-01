@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "security:scan": "semgrep scan --config .semgrep/rules.yaml --metrics=on"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",

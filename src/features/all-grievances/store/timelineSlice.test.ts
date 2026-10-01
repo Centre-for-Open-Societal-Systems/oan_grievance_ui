@@ -147,6 +147,7 @@ describe('timelineSlice', () => {
     const nextState = timelineReducer(currentState, {
       type: 'timeline/executeAction/fulfilled',
       payload: actionResult,
+      meta: { arg: { ticketNumber: 'ET14IN000012026' } },
     });
 
     expect(nextState.isSubmitting).toBe(false);
@@ -194,6 +195,7 @@ describe('timelineSlice', () => {
     const nextState = timelineReducer(currentState, {
       type: 'timeline/deferSLA/fulfilled',
       payload: deferResult,
+      meta: { arg: { ticketNumber: 'ET14IN000012026' } },
     });
 
     expect(nextState.isSubmitting).toBe(false);
@@ -244,6 +246,7 @@ describe('timelineSlice', () => {
     const nextState = timelineReducer(currentState, {
       type: 'timeline/reassign/fulfilled',
       payload: reassignResult,
+      meta: { arg: { ticketNumber: 'ET14IN000012026' } },
     });
 
     expect(nextState.isSubmitting).toBe(false);
@@ -251,5 +254,46 @@ describe('timelineSlice', () => {
     expect(nextState.timelineData?.assignment?.assigned_to).toBe('Abebe Bekele');
     expect(nextState.timelineData?.timeline?.length).toBe(2);
   });
-});
 
+  it('ignores a late timeline response for a ticket that is no longer selected', () => {
+    const onTicketB: TimelineState = {
+      ...initialTimelineState,
+      selectedTicketNumber: 'TICKET-B',
+      status: 'loading',
+    };
+
+    const lateFulfilled = timelineReducer(onTicketB, {
+      type: 'timeline/fetchTimeline/fulfilled',
+      payload: { ...sampleTimelineData, ticket_number: 'TICKET-A' },
+      meta: { arg: { ticketNumber: 'TICKET-A' } },
+    });
+    expect(lateFulfilled.timelineData).toBeNull();
+    expect(lateFulfilled.status).toBe('loading');
+
+    const lateRejected = timelineReducer(onTicketB, {
+      type: 'timeline/fetchTimeline/rejected',
+      payload: 'boom',
+      meta: { arg: { ticketNumber: 'TICKET-A' } },
+    });
+    expect(lateRejected.status).toBe('loading');
+    expect(lateRejected.error).toBeNull();
+  });
+
+  it('ignores a late mutation response for a ticket that is no longer selected', () => {
+    const onTicketB: TimelineState = {
+      ...initialTimelineState,
+      selectedTicketNumber: 'TICKET-B',
+      timelineData: { ...sampleTimelineData, status: 'In Progress' },
+      status: 'succeeded',
+      isSubmitting: true,
+    };
+
+    const next = timelineReducer(onTicketB, {
+      type: 'timeline/reassign/fulfilled',
+      payload: { ticket_number: 'TICKET-A', current_state: { status: 'Closed', escalated: false } },
+      meta: { arg: { ticketNumber: 'TICKET-A' } },
+    });
+    expect(next.timelineData?.status).toBe('In Progress');
+    expect(next.isSubmitting).toBe(false);
+  });
+});

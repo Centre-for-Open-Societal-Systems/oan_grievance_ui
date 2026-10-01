@@ -51,12 +51,15 @@ function renderWithStore(ui: React.ReactElement, initialDepartments = mockDepart
       metadata: initialMetadataState,
     },
   });
-  return render(<Provider store={store}>{ui}</Provider>);
+  // `wrapper` (not wrapping `ui` inline) so a test's rerender() keeps the Provider.
+  return render(ui, { wrapper: ({ children }) => <Provider store={store}>{children}</Provider> });
 }
 
 describe('CaseManagement', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // jsdom doesn't implement scrollIntoView, which AnimatedSelect calls on the highlighted option.
+    Element.prototype.scrollIntoView = vi.fn();
   });
 
   it('renders nothing when canManageCase is false', () => {
@@ -79,8 +82,7 @@ describe('CaseManagement', () => {
 
     expect(screen.getByText('Case Management')).toBeInTheDocument();
     expect(screen.getByText('Department')).toBeInTheDocument();
-    expect(screen.getByText('Inputs Supply & Distribution Agency')).toBeInTheDocument();
-    expect(screen.queryByText('Escalated Priority')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Department' })).toHaveValue('Inputs Supply & Distribution Agency');
   });
 
   it('shows message when saving without changes', async () => {
@@ -117,10 +119,11 @@ describe('CaseManagement', () => {
       />
     );
 
-    // Open Department dropdown
-    fireEvent.click(screen.getByText('Inputs Supply & Distribution Agency'));
-    // Select Credit & Financial Services
-    fireEvent.click(screen.getByRole('button', { name: 'Credit & Financial Services' }));
+    // Open Department combobox from the keyboard, then pick Credit & Financial Services
+    const combobox = screen.getByRole('combobox', { name: 'Department' });
+    combobox.focus();
+    fireEvent.keyDown(combobox, { key: 'ArrowDown' });
+    fireEvent.click(screen.getByRole('option', { name: 'Credit & Financial Services' }));
 
     // Reassignment justification box should appear
     expect(screen.getByText('Reassignment Justification')).toBeInTheDocument();

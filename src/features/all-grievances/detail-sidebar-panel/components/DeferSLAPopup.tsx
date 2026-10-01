@@ -1,21 +1,20 @@
-import { useState, useEffect } from 'react';
-import { X, CalendarClock, ChevronDown, AlertTriangle, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useAppDispatch } from '@/store/hooks';
-import { deferSLAGrievanceThunk } from '../../store/timelineSlice';
-import type { GrievanceChangeResponseData } from '../../types';
+import { useState, useEffect, useId } from 'react';
+import { X, CalendarClock, AlertTriangle, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
+import type { DeferSLAPayload, GrievanceChangeResponseData } from '../../types';
 
 interface DeferSLAPopupProps {
-  ticketNumber: string;
+  /** Bound to the active ticket by `useGrievanceTimeline().deferSLA`, same as CaseManagement's `onReassign`. */
+  onDefer: (payload: DeferSLAPayload) => Promise<GrievanceChangeResponseData | undefined>;
   onClose: () => void;
   onSuccess?: (result: GrievanceChangeResponseData) => void;
 }
 
-export function DeferSLAPopup({ ticketNumber, onClose, onSuccess }: DeferSLAPopupProps) {
-  const dispatch = useAppDispatch();
+export function DeferSLAPopup({ onDefer, onClose, onSuccess }: DeferSLAPopupProps) {
+  const approverSelectId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [days, setDays] = useState('7');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -52,21 +51,17 @@ export function DeferSLAPopup({ ticketNumber, onClose, onSuccess }: DeferSLAPopu
   const isFormValid = isDaysValid && isReasonValid && !isSubmitting;
 
   const handleSubmit = async () => {
-    if (!isFormValid || !ticketNumber) return;
+    if (!isFormValid) return;
     setIsSubmitting(true);
     setErrorMsg(null);
     setSuccessMsg(null);
 
     try {
-      const result = await dispatch(
-        deferSLAGrievanceThunk({
-          ticketNumber,
-          payload: {
-            additional_days: parsedDays,
-            reason: reason.trim(),
-          },
-        })
-      ).unwrap();
+      const result = await onDefer({
+        additional_days: parsedDays,
+        reason: reason.trim(),
+      });
+      if (!result) return;
 
       const status = result?.change_request?.status || 'Pending';
       const msg =
@@ -168,61 +163,29 @@ export function DeferSLAPopup({ ticketNumber, onClose, onSuccess }: DeferSLAPopu
 
           {/* Approver Dropdown */}
           <div className="flex flex-col gap-2 relative">
-            <label className="text-sm font-bold text-gray-700">Senior Nodal Officer (L2) Approver *</label>
+            <label htmlFor={approverSelectId} className="text-sm font-bold text-gray-700">Senior Nodal Officer (L2) Approver *</label>
 
-            {/* Selected Value display */}
-            {!selectedApprover ? (
-              <button
-                type="button"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-500 flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50/50 cursor-pointer"
-              >
-                <span>Select Senior Nodal Officer</span>
-                <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50/50 cursor-pointer"
-                >
-                  <span className="text-gray-500">Select Senior Nodal Officer</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                  <div className="w-8 h-8 rounded-full bg-emerald-800 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                    {selectedApprover.initials || 'UN'}
-                  </div>
-                  <div className="flex flex-col">
-                    <div className="text-sm text-gray-700">
-                      {selectedApprover.name} · {selectedApprover.org} · {selectedApprover.email}
-                    </div>
+            <AnimatedSelect
+              id={approverSelectId}
+              placeholder="Select Senior Nodal Officer"
+              searchable={false}
+              value={selectedApprover?.name ?? ''}
+              onChange={(name) => setSelectedApprover(approvers.find((a) => a.name === name) ?? null)}
+              options={approvers.map((a) => ({ value: a.name, label: `${a.name} — ${a.role}` }))}
+            />
+
+            {selectedApprover && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="w-8 h-8 rounded-full bg-emerald-800 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                  {selectedApprover.initials || 'UN'}
+                </div>
+                <div className="flex flex-col">
+                  <div className="text-sm text-gray-700">
+                    {selectedApprover.name} · {selectedApprover.org} · {selectedApprover.email}
                   </div>
                 </div>
               </div>
             )}
-
-            {/* Dropdown Options with Animation */}
-            <div
-              className={`absolute top-[70px] left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden transition-all duration-300 origin-top transform ${dropdownOpen ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0 pointer-events-none'}`}
-            >
-              <div className="max-h-60 overflow-y-auto">
-                {approvers.map((approver, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setSelectedApprover(approver);
-                      setDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 cursor-pointer ${selectedApprover?.name === approver.name ? 'bg-emerald-50/50 text-emerald-700 font-medium' : 'text-gray-700'}`}
-                  >
-                    {approver.name} — {approver.role}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Warning */}

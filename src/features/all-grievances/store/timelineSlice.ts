@@ -13,6 +13,7 @@ import type {
   GrievanceActionPayload,
   GrievanceActionResult,
   GrievanceChangeResponseData,
+  GrievanceCurrentState,
   GrievanceTimelineData,
   GrievanceTimelineQueryParams,
   ReassignGrievancePayload,
@@ -38,6 +39,40 @@ const initialState: TimelineState = {
   isSubmitting: false,
   submitError: null,
 };
+
+/**
+ * Shared by every mutation thunk's fulfilled case: folds the response's
+ * `current_state` into the cached timeline. Assignment is only touched when
+ * the response actually carries it.
+ */
+function mergeCurrentState(data: GrievanceTimelineData, cs: GrievanceCurrentState) {
+  data.status = cs.status;
+  data.current_status = cs.status;
+  data.escalated = Boolean(cs.escalated);
+  if (cs.available_actions) data.available_actions = cs.available_actions;
+  if (data.assignment) {
+    if (cs.assigned_to !== undefined) data.assignment.assigned_to = cs.assigned_to;
+    if (cs.department !== undefined) data.assignment.department = cs.department;
+  }
+}
+
+/** Appends a mutation's timeline event unless the cached timeline already has it (by id, falling back to name). */
+/**
+ * A response is only applied while its ticket is still the one on screen.
+ * Officers switch tickets faster than responses land (and every mutation fires
+ * a follow-up refetch), so without this a late response for ticket A would
+ * overwrite ticket B's timeline, status and attachments.
+ */
+function isForSelectedTicket(state: TimelineState, ticketNumber: string) {
+  return state.selectedTicketNumber === ticketNumber;
+}
+
+function appendTimelineEvent(data: GrievanceTimelineData, event: TimelineEntry) {
+  const list = data.timeline || [];
+  const eventId = event.id || event.name;
+  const exists = list.some((e) => (e.id && e.id === eventId) || (e.name && e.name === eventId));
+  if (!exists) data.timeline = [...list, event];
+}
 
 export const fetchTimelineThunk = createAsyncThunk<
   GrievanceTimelineData,
@@ -157,11 +192,13 @@ export const timelineSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchTimelineThunk.fulfilled, (state, action) => {
+        if (!isForSelectedTicket(state, action.meta.arg.ticketNumber)) return;
         state.status = 'succeeded';
         state.timelineData = action.payload;
         state.error = null;
       })
       .addCase(fetchTimelineThunk.rejected, (state, action) => {
+        if (!isForSelectedTicket(state, action.meta.arg.ticketNumber)) return;
         state.status = 'failed';
         state.error = action.payload ?? 'Failed to fetch timeline';
       });
@@ -207,22 +244,9 @@ export const timelineSlice = createSlice({
         state.submitError = null;
 
         const result = action.payload;
-        if (state.timelineData) {
+        if (state.timelineData && isForSelectedTicket(state, action.meta.arg.ticketNumber)) {
           if (result.current_state) {
-            state.timelineData.status = result.current_state.status;
-            state.timelineData.current_status = result.current_state.status;
-            state.timelineData.escalated = Boolean(result.current_state.escalated);
-            if (result.current_state.available_actions) {
-              state.timelineData.available_actions = result.current_state.available_actions;
-            }
-            if (state.timelineData.assignment) {
-              if (result.current_state.assigned_to !== undefined) {
-                state.timelineData.assignment.assigned_to = result.current_state.assigned_to;
-              }
-              if (result.current_state.department !== undefined) {
-                state.timelineData.assignment.department = result.current_state.department;
-              }
-            }
+            mergeCurrentState(state.timelineData, result.current_state);
           } else if (result.status) {
             state.timelineData.status = result.status;
             state.timelineData.current_status = result.status;
@@ -231,14 +255,7 @@ export const timelineSlice = createSlice({
             }
           }
 
-          if (result.timeline_event) {
-            const list = state.timelineData.timeline || [];
-            const eventId = result.timeline_event.id || result.timeline_event.name;
-            const exists = list.some((e) => (e.id && e.id === eventId) || (e.name && e.name === eventId));
-            if (!exists) {
-              state.timelineData.timeline = [...list, result.timeline_event];
-            }
-          }
+          if (result.timeline_event) appendTimelineEvent(state.timelineData, result.timeline_event);
         }
       })
       .addCase(executeTimelineActionThunk.rejected, (state, action) => {
@@ -257,26 +274,12 @@ export const timelineSlice = createSlice({
         state.submitError = null;
 
         const result = action.payload;
-        if (state.timelineData) {
+        if (state.timelineData && isForSelectedTicket(state, action.meta.arg.ticketNumber)) {
           if (result.sla_due_date && state.timelineData.sla) {
             state.timelineData.sla.sla_due_date = result.sla_due_date;
           }
-          if (result.current_state) {
-            state.timelineData.status = result.current_state.status;
-            state.timelineData.current_status = result.current_state.status;
-            state.timelineData.escalated = Boolean(result.current_state.escalated);
-            if (result.current_state.available_actions) {
-              state.timelineData.available_actions = result.current_state.available_actions;
-            }
-          }
-          if (result.timeline_event) {
-            const list = state.timelineData.timeline || [];
-            const eventId = result.timeline_event.id || result.timeline_event.name;
-            const exists = list.some((e) => (e.id && e.id === eventId) || (e.name && e.name === eventId));
-            if (!exists) {
-              state.timelineData.timeline = [...list, result.timeline_event];
-            }
-          }
+          if (result.current_state) mergeCurrentState(state.timelineData, result.current_state);
+          if (result.timeline_event) appendTimelineEvent(state.timelineData, result.timeline_event);
         }
       })
       .addCase(deferSLAGrievanceThunk.rejected, (state, action) => {
@@ -295,7 +298,7 @@ export const timelineSlice = createSlice({
         state.submitError = null;
 
         const result = action.payload;
-        if (state.timelineData) {
+        if (state.timelineData && isForSelectedTicket(state, action.meta.arg.ticketNumber)) {
           if (state.timelineData.assignment) {
             if (result.assigned_dept) {
               state.timelineData.assignment.department = result.assigned_dept;
@@ -304,30 +307,8 @@ export const timelineSlice = createSlice({
               state.timelineData.assignment.assigned_to = result.assigned_to;
             }
           }
-          if (result.current_state) {
-            state.timelineData.status = result.current_state.status;
-            state.timelineData.current_status = result.current_state.status;
-            state.timelineData.escalated = Boolean(result.current_state.escalated);
-            if (result.current_state.available_actions) {
-              state.timelineData.available_actions = result.current_state.available_actions;
-            }
-            if (state.timelineData.assignment) {
-              if (result.current_state.assigned_to !== undefined) {
-                state.timelineData.assignment.assigned_to = result.current_state.assigned_to;
-              }
-              if (result.current_state.department !== undefined) {
-                state.timelineData.assignment.department = result.current_state.department;
-              }
-            }
-          }
-          if (result.timeline_event) {
-            const list = state.timelineData.timeline || [];
-            const eventId = result.timeline_event.id || result.timeline_event.name;
-            const exists = list.some((e) => (e.id && e.id === eventId) || (e.name && e.name === eventId));
-            if (!exists) {
-              state.timelineData.timeline = [...list, result.timeline_event];
-            }
-          }
+          if (result.current_state) mergeCurrentState(state.timelineData, result.current_state);
+          if (result.timeline_event) appendTimelineEvent(state.timelineData, result.timeline_event);
         }
       })
       .addCase(reassignGrievanceThunk.rejected, (state, action) => {

@@ -1,73 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { User, ChevronDown, Save, Loader2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { User, Save, Loader2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAppSelector } from '@/store/hooks';
-import type { GrievanceActionPayload, GrievanceChangeResponseData, GrievanceTimelineData, ReassignGrievancePayload } from '../../types';
-
-const AnimatedDropdown = ({
-  label,
-  options,
-  placeholder,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: string[];
-  placeholder: string;
-  value: string;
-  onChange: (val: string) => void;
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="relative flex flex-col gap-1.5">
-      <label className="text-[13px] font-semibold text-[#1B362D]">{label}</label>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 flex justify-between items-center hover:border-gray-300 focus:outline-none focus:border-[#1d9645] focus:ring-1 focus:ring-[#1d9645] bg-white transition-all duration-200 shadow-xs cursor-pointer"
-      >
-        <span className={value ? 'text-gray-900 font-medium' : 'text-[#8C9AA1]'}>
-          {value || placeholder}
-        </span>
-        <ChevronDown
-          className={`h-4 w-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-[68px] left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-30 overflow-hidden max-h-48 overflow-y-auto">
-          {options.length === 0 ? (
-            <div className="p-3 text-xs text-gray-500 text-center">No departments available</div>
-          ) : (
-            options.map((opt, idx) => (
-              <button
-                type="button"
-                key={idx}
-                onClick={() => {
-                  onChange(opt);
-                  setIsOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 cursor-pointer ${
-                  value === opt ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-700'
-                }`}
-              >
-                {opt}
-              </button>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
+import type { GrievanceChangeResponseData, GrievanceTimelineData, ReassignGrievancePayload } from '../../types';
 
 interface CaseManagementProps {
   canManageCase: boolean;
   ticketNumber?: string | null;
   timelineData?: GrievanceTimelineData | null;
-  onExecuteAction?: (payload: GrievanceActionPayload) => Promise<unknown>;
   onReassign?: (payload: ReassignGrievancePayload) => Promise<unknown>;
 }
 
@@ -79,6 +21,7 @@ export function CaseManagement({
 }: CaseManagementProps) {
   const activeTicket = ticketNumber || timelineData?.ticket_number || '';
   const optionsData = useAppSelector((state) => state.metadata?.grievanceOptions);
+  const departmentSelectId = useId();
 
   const [department, setDepartment] = useState<string>('');
   const [reassignReason, setReassignReason] = useState<string>('');
@@ -89,16 +32,21 @@ export function CaseManagement({
 
   const initialDepartment = timelineData?.assignment?.department || '';
 
+  // Re-sync only when the ticket or its server-side department actually
+  // changes. Keying on the whole timelineData object reset the form on every
+  // timeline refetch (status change, comment, the refetch after a reassign),
+  // wiping a half-typed justification.
   useEffect(() => {
-    if (timelineData) {
-      /* eslint-disable-next-line react-hooks/set-state-in-effect */
-      setDepartment(timelineData.assignment?.department || '');
-      setReassignReason('');
-    }
-  }, [timelineData]);
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setDepartment(initialDepartment);
+    setReassignReason('');
+  }, [activeTicket, initialDepartment]);
 
   const departmentOptions = useMemo(() => {
-    return (optionsData?.departments ?? []).map((d) => d.department_name).filter(Boolean);
+    return (optionsData?.departments ?? [])
+      .map((d) => d.department_name)
+      .filter(Boolean)
+      .map((name) => ({ value: name, label: name }));
   }, [optionsData]);
 
   if (!canManageCase) return null;
@@ -124,6 +72,10 @@ export function CaseManagement({
 
         setFeedback({ type: 'success', message: msg });
         setReassignReason('');
+        // A pending request leaves the server department unchanged, so the
+        // effect above won't fire — reset the dropdown here instead of
+        // leaving the form armed to resubmit the same request.
+        if (isPending) setDepartment(initialDepartment);
       } else {
         setFeedback({ type: 'success', message: 'No department changes to save' });
       }
@@ -163,13 +115,18 @@ export function CaseManagement({
           </div>
         )}
 
-        <AnimatedDropdown
-          label="Department"
-          placeholder="Select Department"
-          value={department}
-          onChange={setDepartment}
-          options={departmentOptions}
-        />
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={departmentSelectId} className="text-[13px] font-semibold text-[#1B362D]">
+            Department
+          </label>
+          <AnimatedSelect
+            id={departmentSelectId}
+            placeholder="Select Department"
+            value={department}
+            onChange={setDepartment}
+            options={departmentOptions}
+          />
+        </div>
 
         {/* Reason for Reassignment (visible when department is modified) */}
         {isReassignment && (

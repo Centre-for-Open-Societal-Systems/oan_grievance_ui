@@ -52,14 +52,8 @@ export const KNOWN_COUNTRY_CODES = ['+251', '+254', '+255', '+256', '+250', '+25
  * since the form there sends a number already combined with a country/dial
  * code, the same shape this one accepts alongside the bare local form).
  * Deliberately loose (8-15 digits, not pinned to a specific country's
- * length) rather than "+251 plus exactly 9 digits": a live account's own phone number
- * (`user.mobile_no`, prefilled straight into Submit Grievance's Step 1
- * without the user retyping it) already comes from a trusted backend
- * source, normalized however that backend normalizes it — this repo's own
- * authApi.test.ts fixture for a real getMe() response is
- * "+2519344012394" as one concrete example, 10 digits after +251, not 9. A
- * stricter length check would reject a real, already-valid number the
- * app itself produced, on a field the user never touched.
+ * length): per-country length is libphonenumber's call on the backend, and
+ * this is only a shape check until the frontend uses the same metadata.
  */
 export const PHONE_NUMBER_E164_REGEX = /^\+\d{8,15}$/;
 

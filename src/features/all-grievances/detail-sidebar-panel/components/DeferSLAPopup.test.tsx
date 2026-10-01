@@ -1,27 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DeferSLAPopup } from './DeferSLAPopup';
-import { timelineReducer } from '../../store/timelineSlice';
-import * as grievanceApi from '../../api/grievanceApi';
 
 afterEach(cleanup);
-
-function renderWithStore(ui: React.ReactElement) {
-  const store = configureStore({
-    reducer: {
-      timeline: timelineReducer,
-    },
-  });
-
-  return {
-    ...render(<Provider store={store}>{ui}</Provider>),
-    store,
-  };
-}
 
 describe('DeferSLAPopup', () => {
   beforeEach(() => {
@@ -30,7 +13,7 @@ describe('DeferSLAPopup', () => {
 
   it('renders correctly with default values and validation', () => {
     const onClose = vi.fn();
-    renderWithStore(<DeferSLAPopup ticketNumber="ET14IN000012026" onClose={onClose} />);
+    render(<DeferSLAPopup onDefer={vi.fn()} onClose={onClose} />);
 
     expect(screen.getByText('Defer SLA')).toBeInTheDocument();
     expect(screen.getByText('Requires approval from a Senior Nodal Officer (L2)')).toBeInTheDocument();
@@ -43,7 +26,7 @@ describe('DeferSLAPopup', () => {
 
   it('enables submit button only when reason meets 20 chars and days are valid', () => {
     const onClose = vi.fn();
-    renderWithStore(<DeferSLAPopup ticketNumber="ET14IN000012026" onClose={onClose} />);
+    render(<DeferSLAPopup onDefer={vi.fn()} onClose={onClose} />);
 
     const textarea = screen.getByPlaceholderText(/Describe why the SLA requires extension/i);
     const submitBtn = screen.getByRole('button', { name: /Submit for Approval/i });
@@ -59,7 +42,7 @@ describe('DeferSLAPopup', () => {
   });
 
   it('submits deferral request via API and displays success message', async () => {
-    const deferSpy = vi.spyOn(grievanceApi, 'deferGrievanceSLA').mockResolvedValue({
+    const onDefer = vi.fn().mockResolvedValue({
       ticket_number: 'ET14IN000012026',
       status: 'Under Investigation',
       change_request: {
@@ -80,8 +63,8 @@ describe('DeferSLAPopup', () => {
     const onClose = vi.fn();
     const onSuccess = vi.fn();
 
-    renderWithStore(
-      <DeferSLAPopup ticketNumber="ET14IN000012026" onClose={onClose} onSuccess={onSuccess} />
+    render(
+      <DeferSLAPopup onDefer={onDefer} onClose={onClose} onSuccess={onSuccess} />
     );
 
     const textarea = screen.getByPlaceholderText(/Describe why the SLA requires extension/i);
@@ -96,7 +79,7 @@ describe('DeferSLAPopup', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(deferSpy).toHaveBeenCalledWith('ET14IN000012026', {
+      expect(onDefer).toHaveBeenCalledWith({
         additional_days: 14,
         reason: 'Awaiting lab soil sample test results from regional research lab',
       });
@@ -108,11 +91,12 @@ describe('DeferSLAPopup', () => {
   });
 
   it('displays error message when deferral API fails', async () => {
-    vi.spyOn(grievanceApi, 'deferGrievanceSLA').mockRejectedValue(new Error('SLA deferral limit reached'));
+    // useGrievanceTimeline().deferSLA unwraps the thunk, so a failure arrives as the rejectWithValue string.
+    const onDefer = vi.fn().mockRejectedValue('SLA deferral limit reached');
 
     const onClose = vi.fn();
 
-    renderWithStore(<DeferSLAPopup ticketNumber="ET14IN000012026" onClose={onClose} />);
+    render(<DeferSLAPopup onDefer={onDefer} onClose={onClose} />);
 
     const textarea = screen.getByPlaceholderText(/Describe why the SLA requires extension/i);
     const submitBtn = screen.getByRole('button', { name: /Submit for Approval/i });
@@ -126,5 +110,17 @@ describe('DeferSLAPopup', () => {
     await waitFor(() => {
       expect(screen.getByText('SLA deferral limit reached')).toBeInTheDocument();
     });
+  });
+
+  it('exposes the approver picker as a labelled, keyboard-operable combobox', () => {
+    // jsdom doesn't implement scrollIntoView, which AnimatedSelect calls on the highlighted option.
+    Element.prototype.scrollIntoView = vi.fn();
+    render(<DeferSLAPopup onDefer={vi.fn()} onClose={vi.fn()} />);
+
+    const combobox = screen.getByRole('combobox', { name: /Senior Nodal Officer \(L2\) Approver/i });
+    combobox.focus();
+    fireEvent.keyDown(combobox, { key: 'ArrowDown' });
+    expect(combobox).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('option', { name: /Yonas Mekonnen/ })).toBeInTheDocument();
   });
 });
