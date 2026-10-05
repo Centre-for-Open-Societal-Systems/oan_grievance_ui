@@ -327,11 +327,20 @@ export function CommentsAndCommunication({
                         )}
 
                         {/* Status transition pill if applicable */}
-                        {(event.fromStatus || event.toStatus) && (
+                        {(event.fromStatus || event.toStatus || event.action) && (
                           <div className="mt-3 pt-2 border-t border-gray-200/50 flex items-center gap-2 text-xs font-medium text-gray-600 flex-wrap">
                             <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-xs">
                               <ChevronRight className="h-3 w-3 text-gray-400" />
                             </div>
+                            
+                            {event.action && (
+                              <span className="px-2 py-0.5 bg-gray-100 border border-gray-200 text-gray-800 font-semibold rounded">
+                                {event.action}
+                              </span>
+                            )}
+                            
+                            {event.action && (event.fromStatus || event.toStatus) && <span className="text-gray-400 mx-1">•</span>}
+
                             {event.fromStatus && (
                               <span className="px-2 py-0.5 bg-white border border-gray-200 rounded text-gray-700">
                                 {event.fromStatus}

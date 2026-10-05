@@ -37,5 +37,69 @@
   },
   "commentsAndCommunication": {
     "messageCount": "{count, plural, one {# message} other {# messages}} in this thread"
+  },
+  "notifications": {
+    "label": "Notifications",
+    "unreadLabel": "Notifications, {count} new"
+  },
+  "caseActions": {
+    "submitterTitle": "Your response",
+    "chooseAction": "Choose an action",
+    "nothingToDo": "No action is needed from you right now. We'll let you know when your grievance changes.",
+    "reasonLabel": "Reason",
+    "reasonHelp": "The officers handling your grievance will see this.",
+    "ratingLabel": "How well was your grievance resolved?",
+    "ratingOption": "{value} of 5 stars",
+    "submitting": "Submitting…",
+    "success": "\"{action}\" done.",
+    "failed": "The action could not be completed. Please try again.",
+    "hints": {
+      "submitterReply": "Send the information the officer asked for. Your case goes back to the officer.",
+      "reopen": "Not resolved? Tell the officer what is still wrong and the case is reopened.",
+      "closeCase": "Confirm the resolution and rate how your grievance was handled. This closes the case.",
+      "generic": "Give a reason for this action."
+    },
+    "reasonPlaceholder": "Tell the officer why…"
+  },
+  "responseForm": {
+    "responseSubmitted": "Response \"{type}\" submitted."
+  },
+  "admin": {
+    "responseTemplates": {
+      "searchPlaceholder": "Search response templates…",
+      "serviceCategory": "Service Category",
+      "allCategories": "All categories",
+      "allDepartments": "All departments",
+      "addButton": "+ Add Template",
+      "banner": "Officers pick these templates in the department response form. Use variables like {exampleA} or {exampleB} to fill in case details.",
+      "loading": "Loading templates…",
+      "loadFailed": "Could not load response templates.",
+      "retry": "Retry",
+      "empty": "No response templates match.",
+      "retired": "Retired",
+      "used": "Used",
+      "usedTimes": "{count, plural, one {Used # time} other {Used # times}}",
+      "actionTaken": "Action taken",
+      "resolutionSummary": "Resolution summary",
+      "edit": "Edit Template",
+      "retire": "Retire",
+      "reactivate": "Reactivate",
+      "retireConfirm": "Retire \"{title}\"? Officers will no longer be offered it. Its usage history is kept and you can reactivate it later.",
+      "saveFailed": "The change could not be saved. Please try again.",
+      "addTitle": "Add response template",
+      "editTitle": "Edit response template",
+      "close": "Close",
+      "code": "Template code",
+      "codeFixed": "The code identifies the template and can't be changed.",
+      "titleLabel": "Title",
+      "responseType": "Response type",
+      "selectResponseType": "Select response type",
+      "department": "Department",
+      "active": "Active",
+      "variablesHint": "Available variables:",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "add": "Add template"
+    }
   }
 }

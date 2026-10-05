@@ -1,6 +1,6 @@
 "use client";
 
-import { User, Tag, Info, MapPin, Building, Radio, Calendar } from 'lucide-react';
+import { User, Tag, Info, MapPin, Building, Radio, Calendar, Phone, Mail } from 'lucide-react';
 import type { Grievance, GrievanceTimelineData } from '../../types';
 import { getInitials } from '../../utils/mapGrievance';
 
@@ -53,6 +53,10 @@ export function SubmitterDetails({ grievance, timelineData }: SubmitterDetailsPr
   const submittedAt = grievance.submittedAt || 'N/A';
   const initials = getInitials(submitterName);
 
+  const contactMobile =
+    timelineData?.submitter?.contact_mobile || timelineData?.submitter?.mobile || grievance.contactMobile;
+  const contactEmail = timelineData?.submitter?.contact_email || timelineData?.submitter?.email || grievance.contactEmail;
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
       {/* Header spanning full width */}
@@ -79,6 +83,26 @@ export function SubmitterDetails({ grievance, timelineData }: SubmitterDetailsPr
         </div>
 
         <div className="flex flex-col gap-4">
+          {!isAnonymous && contactMobile && (
+            <div>
+              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5 shrink-0" />
+                <span>Phone</span>
+              </div>
+              <div className="text-[14px] font-semibold text-gray-900 ml-[20px]">{contactMobile}</div>
+            </div>
+          )}
+
+          {!isAnonymous && contactEmail && (
+            <div>
+              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 shrink-0" />
+                <span>Email</span>
+              </div>
+              <div className="text-[14px] font-semibold text-gray-900 ml-[20px]">{contactEmail}</div>
+            </div>
+          )}
+
           <div>
             <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
               <Tag className="h-3.5 w-3.5 shrink-0" />

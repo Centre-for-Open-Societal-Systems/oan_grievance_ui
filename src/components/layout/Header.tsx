@@ -1,10 +1,11 @@
 "use client";
 
-import { Bell, Search, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { UserProfile } from "./UserProfile";
+import { NotificationBell } from "./NotificationBell";
 import { LanguageSelector } from "@/components/ui/LanguageSelector";
 
 export function Header() {
@@ -59,10 +60,7 @@ export function Header() {
         </div>
 
         {/* Notifications */}
-        <button className="relative text-slate-500 hover:text-slate-700 focus:outline-none ml-2 transition-colors">
-          <Bell className="w-[22px] h-[22px] fill-slate-500" />
-          <span className="absolute -top-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full bg-red-600 border-2 border-white"></span>
-        </button>
+        <NotificationBell />
 
         {/* Vertical Divider */}
         <div className="h-7 w-[1px] bg-gray-200 mx-1"></div>

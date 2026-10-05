@@ -173,6 +173,7 @@ export interface TimelineEntry {
   attachments?: GrievanceTimelineAttachment[];
   ref_doctype?: string | null;
   ref_docname?: string | null;
+  action?: string | null;
   created_on: string;
 }
 
@@ -204,7 +205,11 @@ export interface GrievanceTimelineSummary {
 export interface GrievanceTimelineSubmitter {
   name?: string | null;
   mobile?: string | null;
+  contact_mobile?: string | null;
+  country_code?: string | null;
+  phone_number?: string | null;
   email?: string | null;
+  contact_email?: string | null;
   submitter_type?: string | null;
   is_anonymous?: boolean;
   assisted_by_officer?: string | null;
@@ -233,6 +238,8 @@ export interface GrievanceAvailableAction {
 
 export interface GrievanceTimelineAttachment {
   name: string;
+  /** Attachment id; `name` is its alias. */
+  attachment?: string;
   id?: string;
   timeline_entry?: string | null;
   file_name?: string | null;
@@ -248,6 +255,7 @@ export interface GrievanceTimelineAttachment {
 }
 
 export interface GrievanceTimelineData {
+  /** Grievance id (document name): the id realtime events and room subscriptions use. */
   name?: string;
   ticket_number: string;
   ticket_number_display?: string;
@@ -265,11 +273,25 @@ export interface GrievanceTimelineData {
   sla?: GrievanceTimelineSla;
   assignment?: GrievanceTimelineAssignment;
   available_actions?: GrievanceAvailableAction[];
+  can_request_more_info?: boolean;
   attachments?: GrievanceTimelineAttachment[];
   timeline?: TimelineEntry[];
   events?: TimelineEventItem[];
   has_more?: boolean;
   next_cursor?: string | null;
+}
+
+export interface ResponseTemplateItem {
+  template: string;
+  title: string;
+  department?: string | null;
+  service_category?: string | null;
+  /** Template body rendered for the case, as plain text. Prefills the action's `reason`. */
+  reason: string;
+}
+
+export interface ResponseTemplatesData {
+  items: ResponseTemplateItem[];
 }
 
 export interface GrievanceTimelineQueryParams {
@@ -278,13 +300,18 @@ export interface GrievanceTimelineQueryParams {
   cursor?: string;
 }
 
+/** Body of POST /api/v1/grievances/:ticket_number/action (`GrievanceActionRequest`). */
 export interface GrievanceActionPayload {
+  /** One of the case's `available_actions`. */
   action: string;
-  reason?: string;
-  note?: string;
-  rating?: number;
-  comments?: string;
-  body?: string;
+  /** Shown to the submitter. For a department response, the response itself. */
+  reason: string;
+  /** Staff only. Posted as a separate internal timeline entry. */
+  internal_notes?: string | null;
+  /** Staff only. Response template the reason started from. */
+  template?: string | null;
+  /** 1-5, on `Close Case` by the submitter only. */
+  rating?: number | null;
 }
 
 export interface GrievanceCurrentState {

@@ -14,6 +14,7 @@ Sessions are three httpOnly cookies (access token, refresh token, remember-me fl
 - `src/lib/jwt.ts` — decodes the access token's claims for display/routing only; the backend is what actually verifies it.
 - `src/lib/rateLimit.ts` — in-memory, per-process rate limiting for the `/api/auth/*` routes.
 - `src/app/api/proxy/[...path]/route.ts` — the one path all non-auth backend calls go through, so the browser only ever talks to same-origin `/api/*`.
+- `src/lib/realtime/` + `src/app/api/realtime/token/route.ts` — the socket.io client for `oan_grievance_service`'s AsyncAPI events (`attachment_scanned`, `notification`). A browser can't set headers on a WebSocket, so the token route is the one deliberate place the access token reaches page script, only for the handshake. Events are signals: listeners refetch through `/api/proxy`, and a local `resync` event fires on reconnect and tab focus because missed events are never replayed.
 - `src/features/auth/logout.ts` — `performLogout`, the single way a session ends client-side (revokes server-side, then resets Redux). Anything that signs the user out — the header's Sign Out button, the idle timer — goes through this rather than reimplementing it, and awaits it before navigating: a fire-and-forget logout races the next page's session-restore check.
 
 ## Required environment variables
@@ -22,9 +23,11 @@ Sessions are three httpOnly cookies (access token, refresh token, remember-me fl
 | --- | --- | --- | --- |
 | `AUTH_API_BASE_URL` | Yes | — | Base URL of `oan_auth_service` (see `src/lib/env.ts`) |
 | `TRUSTED_PROXY_HOPS` | No | `0` (don't trust `X-Forwarded-For`) | Reverse-proxy hop count for client-IP resolution |
-| `RATE_LIMIT_<LOGIN\|REGISTER\|REGISTER_SHARED\|REFRESH\|LOGOUT\|HEARTBEAT\|FORGOT_PASSWORD\|RESET_PASSWORD>_MAX` / `_WINDOW_MS` | No | see `rateLimit.ts` | Per-route rate-limit overrides. `REGISTER_SHARED` is the effective ceiling for `/api/auth/register` whenever `TRUSTED_PROXY_HOPS` is unset — see that route's own comments |
+| `RATE_LIMIT_<LOGIN\|REGISTER\|REGISTER_SHARED\|REFRESH\|LOGOUT\|HEARTBEAT\|FORGOT_PASSWORD\|RESET_PASSWORD\|REALTIME_TOKEN>_MAX` / `_WINDOW_MS` | No | see `rateLimit.ts` | Per-route rate-limit overrides. `REGISTER_SHARED` is the effective ceiling for `/api/auth/register` whenever `TRUSTED_PROXY_HOPS` is unset — see that route's own comments |
 | `IDLE_TIMEOUT_MS` / `IDLE_WARNING_LEAD_MS` | No | 15 min / 60 s | Server-enforced idle-session cutoff and warning lead |
 | `NEXT_PUBLIC_IDLE_TIMEOUT_MS` / `NEXT_PUBLIC_IDLE_WARNING_LEAD_MS` | No | same as above | Client copies — set alongside the two above if you override them, or the warning modal drifts from the actual cutoff |
+| `REALTIME_URL` / `REALTIME_SITE` | No | unset (realtime off) | Grievance service socket.io origin (`wss://...`) and the Frappe site its namespace is named after. Also added to CSP `connect-src` |
+| `REALTIME_PATH` | No | `/socket.io/` | socket.io path on that origin |
 
 ## Commands
 

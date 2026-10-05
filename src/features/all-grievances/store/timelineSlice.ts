@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/store';
+import type { AttachmentScannedEvent } from '@/lib/realtime';
 import {
   fetchGrievanceTimeline,
   postGrievanceMessage,
@@ -14,6 +15,7 @@ import type {
   GrievanceActionResult,
   GrievanceChangeResponseData,
   GrievanceCurrentState,
+  GrievanceTimelineAttachment,
   GrievanceTimelineData,
   GrievanceTimelineQueryParams,
   ReassignGrievancePayload,
@@ -76,7 +78,12 @@ function appendTimelineEvent(data: GrievanceTimelineData, event: TimelineEntry) 
 
 export const fetchTimelineThunk = createAsyncThunk<
   GrievanceTimelineData,
-  { ticketNumber: string; params?: GrievanceTimelineQueryParams },
+  {
+    ticketNumber: string;
+    params?: GrievanceTimelineQueryParams;
+    /** A background refresh (realtime signal, tab focus): keeps the current view instead of showing a loading state. */
+    silent?: boolean;
+  },
   { rejectValue: string }
 >('timeline/fetchTimeline', async ({ ticketNumber, params }, { rejectWithValue }) => {
   try {
@@ -175,6 +182,26 @@ export const timelineSlice = createSlice({
         state.error = null;
       }
     },
+    /**
+     * Applies a realtime scan verdict to the attachment wherever the cached
+     * timeline lists it, so a Clean file becomes viewable without waiting for
+     * the follow-up refetch.
+     */
+    attachmentScanVerdictReceived(state, action: PayloadAction<AttachmentScannedEvent>) {
+      const data = state.timelineData;
+      if (!data) return;
+      const { attachment, scan_status } = action.payload;
+      const matches = (a: GrievanceTimelineAttachment) =>
+        a.attachment === attachment || a.name === attachment || a.id === attachment;
+      for (const a of data.attachments ?? []) {
+        if (matches(a)) a.scan_status = scan_status;
+      }
+      for (const entry of data.timeline ?? []) {
+        for (const a of entry.attachments ?? []) {
+          if (matches(a)) a.scan_status = scan_status;
+        }
+      }
+    },
     clearTimeline(state) {
       state.selectedTicketNumber = null;
       state.timelineData = null;
@@ -187,7 +214,8 @@ export const timelineSlice = createSlice({
   extraReducers: (builder) => {
     // fetchTimelineThunk
     builder
-      .addCase(fetchTimelineThunk.pending, (state) => {
+      .addCase(fetchTimelineThunk.pending, (state, action) => {
+        if (action.meta.arg.silent && state.timelineData) return;
         state.status = 'loading';
         state.error = null;
       })
@@ -199,6 +227,8 @@ export const timelineSlice = createSlice({
       })
       .addCase(fetchTimelineThunk.rejected, (state, action) => {
         if (!isForSelectedTicket(state, action.meta.arg.ticketNumber)) return;
+        // A failed background refresh leaves the last good view on screen.
+        if (action.meta.arg.silent && state.timelineData) return;
         state.status = 'failed';
         state.error = action.payload ?? 'Failed to fetch timeline';
       });
@@ -319,7 +349,7 @@ export const timelineSlice = createSlice({
 });
 
 
-export const { setSelectedTicketNumber, clearTimeline } = timelineSlice.actions;
+export const { setSelectedTicketNumber, attachmentScanVerdictReceived, clearTimeline } = timelineSlice.actions;
 export const timelineReducer = timelineSlice.reducer;
 
 // Selectors

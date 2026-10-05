@@ -2,19 +2,22 @@
 
 import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { subscribeGrievance, useRealtimeEvent } from '@/lib/realtime';
 import {
   fetchTimelineThunk,
   postTimelineMessageThunk,
   addTimelineNoteThunk,
+  executeTimelineActionThunk,
   deferSLAGrievanceThunk,
   reassignGrievanceThunk,
   setSelectedTicketNumber,
+  attachmentScanVerdictReceived,
   selectTimelineData,
   selectTimelineLoading,
   selectTimelineIsSubmitting,
   selectTimelineError,
 } from '../store/timelineSlice';
-import type { DeferSLAPayload, ReassignGrievancePayload } from '../types';
+import type { DeferSLAPayload, GrievanceActionPayload, ReassignGrievancePayload } from '../types';
 
 interface UseGrievanceTimelineOptions {
   ticketNumber: string | null | undefined;
@@ -37,6 +40,31 @@ export function useGrievanceTimeline({ ticketNumber }: UseGrievanceTimelineOptio
     void dispatch(fetchTimelineThunk({ ticketNumber }));
   }, [ticketNumber, dispatch]);
 
+  // Realtime events name the grievance by its id (document name), which the
+  // timeline response carries; the ticket number alone can't join the room.
+  // The slice only keeps the selected ticket's timeline, so this is never a
+  // previous ticket's id.
+  const grievanceId = timelineData?.name;
+
+  useEffect(() => {
+    if (!grievanceId) return;
+    return subscribeGrievance(grievanceId);
+  }, [grievanceId]);
+
+  const refreshSilently = useCallback(() => {
+    if (ticketNumber) void dispatch(fetchTimelineThunk({ ticketNumber, silent: true }));
+  }, [ticketNumber, dispatch]);
+
+  useRealtimeEvent('attachment_scanned', (event) => {
+    if (!grievanceId || event.grievance !== grievanceId) return;
+    dispatch(attachmentScanVerdictReceived(event));
+    refreshSilently();
+  });
+  // A notification may be about this case, and a resync means events may
+  // have been missed; either way the open case is re-read through REST.
+  useRealtimeEvent('notification', refreshSilently);
+  useRealtimeEvent('resync', refreshSilently);
+
   const refetch = useCallback(() => {
     if (ticketNumber) {
       void dispatch(fetchTimelineThunk({ ticketNumber }));
@@ -55,6 +83,14 @@ export function useGrievanceTimeline({ ticketNumber }: UseGrievanceTimelineOptio
     async (body: string, isInternal = true) => {
       if (!ticketNumber) return;
       return dispatch(addTimelineNoteThunk({ ticketNumber, body, isInternal })).unwrap();
+    },
+    [ticketNumber, dispatch]
+  );
+
+  const executeAction = useCallback(
+    async (payload: GrievanceActionPayload) => {
+      if (!ticketNumber) return;
+      return dispatch(executeTimelineActionThunk({ ticketNumber, payload })).unwrap();
     },
     [ticketNumber, dispatch]
   );
@@ -83,8 +119,8 @@ export function useGrievanceTimeline({ ticketNumber }: UseGrievanceTimelineOptio
     refetch,
     postMessage,
     addNote,
+    executeAction,
     deferSLA,
     reassign,
   };
 }
-

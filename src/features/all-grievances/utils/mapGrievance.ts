@@ -160,6 +160,7 @@ export interface FormattedTimelineEvent {
   rawDate: string;
   fromStatus?: string | null;
   toStatus?: string | null;
+  action?: string | null;
   attachments?: GrievanceTimelineAttachment[];
 }
 
@@ -231,6 +232,7 @@ export function normalizeTimelineEntry(
     rawDate: rawCreated,
     fromStatus: (entry as TimelineEntry).from_status || (entry as TimelineEventItem).from_status,
     toStatus: (entry as TimelineEntry).to_status || (entry as TimelineEventItem).to_status,
+    action: (entry as TimelineEntry).action || null,
     attachments: entry.attachments,
   };
 }

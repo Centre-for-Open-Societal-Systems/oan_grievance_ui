@@ -196,8 +196,8 @@ describe('grievanceService', () => {
     expect(options.method).toBe('POST');
     const body = JSON.parse(options.body as string);
     expect(body.ticket_number).toBe('SOMA-JIG-INP-09905');
-    expect(body.message).toBe('Payment proof submitted.');
     expect(body.body).toBe('Payment proof submitted.');
+    expect(body.is_internal).toBe(false);
   });
 
   it('adds an internal note to the case timeline', async () => {
@@ -205,12 +205,12 @@ describe('grievanceService', () => {
 
     await grievanceService.addNote('SOMA-JIG-INP-09905', 'Internal verification complete.', true);
 
-    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/note');
+    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/message');
     const options = calledOptions();
     expect(options.method).toBe('POST');
     const body = JSON.parse(options.body as string);
     expect(body.ticket_number).toBe('SOMA-JIG-INP-09905');
-    expect(body.note).toBe('Internal verification complete.');
+    expect(body.body).toBe('Internal verification complete.');
     expect(body.is_internal).toBe(true);
   });
 
@@ -229,6 +229,25 @@ describe('grievanceService', () => {
     expect(body.ticket_number).toBe('SOMA-JIG-INP-09905');
     expect(body.action).toBe('Confirm Resolution');
     expect(body.reason).toBe('Issue resolved on site');
+  });
+
+  it('sends only the action fields the request model accepts', async () => {
+    mockJsonResponse({ ticket_number: 'SOMA-JIG-INP-09905', status: 'Closed' });
+
+    await grievanceService.executeAction('SOMA-JIG-INP-09905', {
+      action: 'Close Case',
+      reason: 'Thanks, all sorted.',
+      rating: 5,
+      template: '',
+    });
+
+    const body = JSON.parse(calledOptions().body as string);
+    expect(body).toEqual({
+      ticket_number: 'SOMA-JIG-INP-09905',
+      action: 'Close Case',
+      reason: 'Thanks, all sorted.',
+      rating: 5,
+    });
   });
 
   it('reassigns grievance department and officer', async () => {

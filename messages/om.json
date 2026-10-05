@@ -37,5 +37,69 @@
   },
   "commentsAndCommunication": {
     "messageCount": "{count, plural, one {ergaa #} other {ergaawwan #}} guca kana keessatti"
+  },
+  "notifications": {
+    "label": "Beeksisoota",
+    "unreadLabel": "Beeksisoota, {count} haaraa"
+  },
+  "caseActions": {
+    "submitterTitle": "Deebii keessan",
+    "chooseAction": "Tarkaanfii filadhaa",
+    "nothingToDo": "Amma tarkaanfiin isin irraa eegamu hin jiru. Yeroo komiin keessan jijjiiramu isin beeksifna.",
+    "reasonLabel": "Sababa",
+    "reasonHelp": "Qondaaltonni komii keessan hordofan kana ni argu.",
+    "ratingLabel": "Komiin keessan hammam gaariitti furame?",
+    "ratingOption": "Urjii 5 keessaa {value}",
+    "submitting": "Ergamaa jira…",
+    "success": "\"{action}\" raawwatameera.",
+    "failed": "Tarkaanfichi xumuramuu hin dandeenye. Maaloo irra deebi'aa yaalaa.",
+    "hints": {
+      "submitterReply": "Odeeffannoo qondaalichi gaafate ergaa. Dhimmi keessan gara qondaalichaatti deebi'a.",
+      "reopen": "Hin furamne? Waan ammallee hafe qondaalichatti himaa, dhimmichi irra deebi'ee ni banama.",
+      "closeCase": "Furmaata mirkaneessaa, akkaataa komiin keessan itti qabame sadarkaa kennaa. Kun dhimmicha cufa.",
+      "generic": "Tarkaanfii kanaaf sababa kennaa."
+    },
+    "reasonPlaceholder": "Sababa isaa qondaalichatti himaa…"
+  },
+  "responseForm": {
+    "responseSubmitted": "Deebiin \"{type}\" ergameera."
+  },
+  "admin": {
+    "responseTemplates": {
+      "searchPlaceholder": "Unkaalee deebii barbaadaa…",
+      "serviceCategory": "Gosa tajaajilaa",
+      "allCategories": "Gosoota hunda",
+      "allDepartments": "Kutaalee hunda",
+      "addButton": "+ Unkaa dabaladhaa",
+      "banner": "Qondaaltonni unkaalee kana unka deebii kutaa keessatti filatu. Bal'ina dhimmaa guutuuf jijjiiramtoota akka {exampleA} ykn {exampleB} fayyadamaa.",
+      "loading": "Unkaaleen fe'amaa jiru…",
+      "loadFailed": "Unkaalee deebii fe'uun hin danda'amne.",
+      "retry": "Irra deebi'aa yaalaa",
+      "empty": "Unkaan deebii walsimu hin jiru.",
+      "retired": "Soorame",
+      "used": "Itti fayyadame",
+      "usedTimes": "{count, plural, one {Yeroo # itti fayyadame} other {Yeroo # itti fayyadame}}",
+      "actionTaken": "Tarkaanfii fudhatame",
+      "resolutionSummary": "Cuunfaa furmaataa",
+      "edit": "Unkaa gulaali",
+      "retire": "Soori",
+      "reactivate": "Irra deebi'ii hojiirra oolchi",
+      "retireConfirm": "\"{title}\" ni sooramaa? Qondaaltotaaf hin dhiyaatu. Seenaan itti fayyadamaa ni kuufama, booda irra deebi'anii hojiirra oolchuu dandeessu.",
+      "saveFailed": "Jijjiiramni olkaa'amuu hin dandeenye. Maaloo irra deebi'aa yaalaa.",
+      "addTitle": "Unkaa deebii dabaladhaa",
+      "editTitle": "Unkaa deebii gulaali",
+      "close": "Cufi",
+      "code": "Koodii unkaa",
+      "codeFixed": "Koodiin unkaa addaan baasa, jijjiiramuu hin danda'u.",
+      "titleLabel": "Mata duree",
+      "responseType": "Gosa deebii",
+      "selectResponseType": "Gosa deebii filadhaa",
+      "department": "Kutaa",
+      "active": "Hojiirra",
+      "variablesHint": "Jijjiiramtoota jiran:",
+      "cancel": "Haqi",
+      "save": "Jijjiirama olkaa'i",
+      "add": "Unkaa dabali"
+    }
   }
 }

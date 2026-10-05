@@ -1,4 +1,5 @@
 import { canAccessRoute, homeRouteForRoles, isProtectedRoute, isPublicRouteAllowedWhenAuthenticated } from '@/features/auth/rbac';
+import { env } from '@/lib/env';
 import { hasRecentActivity } from '@/lib/idleSession';
 import { decodeAccessToken, isExpired } from '@/lib/jwt';
 import {
@@ -25,6 +26,21 @@ const isDev = process.env.NODE_ENV === 'development';
  * UI without closing a meaningful attack surface — the vector CSP is actually
  * defending against here is script injection, and `script-src` stays strict.
  */
+/**
+ * The socket.io origin the realtime client connects to (see `env.REALTIME`),
+ * or nothing when realtime is off. A malformed value is logged by the token
+ * route that actually serves it; here it only means the socket stays blocked
+ * rather than every page failing to render.
+ */
+function realtimeConnectSrc(): string {
+  try {
+    const realtime = env.REALTIME;
+    return realtime ? ` ${realtime.url}` : '';
+  } catch {
+    return '';
+  }
+}
+
 function buildCsp(nonce: string): string {
   return [
     `default-src 'self'`,
@@ -37,7 +53,7 @@ function buildCsp(nonce: string): string {
     // URL and the preview modal shows nothing.
     `img-src 'self' data: blob: https://i.pravatar.cc`,
     `font-src 'self'`,
-    `connect-src 'self'`,
+    `connect-src 'self'${realtimeConnectSrc()}`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

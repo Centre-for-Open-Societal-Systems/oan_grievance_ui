@@ -9,6 +9,7 @@ import { SubmitterDetails } from './components/SubmitterDetails';
 import { ThreadSummary } from './components/ThreadSummary';
 import { ResponseForm } from './components/ResponseForm';
 import { AttachmentsList } from './components/AttachmentsList';
+import { CaseActionsPanel } from './components/CaseActionsPanel';
 import { useGrievanceTimeline } from '../hooks/useGrievanceTimeline';
 import type { Grievance } from '../types';
 import { useAppSelector } from '@/store/hooks';
@@ -34,8 +35,8 @@ export function GrievanceDetailSidebar({
     isSubmitting,
     error,
     refetch,
-    postMessage,
     addNote,
+    executeAction,
     deferSLA,
     reassign,
   } = useGrievanceTimeline({
@@ -43,6 +44,11 @@ export function GrievanceDetailSidebar({
   });
 
   if (!activeTicket) return null;
+
+  // An officer takes every action through the department response form
+  // (action, then the response type mapped onto it). A submitter has no
+  // response form, so their actions get the panel in its place.
+  const availableActions = timelineData?.available_actions ?? [];
 
   return (
     <>
@@ -81,11 +87,22 @@ export function GrievanceDetailSidebar({
                 grievance={grievance}
               />
               <ResponseForm
+                ticketNumber={activeTicket}
                 canManageCase={canManageCase}
-                onPostMessage={postMessage}
+                actions={availableActions}
+                isLoadingActions={!timelineData}
+                onExecuteAction={executeAction}
                 onAddNote={addNote}
                 isSubmitting={isSubmitting}
               />
+              {timelineData && !canManageCase ? (
+                <CaseActionsPanel
+                  key={activeTicket}
+                  actions={availableActions}
+                  isSubmitting={isSubmitting}
+                  onExecute={executeAction}
+                />
+              ) : null}
             </div>
 
             {/* Right Column: SLA, Case Management, Submitter, Summary & Attachments */}

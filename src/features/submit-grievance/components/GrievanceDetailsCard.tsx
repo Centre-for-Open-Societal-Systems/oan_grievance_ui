@@ -35,6 +35,7 @@ import {
 import { saveDraft } from "@/lib/drafts";
 import { buildSaveDraftPayload } from "../draftPayload";
 import { getDescriptionError, getDetailsErrors, type DetailsField } from "../wizardSteps";
+import { useRealtimeEvent } from "@/lib/realtime";
 import { logger } from "@/lib/logger";
 
 function isPdf(item: WizardAttachment): boolean {
@@ -712,6 +713,20 @@ export function GrievanceDetailsCard({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the pending id set (pendingAttachmentKey), not the attachments array itself, so a scan resolving elsewhere doesn't restart this poll loop.
   }, [pendingAttachmentKey, clientUuid, setAttachments]);
+
+  // The scan verdict is also pushed to the uploader over the realtime socket
+  // (AsyncAPI `attachment_scanned`), which settles a pending row as soon as
+  // the scanner does. The poll above stays as the fallback for a socket that
+  // is down or disabled: events missed while disconnected are never replayed.
+  useRealtimeEvent("attachment_scanned", (event) => {
+    setAttachments((prev) =>
+      prev.map((item) =>
+        item.attachmentId === event.attachment && item.scanStatus === SCAN_STATUS.PENDING
+          ? { ...item, scanStatus: event.scan_status }
+          : item
+      )
+    );
+  });
 
   return (
     <>
