@@ -3,16 +3,17 @@
 import { useState } from 'react';
 import { AlertCircle, CalendarClock, CheckCircle2, Clock, Timer } from 'lucide-react';
 import { DeferSLAPopup } from './DeferSLAPopup';
-import type { Grievance, GrievanceTimelineData } from '../../types';
+import type { DeferSLAPayload, Grievance, GrievanceChangeResponseData, GrievanceTimelineData } from '../../types';
 import { formatDate } from '../../utils/mapGrievance';
 
 interface SLATrackerProps {
   canManageCase: boolean;
   grievance: Grievance;
   timelineData?: GrievanceTimelineData | null;
+  onDefer: (payload: DeferSLAPayload) => Promise<GrievanceChangeResponseData | undefined>;
 }
 
-export function SLATracker({ canManageCase, grievance, timelineData }: SLATrackerProps) {
+export function SLATracker({ canManageCase, grievance, timelineData, onDefer }: SLATrackerProps) {
   const [showPopup, setShowPopup] = useState(false);
   const canDefer = canManageCase;
 
@@ -131,7 +132,13 @@ export function SLATracker({ canManageCase, grievance, timelineData }: SLATracke
         </div>
       </div>
 
-      {canDefer && showPopup && <DeferSLAPopup onClose={() => setShowPopup(false)} />}
+      {canDefer && showPopup && (
+        <DeferSLAPopup
+          onDefer={onDefer}
+          onClose={() => setShowPopup(false)}
+        />
+      )}
     </>
   );
 }
+

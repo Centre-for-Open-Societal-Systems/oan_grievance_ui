@@ -48,15 +48,17 @@ const sessionExpiryMiddleware: Middleware<object, { auth: AuthState }> = (api) =
   return result;
 };
 
-export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    metadata: metadataReducer,
-    timeline: timelineReducer,
-    [areasApi.reducerPath]: areasApi.reducer,
-  },
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sessionExpiryMiddleware, areasApi.middleware),
-});
+export const makeStore = () =>
+  configureStore({
+    reducer: {
+      auth: authReducer,
+      metadata: metadataReducer,
+      timeline: timelineReducer,
+      [areasApi.reducerPath]: areasApi.reducer,
+    },
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sessionExpiryMiddleware, areasApi.middleware),
+  });
 
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
+export type AppStore = ReturnType<typeof makeStore>;
+export type RootState = ReturnType<AppStore['getState']>;
+export type AppDispatch = AppStore['dispatch'];

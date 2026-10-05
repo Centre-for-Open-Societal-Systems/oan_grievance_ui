@@ -147,11 +147,153 @@ describe('timelineSlice', () => {
     const nextState = timelineReducer(currentState, {
       type: 'timeline/executeAction/fulfilled',
       payload: actionResult,
+      meta: { arg: { ticketNumber: 'ET14IN000012026' } },
     });
 
     expect(nextState.isSubmitting).toBe(false);
     expect(nextState.timelineData?.status).toBe('Closed');
     expect(nextState.timelineData?.timeline?.length).toBe(2);
     expect(nextState.timelineData?.timeline?.[1]?.body).toBe('Resolution confirmed by submitter');
+  });
+
+  it('updates sla_due_date and appends timeline_event on deferSLAGrievanceThunk.fulfilled', () => {
+    const currentState: TimelineState = {
+      selectedTicketNumber: 'ET14IN000012026',
+      timelineData: { ...sampleTimelineData },
+      status: 'succeeded',
+      error: null,
+      isSubmitting: true,
+      submitError: null,
+    };
+
+    const deferResult = {
+      ticket_number: 'ET14IN000012026',
+      status: 'In Progress',
+      sla_due_date: '2026-05-17T17:00:00Z',
+      change_request: {
+        name: 'CR-0001',
+        ticket_number: 'ET14IN000012026',
+        subject: 'Defer SLA by 7 days',
+        status: 'Pending',
+        requested_by: 'officer@example.com',
+        changes: [{ fieldname: 'sla_due_date', new_value: '2026-05-17T17:00:00Z' }],
+        trail: [],
+      },
+      current_state: {
+        status: 'In Progress',
+        escalated: false,
+      },
+      timeline_event: {
+        id: 'GR-TIME-000003',
+        entry_type: 'deferral',
+        is_internal: true,
+        body: 'SLA deferral requested for 7 days',
+        created_on: '2026-04-11T12:00:00Z',
+      },
+    };
+
+    const nextState = timelineReducer(currentState, {
+      type: 'timeline/deferSLA/fulfilled',
+      payload: deferResult,
+      meta: { arg: { ticketNumber: 'ET14IN000012026' } },
+    });
+
+    expect(nextState.isSubmitting).toBe(false);
+    expect(nextState.timelineData?.sla?.sla_due_date).toBe('2026-05-17T17:00:00Z');
+    expect(nextState.timelineData?.timeline?.length).toBe(2);
+    expect(nextState.timelineData?.timeline?.[1]?.body).toBe('SLA deferral requested for 7 days');
+  });
+
+  it('updates department/assignee and appends timeline_event on reassignGrievanceThunk.fulfilled', () => {
+    const currentState: TimelineState = {
+      selectedTicketNumber: 'ET14IN000012026',
+      timelineData: { ...sampleTimelineData },
+      status: 'succeeded',
+      error: null,
+      isSubmitting: true,
+      submitError: null,
+    };
+
+    const reassignResult = {
+      ticket_number: 'ET14IN000012026',
+      status: 'Assigned',
+      assigned_dept: 'Credit & Financial Services',
+      assigned_to: 'Abebe Bekele',
+      change_request: {
+        name: 'CR-0002',
+        ticket_number: 'ET14IN000012026',
+        subject: 'Reassign to Credit & Financial Services',
+        status: 'Pending',
+        requested_by: 'officer@example.com',
+        changes: [{ fieldname: 'assigned_dept', new_value: 'Credit & Financial Services' }],
+        trail: [],
+      },
+      current_state: {
+        status: 'Assigned',
+        escalated: false,
+        department: 'Credit & Financial Services',
+        assigned_to: 'Abebe Bekele',
+      },
+      timeline_event: {
+        id: 'GR-TIME-000004',
+        entry_type: 'reassignment',
+        is_internal: true,
+        body: 'Reassignment requested to Credit & Financial Services',
+        created_on: '2026-04-11T13:00:00Z',
+      },
+    };
+
+    const nextState = timelineReducer(currentState, {
+      type: 'timeline/reassign/fulfilled',
+      payload: reassignResult,
+      meta: { arg: { ticketNumber: 'ET14IN000012026' } },
+    });
+
+    expect(nextState.isSubmitting).toBe(false);
+    expect(nextState.timelineData?.assignment?.department).toBe('Credit & Financial Services');
+    expect(nextState.timelineData?.assignment?.assigned_to).toBe('Abebe Bekele');
+    expect(nextState.timelineData?.timeline?.length).toBe(2);
+  });
+
+  it('ignores a late timeline response for a ticket that is no longer selected', () => {
+    const onTicketB: TimelineState = {
+      ...initialTimelineState,
+      selectedTicketNumber: 'TICKET-B',
+      status: 'loading',
+    };
+
+    const lateFulfilled = timelineReducer(onTicketB, {
+      type: 'timeline/fetchTimeline/fulfilled',
+      payload: { ...sampleTimelineData, ticket_number: 'TICKET-A' },
+      meta: { arg: { ticketNumber: 'TICKET-A' } },
+    });
+    expect(lateFulfilled.timelineData).toBeNull();
+    expect(lateFulfilled.status).toBe('loading');
+
+    const lateRejected = timelineReducer(onTicketB, {
+      type: 'timeline/fetchTimeline/rejected',
+      payload: 'boom',
+      meta: { arg: { ticketNumber: 'TICKET-A' } },
+    });
+    expect(lateRejected.status).toBe('loading');
+    expect(lateRejected.error).toBeNull();
+  });
+
+  it('ignores a late mutation response for a ticket that is no longer selected', () => {
+    const onTicketB: TimelineState = {
+      ...initialTimelineState,
+      selectedTicketNumber: 'TICKET-B',
+      timelineData: { ...sampleTimelineData, status: 'In Progress' },
+      status: 'succeeded',
+      isSubmitting: true,
+    };
+
+    const next = timelineReducer(onTicketB, {
+      type: 'timeline/reassign/fulfilled',
+      payload: { ticket_number: 'TICKET-A', current_state: { status: 'Closed', escalated: false } },
+      meta: { arg: { ticketNumber: 'TICKET-A' } },
+    });
+    expect(next.timelineData?.status).toBe('In Progress');
+    expect(next.isSubmitting).toBe(false);
   });
 });

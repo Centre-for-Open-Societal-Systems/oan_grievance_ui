@@ -36,7 +36,8 @@ export function GrievanceDetailSidebar({
     refetch,
     postMessage,
     addNote,
-    executeAction,
+    deferSLA,
+    reassign,
   } = useGrievanceTimeline({
     ticketNumber: activeTicket,
   });
@@ -94,19 +95,24 @@ export function GrievanceDetailSidebar({
                   canManageCase={canManageCase}
                   grievance={grievance}
                   timelineData={timelineData}
+                  onDefer={deferSLA}
                 />
               ) : null}
               <CaseManagement
                 canManageCase={canManageCase}
+                ticketNumber={activeTicket}
                 timelineData={timelineData}
-                onExecuteAction={executeAction}
+                onReassign={reassign}
               />
+
               {grievance ? (
                 <SubmitterDetails grievance={grievance} timelineData={timelineData} />
               ) : null}
               <ThreadSummary canManageCase={canManageCase} timelineData={timelineData} />
               <AttachmentsList
-                grievance={timelineData?.name || grievance?.id || activeTicket}
+                attachments={timelineData?.attachments}
+                isLoading={isLoading}
+                error={error}
               />
             </div>
           </div>

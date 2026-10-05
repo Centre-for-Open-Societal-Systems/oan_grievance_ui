@@ -17,6 +17,8 @@ export interface SubmitGrievancePayload {
   submitter_type?: string;
   submitter_name?: string;
   contact_mobile?: string;
+  country_code?: string;
+  phone_number?: string;
   contact_email?: string;
   /** `area_id` or `path_code` of the woreda or kebele filed against — never a display name (the wizard holds areas as `AreaRef`s). */
   administrative_area?: string;

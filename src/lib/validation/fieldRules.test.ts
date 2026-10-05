@@ -54,7 +54,7 @@ describe('validateFullName', () => {
 
 describe('validateLocalPhone', () => {
   const ETHIOPIA = '+251';
-  const ETHIOPIA_INVALID_MESSAGE = 'Enter a valid Ethiopian mobile number, e.g. 0911234567 (10 digits, starting 09 or 07).';
+  const ETHIOPIA_INVALID_MESSAGE = 'Enter a valid Ethiopian mobile number, e.g. 0911234567 or 911234567 (starts with 09, 07, 9, or 7).';
   const GENERIC_INVALID_MESSAGE = 'Enter a valid phone number for the selected country.';
 
   it('asks for a number when blank, whatever country is selected', () => {
@@ -63,21 +63,27 @@ describe('validateLocalPhone', () => {
   });
 
   describe('Ethiopia (+251) — the backend has a real rule for this one', () => {
-    it('requires exactly ten digits', () => {
-      expect(validateLocalPhone('091100000', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // 9 digits
-      expect(validateLocalPhone('09110000000', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // 11 digits
+    it('requires 9 or 10 digits starting with valid prefix', () => {
+      expect(validateLocalPhone('09110000', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // 8 digits (too short)
+      expect(validateLocalPhone('09110000000', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // 11 digits (too long)
+      expect(validateLocalPhone('9110000', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // 7 digits
     });
 
-    it('accepts a real Ethiopian mobile number, leading 0 then 9 or 7', () => {
+    it('accepts both 10-digit (domestic trunk 0) and 9-digit (national significant) Ethiopian mobile numbers', () => {
+      // 10 digits (with domestic trunk 0)
       expect(validateLocalPhone('0911000000', ETHIOPIA)).toBeNull();
       expect(validateLocalPhone('0711000000', ETHIOPIA)).toBeNull();
+
+      // 9 digits (national significant number without 0)
+      expect(validateLocalPhone('911000000', ETHIOPIA)).toBeNull();
+      expect(validateLocalPhone('711000000', ETHIOPIA)).toBeNull();
     });
 
-    it("rejects a 10-digit number that is not actually Ethiopian — the shape the backend's own error names", () => {
-      // +2515454444444 (this local part with +251 prepended) is exactly the
-      // number oan_grievance_service's normalise_mobile rejects as invalid.
-      expect(validateLocalPhone('5454444444', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // no leading 0
+    it("rejects numbers that do not match the Ethiopian mobile prefix rules", () => {
+      expect(validateLocalPhone('5454444444', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // 10 digits, starts 5
+      expect(validateLocalPhone('545444444', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // 9 digits, starts 5
       expect(validateLocalPhone('0811234567', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // leading 0, but starts 08 not 09/07
+      expect(validateLocalPhone('811234567', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // 9 digits, starts 8
       expect(validateLocalPhone('0011234567', ETHIOPIA)).toBe(ETHIOPIA_INVALID_MESSAGE); // leading 0, but starts 00
     });
   });

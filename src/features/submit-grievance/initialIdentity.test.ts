@@ -16,7 +16,8 @@ describe('buildInitialIdentityValues', () => {
     expect(buildInitialIdentityValues(FULL_USER, null, 'individual')).toEqual({
       fullName: 'Tigist Agent',
       faydaId: 'ET-FAYDA-111',
-      phoneNumber: '+251911000000',
+      phoneCode: '+251',
+      phoneNumber: '911000000',
       email: 'agent@example.com',
     });
   });

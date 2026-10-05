@@ -2,19 +2,15 @@
 export const PHONE_NUMBER_LENGTH = 10;
 
 /**
- * A local Ethiopian mobile number as typed in the phone box: a leading trunk
- * `0` followed by a 9-digit subscriber number starting with `7` or `9`.
+ * A local Ethiopian mobile number as typed in the phone box: either a 9-digit
+ * national significant number (e.g. 911234567 or 711234567) or a 10-digit
+ * domestic number with a leading trunk `0` (e.g. 0911234567 or 0711234567).
  *
- * Mirrors the backend's own rule exactly — `oan_grievance_service`'s
- * `normalise_mobile` / `MOBILE_PATTERN` (services/submission.py) strips a
- * leading `0` (or `+251`) and then requires exactly `^[79]\d{8}$` on what's
- * left. Before this matched that check, any 10 digits passed here (e.g.
- * "5454444444", no leading 0, first digit 5) — accepted at registration,
- * concatenated with the country code into a number the backend would only
- * ever reject, and surfacing only as a confusing field error the first time
- * a grievance was submitted, nowhere near where the bad number was typed.
+ * Mirrors the backend's own rule — `oan_grievance_service`'s `normalise_mobile` /
+ * `MOBILE_PATTERN` (services/submission.py) strips a leading `0` (or `+251`)
+ * and then requires exactly `^[79]\d{8}$` on what's left.
  */
-export const PHONE_NUMBER_REGEX = /^0[79]\d{8}$/;
+export const PHONE_NUMBER_REGEX = /^0?[79]\d{8}$/;
 
 /** The dial code this app has an actual, backend-confirmed local-number rule for. */
 export const ETHIOPIA_DIAL_CODE = '+251';
@@ -56,14 +52,8 @@ export const KNOWN_COUNTRY_CODES = ['+251', '+254', '+255', '+256', '+250', '+25
  * since the form there sends a number already combined with a country/dial
  * code, the same shape this one accepts alongside the bare local form).
  * Deliberately loose (8-15 digits, not pinned to a specific country's
- * length) rather than "+251 plus exactly 9 digits": a live account's own phone number
- * (`user.mobile_no`, prefilled straight into Submit Grievance's Step 1
- * without the user retyping it) already comes from a trusted backend
- * source, normalized however that backend normalizes it — this repo's own
- * authApi.test.ts fixture for a real getMe() response is
- * "+2519344012394" as one concrete example, 10 digits after +251, not 9. A
- * stricter length check would reject a real, already-valid number the
- * app itself produced, on a field the user never touched.
+ * length): per-country length is libphonenumber's call on the backend, and
+ * this is only a shape check until the frontend uses the same metadata.
  */
 export const PHONE_NUMBER_E164_REGEX = /^\+\d{8,15}$/;
 

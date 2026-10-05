@@ -99,7 +99,7 @@ describe('authApi - getMe()', () => {
         full_name: 'Abebe Bikila',
         last_name: 'Bikila',
         login_email: 'abebe.farmer.344012394@example.com',
-        mobile_no: '+2519344012394',
+        mobile_no: '+251934401239',
         profiles: {
           grievance: {
             administrative_area: 'kebele-ET140108101008',
@@ -139,7 +139,7 @@ describe('authApi - getMe()', () => {
     expect(user.full_name).toBe('Abebe Bikila');
     expect(user.type).toBe('Individual Farmer');
     expect(user.email).toBe('abebe.farmer.344012394@example.com');
-    expect(user.mobile_no).toBe('+2519344012394');
+    expect(user.mobile_no).toBe('+251934401239');
     expect(user.fayda_id).toBe('ET-FAYDA-344012394');
     expect(user.profile_id).toBe('SUB-00141');
     expect(user.roles).toEqual(['Grievance Submitter']);

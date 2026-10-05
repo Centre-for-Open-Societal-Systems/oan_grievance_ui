@@ -66,6 +66,8 @@ describe("buildSaveDraftPayload", () => {
       submitter_type: "",
       submitter_name: "",
       contact_mobile: "",
+      country_code: "+251",
+      phone_number: "",
       contact_email: "",
       administrative_area: undefined,
       administrative_unit: "",

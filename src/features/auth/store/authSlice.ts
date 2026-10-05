@@ -10,6 +10,8 @@ export interface User {
   first_name?: string;
   last_name?: string;
   mobile_no?: string;
+  country_code?: string;
+  phone_number?: string;
   type?: string;
   profile_id?: string;
   fayda_id?: string;

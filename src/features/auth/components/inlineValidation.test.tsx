@@ -22,7 +22,7 @@ vi.mock('@/features/auth/api/authApi', async (importOriginal) => ({
 }));
 
 import { IndividualFarmerForm } from '@/components/submitter-identity/SI-IndividualFarmerForm';
-import { store } from '@/store';
+import { makeStore } from '@/store';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 
@@ -59,7 +59,7 @@ describe('LoginForm inline validation', () => {
 
   const renderLogin = () =>
     render(
-      <Provider store={store}>
+      <Provider store={makeStore()}>
         <LoginForm />
       </Provider>
     );

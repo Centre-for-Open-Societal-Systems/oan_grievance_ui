@@ -1,6 +1,7 @@
 import { normalizeSubmitterType } from "@/features/metadata";
 import type { User } from "@/features/auth/store/authSlice";
 import { submitsOnBehalfOfOthers } from "@/components/submitter-identity/fields";
+import { splitPhoneNumber } from "@/lib/validation/phone";
 import type { SubmitterProfile } from "@/lib/submitterProfile";
 
 const KNOWN_TYPES = ["individual", "cooperative", "ngo", "woreda_kebele", "development_agent"];
@@ -53,7 +54,14 @@ export function buildInitialIdentityValues(
   if (user) {
     if (user.full_name) initial.fullName = user.full_name;
     if (user.fayda_id) initial.faydaId = user.fayda_id;
-    if (user.mobile_no) initial.phoneNumber = user.mobile_no;
+    if (user.phone_number) {
+      initial.phoneNumber = user.phone_number;
+      initial.phoneCode = user.country_code || "+251";
+    } else if (user.mobile_no) {
+      const parsed = splitPhoneNumber(user.mobile_no);
+      initial.phoneCode = parsed.phoneCode;
+      initial.phoneNumber = parsed.phoneNumber;
+    }
     if (user.email) initial.email = user.email;
   }
   return initial;

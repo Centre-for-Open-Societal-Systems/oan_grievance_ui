@@ -45,7 +45,7 @@ export function validateLocalPhone(digits: string, dialCode: string): string | n
   if (!digits) return 'Enter your phone number.';
   if (!isValidLocalPhoneForCountry(digits, dialCode)) {
     return isEthiopianDialCode(dialCode)
-      ? 'Enter a valid Ethiopian mobile number, e.g. 0911234567 (10 digits, starting 09 or 07).'
+      ? 'Enter a valid Ethiopian mobile number, e.g. 0911234567 or 911234567 (starts with 09, 07, 9, or 7).'
       : 'Enter a valid phone number for the selected country.';
   }
   return null;

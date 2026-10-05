@@ -16,6 +16,8 @@ export interface BackendAuthMeData {
   last_name?: string;
   full_name?: string;
   mobile_no?: string;
+  country_code?: string;
+  phone_number?: string;
   roles?: string[];
   profiles?: {
     grievance?: {
@@ -24,6 +26,8 @@ export interface BackendAuthMeData {
       administrative_unit?: string | null;
       contact_email?: string | null;
       contact_mobile?: string | null;
+      country_code?: string | null;
+      phone_number?: string | null;
       department?: string | null;
       /** e.g. `[{ scheme: "fayda", value: "3214..." }]` — see `resolveFaydaId`. */
       identities?: Array<{ scheme?: string | null; value?: string | null }> | null;
@@ -210,6 +214,8 @@ export async function getMe(): Promise<User> {
     first_name: d.first_name || undefined,
     last_name: d.last_name || undefined,
     mobile_no: d.mobile_no || grievanceProfile?.contact_mobile || undefined,
+    country_code: d.country_code || grievanceProfile?.country_code || undefined,
+    phone_number: d.phone_number || grievanceProfile?.phone_number || undefined,
     type,
     profile_id: grievanceProfile?.profile_id || undefined,
     fayda_id: resolveFaydaId(grievanceProfile?.identities),
