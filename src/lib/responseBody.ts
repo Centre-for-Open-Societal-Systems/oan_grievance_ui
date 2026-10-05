@@ -26,7 +26,10 @@ export function composeResponseBody({ actionTaken, resolutionSummary }: Response
  * (an older template, or one written by hand) is treated as all summary,
  * since the summary is what the submitter reads.
  */
-export function splitResponseBody(body: string): ResponseParts {
+export function splitResponseBody(body: string | null | undefined): ResponseParts {
+  if (!body) {
+    return { actionTaken: '', resolutionSummary: '' };
+  }
   const actionAt = body.indexOf(ACTION_TAKEN_HEADING);
   const summaryAt = body.indexOf(RESOLUTION_SUMMARY_HEADING, actionAt + 1);
   if (actionAt === -1 || summaryAt === -1) {
