@@ -8,7 +8,7 @@ export interface ResponseTemplate {
   /** Template code; the identifier, fixed once created. */
   template: string;
   title: string;
-  response_type: string;
+  action: string;
   /** Null for every department. */
   department?: string | null;
   /** Null for every category. */
@@ -44,7 +44,7 @@ export interface ResponseTemplateData {
 export interface ResponseTemplateListParams {
   page?: number;
   page_size?: number;
-  response_type?: string;
+  action?: string;
   department?: string;
   service_category?: string;
   is_active?: boolean;
@@ -54,7 +54,7 @@ export interface ResponseTemplateListParams {
 export interface CreateResponseTemplatePayload {
   template: string;
   title: string;
-  response_type: string;
+  action: string;
   department?: string | null;
   service_category?: string | null;
   body: string;
@@ -63,19 +63,6 @@ export interface CreateResponseTemplatePayload {
 
 /** `UpdateResponseTemplateRequest`: partial; the code can't change, and null clears a scope. */
 export type UpdateResponseTemplatePayload = Partial<Omit<CreateResponseTemplatePayload, 'template'>>;
-
-/** `AdminResponseType`, the choices for a template's response type. */
-export interface AdminResponseType {
-  response_type: string;
-  workflow_action: string;
-  description?: string | null;
-  is_active: boolean;
-}
-
-export interface AdminResponseTypeListData {
-  response_types: AdminResponseType[];
-  pagination: Pagination;
-}
 
 /** The variables `render_context` in the service makes available to a template body. */
 export const TEMPLATE_VARIABLES = [

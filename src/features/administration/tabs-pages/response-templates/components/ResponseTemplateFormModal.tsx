@@ -21,7 +21,7 @@ export interface SelectOption {
 export interface ResponseTemplateFormModalProps {
   /** The template being edited; absent when adding one. */
   template?: ResponseTemplate | null;
-  responseTypes: SelectOption[];
+  actions: SelectOption[];
   departments: SelectOption[];
   serviceCategories: SelectOption[];
   onCreate: (payload: CreateResponseTemplatePayload) => Promise<unknown>;
@@ -39,7 +39,7 @@ const inputClass =
  */
 export function ResponseTemplateFormModal({
   template,
-  responseTypes,
+  actions,
   departments,
   serviceCategories,
   onCreate,
@@ -55,7 +55,7 @@ export function ResponseTemplateFormModal({
   const initialParts = template ? splitResponseBody(template.body) : { actionTaken: '', resolutionSummary: '' };
   const [code, setCode] = useState(template?.template ?? '');
   const [title, setTitle] = useState(template?.title ?? '');
-  const [responseType, setResponseType] = useState(template?.response_type ?? '');
+  const [action, setAction] = useState(template?.action ?? '');
   const [department, setDepartment] = useState(template?.department ?? '');
   const [serviceCategory, setServiceCategory] = useState(template?.service_category ?? '');
   const [actionTaken, setActionTaken] = useState(initialParts.actionTaken);
@@ -88,7 +88,7 @@ export function ResponseTemplateFormModal({
   const isValid =
     code.trim() !== '' &&
     title.trim() !== '' &&
-    responseType !== '' &&
+    action !== '' &&
     actionTaken.trim() !== '' &&
     resolutionSummary.trim() !== '';
 
@@ -99,7 +99,7 @@ export function ResponseTemplateFormModal({
     setError(null);
     const fields = {
       title: title.trim(),
-      response_type: responseType,
+      action: action,
       // An empty scope means "every department/category": null clears it on edit, omitted on create.
       department: department || null,
       service_category: serviceCategory || null,
@@ -172,11 +172,11 @@ export function ResponseTemplateFormModal({
                 <input id={id} value={title} onChange={(e) => setTitle(e.target.value)} required className={inputClass} />
               )}
             </Field>
-            <Field label={t('responseType')} required>
+            <Field label={t('action')} required>
               {(id) => (
-                <select id={id} value={responseType} onChange={(e) => setResponseType(e.target.value)} required className={inputClass}>
-                  <option value="">{t('selectResponseType')}</option>
-                  {withCurrent(responseTypes, responseType).map((o) => (
+                <select id={id} value={action} onChange={(e) => setAction(e.target.value)} required className={inputClass}>
+                  <option value="">{t('selectAction')}</option>
+                  {withCurrent(actions, action).map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>

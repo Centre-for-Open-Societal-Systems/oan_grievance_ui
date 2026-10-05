@@ -7,7 +7,7 @@ import en from '../../../../../../messages/en.json';
 import { ResponseTemplateFormModal, type ResponseTemplateFormModalProps } from './ResponseTemplateFormModal';
 
 const OPTIONS = {
-  responseTypes: [{ value: 'Resolved', label: 'Resolved' }],
+  actions: [{ value: 'Resolved', label: 'Resolved' }],
   departments: [{ value: 'DEPT-INPUTS', label: 'Inputs Supply' }],
   serviceCategories: [{ value: 'Inputs', label: 'Inputs' }],
 };
@@ -37,7 +37,7 @@ describe('ResponseTemplateFormModal', () => {
 
     change(/Template code/, 'TPL-RESOLVED-INPUTS');
     change(/^Title/, 'Fertilizer delivered');
-    change(/Response type/, 'Resolved');
+    fireEvent.change(screen.getByRole('combobox', { name: /Action/i }), { target: { value: 'Resolved' } });
     change(/Service Category/, 'Inputs');
     change(/Action taken/, 'Checked stock for {{ ticket_number }}.');
     change(/Resolution summary/, 'Delivered on {{ today }}.');
@@ -47,7 +47,7 @@ describe('ResponseTemplateFormModal', () => {
     expect(onCreate).toHaveBeenCalledWith({
       template: 'TPL-RESOLVED-INPUTS',
       title: 'Fertilizer delivered',
-      response_type: 'Resolved',
+      action: 'Resolved',
       department: undefined,
       service_category: 'Inputs',
       body: 'Action taken:\nChecked stock for {{ ticket_number }}.\n\nResolution summary:\nDelivered on {{ today }}.',
@@ -60,7 +60,7 @@ describe('ResponseTemplateFormModal', () => {
       template: {
         template: 'TPL-1',
         title: 'Old title',
-        response_type: 'Resolved',
+        action: 'Resolved',
         department: 'DEPT-INPUTS',
         service_category: null,
         body: 'Action taken:\nCalled the agent.\n\nResolution summary:\nPaid.',
@@ -85,7 +85,7 @@ describe('ResponseTemplateFormModal', () => {
 
     change(/Template code/, 'TPL-1');
     change(/^Title/, 'T');
-    change(/Response type/, 'Resolved');
+    fireEvent.change(screen.getByRole('combobox', { name: /Action/i }), { target: { value: 'Resolved' } });
     change(/Action taken/, 'A');
     change(/Resolution summary/, 'B');
     fireEvent.click(screen.getByRole('button', { name: 'Add template' }));

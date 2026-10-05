@@ -1,6 +1,5 @@
 import { fetchApi } from '@/lib/api';
 import type {
-  AdminResponseTypeListData,
   CreateResponseTemplatePayload,
   ResponseTemplateData,
   ResponseTemplateListData,
@@ -80,9 +79,4 @@ export function retireResponseTemplate(template: string): Promise<ResponseTempla
 /**
  * Corresponding REST endpoint: GET /api/v1/response-types
  */
-export function fetchAdminResponseTypes(options: RequestOptions = {}): Promise<AdminResponseTypeListData> {
-  return fetchApi<AdminResponseTypeListData>(
-    `/api/v1/response-types${query({ page_size: MAX_PAGE_SIZE, is_active: true })}`,
-    { method: 'GET', signal: options.signal }
-  );
-}
+

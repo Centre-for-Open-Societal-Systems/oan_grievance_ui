@@ -15,14 +15,16 @@ interface ResponseTemplateRowProps {
     onReactivate: (template: ResponseTemplate) => void;
 }
 
-const getStatusStyles = (responseType: string) => {
-    switch (responseType) {
-        case 'Resolved':
+const getStatusStyles = (action: string) => {
+    switch (action) {
+        case 'Resolve':
             return 'bg-[#E1F9E8] text-[#1A9F53] border-[#B7ECC9]';
-        case 'Partially Resolved':
+        case 'Submit Response':
             return 'bg-[#E1EDFF] text-[#2F65CB] border-[#C3DDFD]';
-        case 'Requires further info':
+        case 'Request More Info':
             return 'bg-[#FFF3E5] text-[#D0621D] border-[#FBD6B7]';
+        case 'Reject':
+            return 'bg-[#FFE5E5] text-[#D01D1D] border-[#FBB7B7]';
         default:
             return 'bg-gray-100 text-gray-700 border-gray-200';
     }
@@ -74,8 +76,8 @@ export function ResponseTemplateRow({
                             {t('retired')}
                         </span>
                     )}
-                    <span className={`px-2.5 py-1 rounded-full text-[12px] font-semibold border ${getStatusStyles(template.response_type)}`}>
-                        {template.response_type}
+                    <span className={`px-2.5 py-1 rounded-full text-[12px] font-semibold border ${getStatusStyles(template.action)}`}>
+                        {template.action}
                     </span>
                     <div className="flex flex-col justify-center">
                         <span className="text-[11px] text-[#717182] font-medium leading-none mb-1">{t('used')}</span>

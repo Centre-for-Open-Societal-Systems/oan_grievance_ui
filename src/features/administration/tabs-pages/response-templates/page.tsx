@@ -7,7 +7,6 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { useGrievanceOptions } from '@/features/metadata';
 import {
   createResponseTemplate,
-  fetchAdminResponseTypes,
   fetchResponseTemplates,
   MAX_PAGE_SIZE,
   retireResponseTemplate,
@@ -38,7 +37,6 @@ export default function ResponseTemplatesPage() {
     const [reloadKey, setReloadKey] = useState(0);
     const [form, setForm] = useState<FormState>(null);
 
-    const [responseTypes, setResponseTypes] = useState<SelectOption[]>([]);
     const { data: grievanceOptions } = useGrievanceOptions();
 
     const reload = useCallback(() => setReloadKey((key) => key + 1), []);
@@ -63,19 +61,12 @@ export default function ResponseTemplatesPage() {
         return () => controller.abort();
     }, [selectedCategory, reloadKey, t]);
 
-    useEffect(() => {
-        const controller = new AbortController();
-        fetchAdminResponseTypes({ signal: controller.signal })
-            .then((data) =>
-                setResponseTypes(
-                    (data?.response_types ?? []).map((rt) => ({ value: rt.response_type, label: rt.response_type }))
-                )
-            )
-            .catch(() => {
-                // The form still opens; the type list is just empty until a reload.
-            });
-        return () => controller.abort();
-    }, []);
+    const actions: SelectOption[] = useMemo(() => [
+        { value: 'Resolve', label: 'Resolve' },
+        { value: 'Request More Info', label: 'Request More Info' },
+        { value: 'Reject', label: 'Reject' },
+        { value: 'Submit Response', label: 'Submit Response' },
+    ], []);
 
     const departments = useMemo<SelectOption[]>(
         () => (grievanceOptions?.departments ?? []).map((d) => ({ value: d.department_id, label: d.department_name })),
@@ -92,7 +83,7 @@ export default function ResponseTemplatesPage() {
         const search = searchTerm.trim().toLowerCase();
         if (!search) return templates;
         return templates.filter((template) =>
-            [template.template, template.title, template.response_type, template.body].some((field) =>
+            [template.template, template.title, template.action, template.body].some((field) =>
                 field.toLowerCase().includes(search)
             )
         );
@@ -207,7 +198,7 @@ export default function ResponseTemplatesPage() {
             {form !== null && (
                 <ResponseTemplateFormModal
                     template={form === 'new' ? null : form}
-                    responseTypes={responseTypes}
+                    actions={actions}
                     departments={departments}
                     serviceCategories={serviceCategories}
                     onCreate={handleCreate}
