@@ -1,3 +1,5 @@
+import type { ResponseParts } from '@/lib/responseBody';
+
 /**
  * Response templates as administrators manage them — mirrors
  * `AdminResponseTemplate` and its request bodies in
@@ -13,11 +15,13 @@ export interface ResponseTemplate {
   department?: string | null;
   /** Null for every category. */
   service_category?: string | null;
-  /**
-   * Jinja template for the action's reason, unrendered. Authored and shown
-   * as Action taken + Resolution summary (see `@/lib/responseBody`).
-   */
+  /** Jinja template for the action's reason, unrendered. */
   body: string;
+  /**
+   * `body` split into Action taken + Resolution summary, as it is authored and
+   * shown; null for a template not written in two parts.
+   */
+  reason_parts?: ResponseParts | null;
   /** Actions sent with this template. */
   usage_count: number;
   is_active: boolean;
@@ -52,12 +56,14 @@ export interface ResponseTemplateListParams {
 
 /** `CreateResponseTemplateRequest`. An omitted department or category means "every". */
 export interface CreateResponseTemplatePayload {
-  template: string;
   title: string;
   action: string;
   department?: string | null;
   service_category?: string | null;
-  body: string;
+  /** The body's two parts; the service stores them together as the body. */
+  action_taken?: string;
+  resolution_summary?: string;
+  body?: string;
   is_active?: boolean;
 }
 

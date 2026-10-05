@@ -209,7 +209,12 @@ export async function executeGrievanceAction(
       body: JSON.stringify({
         ticket_number: ticketNumber,
         action: payload.action,
-        reason: payload.reason,
+        ...('reason' in payload
+          ? { reason: payload.reason }
+          : {
+              action_taken: payload.action_taken,
+              resolution_summary: payload.resolution_summary,
+            }),
         ...(payload.internal_notes ? { internal_notes: payload.internal_notes } : {}),
         ...(payload.template ? { template: payload.template } : {}),
         ...(payload.rating != null ? { rating: payload.rating } : {}),

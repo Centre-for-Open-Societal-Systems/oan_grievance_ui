@@ -63,7 +63,9 @@ export default function ResponseTemplatesPage() {
 
     const actions: SelectOption[] = useMemo(() => [
         { value: 'Resolve', label: 'Resolve' },
+        { value: 'Partially Resolve', label: 'Partially Resolve' },
         { value: 'Request More Info', label: 'Request More Info' },
+        { value: 'Refer Onward', label: 'Refer Onward' },
         { value: 'Reject', label: 'Reject' },
         { value: 'Submit Response', label: 'Submit Response' },
     ], []);
@@ -84,7 +86,7 @@ export default function ResponseTemplatesPage() {
         if (!search) return templates;
         return templates.filter((template) =>
             [template.template, template.title, template.action, template.body].some((field) =>
-                field.toLowerCase().includes(search)
+                (field || '').toLowerCase().includes(search)
             )
         );
     }, [templates, searchTerm]);

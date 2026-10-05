@@ -37,8 +37,8 @@ describe('responseTemplatesApi', () => {
   it('creates, updates and retires by template code', async () => {
     const fetchMock = mockFetch({ response_template: {} });
 
-    await createResponseTemplate({ template: 'TPL 1', title: 'T', action: 'Resolved', body: 'B' });
-    expect(lastCall(fetchMock)).toMatchObject({ method: 'POST', body: { template: 'TPL 1' } });
+    await createResponseTemplate({ title: 'T', action: 'Resolved', body: 'B' });
+    expect(lastCall(fetchMock)).toMatchObject({ method: 'POST', body: { title: 'T', action: 'Resolved', body: 'B' } });
     expect(lastCall(fetchMock).url).toMatch(/\/api\/v1\/response-templates$/);
 
     await updateResponseTemplate('TPL 1', { department: null });

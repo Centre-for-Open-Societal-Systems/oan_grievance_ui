@@ -1,42 +1,71 @@
 /**
- * A department response is one block of text on the wire — the action's
- * `reason`, and a response template's `body` — but officers and
- * administrators write it as two parts: what was done, and the outcome for
- * the submitter. These helpers join the two parts under fixed headings and
- * split them back apart, so a template authored in two boxes opens in two
- * boxes again and fills the officer's two boxes when used.
+ * A department response in two parts: what was done, and the outcome for
+ * the submitter.
  *
- * The headings are fixed, not translated: they are stored inside templates
- * and must parse the same whatever language the reader's UI is in.
+ * Provides utilities to compose and split response body text with standard headings.
  */
+
 export const ACTION_TAKEN_HEADING = 'Action taken:';
 export const RESOLUTION_SUMMARY_HEADING = 'Resolution summary:';
 
 export interface ResponseParts {
+  action_taken: string;
+  resolution_summary: string;
+}
+
+export interface LegacyResponseParts {
   actionTaken: string;
   resolutionSummary: string;
 }
 
-export function composeResponseBody({ actionTaken, resolutionSummary }: ResponseParts): string {
-  return `${ACTION_TAKEN_HEADING}\n${actionTaken.trim()}\n\n${RESOLUTION_SUMMARY_HEADING}\n${resolutionSummary.trim()}`;
+export function composeResponseBody({
+  actionTaken,
+  resolutionSummary,
+  action_taken,
+  resolution_summary,
+}: {
+  actionTaken?: string;
+  resolutionSummary?: string;
+  action_taken?: string;
+  resolution_summary?: string;
+}): string {
+  const action = (actionTaken ?? action_taken ?? '').trim();
+  const summary = (resolutionSummary ?? resolution_summary ?? '').trim();
+  if (!action) return summary;
+  return `${ACTION_TAKEN_HEADING}\n${action}\n\n${RESOLUTION_SUMMARY_HEADING}\n${summary}`;
 }
 
-/**
- * The inverse of `composeResponseBody`. Text without both headings in order
- * (an older template, or one written by hand) is treated as all summary,
- * since the summary is what the submitter reads.
- */
-export function splitResponseBody(body: string | null | undefined): ResponseParts {
+export function splitResponseBody(body: string | null | undefined): LegacyResponseParts {
   if (!body) {
     return { actionTaken: '', resolutionSummary: '' };
   }
-  const actionAt = body.indexOf(ACTION_TAKEN_HEADING);
-  const summaryAt = body.indexOf(RESOLUTION_SUMMARY_HEADING, actionAt + 1);
-  if (actionAt === -1 || summaryAt === -1) {
-    return { actionTaken: '', resolutionSummary: body.trim() };
+  const actionMatch = body.match(/^[ \t]*action\s+taken:[ \t]*\r?$/im) || body.match(/action\s+taken:/i);
+  const summaryMatch = body.match(/^[ \t]*resolution\s+summary:[ \t]*\r?$/im) || body.match(/resolution\s+summary:/i);
+
+  if (!actionMatch || !summaryMatch || (actionMatch.index ?? 0) >= (summaryMatch.index ?? 0)) {
+    return {
+      actionTaken: '',
+      resolutionSummary: body.trim(),
+    };
   }
+
+  const actionStart = (actionMatch.index ?? 0) + actionMatch[0].length;
+  const summaryStart = summaryMatch.index ?? 0;
+  const summaryEnd = summaryStart + summaryMatch[0].length;
+
+  const actionPart = body.slice(actionStart, summaryStart).trim();
+  const summaryPart = body.slice(summaryEnd).trim();
+
   return {
-    actionTaken: body.slice(actionAt + ACTION_TAKEN_HEADING.length, summaryAt).trim(),
-    resolutionSummary: body.slice(summaryAt + RESOLUTION_SUMMARY_HEADING.length).trim(),
+    actionTaken: actionPart,
+    resolutionSummary: summaryPart,
+  };
+}
+
+export function splitResponseParts(body: string | null | undefined): ResponseParts {
+  const { actionTaken, resolutionSummary } = splitResponseBody(body);
+  return {
+    action_taken: actionTaken,
+    resolution_summary: resolutionSummary,
   };
 }

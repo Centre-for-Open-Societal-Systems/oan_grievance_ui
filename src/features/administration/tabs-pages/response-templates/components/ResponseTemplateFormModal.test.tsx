@@ -35,7 +35,6 @@ describe('ResponseTemplateFormModal', () => {
   it('creates a template whose body joins the two parts', async () => {
     const { onCreate, onClose } = renderModal();
 
-    change(/Template code/, 'TPL-RESOLVED-INPUTS');
     change(/^Title/, 'Fertilizer delivered');
     fireEvent.change(screen.getByRole('combobox', { name: /Action/i }), { target: { value: 'Resolved' } });
     change(/Service Category/, 'Inputs');
@@ -45,7 +44,6 @@ describe('ResponseTemplateFormModal', () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(onCreate).toHaveBeenCalledWith({
-      template: 'TPL-RESOLVED-INPUTS',
       title: 'Fertilizer delivered',
       action: 'Resolved',
       department: undefined,
@@ -83,7 +81,6 @@ describe('ResponseTemplateFormModal', () => {
   it('keeps the dialog open and shows the error when saving fails', async () => {
     const { onClose } = renderModal({ onCreate: vi.fn().mockRejectedValue(new Error('Template code already exists')) });
 
-    change(/Template code/, 'TPL-1');
     change(/^Title/, 'T');
     fireEvent.change(screen.getByRole('combobox', { name: /Action/i }), { target: { value: 'Resolved' } });
     change(/Action taken/, 'A');

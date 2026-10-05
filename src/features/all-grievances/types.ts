@@ -7,6 +7,7 @@
  */
 
 import type { AreaRef } from '@/features/metadata';
+import type { ResponseParts } from '@/lib/responseBody';
 
 export interface GrievanceListItem {
   name: string;
@@ -163,6 +164,8 @@ export interface TimelineEntry {
     | string;
   is_internal: boolean;
   body: string;
+  /** `body` split into its two parts when it is a two-part department response. */
+  body_parts?: ResponseParts | null;
   author_user?: string | null;
   author_submitter?: string | null;
   author_type?: 'submitter' | 'officer' | 'system' | string;
@@ -288,6 +291,8 @@ export interface ResponseTemplateItem {
   service_category?: string | null;
   /** Template body rendered for the case, as plain text. Prefills the action's `reason`. */
   reason: string;
+  /** `reason` split into its two parts; null when the template isn't written in two parts. */
+  reason_parts?: ResponseParts | null;
 }
 
 export interface ResponseTemplatesData {
@@ -300,19 +305,22 @@ export interface GrievanceTimelineQueryParams {
   cursor?: string;
 }
 
-/** Body of POST /api/v1/grievances/:ticket_number/action (`GrievanceActionRequest`). */
-export interface GrievanceActionPayload {
+/**
+ * Body of POST /api/v1/grievances/:ticket_number/action (`GrievanceActionRequest`).
+ * The text shown to the submitter is either a plain `reason` or, for a
+ * department response, its two parts, which the service stores together as
+ * the reason.
+ */
+export type GrievanceActionPayload = {
   /** One of the case's `available_actions`. */
   action: string;
-  /** Shown to the submitter. For a department response, the response itself. */
-  reason: string;
   /** Staff only. Posted as a separate internal timeline entry. */
   internal_notes?: string | null;
   /** Staff only. Response template the reason started from. */
   template?: string | null;
   /** 1-5, on `Close Case` by the submitter only. */
   rating?: number | null;
-}
+} & ({ reason: string } | ResponseParts);
 
 export interface GrievanceCurrentState {
   status: string;

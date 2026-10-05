@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
-import { composeResponseBody, splitResponseBody } from '@/lib/responseBody';
+import { composeResponseBody, splitResponseParts } from '@/lib/responseBody';
 import {
   TEMPLATE_VARIABLES,
   type CreateResponseTemplatePayload,
@@ -34,8 +34,8 @@ const inputClass =
 
 /**
  * Add or edit a response template. The service stores one Jinja `body`; it is
- * edited here as Action taken + Resolution summary, the same two parts the
- * officer's response form fills from it (see `@/lib/responseBody`).
+ * sent and read here as Action taken + Resolution summary, the same two parts
+ * the officer's response form fills from it (see `@/lib/responseBody`).
  */
 export function ResponseTemplateFormModal({
   template,
@@ -52,17 +52,25 @@ export function ResponseTemplateFormModal({
   const variablesId = useId();
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
-  const initialParts = template ? splitResponseBody(template.body) : { actionTaken: '', resolutionSummary: '' };
-  const [code, setCode] = useState(template?.template ?? '');
+  // A template not written in two parts opens with its whole body as the summary.
+  const initialParts = template?.reason_parts
+    ? {
+        action_taken: template.reason_parts.action_taken ?? '',
+        resolution_summary: template.reason_parts.resolution_summary ?? '',
+      }
+    : splitResponseParts(template?.body);
+  const code = template?.template ?? '';
   const [title, setTitle] = useState(template?.title ?? '');
   const [action, setAction] = useState(template?.action ?? '');
   const [department, setDepartment] = useState(template?.department ?? '');
   const [serviceCategory, setServiceCategory] = useState(template?.service_category ?? '');
-  const [actionTaken, setActionTaken] = useState(initialParts.actionTaken);
-  const [resolutionSummary, setResolutionSummary] = useState(initialParts.resolutionSummary);
+  const [actionTaken, setActionTaken] = useState(initialParts.action_taken);
+  const [resolutionSummary, setResolutionSummary] = useState(initialParts.resolution_summary);
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isTwoPartAction = action === 'Resolve' || action === 'Partially Resolve' || action === 'Resolved';
 
   // Held in a ref so a parent passing an inline `onClose` doesn't re-run the
   // mount effect (and steal focus back to the first field) on every render.
@@ -85,25 +93,29 @@ export function ResponseTemplateFormModal({
   const withCurrent = (options: SelectOption[], current: string) =>
     current && !options.some((o) => o.value === current) ? [...options, { value: current, label: current }] : options;
 
-  const isValid =
-    code.trim() !== '' &&
-    title.trim() !== '' &&
-    action !== '' &&
-    actionTaken.trim() !== '' &&
-    resolutionSummary.trim() !== '';
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!isValid) return;
+    if (!title.trim() || !action) {
+      return;
+    }
+    if (isTwoPartAction && !actionTaken.trim()) {
+      return;
+    }
+    if (!resolutionSummary.trim()) {
+      return;
+    }
     setIsSaving(true);
     setError(null);
+    const bodyText = actionTaken.trim()
+      ? composeResponseBody({ action_taken: actionTaken, resolution_summary: resolutionSummary })
+      : resolutionSummary.trim();
     const fields = {
       title: title.trim(),
       action: action,
       // An empty scope means "every department/category": null clears it on edit, omitted on create.
       department: department || null,
       service_category: serviceCategory || null,
-      body: composeResponseBody({ actionTaken, resolutionSummary }),
+      body: bodyText,
       is_active: isActive,
     };
     try {
@@ -112,7 +124,6 @@ export function ResponseTemplateFormModal({
       } else {
         await onCreate({
           ...fields,
-          template: code.trim(),
           department: fields.department ?? undefined,
           service_category: fields.service_category ?? undefined,
         });
@@ -152,24 +163,29 @@ export function ResponseTemplateFormModal({
           {error && <ErrorAlert>{error}</ErrorAlert>}
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label={t('code')} required hint={isEdit ? t('codeFixed') : undefined}>
-              {(id, describedBy) => (
+            {isEdit && (
+              <Field label={t('code')} hint={t('codeFixed')}>
+                {(id, describedBy) => (
+                  <input
+                    id={id}
+                    aria-describedby={describedBy}
+                    value={code}
+                    disabled
+                    className={inputClass}
+                  />
+                )}
+              </Field>
+            )}
+            <Field label={t('titleLabel')} required>
+              {(id) => (
                 <input
                   id={id}
                   ref={firstFieldRef}
-                  aria-describedby={describedBy}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  disabled={isEdit}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   required
-                  placeholder="TPL-RESOLVED-INPUTS"
                   className={inputClass}
                 />
-              )}
-            </Field>
-            <Field label={t('titleLabel')} required>
-              {(id) => (
-                <input id={id} value={title} onChange={(e) => setTitle(e.target.value)} required className={inputClass} />
               )}
             </Field>
             <Field label={t('action')} required>
@@ -220,14 +236,14 @@ export function ResponseTemplateFormModal({
             ))}
           </p>
 
-          <Field label={t('actionTaken')} required>
+          <Field label={t('actionTaken')} required={isTwoPartAction}>
             {(id) => (
               <textarea
                 id={id}
                 rows={4}
                 value={actionTaken}
                 onChange={(e) => setActionTaken(e.target.value)}
-                required
+                required={isTwoPartAction}
                 aria-describedby={variablesId}
                 className={`${inputClass} resize-y`}
               />
@@ -251,7 +267,7 @@ export function ResponseTemplateFormModal({
             <Button type="button" variant="ghost" onClick={onClose}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={!isValid} isLoading={isSaving}>
+            <Button type="submit" isLoading={isSaving}>
               {isEdit ? t('save') : t('add')}
             </Button>
           </div>

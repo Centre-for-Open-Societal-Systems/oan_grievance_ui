@@ -8,7 +8,7 @@ import type {
   GrievanceAvailableAction,
   ResponseTemplateItem,
 } from '../../types';
-import { composeResponseBody, splitResponseBody } from '@/lib/responseBody';
+import { composeResponseBody, splitResponseParts } from '@/lib/responseBody';
 import {
   FileText,
   AlertCircle,
@@ -178,15 +178,16 @@ export function ResponseForm({
     setTemplate('');
   };
 
-  // A template is authored in the same two parts the officer fills, so its
-  // rendered text is split back into them.
+  // A template is authored in the same two parts the officer fills, and the
+  // service returns them split. One not written in two parts fills the
+  // summary, since the summary is what the submitter reads.
   const handleTemplateChange = (value: string) => {
     const selected = templateItems.find((item) => item.template === value);
     if (!selected) return;
-    const parts = splitResponseBody(selected.reason);
+    const parts = selected.reason_parts ?? splitResponseParts(selected.reason);
     setTemplate(value);
-    setActionTaken(parts.actionTaken.slice(0, ACTION_TAKEN_MAX));
-    setResolutionSummary(parts.resolutionSummary);
+    setActionTaken((parts.action_taken || '').slice(0, ACTION_TAKEN_MAX));
+    setResolutionSummary(parts.resolution_summary || selected.reason);
   };
 
   let actionPlaceholder = 'Select Response Type';
@@ -212,8 +213,7 @@ export function ResponseForm({
     setSubmitSuccess(null);
 
     try {
-      // The service takes one `reason` per action, shown to the submitter, so
-      // the two fields are sent combined (see `composeResponseBody`).
+      // Sent as two parts composed under standard headings as the reason.
       await onExecuteAction({
         action: selectedAction.action,
         template: template || null,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { FileText, ChevronDown, Pencil, Archive, RotateCcw } from 'lucide-react';
-import { splitResponseBody } from '@/lib/responseBody';
+import { splitResponseParts } from '@/lib/responseBody';
 import type { ResponseTemplate } from './types';
 
 interface ResponseTemplateRowProps {
@@ -19,10 +19,14 @@ const getStatusStyles = (action: string) => {
     switch (action) {
         case 'Resolve':
             return 'bg-[#E1F9E8] text-[#1A9F53] border-[#B7ECC9]';
+        case 'Partially Resolve':
+            return 'bg-[#E1F9E8] text-[#059669] border-[#A7F3D0]';
         case 'Submit Response':
             return 'bg-[#E1EDFF] text-[#2F65CB] border-[#C3DDFD]';
         case 'Request More Info':
             return 'bg-[#FFF3E5] text-[#D0621D] border-[#FBD6B7]';
+        case 'Refer Onward':
+            return 'bg-[#F3E8FF] text-[#7E22CE] border-[#E9D5FF]';
         case 'Reject':
             return 'bg-[#FFE5E5] text-[#D01D1D] border-[#FBB7B7]';
         default:
@@ -41,7 +45,13 @@ export function ResponseTemplateRow({
 }: ResponseTemplateRowProps) {
     const t = useTranslations('admin.responseTemplates');
     const [isExpanded, setIsExpanded] = useState(false);
-    const parts = splitResponseBody(template.body);
+    // A template not written in two parts shows its whole body as the summary.
+    const parts = template.reason_parts
+        ? {
+            action_taken: template.reason_parts.action_taken ?? '',
+            resolution_summary: template.reason_parts.resolution_summary ?? template.body,
+        }
+        : splitResponseParts(template.body);
     const panelId = `template-${template.template}-details`;
 
     return (
@@ -95,14 +105,14 @@ export function ResponseTemplateRow({
                         <div className="mb-6">
                             <h4 className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1">{t('actionTaken')}</h4>
                             <p className="text-[14px] text-gray-800 leading-relaxed whitespace-pre-wrap">
-                                {parts.actionTaken || '—'}
+                                {parts.action_taken || '—'}
                             </p>
                         </div>
 
                         <div>
                             <h4 className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1">{t('resolutionSummary')}</h4>
                             <p className="text-[14px] text-gray-800 leading-relaxed whitespace-pre-wrap">
-                                {parts.resolutionSummary}
+                                {parts.resolution_summary}
                             </p>
                         </div>
                     </div>
