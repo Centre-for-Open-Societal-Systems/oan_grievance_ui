@@ -32,7 +32,8 @@
     "detailsStep": {
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
-      "fieldRequired": "ይህ መስክ ያስፈልጋል።"
+      "fieldRequired": "ይህ መስክ ያስፈልጋል።",
+      "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች"
     }
   },
   "commentsAndCommunication": {
@@ -48,18 +49,28 @@
     "nothingToDo": "አሁን ከእርስዎ የሚጠበቅ እርምጃ የለም። ቅሬታዎ ሲለወጥ እናሳውቅዎታለን።",
     "reasonLabel": "ምክንያት",
     "reasonHelp": "ቅሬታዎን የሚይዙ ኃላፊዎች ይህንን ያያሉ።",
-    "ratingLabel": "ቅሬታዎ ምን ያህል በደንብ ተፈታ?",
+    "ratingLabel": "በዚህ መፍትሄ ምን ያህል ረክተዋል?",
     "ratingOption": "ከ5 ኮከቦች {value}",
     "submitting": "በመላክ ላይ…",
     "success": "\"{action}\" ተከናውኗል።",
     "failed": "እርምጃው ሊጠናቀቅ አልቻለም። እባክዎ እንደገና ይሞክሩ።",
     "hints": {
-      "submitterReply": "ኃላፊው የጠየቀውን መረጃ ይላኩ። ጉዳይዎ ወደ ኃላፊው ይመለሳል።",
+      "submitterReply": "ከገባ በኋላ ቅሬታዎ ወደ \"በሂደት ላይ\" ይመለሳል።",
       "reopen": "አልተፈታም? ምን እንደቀረ ለኃላፊው ይንገሩ፣ ጉዳዩም እንደገና ይከፈታል።",
       "closeCase": "መፍትሄውን ያረጋግጡ እና ቅሬታዎ እንዴት እንደተያዘ ደረጃ ይስጡ። ይህ ጉዳዩን ይዘጋል።",
       "generic": "ለዚህ እርምጃ ምክንያት ይስጡ።"
     },
-    "reasonPlaceholder": "ለኃላፊው ምክንያቱን ይንገሩ…"
+    "reasonPlaceholder": "ለኃላፊው ምክንያቱን ይንገሩ…",
+    "detailsLabel": "ተጨማሪ ዝርዝሮች",
+    "detailsPlaceholder": "ኃላፊው የጠየቀውን መረጃ ይግለጹ ወይም ያቅርቡ…",
+    "minLength": "ቢያንስ {min} ቁምፊዎች።",
+    "submitReply": "ተጨማሪ መረጃ አስገባ",
+    "commentsLabel": "አስተያየቶች",
+    "commentsPlaceholder": "ስለ ተሞክሮዎ የበለጠ ይንገሩን…",
+    "optional": "(አማራጭ)",
+    "confirmClose": "አረጋግጥ እና ቅሬታውን ዝጋ",
+    "reopenLink": "አልረኩም? ይህን ቅሬታ እንደገና ይክፈቱ",
+    "backToClose": "ረክተዋል? በምትኩ ይህን ቅሬታ ይዝጉ"
   },
   "responseForm": {
     "responseSubmitted": "ምላሽ \"{type}\" ተልኳል።"
@@ -101,5 +112,13 @@
       "save": "ለውጦችን አስቀምጥ",
       "add": "አብነት ያክሉ"
     }
+  },
+  "supportingDocuments": {
+    "label": "ደጋፊ ሰነዶች",
+    "prompt": "<strong>ለመስቀል ይጫኑ</strong> ወይም ጎትተው ይጣሉ",
+    "hint": "PDF፣ JPG ወይም PNG እያንዳንዱ እስከ 10MB",
+    "rejected": "አንዳንድ ፋይሎች ተዘለዋል። እስከ 10MB የሆኑ PDF፣ JPG ወይም PNG ፋይሎች ብቻ ሊያያዙ ይችላሉ።",
+    "remove": "{name}ን አስወግድ",
+    "uploadFailed": "ሰነዶቹ ሊሰቀሉ ስላልቻሉ ምላሹ አልተላከም። እባክዎ እንደገና ይሞክሩ።"
   }
 }

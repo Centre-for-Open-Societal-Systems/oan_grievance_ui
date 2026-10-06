@@ -9,6 +9,7 @@ import type {
   ResponseTemplateItem,
 } from '../../types';
 import { composeResponseBody, splitResponseParts } from '@/lib/responseBody';
+import { SupportingDocumentsField } from './SupportingDocumentsField';
 import {
   FileText,
   AlertCircle,
@@ -116,6 +117,8 @@ interface ResponseFormProps {
   isLoadingActions: boolean;
   onExecuteAction?: (payload: GrievanceActionPayload) => Promise<unknown>;
   onAddNote?: (note: string, isInternal: boolean) => Promise<unknown>;
+  /** Uploads supporting documents to the case before the response is sent. */
+  onUploadFiles?: (files: File[]) => Promise<unknown>;
   isSubmitting?: boolean;
 }
 
@@ -126,9 +129,14 @@ export function ResponseForm({
   isLoadingActions,
   onExecuteAction,
   onAddNote,
-  isSubmitting = false,
+  onUploadFiles,
+  isSubmitting: isExecuting = false,
 }: ResponseFormProps) {
   const t = useTranslations('responseForm');
+  const tDocs = useTranslations('supportingDocuments');
+  const [files, setFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const isSubmitting = isExecuting || isUploading;
   const [activeTab, setActiveTab] = useState<'response' | 'internal'>('response');
 
   const [action, setAction] = useState('');
@@ -211,6 +219,20 @@ export function ResponseForm({
     if (!isResponseValid || !selectedAction || !onExecuteAction) return;
     setSubmitError(null);
     setSubmitSuccess(null);
+
+    // Upload first so the documents are on the case when the response lands.
+    if (files.length > 0 && onUploadFiles) {
+      setIsUploading(true);
+      try {
+        await onUploadFiles(files);
+        setFiles([]);
+      } catch (err) {
+        setSubmitError(err instanceof Error && err.message ? err.message : tDocs('uploadFailed'));
+        return;
+      } finally {
+        setIsUploading(false);
+      }
+    }
 
     try {
       // Sent as two parts composed under standard headings as the reason.
@@ -346,6 +368,17 @@ export function ResponseForm({
                 className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white resize-none"
               ></textarea>
             </div>
+            {onUploadFiles && (
+              <SupportingDocumentsField
+                files={files}
+                onChange={(next) => {
+                  setFiles(next);
+                  setSubmitError(null);
+                }}
+                onRejected={() => setSubmitError(tDocs('rejected'))}
+                disabled={isSubmitting}
+              />
+            )}
             <div className="z-10 relative">
               <label className="block text-sm font-bold text-[#203628] mb-1.5 flex items-center gap-1.5">
                 <EyeOff className="h-4 w-4 text-gray-500" /> Internal Notes{' '}

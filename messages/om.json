@@ -32,7 +32,8 @@
     "detailsStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
-      "fieldRequired": "Gabateen kun barbaachisaadha."
+      "fieldRequired": "Gabateen kun barbaachisaadha.",
+      "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}"
     }
   },
   "commentsAndCommunication": {
@@ -48,18 +49,28 @@
     "nothingToDo": "Amma tarkaanfiin isin irraa eegamu hin jiru. Yeroo komiin keessan jijjiiramu isin beeksifna.",
     "reasonLabel": "Sababa",
     "reasonHelp": "Qondaaltonni komii keessan hordofan kana ni argu.",
-    "ratingLabel": "Komiin keessan hammam gaariitti furame?",
+    "ratingLabel": "Furmaata kanaan hammam quufte?",
     "ratingOption": "Urjii 5 keessaa {value}",
     "submitting": "Ergamaa jira…",
     "success": "\"{action}\" raawwatameera.",
     "failed": "Tarkaanfichi xumuramuu hin dandeenye. Maaloo irra deebi'aa yaalaa.",
     "hints": {
-      "submitterReply": "Odeeffannoo qondaalichi gaafate ergaa. Dhimmi keessan gara qondaalichaatti deebi'a.",
+      "submitterReply": "Erga galfamee booda komiin kee gara \"Hojii Irra Jira\" deebi'a.",
       "reopen": "Hin furamne? Waan ammallee hafe qondaalichatti himaa, dhimmichi irra deebi'ee ni banama.",
       "closeCase": "Furmaata mirkaneessaa, akkaataa komiin keessan itti qabame sadarkaa kennaa. Kun dhimmicha cufa.",
       "generic": "Tarkaanfii kanaaf sababa kennaa."
     },
-    "reasonPlaceholder": "Sababa isaa qondaalichatti himaa…"
+    "reasonPlaceholder": "Sababa isaa qondaalichatti himaa…",
+    "detailsLabel": "Bal'ina Dabalataa",
+    "detailsPlaceholder": "Odeeffannoo qondaalli gaafate ibsi ykn kenni…",
+    "minLength": "Yoo xiqqaate qubee {min}.",
+    "submitReply": "Odeeffannoo Dabalataa Galchi",
+    "commentsLabel": "Yaada",
+    "commentsPlaceholder": "Waa'ee muuxannoo keetii caalaatti nutti himi…",
+    "optional": "(filannoo)",
+    "confirmClose": "Mirkaneessi & Komii Cufi",
+    "reopenLink": "Hin quufnee? Komii kana irra deebi'ii bani",
+    "backToClose": "Quufteettaa? Qooda kanaa komii kana cufi"
   },
   "responseForm": {
     "responseSubmitted": "Deebiin \"{type}\" ergameera."
@@ -101,5 +112,13 @@
       "save": "Jijjiirama olkaa'i",
       "add": "Unkaa dabali"
     }
+  },
+  "supportingDocuments": {
+    "label": "Sanadoota Deeggarsaa",
+    "prompt": "<strong>Fe'uuf cuqaasi</strong> ykn harkisii buusi",
+    "hint": "PDF, JPG ykn PNG tokkoon tokkoon hanga 10MB",
+    "rejected": "Faayiloonni tokko tokko darbamaniiru. Faayiloota PDF, JPG ykn PNG hanga 10MB qofatu walqabsiifama.",
+    "remove": "{name} haqi",
+    "uploadFailed": "Sanadoonni fe'amuu waan hin dandeenyeef deebiin hin ergamne. Maaloo irra deebi'ii yaali."
   }
 }

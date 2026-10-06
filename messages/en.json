@@ -32,7 +32,8 @@
     "detailsStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
-      "fieldRequired": "This field is required."
+      "fieldRequired": "This field is required.",
+      "documentsHint": "JPG, PNG, PDF or MP3 up to 10MB each · up to {max} files"
     }
   },
   "commentsAndCommunication": {
@@ -48,18 +49,28 @@
     "nothingToDo": "No action is needed from you right now. We'll let you know when your grievance changes.",
     "reasonLabel": "Reason",
     "reasonHelp": "The officers handling your grievance will see this.",
-    "ratingLabel": "How well was your grievance resolved?",
+    "ratingLabel": "How satisfied are you with this resolution?",
     "ratingOption": "{value} of 5 stars",
     "submitting": "Submitting…",
     "success": "\"{action}\" done.",
     "failed": "The action could not be completed. Please try again.",
     "hints": {
-      "submitterReply": "Send the information the officer asked for. Your case goes back to the officer.",
+      "submitterReply": "Your grievance returns to \"In Progress\" once submitted.",
       "reopen": "Not resolved? Tell the officer what is still wrong and the case is reopened.",
       "closeCase": "Confirm the resolution and rate how your grievance was handled. This closes the case.",
       "generic": "Give a reason for this action."
     },
-    "reasonPlaceholder": "Tell the officer why…"
+    "reasonPlaceholder": "Tell the officer why…",
+    "detailsLabel": "Additional Details",
+    "detailsPlaceholder": "Describe or provide the information the officer asked for…",
+    "minLength": "Min. {min} characters.",
+    "submitReply": "Submit Additional Information",
+    "commentsLabel": "Comments",
+    "commentsPlaceholder": "Tell us more about your experience…",
+    "optional": "(optional)",
+    "confirmClose": "Confirm & Close Grievance",
+    "reopenLink": "Not satisfied? Reopen this grievance",
+    "backToClose": "Satisfied after all? Close this grievance instead"
   },
   "responseForm": {
     "responseSubmitted": "Response \"{type}\" submitted."
@@ -101,5 +112,13 @@
       "save": "Save changes",
       "add": "Add template"
     }
+  },
+  "supportingDocuments": {
+    "label": "Supporting Documents",
+    "prompt": "<strong>Click to upload</strong> or drag and drop",
+    "hint": "PDF, JPG or PNG up to 10MB each",
+    "rejected": "Some files were skipped. Only PDF, JPG or PNG files up to 10MB can be attached.",
+    "remove": "Remove {name}",
+    "uploadFailed": "The documents could not be uploaded, so the response was not sent. Please try again."
   }
 }

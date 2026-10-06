@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import en from '../../../../../messages/en.json';
 import { ResponseForm } from './ResponseForm';
@@ -19,7 +19,7 @@ const ACTIONS = [
   { action: 'Reject', label: 'Reject', requires_reason: true },
 ];
 
-function renderForm() {
+function renderForm(onUploadFiles?: (files: File[]) => Promise<unknown>) {
   const onExecuteAction = vi.fn().mockResolvedValue({});
   render(
     <NextIntlClientProvider locale="en" messages={en}>
@@ -29,6 +29,7 @@ function renderForm() {
         actions={ACTIONS}
         isLoadingActions={false}
         onExecuteAction={onExecuteAction}
+        onUploadFiles={onUploadFiles}
       />
     </NextIntlClientProvider>
   );
@@ -74,5 +75,34 @@ describe('ResponseForm', () => {
     expect(onExecuteAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'Submit Response' })
     );
+  });
+
+  it('uploads supporting documents before sending the response', async () => {
+    const onUploadFiles = vi.fn().mockResolvedValue([]);
+    const { onExecuteAction } = renderForm(onUploadFiles);
+    const file = new File(['x'], 'site_visit.jpg', { type: 'image/jpeg' });
+
+    fireEvent.click(screen.getByRole('button', { name: /Select Response Type/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
+    fireEvent.change(screen.getByLabelText('Supporting Documents'), { target: { files: [file] } });
+    fillAndSubmit();
+
+    await waitFor(() => expect(onExecuteAction).toHaveBeenCalled());
+    expect(onUploadFiles).toHaveBeenCalledWith([file]);
+    expect(onUploadFiles.mock.invocationCallOrder[0]).toBeLessThan(onExecuteAction.mock.invocationCallOrder[0]!);
+  });
+
+  it('does not send the response when the upload fails', async () => {
+    const { onExecuteAction } = renderForm(vi.fn().mockRejectedValue(new Error('Upload rejected')));
+
+    fireEvent.click(screen.getByRole('button', { name: /Select Response Type/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
+    fireEvent.change(screen.getByLabelText('Supporting Documents'), {
+      target: { files: [new File(['x'], 'memo.pdf', { type: 'application/pdf' })] },
+    });
+    fillAndSubmit();
+
+    expect(await screen.findByText('Upload rejected')).toBeInTheDocument();
+    expect(onExecuteAction).not.toHaveBeenCalled();
   });
 });

@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState, useRef, type ReactElement } from "react";
 import { useTranslations } from "next-intl";
-import { FileText, Info, Save, ArrowRight, ArrowLeft, Folder, IdCard, Eye, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
+import { FileText, Info, Save, ArrowRight, ArrowLeft, Eye, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { FileDropzone, FileRow } from "@/components/ui/FileDropzone";
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from "@/components/ui/FieldError";
 import { MIN_DESCRIPTION_LENGTH } from "@/lib/validation/fieldRules";
 import { focusFirstError, useFieldErrors, type FieldErrors } from "@/lib/validation/useFieldErrors";
@@ -233,6 +234,7 @@ export function GrievanceDetailsCard({
   setAttachments,
 }: GrievanceDetailsCardProps) {
   const t = useTranslations("submitGrievance.detailsStep");
+  const tDocs = useTranslations("supportingDocuments");
   const dispatch = useAppDispatch();
   const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
   const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
@@ -269,7 +271,6 @@ export function GrievanceDetailsCard({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // `submit_document` with a `client_uuid` requires the Grievance Draft to
   // already exist server-side — this fires once, right before the first
@@ -471,9 +472,7 @@ export function GrievanceDetailsCard({
     onNext();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
 
     // The backend caps a case at MAX_ATTACHMENTS_PER_CASE total — trim a
@@ -972,95 +971,69 @@ export function GrievanceDetailsCard({
 
           {/* Supporting Documents / Evidence */}
           <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Supporting Documents / Evidence {activeAttachments.length > 0 && `(${activeAttachments.length}/${MAX_ATTACHMENTS_PER_CASE})`}
-            </label>
-            {activeAttachments.length < MAX_ATTACHMENTS_PER_CASE && (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full bg-[#F9FAFB] border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-[#f0fcf3] transition-colors cursor-pointer"
-              >
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 border border-gray-100">
-                  <Folder className="w-6 h-6 text-slate-400" fill="currentColor" />
-                </div>
-                <p className="text-[14px] font-semibold text-[#1e293b] mb-1">
-                  Attach photos, voice recordings, or documents
-                </p>
-                <p className="text-[13px] text-slate-500 mb-4 font-medium">
-                  Max 10 MB each · JPG, PNG, PDF, MP3 · up to {MAX_ATTACHMENTS_PER_CASE} files
-                </p>
-                <button type="button" className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F0FDF4] text-[#16A34A] rounded-lg text-sm font-semibold hover:bg-green-100 transition-colors border border-green-300 hover:border-green-300">
-                  {activeAttachments.length > 0 ? "+ Add More Files" : "+ Browse Files"}
-                </button>
-              </div>
-            )}
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
+            <FileDropzone
+              label={
+                <span className="text-sm font-semibold text-gray-800">
+                  Supporting Documents / Evidence{" "}
+                  {activeAttachments.length > 0 && `(${activeAttachments.length}/${MAX_ATTACHMENTS_PER_CASE})`}
+                </span>
+              }
+              prompt={tDocs.rich("prompt", {
+                strong: (chunks) => <span className="font-bold text-emerald-700">{chunks}</span>,
+              })}
+              hint={t("documentsHint", { max: MAX_ATTACHMENTS_PER_CASE })}
+              inputLabel={tDocs("label")}
               accept=".jpg,.jpeg,.png,.pdf,.mp3"
-              multiple
-            />
-
-            {/* Uploaded files */}
-            {attachments.length > 0 && (
-              <div className="space-y-3 mt-4">
-                {attachments.map((item) => (
-                  <div
-                    key={item.key}
-                    className="flex items-center justify-between bg-[#F0FDF4] hover:bg-[#e5fbeb] border border-green-300 p-4 rounded-xl"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[#D1FAE5] rounded-xl flex items-center justify-center">
-                        {item.uploadState === "uploading" ? (
-                          <Loader2 className="w-6 h-6 text-[#16A34A] animate-spin" />
-                        ) : (
-                          <IdCard className="w-6 h-6 text-[#16A34A]" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-[15px] font-bold text-gray-900 leading-snug">
-                          {item.fileName}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[13px] font-medium">
-                          {attachmentStatusIndicator(item)}
+              disabled={activeAttachments.length >= MAX_ATTACHMENTS_PER_CASE}
+              onFiles={handleFiles}
+            >
+              {attachments.length > 0 && (
+                <ul className="mt-4 flex flex-col gap-3">
+                  {attachments.map((item) => (
+                    <FileRow
+                      key={item.key}
+                      name={item.fileName}
+                      icon={
+                        item.uploadState === "uploading" ? (
+                          <Loader2 className="h-4 w-4 shrink-0 text-[#16A34A] animate-spin" aria-hidden="true" />
+                        ) : undefined
+                      }
+                      detail={attachmentStatusIndicator(item)}
+                      actions={
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewItem(item);
+                            }}
+                            disabled={!canPreviewAttachment(item)}
+                            aria-label={`Preview ${item.fileName}`}
+                            title={previewTooltip(item)}
+                            className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Eye className="w-5 h-5 text-blue-500" />
+                          </button>
+                          <button
+                            onClick={handleRemoveAttachment(item.key)}
+                            disabled={item.uploadState === "uploading" || item.uploadState === "persisting"}
+                            aria-label={`Remove ${item.fileName}`}
+                            title={
+                              item.uploadState === "uploading" || item.uploadState === "persisting"
+                                ? "Wait for the upload to finish before removing it"
+                                : undefined
+                            }
+                            className="p-2.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 className="w-5 h-5 text-red-500" />
+                          </button>
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPreviewItem(item);
-                        }}
-                        disabled={!canPreviewAttachment(item)}
-                        aria-label={`Preview ${item.fileName}`}
-                        title={previewTooltip(item)}
-                        className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Eye className="w-5 h-5 text-blue-500" />
-                      </button>
-                      <button
-                        onClick={handleRemoveAttachment(item.key)}
-                        disabled={item.uploadState === "uploading" || item.uploadState === "persisting"}
-                        aria-label={`Remove ${item.fileName}`}
-                        title={
-                          item.uploadState === "uploading" || item.uploadState === "persisting"
-                            ? "Wait for the upload to finish before removing it"
-                            : undefined
-                        }
-                        className="p-2.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Trash2 className="w-5 h-5 text-red-500" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                      }
+                    />
+                  ))}
+                </ul>
+              )}
+            </FileDropzone>
           </div>
         </div>
 

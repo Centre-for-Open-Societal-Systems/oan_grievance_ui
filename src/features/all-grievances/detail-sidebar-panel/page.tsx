@@ -13,6 +13,7 @@ import { CaseActionsPanel } from './components/CaseActionsPanel';
 import { useGrievanceTimeline } from '../hooks/useGrievanceTimeline';
 import type { Grievance } from '../types';
 import { useAppSelector } from '@/store/hooks';
+import { uploadAttachments } from '@/lib/attachments';
 
 export function GrievanceDetailSidebar({
   ticketNumber,
@@ -49,6 +50,7 @@ export function GrievanceDetailSidebar({
   // (action, then the response type mapped onto it). A submitter has no
   // response form, so their actions get the panel in its place.
   const availableActions = timelineData?.available_actions ?? [];
+  const uploadFiles = (files: File[]) => uploadAttachments({ files, grievance: activeTicket });
 
   return (
     <>
@@ -93,6 +95,7 @@ export function GrievanceDetailSidebar({
                 isLoadingActions={!timelineData}
                 onExecuteAction={executeAction}
                 onAddNote={addNote}
+                onUploadFiles={uploadFiles}
                 isSubmitting={isSubmitting}
               />
               {timelineData && !canManageCase ? (
@@ -101,6 +104,7 @@ export function GrievanceDetailSidebar({
                   actions={availableActions}
                   isSubmitting={isSubmitting}
                   onExecute={executeAction}
+                  onUploadFiles={uploadFiles}
                 />
               ) : null}
             </div>
