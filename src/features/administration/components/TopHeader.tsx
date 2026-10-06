@@ -3,7 +3,7 @@ interface TopHeaderProps {
 }
 
 export function TopHeader({ activeTab }: TopHeaderProps) {
-  let title = activeTab;
+  const title = activeTab;
   let description = '';
 
   switch (activeTab) {
