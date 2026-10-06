@@ -73,7 +73,14 @@
     "backToClose": "Quufteettaa? Qooda kanaa komii kana cufi"
   },
   "responseForm": {
-    "responseSubmitted": "Deebiin \"{type}\" ergameera."
+    "responseSubmitted": "Deebiin \"{type}\" ergameera.",
+    "selectAction": "Tarkaanfii filadhaa",
+    "loadingActions": "Tarkaanfiiwwan fe'amaa jiru…",
+    "noActions": "Tarkaanfiin jiru hin jiru",
+    "selectTemplate": "Unkaa deebii filadhaa",
+    "selectActionFirst": "Dursa tarkaanfii filadhaa",
+    "loadingTemplates": "Unkaaleen fe'amaa jiru…",
+    "noTemplates": "Unkaaleen jiran hin jiru"
   },
   "admin": {
     "responseTemplates": {
@@ -103,8 +110,12 @@
       "code": "Koodii unkaa",
       "codeFixed": "Koodiin unkaa addaan baasa, jijjiiramuu hin danda'u.",
       "titleLabel": "Mata duree",
-      "responseType": "Gosa deebii",
-      "selectResponseType": "Gosa deebii filadhaa",
+      "titleRequired": "Mata dureen barbaachisaadha",
+      "action": "Tarkaanfii",
+      "selectAction": "Tarkaanfii filadhaa",
+      "actionRequired": "Mee tarkaanfii filadhaa",
+      "actionTakenRequired": "Tarkaanfiin fudhatame tarkaanfii kanaaf barbaachisaadha",
+      "resolutionSummaryRequired": "Cuunfaan furmaataa barbaachisaadha",
       "department": "Kutaa",
       "active": "Hojiirra",
       "variablesHint": "Jijjiiramtoota jiran:",

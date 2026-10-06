@@ -90,4 +90,16 @@ describe('ResponseTemplateFormModal', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Template code already exists');
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('displays field validation errors and halts submission on empty submit', async () => {
+    const { onCreate, onClose } = renderModal();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add template' }));
+
+    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    expect(screen.getByText('Please select an action')).toBeInTheDocument();
+    expect(screen.getByText('Resolution summary is required')).toBeInTheDocument();
+    expect(onCreate).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

@@ -125,4 +125,33 @@ describe('CaseActionsPanel', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Action not allowed from this state');
   });
+
+  it('correctly uses action_code and requires_rating even if action labels are localized or renamed', async () => {
+    const onExecute = vi.fn().mockResolvedValue({});
+    renderPanel({
+      caseStatus: 'Resolved',
+      actions: [
+        { action: 'Deebi_Bani', action_code: 'reopen', label: 'Deebisi bani', requires_reason: true },
+        { action: 'Cufaa', action_code: 'close_case', label: 'Dhimma Cufaa', requires_reason: false, requires_rating: true },
+      ],
+      onExecute,
+    });
+
+    // Skips multi-picker because case is resolved and provides close + reopen
+    expect(screen.queryByRole('group', { name: 'Choose an action' })).not.toBeInTheDocument();
+    const submit = screen.getByRole('button', { name: 'Confirm & Close Grievance' });
+    expect(submit).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText('5 of 5 stars'));
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+
+    await waitFor(() => expect(onExecute).toHaveBeenCalled());
+    expect(onExecute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'Cufaa',
+        rating: 5,
+      })
+    );
+  });
 });

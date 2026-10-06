@@ -53,7 +53,7 @@ describe('ResponseForm', () => {
   it('sends an action without response types', () => {
     const { onExecuteAction } = renderForm();
 
-    fireEvent.click(screen.getByRole('button', { name: /Select Response Type/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Select Action/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
     fillAndSubmit();
 
@@ -68,7 +68,7 @@ describe('ResponseForm', () => {
   it('sends another action', () => {
     const { onExecuteAction } = renderForm();
 
-    fireEvent.click(screen.getByRole('button', { name: /Select Response Type/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Select Action/i }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Submit Response' })[0]!);
     fillAndSubmit();
 
@@ -82,7 +82,7 @@ describe('ResponseForm', () => {
     const { onExecuteAction } = renderForm(onUploadFiles);
     const file = new File(['x'], 'site_visit.jpg', { type: 'image/jpeg' });
 
-    fireEvent.click(screen.getByRole('button', { name: /Select Response Type/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Select Action/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
     fireEvent.change(screen.getByLabelText('Supporting Documents'), { target: { files: [file] } });
     fillAndSubmit();
@@ -95,7 +95,7 @@ describe('ResponseForm', () => {
   it('does not send the response when the upload fails', async () => {
     const { onExecuteAction } = renderForm(vi.fn().mockRejectedValue(new Error('Upload rejected')));
 
-    fireEvent.click(screen.getByRole('button', { name: /Select Response Type/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Select Action/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
     fireEvent.change(screen.getByLabelText('Supporting Documents'), {
       target: { files: [new File(['x'], 'memo.pdf', { type: 'application/pdf' })] },

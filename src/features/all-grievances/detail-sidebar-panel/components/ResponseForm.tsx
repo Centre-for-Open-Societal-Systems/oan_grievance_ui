@@ -198,14 +198,23 @@ export function ResponseForm({
     setResolutionSummary(parts.resolution_summary || selected.reason);
   };
 
-  let actionPlaceholder = 'Select Response Type';
-  if (isLoadingActions) actionPlaceholder = 'Loading response types…';
-  else if (actionOptions.length === 0) actionPlaceholder = 'No response types available';
+  const getErrorMessage = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message ? err.message : fallback;
 
-  let templatePlaceholder = 'Select Response Template';
-  if (!selectedAction) templatePlaceholder = 'Select an action first';
-  else if (isLoadingTemplates) templatePlaceholder = 'Loading templates…';
-  else if (templateOptions.length === 0) templatePlaceholder = 'No templates available';
+  const switchTab = (tab: 'response' | 'internal') => {
+    setActiveTab(tab);
+    setSubmitError(null);
+    setSubmitSuccess(null);
+  };
+
+  let actionPlaceholder = t('selectAction');
+  if (isLoadingActions) actionPlaceholder = t('loadingActions');
+  else if (actionOptions.length === 0) actionPlaceholder = t('noActions');
+
+  let templatePlaceholder = t('selectTemplate');
+  if (!selectedAction) templatePlaceholder = t('selectActionFirst');
+  else if (isLoadingTemplates) templatePlaceholder = t('loadingTemplates');
+  else if (templateOptions.length === 0) templatePlaceholder = t('noTemplates');
 
   const isResponseValid =
     selectedAction !== null &&
@@ -227,7 +236,7 @@ export function ResponseForm({
         await onUploadFiles(files);
         setFiles([]);
       } catch (err) {
-        setSubmitError(err instanceof Error && err.message ? err.message : tDocs('uploadFailed'));
+        setSubmitError(getErrorMessage(err, tDocs('uploadFailed')));
         return;
       } finally {
         setIsUploading(false);
@@ -250,8 +259,7 @@ export function ResponseForm({
       setSubmitSuccess(t('responseSubmitted', { type: selectedAction.label }));
       setTimeout(() => setSubmitSuccess(null), 4000);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to post response';
-      setSubmitError(msg);
+      setSubmitError(getErrorMessage(err, 'Failed to post response'));
     }
   };
 
@@ -266,8 +274,7 @@ export function ResponseForm({
       setSubmitSuccess('Internal note added successfully');
       setTimeout(() => setSubmitSuccess(null), 4000);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to add internal note';
-      setSubmitError(msg);
+      setSubmitError(getErrorMessage(err, 'Failed to add internal note'));
     }
   };
 
@@ -276,11 +283,7 @@ export function ResponseForm({
       <div className="flex border-b border-gray-200">
         <button
           type="button"
-          onClick={() => {
-            setActiveTab('response');
-            setSubmitError(null);
-            setSubmitSuccess(null);
-          }}
+          onClick={() => switchTab('response')}
           className={`flex-1 py-4 px-6 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
             activeTab === 'response'
               ? 'text-emerald-700 bg-emerald-50/50 border-b-2 border-emerald-500'
@@ -291,11 +294,7 @@ export function ResponseForm({
         </button>
         <button
           type="button"
-          onClick={() => {
-            setActiveTab('internal');
-            setSubmitError(null);
-            setSubmitSuccess(null);
-          }}
+          onClick={() => switchTab('internal')}
           className={`flex-1 py-4 px-6 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
             activeTab === 'internal'
               ? 'text-emerald-700 bg-emerald-50/50 border-b-2 border-emerald-500'

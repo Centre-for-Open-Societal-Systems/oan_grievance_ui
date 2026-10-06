@@ -102,6 +102,7 @@ export function GrievanceDetailSidebar({
                 <CaseActionsPanel
                   key={activeTicket}
                   actions={availableActions}
+                  caseStatus={timelineData.status ?? timelineData.current_status}
                   isSubmitting={isSubmitting}
                   onExecute={executeAction}
                   onUploadFiles={uploadFiles}

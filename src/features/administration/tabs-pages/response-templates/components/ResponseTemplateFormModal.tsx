@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { z } from 'zod';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
@@ -29,8 +30,12 @@ export interface ResponseTemplateFormModalProps {
   onClose: () => void;
 }
 
-const inputClass =
-  'w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] disabled:bg-gray-50 disabled:text-gray-500';
+const getInputClass = (hasError?: boolean) =>
+  `w-full border rounded-lg px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none transition-colors disabled:bg-gray-50 disabled:text-gray-500 ${
+    hasError
+      ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+      : 'border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600'
+  }`;
 
 /**
  * Add or edit a response template. The service stores one Jinja `body`; it is
@@ -51,6 +56,9 @@ export function ResponseTemplateFormModal({
   const titleId = useId();
   const variablesId = useId();
   const firstFieldRef = useRef<HTMLInputElement>(null);
+  const actionRef = useRef<HTMLSelectElement>(null);
+  const actionTakenRef = useRef<HTMLTextAreaElement>(null);
+  const resolutionSummaryRef = useRef<HTMLTextAreaElement>(null);
 
   // A template not written in two parts opens with its whole body as the summary.
   const initialParts = template?.reason_parts
@@ -69,6 +77,12 @@ export function ResponseTemplateFormModal({
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    title?: string;
+    action?: string;
+    actionTaken?: string;
+    resolutionSummary?: string;
+  }>({});
 
   const isTwoPartAction = action === 'Resolve' || action === 'Partially Resolve' || action === 'Resolved';
 
@@ -95,15 +109,40 @@ export function ResponseTemplateFormModal({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!title.trim() || !action) {
+
+    const templateSchema = z.object({
+      title: z.string().trim().min(1, t('titleRequired')),
+      action: z.string().min(1, t('actionRequired')),
+      actionTaken: isTwoPartAction
+        ? z.string().trim().min(1, t('actionTakenRequired'))
+        : z.string().optional(),
+      resolutionSummary: z.string().trim().min(1, t('resolutionSummaryRequired')),
+    });
+
+    const parsed = templateSchema.safeParse({
+      title,
+      action,
+      actionTaken,
+      resolutionSummary,
+    });
+
+    if (!parsed.success) {
+      const errors: typeof fieldErrors = {};
+      for (const issue of parsed.error.issues) {
+        const fieldKey = issue.path[0] as keyof typeof fieldErrors;
+        if (fieldKey && !errors[fieldKey]) {
+          errors[fieldKey] = issue.message;
+        }
+      }
+      setFieldErrors(errors);
+      if (errors.title) firstFieldRef.current?.focus();
+      else if (errors.action) actionRef.current?.focus();
+      else if (errors.actionTaken) actionTakenRef.current?.focus();
+      else if (errors.resolutionSummary) resolutionSummaryRef.current?.focus();
       return;
     }
-    if (isTwoPartAction && !actionTaken.trim()) {
-      return;
-    }
-    if (!resolutionSummary.trim()) {
-      return;
-    }
+
+    setFieldErrors({});
     setIsSaving(true);
     setError(null);
     const bodyText = actionTaken.trim()
@@ -153,7 +192,7 @@ export function ResponseTemplateFormModal({
             type="button"
             onClick={onClose}
             aria-label={t('close')}
-            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#16A34A]"
+            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
           >
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -171,26 +210,41 @@ export function ResponseTemplateFormModal({
                     aria-describedby={describedBy}
                     value={code}
                     disabled
-                    className={inputClass}
+                    className={getInputClass()}
                   />
                 )}
               </Field>
             )}
-            <Field label={t('titleLabel')} required>
-              {(id) => (
+            <Field label={t('titleLabel')} required error={fieldErrors.title}>
+              {(id, describedBy) => (
                 <input
                   id={id}
                   ref={firstFieldRef}
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  className={inputClass}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (fieldErrors.title) setFieldErrors((p) => ({ ...p, title: undefined }));
+                  }}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!fieldErrors.title}
+                  className={getInputClass(!!fieldErrors.title)}
                 />
               )}
             </Field>
-            <Field label={t('action')} required>
-              {(id) => (
-                <select id={id} value={action} onChange={(e) => setAction(e.target.value)} required className={inputClass}>
+            <Field label={t('action')} required error={fieldErrors.action}>
+              {(id, describedBy) => (
+                <select
+                  id={id}
+                  ref={actionRef}
+                  value={action}
+                  onChange={(e) => {
+                    setAction(e.target.value);
+                    if (fieldErrors.action) setFieldErrors((p) => ({ ...p, action: undefined }));
+                  }}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!fieldErrors.action}
+                  className={getInputClass(!!fieldErrors.action)}
+                >
                   <option value="">{t('selectAction')}</option>
                   {withCurrent(actions, action).map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -200,7 +254,7 @@ export function ResponseTemplateFormModal({
             </Field>
             <Field label={t('department')}>
               {(id) => (
-                <select id={id} value={department} onChange={(e) => setDepartment(e.target.value)} className={inputClass}>
+                <select id={id} value={department} onChange={(e) => setDepartment(e.target.value)} className={getInputClass()}>
                   <option value="">{t('allDepartments')}</option>
                   {withCurrent(departments, department).map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -210,7 +264,7 @@ export function ResponseTemplateFormModal({
             </Field>
             <Field label={t('serviceCategory')}>
               {(id) => (
-                <select id={id} value={serviceCategory} onChange={(e) => setServiceCategory(e.target.value)} className={inputClass}>
+                <select id={id} value={serviceCategory} onChange={(e) => setServiceCategory(e.target.value)} className={getInputClass()}>
                   <option value="">{t('allCategories')}</option>
                   {withCurrent(serviceCategories, serviceCategory).map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -223,42 +277,50 @@ export function ResponseTemplateFormModal({
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
-                className="h-4 w-4 accent-[#16A34A]"
+                className="h-4 w-4 accent-emerald-600"
               />
               {t('active')}
             </label>
           </div>
 
-          <p id={variablesId} className="text-xs text-gray-600 bg-[#F0F7FF] border border-[#D6E8FF] rounded-lg p-3">
+          <p id={variablesId} className="text-xs text-gray-600 bg-blue-50 border border-blue-100 rounded-lg p-3">
             {t('variablesHint')}{' '}
             {TEMPLATE_VARIABLES.map((v) => (
-              <code key={v} className="mr-1.5 text-[#1447E6]">{`{{ ${v} }}`}</code>
+              <code key={v} className="mr-1.5 text-blue-700">{`{{ ${v} }}`}</code>
             ))}
           </p>
 
-          <Field label={t('actionTaken')} required={isTwoPartAction}>
-            {(id) => (
+          <Field label={t('actionTaken')} required={isTwoPartAction} error={fieldErrors.actionTaken}>
+            {(id, describedBy) => (
               <textarea
                 id={id}
+                ref={actionTakenRef}
                 rows={4}
                 value={actionTaken}
-                onChange={(e) => setActionTaken(e.target.value)}
-                required={isTwoPartAction}
-                aria-describedby={variablesId}
-                className={`${inputClass} resize-y`}
+                onChange={(e) => {
+                  setActionTaken(e.target.value);
+                  if (fieldErrors.actionTaken) setFieldErrors((p) => ({ ...p, actionTaken: undefined }));
+                }}
+                aria-describedby={describedBy ?? variablesId}
+                aria-invalid={!!fieldErrors.actionTaken}
+                className={`${getInputClass(!!fieldErrors.actionTaken)} resize-y`}
               />
             )}
           </Field>
-          <Field label={t('resolutionSummary')} required>
-            {(id) => (
+          <Field label={t('resolutionSummary')} required error={fieldErrors.resolutionSummary}>
+            {(id, describedBy) => (
               <textarea
                 id={id}
+                ref={resolutionSummaryRef}
                 rows={5}
                 value={resolutionSummary}
-                onChange={(e) => setResolutionSummary(e.target.value)}
-                required
-                aria-describedby={variablesId}
-                className={`${inputClass} resize-y`}
+                onChange={(e) => {
+                  setResolutionSummary(e.target.value);
+                  if (fieldErrors.resolutionSummary) setFieldErrors((p) => ({ ...p, resolutionSummary: undefined }));
+                }}
+                aria-describedby={describedBy ?? variablesId}
+                aria-invalid={!!fieldErrors.resolutionSummary}
+                className={`${getInputClass(!!fieldErrors.resolutionSummary)} resize-y`}
               />
             )}
           </Field>
@@ -281,22 +343,31 @@ function Field({
   label,
   required = false,
   hint,
+  error,
   children,
 }: {
   label: string;
   required?: boolean;
   hint?: string;
+  error?: string;
   children: (id: string, describedBy: string | undefined) => React.ReactNode;
 }) {
   const id = useId();
   const hintId = useId();
+  const errorId = useId();
+  const describedBy = error ? errorId : hint ? hintId : undefined;
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-bold text-gray-700 mb-1.5">
         {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
       </label>
-      {children(id, hint ? hintId : undefined)}
-      {hint && <p id={hintId} className="mt-1 text-xs text-gray-500">{hint}</p>}
+      {children(id, describedBy)}
+      {error && (
+        <p id={errorId} className="mt-1 text-xs text-red-600 font-medium" role="alert">
+          {error}
+        </p>
+      )}
+      {!error && hint && <p id={hintId} className="mt-1 text-xs text-gray-500">{hint}</p>}
     </div>
   );
 }

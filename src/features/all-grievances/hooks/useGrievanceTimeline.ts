@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { subscribeGrievance, useRealtimeEvent } from '@/lib/realtime';
 import {
@@ -51,8 +51,20 @@ export function useGrievanceTimeline({ ticketNumber }: UseGrievanceTimelineOptio
     return subscribeGrievance(grievanceId);
   }, [grievanceId]);
 
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, []);
+
   const refreshSilently = useCallback(() => {
-    if (ticketNumber) void dispatch(fetchTimelineThunk({ ticketNumber, silent: true }));
+    if (!ticketNumber) return;
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      void dispatch(fetchTimelineThunk({ ticketNumber, silent: true }));
+    }, 400);
   }, [ticketNumber, dispatch]);
 
   useRealtimeEvent('attachment_scanned', (event) => {

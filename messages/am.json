@@ -73,7 +73,14 @@
     "backToClose": "ረክተዋል? በምትኩ ይህን ቅሬታ ይዝጉ"
   },
   "responseForm": {
-    "responseSubmitted": "ምላሽ \"{type}\" ተልኳል።"
+    "responseSubmitted": "ምላሽ \"{type}\" ተልኳል።",
+    "selectAction": "እርምጃ ይምረጡ",
+    "loadingActions": "እርምጃዎች በመጫን ላይ ናቸው…",
+    "noActions": "ምንም የሚገኙ እርምጃዎች የሉም",
+    "selectTemplate": "የምላሽ አብነት ይምረጡ",
+    "selectActionFirst": "መጀመሪያ እርምጃ ይምረጡ",
+    "loadingTemplates": "አብነቶች በመጫን ላይ ናቸው…",
+    "noTemplates": "ምንም የሚገኙ አብነቶች የሉም"
   },
   "admin": {
     "responseTemplates": {
@@ -103,8 +110,12 @@
       "code": "የአብነት ኮድ",
       "codeFixed": "ኮዱ አብነቱን ይለያል፣ ሊቀየር አይችልም።",
       "titleLabel": "ርዕስ",
-      "responseType": "የምላሽ አይነት",
-      "selectResponseType": "የምላሽ አይነት ይምረጡ",
+      "titleRequired": "ርዕስ ያስፈልጋል",
+      "action": "እርምጃ",
+      "selectAction": "እርምጃ ይምረጡ",
+      "actionRequired": "እባክዎ እርምጃ ይምረጡ",
+      "actionTakenRequired": "ለዚህ እርምጃ የተወሰደው እርምጃ ያስፈልጋል",
+      "resolutionSummaryRequired": "የመፍትሄ ማጠቃለያ ያስፈልጋል",
       "department": "መምሪያ",
       "active": "ንቁ",
       "variablesHint": "የሚገኙ ተለዋዋጮች:",

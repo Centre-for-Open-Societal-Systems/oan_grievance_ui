@@ -73,7 +73,14 @@
     "backToClose": "Satisfied after all? Close this grievance instead"
   },
   "responseForm": {
-    "responseSubmitted": "Response \"{type}\" submitted."
+    "responseSubmitted": "Response \"{type}\" submitted.",
+    "selectAction": "Select Action",
+    "loadingActions": "Loading actions…",
+    "noActions": "No actions available",
+    "selectTemplate": "Select Response Template",
+    "selectActionFirst": "Select an action first",
+    "loadingTemplates": "Loading templates…",
+    "noTemplates": "No templates available"
   },
   "admin": {
     "responseTemplates": {
@@ -103,8 +110,12 @@
       "code": "Template code",
       "codeFixed": "The code identifies the template and can't be changed.",
       "titleLabel": "Title",
+      "titleRequired": "Title is required",
       "action": "Action",
       "selectAction": "Select action",
+      "actionRequired": "Please select an action",
+      "actionTakenRequired": "Action taken is required for this action",
+      "resolutionSummaryRequired": "Resolution summary is required",
       "department": "Department",
       "active": "Active",
       "variablesHint": "Available variables:",

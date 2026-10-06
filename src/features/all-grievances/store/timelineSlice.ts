@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSelector, createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/store';
 import type { AttachmentScannedEvent } from '@/lib/realtime';
 import {
@@ -233,46 +233,9 @@ export const timelineSlice = createSlice({
         state.error = action.payload ?? 'Failed to fetch timeline';
       });
 
-    // postTimelineMessageThunk
+    // Specific mutation payload handlers
     builder
-      .addCase(postTimelineMessageThunk.pending, (state) => {
-        state.isSubmitting = true;
-        state.submitError = null;
-      })
-      .addCase(postTimelineMessageThunk.fulfilled, (state) => {
-        state.isSubmitting = false;
-        state.submitError = null;
-      })
-      .addCase(postTimelineMessageThunk.rejected, (state, action) => {
-        state.isSubmitting = false;
-        state.submitError = action.payload ?? 'Failed to post message';
-      });
-
-    // addTimelineNoteThunk
-    builder
-      .addCase(addTimelineNoteThunk.pending, (state) => {
-        state.isSubmitting = true;
-        state.submitError = null;
-      })
-      .addCase(addTimelineNoteThunk.fulfilled, (state) => {
-        state.isSubmitting = false;
-        state.submitError = null;
-      })
-      .addCase(addTimelineNoteThunk.rejected, (state, action) => {
-        state.isSubmitting = false;
-        state.submitError = action.payload ?? 'Failed to add note';
-      });
-
-    // executeTimelineActionThunk
-    builder
-      .addCase(executeTimelineActionThunk.pending, (state) => {
-        state.isSubmitting = true;
-        state.submitError = null;
-      })
       .addCase(executeTimelineActionThunk.fulfilled, (state, action) => {
-        state.isSubmitting = false;
-        state.submitError = null;
-
         const result = action.payload;
         if (state.timelineData && isForSelectedTicket(state, action.meta.arg.ticketNumber)) {
           if (result.current_state) {
@@ -288,21 +251,7 @@ export const timelineSlice = createSlice({
           if (result.timeline_event) appendTimelineEvent(state.timelineData, result.timeline_event);
         }
       })
-      .addCase(executeTimelineActionThunk.rejected, (state, action) => {
-        state.isSubmitting = false;
-        state.submitError = action.payload ?? 'Failed to execute action';
-      });
-
-    // deferSLAGrievanceThunk
-    builder
-      .addCase(deferSLAGrievanceThunk.pending, (state) => {
-        state.isSubmitting = true;
-        state.submitError = null;
-      })
       .addCase(deferSLAGrievanceThunk.fulfilled, (state, action) => {
-        state.isSubmitting = false;
-        state.submitError = null;
-
         const result = action.payload;
         if (state.timelineData && isForSelectedTicket(state, action.meta.arg.ticketNumber)) {
           if (result.sla_due_date && state.timelineData.sla) {
@@ -312,21 +261,7 @@ export const timelineSlice = createSlice({
           if (result.timeline_event) appendTimelineEvent(state.timelineData, result.timeline_event);
         }
       })
-      .addCase(deferSLAGrievanceThunk.rejected, (state, action) => {
-        state.isSubmitting = false;
-        state.submitError = action.payload ?? 'Failed to request SLA deferral';
-      });
-
-    // reassignGrievanceThunk
-    builder
-      .addCase(reassignGrievanceThunk.pending, (state) => {
-        state.isSubmitting = true;
-        state.submitError = null;
-      })
       .addCase(reassignGrievanceThunk.fulfilled, (state, action) => {
-        state.isSubmitting = false;
-        state.submitError = null;
-
         const result = action.payload;
         if (state.timelineData && isForSelectedTicket(state, action.meta.arg.ticketNumber)) {
           if (state.timelineData.assignment) {
@@ -340,11 +275,49 @@ export const timelineSlice = createSlice({
           if (result.current_state) mergeCurrentState(state.timelineData, result.current_state);
           if (result.timeline_event) appendTimelineEvent(state.timelineData, result.timeline_event);
         }
-      })
-      .addCase(reassignGrievanceThunk.rejected, (state, action) => {
-        state.isSubmitting = false;
-        state.submitError = action.payload ?? 'Failed to reassign grievance';
       });
+
+    // Shared lifecycle matchers for timeline mutations
+    builder
+      .addMatcher(
+        isAnyOf(
+          postTimelineMessageThunk.pending,
+          addTimelineNoteThunk.pending,
+          executeTimelineActionThunk.pending,
+          deferSLAGrievanceThunk.pending,
+          reassignGrievanceThunk.pending
+        ),
+        (state) => {
+          state.isSubmitting = true;
+          state.submitError = null;
+        }
+      )
+      .addMatcher(
+        isAnyOf(
+          postTimelineMessageThunk.fulfilled,
+          addTimelineNoteThunk.fulfilled,
+          executeTimelineActionThunk.fulfilled,
+          deferSLAGrievanceThunk.fulfilled,
+          reassignGrievanceThunk.fulfilled
+        ),
+        (state) => {
+          state.isSubmitting = false;
+          state.submitError = null;
+        }
+      )
+      .addMatcher(
+        isAnyOf(
+          postTimelineMessageThunk.rejected,
+          addTimelineNoteThunk.rejected,
+          executeTimelineActionThunk.rejected,
+          deferSLAGrievanceThunk.rejected,
+          reassignGrievanceThunk.rejected
+        ),
+        (state, action) => {
+          state.isSubmitting = false;
+          state.submitError = (action.payload as string | undefined) ?? 'Action failed';
+        }
+      );
   },
 });
 

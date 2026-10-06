@@ -22,7 +22,7 @@ export function NotificationBell() {
       type="button"
       onClick={() => setUnread(0)}
       aria-label={unread > 0 ? t("unreadLabel", { count: unread }) : t("label")}
-      className="relative text-slate-500 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c36]/40 rounded ml-2 transition-colors"
+      className="relative text-slate-500 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800/40 rounded ml-2 transition-colors"
     >
       <Bell className="w-[22px] h-[22px] fill-slate-500" />
       {unread > 0 && (

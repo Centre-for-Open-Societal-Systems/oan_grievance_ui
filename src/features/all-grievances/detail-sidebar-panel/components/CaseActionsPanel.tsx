@@ -27,11 +27,22 @@ const ACTION_HINT_KEYS: Record<string, string> = {
 export interface CaseActionsPanelProps {
   /** The case's `available_actions` for the submitter. */
   actions: GrievanceAvailableAction[];
+  caseStatus?: string;
   isSubmitting: boolean;
   onExecute: (payload: GrievanceActionPayload) => Promise<unknown>;
   /** Uploads supporting documents to the case before the action runs. */
   onUploadFiles: (files: File[]) => Promise<unknown>;
 }
+
+const isCloseAction = (a: GrievanceAvailableAction | null | undefined): boolean => {
+  if (!a) return false;
+  return a.action_code === "close_case" || a.action.trim().toLowerCase() === "close case";
+};
+
+const isReopenAction = (a: GrievanceAvailableAction | null | undefined): boolean => {
+  if (!a) return false;
+  return a.action_code === "reopen" || a.action.trim().toLowerCase() === "reopen";
+};
 
 /**
  * The submitter's workflow-action form, shown where officers get the
@@ -44,7 +55,7 @@ export interface CaseActionsPanelProps {
  * reopening as a link. Whether a reason is required comes from the
  * action's `requires_reason`.
  */
-export function CaseActionsPanel({ actions, isSubmitting, onExecute, onUploadFiles }: CaseActionsPanelProps) {
+export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute, onUploadFiles }: CaseActionsPanelProps) {
   const t = useTranslations("caseActions");
   const tDocs = useTranslations("supportingDocuments");
   const reasonId = useId();
@@ -61,13 +72,14 @@ export function CaseActionsPanel({ actions, isSubmitting, onExecute, onUploadFil
   // The case moves on after an action (here or elsewhere), so a selection
   // that is no longer offered is treated as no selection. A lone action is
   // always selected, and a resolved case starts on Close Case.
-  const closeAction = actions.find((a) => a.action === CLOSE_CASE_ACTION) ?? null;
-  const reopenAction = actions.find((a) => a.action === REOPEN_ACTION) ?? null;
-  const isResolvedChoice = actions.length === 2 && !!closeAction && !!reopenAction;
+  const closeAction = actions.find(isCloseAction) ?? null;
+  const reopenAction = actions.find(isReopenAction) ?? null;
+  const isCaseResolved = caseStatus ? caseStatus.trim().toLowerCase() === "resolved" : actions.length === 2;
+  const isResolvedChoice = isCaseResolved && !!closeAction && !!reopenAction;
   const defaultAction = actions.length === 1 ? actions[0] : isResolvedChoice ? closeAction : null;
   const selected = actions.find((a) => a.action === selectedAction) ?? defaultAction;
   const showPicker = actions.length > 1 && !isResolvedChoice;
-  const needsRating = selected?.action === CLOSE_CASE_ACTION;
+  const needsRating = selected ? (selected.requires_rating ?? isCloseAction(selected)) : false;
   const takesFiles = !!selected && !needsRating;
   const reasonRequired = selected?.requires_reason ?? true;
   const busy = isSubmitting || isUploading;
@@ -89,11 +101,13 @@ export function CaseActionsPanel({ actions, isSubmitting, onExecute, onUploadFil
     );
   }
 
-  const choose = (action: string) => {
-    setSelectedAction(action);
+  const choose = (actionName: string) => {
+    setSelectedAction(actionName);
     setError(null);
     setSuccess(null);
-    if (action !== CLOSE_CASE_ACTION) setRating(null);
+    const act = actions.find((a) => a.action === actionName);
+    const requiresRating = act ? (act.requires_rating ?? isCloseAction(act)) : actionName.toLowerCase() === "close case";
+    if (!requiresRating) setRating(null);
     else setFiles([]);
   };
 

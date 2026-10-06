@@ -4,17 +4,20 @@ import { useFormatter, useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { FileDropzone, FileRow } from "@/components/ui/FileDropzone";
 
-/** Mirrors the backend's per-file upload limit (attachment.py). */
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
-const ACCEPT_ATTR = ".pdf,.jpg,.jpeg,.png";
+import {
+  MAX_ATTACHMENTS_PER_CASE,
+  MAX_ATTACHMENT_BYTES,
+  ACCEPTED_ATTACHMENT_MIME_TYPES,
+  ACCEPTED_ATTACHMENT_EXTENSIONS,
+} from "@/lib/attachments";
 
 export interface SupportingDocumentsFieldProps {
   files: File[];
   onChange: (files: File[]) => void;
-  /** Called when a pick or drop included files that were skipped for type or size. */
+  /** Called when a pick or drop included files that were skipped for type, size, or slot limits. */
   onRejected: () => void;
   disabled?: boolean;
+  maxFiles?: number;
 }
 
 /**
@@ -22,21 +25,40 @@ export interface SupportingDocumentsFieldProps {
  * and the submitter's action panel. Only holds the picked files; the form
  * that owns it uploads them on submit.
  */
-export function SupportingDocumentsField({ files, onChange, onRejected, disabled }: SupportingDocumentsFieldProps) {
+export function SupportingDocumentsField({
+  files,
+  onChange,
+  onRejected,
+  disabled,
+  maxFiles = MAX_ATTACHMENTS_PER_CASE,
+}: SupportingDocumentsFieldProps) {
   const t = useTranslations("supportingDocuments");
   const format = useFormatter();
 
   const addFiles = (picked: File[]) => {
-    const accepted = picked.filter((f) => ACCEPTED_TYPES.includes(f.type) && f.size <= MAX_FILE_BYTES);
-    onChange([...files, ...accepted.filter((f) => !files.some((p) => p.name === f.name && p.size === f.size))]);
-    // After onChange, so a caller that clears its error on change still shows this one.
-    if (accepted.length < picked.length) onRejected();
+    const remainingSlots = Math.max(0, maxFiles - files.length);
+    const valid = picked.filter(
+      (f) => (ACCEPTED_ATTACHMENT_MIME_TYPES as readonly string[]).includes(f.type) && f.size <= MAX_ATTACHMENT_BYTES
+    );
+    const unique = valid.filter((f) => !files.some((p) => p.name === f.name && p.size === f.size));
+    const toAdd = unique.slice(0, remainingSlots);
+
+    if (toAdd.length > 0) {
+      onChange([...files, ...toAdd]);
+    }
+
+    // Trigger rejection feedback if files were filtered out or capped by available slots.
+    if (valid.length < picked.length || unique.length > remainingSlots) {
+      onRejected();
+    }
   };
 
   const formatSize = (bytes: number) =>
     bytes >= 1024 * 1024
       ? format.number(bytes / (1024 * 1024), { style: "unit", unit: "megabyte", maximumFractionDigits: 1 })
       : format.number(Math.max(1, Math.round(bytes / 1024)), { style: "unit", unit: "kilobyte" });
+
+  const isFull = files.length >= maxFiles;
 
   return (
     <FileDropzone
@@ -46,8 +68,8 @@ export function SupportingDocumentsField({ files, onChange, onRejected, disabled
       })}
       hint={t("hint")}
       inputLabel={t("label")}
-      accept={ACCEPT_ATTR}
-      disabled={disabled}
+      accept={ACCEPTED_ATTACHMENT_EXTENSIONS}
+      disabled={disabled || isFull}
       onFiles={addFiles}
     >
       {files.length > 0 && (

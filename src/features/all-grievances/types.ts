@@ -237,6 +237,8 @@ export interface GrievanceAvailableAction {
   action: string;
   label: string;
   requires_reason: boolean;
+  action_code?: string;
+  requires_rating?: boolean;
 }
 
 export interface GrievanceTimelineAttachment {
