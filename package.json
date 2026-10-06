@@ -2,7 +2,7 @@
   "name": "grievance-management-portal",
   "version": "0.1.0",
   "private": true,
-  "//": "NOTE: package-lock.json is kept temporarily for backward compatibility with npm workflows. It will be removed later in favor of pnpm-lock.yaml.",
+
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=24.0.0"
