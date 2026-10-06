@@ -15,4 +15,32 @@ export const env = {
     }
     return val.replace(/\/+$/, '');
   },
+
+  /**
+   * The grievance service's socket.io endpoint (AsyncAPI `servers`), e.g.
+   * `wss://grievance.openagrinet.org` plus the Frappe site the socket's
+   * namespace is named after. Optional: when either is unset realtime is off
+   * and the UI falls back to reading state through REST only, so a deployment
+   * without a socket gateway still runs. A value that is set but malformed
+   * throws, same as AUTH_API_BASE_URL.
+   */
+  get REALTIME(): { url: string; site: string; path: string } | null {
+    const url = process.env.REALTIME_URL;
+    const site = process.env.REALTIME_SITE;
+    if (!url || !site) return null;
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new Error(`[env] Invalid environment configuration: REALTIME_URL must be a valid URL (got "${url}")`);
+    }
+    if (parsed.protocol !== 'wss:' && parsed.protocol !== 'ws:') {
+      throw new Error(`[env] Invalid environment configuration: REALTIME_URL must use ws:// or wss:// (got "${url}")`);
+    }
+    return {
+      url: parsed.origin,
+      site,
+      path: process.env.REALTIME_PATH || '/socket.io/',
+    };
+  },
 };

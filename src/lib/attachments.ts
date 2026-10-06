@@ -43,6 +43,17 @@ export type ScanStatus = (typeof SCAN_STATUS)[keyof typeof SCAN_STATUS];
 /** Mirrors the backend's `MAX_ATTACHMENTS_PER_CASE` (attachment.py) — a case may carry at most this many files, resumed draft attachments included. */
 export const MAX_ATTACHMENTS_PER_CASE = 10;
 
+/** Mirrors the backend's 10MB per-file upload limit (attachment.py). */
+export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+export const ACCEPTED_ATTACHMENT_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+] as const;
+
+export const ACCEPTED_ATTACHMENT_EXTENSIONS = '.pdf,.jpg,.jpeg,.png';
+
 export type AttachmentUploadState = 'idle' | 'uploading' | 'persisting' | 'error';
 
 /**

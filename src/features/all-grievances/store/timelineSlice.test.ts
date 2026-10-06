@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  attachmentScanVerdictReceived,
   clearTimeline,
   setSelectedTicketNumber,
   timelineReducer,
@@ -295,5 +296,49 @@ describe('timelineSlice', () => {
     });
     expect(next.timelineData?.status).toBe('In Progress');
     expect(next.isSubmitting).toBe(false);
+  });
+
+  it('applies a realtime scan verdict to the attachment everywhere it is listed', () => {
+    const attachment = { name: 'GA-2026-00042', attachment: 'GA-2026-00042', scan_status: 'Pending' };
+    const withPending: TimelineState = {
+      ...initialTimelineState,
+      selectedTicketNumber: 'ET14IN000012026',
+      status: 'succeeded',
+      timelineData: {
+        ...sampleTimelineData,
+        attachments: [{ ...attachment }, { name: 'GA-OTHER', scan_status: 'Pending' }],
+        timeline: [{ ...sampleTimelineData.timeline![0]!, attachments: [{ ...attachment }] }],
+      },
+    };
+
+    const next = timelineReducer(
+      withPending,
+      attachmentScanVerdictReceived({ attachment: 'GA-2026-00042', grievance: 'GRV-1', scan_status: 'Clean' })
+    );
+    expect(next.timelineData?.attachments?.[0]?.scan_status).toBe('Clean');
+    expect(next.timelineData?.attachments?.[1]?.scan_status).toBe('Pending');
+    expect(next.timelineData?.timeline?.[0]?.attachments?.[0]?.scan_status).toBe('Clean');
+  });
+
+  it('keeps the current view during a silent background refetch', () => {
+    const loaded: TimelineState = {
+      ...initialTimelineState,
+      selectedTicketNumber: 'ET14IN000012026',
+      timelineData: sampleTimelineData,
+      status: 'succeeded',
+    };
+    const meta = { arg: { ticketNumber: 'ET14IN000012026', silent: true } };
+
+    const pending = timelineReducer(loaded, { type: 'timeline/fetchTimeline/pending', meta });
+    expect(pending.status).toBe('succeeded');
+
+    const failed = timelineReducer(pending, {
+      type: 'timeline/fetchTimeline/rejected',
+      payload: 'Network down',
+      meta,
+    });
+    expect(failed.status).toBe('succeeded');
+    expect(failed.error).toBeNull();
+    expect(failed.timelineData).toBe(sampleTimelineData);
   });
 });

@@ -1,34 +1,51 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
+import { fetchResponseTemplates } from '../../api/grievanceApi';
+import type {
+  GrievanceActionPayload,
+  GrievanceAvailableAction,
+  ResponseTemplateItem,
+} from '../../types';
+import { composeResponseBody, splitResponseParts } from '@/lib/responseBody';
+import { SupportingDocumentsField } from './SupportingDocumentsField';
 import {
   FileText,
   AlertCircle,
   ChevronDown,
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
   EyeOff,
   Send,
   Loader2,
   CheckCircle2,
 } from 'lucide-react';
 
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
+const ACTION_TAKEN_MAX = 500;
+
 const AnimatedDropdown = ({
   label,
   options,
   placeholder,
   required,
+  disabled,
   value,
   onChange,
 }: {
   label: string;
-  options: string[];
+  options: DropdownOption[];
   placeholder: string;
   required?: boolean;
+  disabled?: boolean;
   value: string;
   onChange: (val: string) => void;
 }) => {
+  const selected = options.find((opt) => opt.value === value);
+
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -49,10 +66,13 @@ const AnimatedDropdown = ({
       </label>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full border rounded-lg px-3 py-2.5 text-sm flex justify-between items-center transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 border-gray-300 bg-white"
+        className="w-full border rounded-lg px-3 py-2.5 text-sm flex justify-between items-center transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 border-gray-300 bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
       >
-        <span className={value ? 'text-gray-900' : 'text-gray-400'}>{value || placeholder}</span>
+        <span className={`truncate ${selected ? 'text-gray-900' : 'text-gray-400'}`}>
+          {selected?.label || placeholder}
+        </span>
         <ChevronDown
           className={`h-4 w-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
         />
@@ -64,19 +84,19 @@ const AnimatedDropdown = ({
         }`}
       >
         <div className="max-h-48 overflow-y-auto">
-          {options.map((opt, idx) => (
+          {options.map((opt) => (
             <button
               type="button"
-              key={idx}
+              key={opt.value}
               onClick={() => {
-                onChange(opt);
+                onChange(opt.value);
                 setIsOpen(false);
               }}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 transition-colors border-b border-gray-50 last:border-0 ${
-                value === opt ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-700'
+                value === opt.value ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-700'
               }`}
             >
-              {opt}
+              {opt.label}
             </button>
           ))}
         </div>
@@ -85,126 +105,42 @@ const AnimatedDropdown = ({
   );
 };
 
-const AnimatedDatePicker = ({
-  label,
-  required,
-  value,
-  onChange,
-  placeholder = 'dd/mm/yyyy',
-}: {
-  label: string;
-  required?: boolean;
-  value: string;
-  onChange: (val: string) => void;
-  placeholder?: string;
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const calRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (calRef.current && !calRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const today = new Date();
-  const currentMonth = today.toLocaleString('default', { month: 'long' });
-  const currentYear = today.getFullYear();
-  const currentMonthShort = today.toLocaleString('default', { month: 'short' });
-  const daysInMonth = new Date(currentYear, today.getMonth() + 1, 0).getDate();
-
-  return (
-    <div className="relative flex flex-col flex-1" ref={calRef}>
-      <label className="block text-sm font-bold text-gray-700 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-500 flex justify-between items-center hover:border-emerald-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white transition-colors"
-      >
-        <span className={value ? 'text-gray-900' : 'text-gray-400'}>{value || placeholder}</span>
-        <CalendarIcon className="h-4 w-4 text-gray-700" />
-      </button>
-
-      <div
-        className={`absolute top-[72px] right-0 p-4 bg-white border border-gray-100 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-[60] w-[260px] transform transition-all duration-300 origin-top-right ${
-          isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <button
-            type="button"
-            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="text-sm font-bold text-gray-800">
-            {currentMonth} {currentYear}
-          </span>
-          <button
-            type="button"
-            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="grid grid-cols-7 gap-1 text-center mb-2">
-          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-            <div key={d} className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-              {d}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const dayDate = `${currentMonthShort} ${i + 1}, ${currentYear}`;
-            const isSelected = value === dayDate;
-            return (
-              <button
-                type="button"
-                key={i}
-                onClick={() => {
-                  onChange(dayDate);
-                  setIsOpen(false);
-                }}
-                className={`w-7 h-7 mx-auto text-xs font-medium flex items-center justify-center rounded-full transition-all ${
-                  isSelected
-                    ? 'bg-[#1E8E3E] text-white shadow-md transform scale-110'
-                    : 'text-gray-700 hover:bg-emerald-50 hover:text-[#1E8E3E]'
-                }`}
-              >
-                {i + 1}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 interface ResponseFormProps {
+  ticketNumber: string;
   canManageCase: boolean;
-  onPostMessage?: (msg: string) => Promise<unknown>;
+  /**
+   * The case's `available_actions`, each carrying the response types mapped
+   * onto it. Comes with the timeline, so it follows the case's state.
+   */
+  actions: GrievanceAvailableAction[];
+  /** True until the timeline (and so the action list) has loaded. */
+  isLoadingActions: boolean;
+  onExecuteAction?: (payload: GrievanceActionPayload) => Promise<unknown>;
   onAddNote?: (note: string, isInternal: boolean) => Promise<unknown>;
+  /** Uploads supporting documents to the case before the response is sent. */
+  onUploadFiles?: (files: File[]) => Promise<unknown>;
   isSubmitting?: boolean;
 }
 
 export function ResponseForm({
+  ticketNumber,
   canManageCase,
-  onPostMessage,
+  actions,
+  isLoadingActions,
+  onExecuteAction,
   onAddNote,
-  isSubmitting = false,
+  onUploadFiles,
+  isSubmitting: isExecuting = false,
 }: ResponseFormProps) {
+  const t = useTranslations('responseForm');
+  const tDocs = useTranslations('supportingDocuments');
+  const [files, setFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const isSubmitting = isExecuting || isUploading;
   const [activeTab, setActiveTab] = useState<'response' | 'internal'>('response');
 
-  const [responseType, setResponseType] = useState('');
-  const [closureDate, setClosureDate] = useState('');
+  const [action, setAction] = useState('');
+  const [template, setTemplate] = useState('');
   const [actionTaken, setActionTaken] = useState('');
   const [resolutionSummary, setResolutionSummary] = useState('');
   const [internalNotesResponse, setInternalNotesResponse] = useState('');
@@ -213,9 +149,75 @@ export function ResponseForm({
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Tagged with the action it was fetched for, so loading state is
+  // derived (no synchronous setState in the effect) and stale responses are ignored.
+  const [templates, setTemplates] = useState<{
+    action: string;
+    items: ResponseTemplateItem[];
+  } | null>(null);
+
+  // The case can move on (here or from another tab) while something is
+  // picked; an action or type no longer offered is treated as no selection.
+  const selectedAction = actions.find((item) => item.action === action) ?? null;
+
+  useEffect(() => {
+    if (!canManageCase || !action) return;
+    const controller = new AbortController();
+    fetchResponseTemplates(ticketNumber, action, { signal: controller.signal })
+      .then((data) => setTemplates({ action: action, items: data?.items ?? [] }))
+      .catch(() => {
+        if (!controller.signal.aborted) setTemplates({ action: action, items: [] });
+      });
+    return () => controller.abort();
+  }, [ticketNumber, action, canManageCase]);
+
+  const actionOptions = actions.map((item) => ({ value: item.action, label: item.label }));
+
+  const templateItems = selectedAction && templates?.action === selectedAction.action ? templates.items : [];
+  const isLoadingTemplates = selectedAction !== null && templates?.action !== selectedAction.action;
+  const templateOptions = templateItems.map((item) => ({
+    value: item.template,
+    label: item.title,
+  }));
+
+  const handleActionChange = (value: string) => {
+    if (value === action) return;
+    setAction(value);
+    setTemplate('');
+  };
+
+  // A template is authored in the same two parts the officer fills, and the
+  // service returns them split. One not written in two parts fills the
+  // summary, since the summary is what the submitter reads.
+  const handleTemplateChange = (value: string) => {
+    const selected = templateItems.find((item) => item.template === value);
+    if (!selected) return;
+    const parts = selected.reason_parts ?? splitResponseParts(selected.reason);
+    setTemplate(value);
+    setActionTaken((parts.action_taken || '').slice(0, ACTION_TAKEN_MAX));
+    setResolutionSummary(parts.resolution_summary || selected.reason);
+  };
+
+  const getErrorMessage = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message ? err.message : fallback;
+
+  const switchTab = (tab: 'response' | 'internal') => {
+    setActiveTab(tab);
+    setSubmitError(null);
+    setSubmitSuccess(null);
+  };
+
+  let actionPlaceholder = t('selectAction');
+  if (isLoadingActions) actionPlaceholder = t('loadingActions');
+  else if (actionOptions.length === 0) actionPlaceholder = t('noActions');
+
+  let templatePlaceholder = t('selectTemplate');
+  if (!selectedAction) templatePlaceholder = t('selectActionFirst');
+  else if (isLoadingTemplates) templatePlaceholder = t('loadingTemplates');
+  else if (templateOptions.length === 0) templatePlaceholder = t('noTemplates');
+
   const isResponseValid =
-    responseType !== '' &&
-    closureDate !== '' &&
+    selectedAction !== null &&
     actionTaken.trim() !== '' &&
     resolutionSummary.trim() !== '';
   const isInternalValid = internalNoteTab.trim() !== '';
@@ -223,27 +225,41 @@ export function ResponseForm({
   if (!canManageCase) return null;
 
   const handleSubmitResponse = async () => {
-    if (!isResponseValid || !onPostMessage) return;
+    if (!isResponseValid || !selectedAction || !onExecuteAction) return;
     setSubmitError(null);
     setSubmitSuccess(null);
 
-    const fullMessage = `**${responseType}** (Proposed Closure: ${closureDate})\n\n**Action Taken:**\n${actionTaken.trim()}\n\n**Resolution Summary:**\n${resolutionSummary.trim()}`;
+    // Upload first so the documents are on the case when the response lands.
+    if (files.length > 0 && onUploadFiles) {
+      setIsUploading(true);
+      try {
+        await onUploadFiles(files);
+        setFiles([]);
+      } catch (err) {
+        setSubmitError(getErrorMessage(err, tDocs('uploadFailed')));
+        return;
+      } finally {
+        setIsUploading(false);
+      }
+    }
 
     try {
-      await onPostMessage(fullMessage);
-      if (internalNotesResponse.trim() && onAddNote) {
-        await onAddNote(internalNotesResponse.trim(), true);
-      }
-      setResponseType('');
-      setClosureDate('');
+      // Sent as two parts composed under standard headings as the reason.
+      await onExecuteAction({
+        action: selectedAction.action,
+        template: template || null,
+        reason: composeResponseBody({ actionTaken, resolutionSummary }),
+        internal_notes: internalNotesResponse.trim() || null,
+      });
+      setAction('');
+      setTemplate('');
       setActionTaken('');
       setResolutionSummary('');
       setInternalNotesResponse('');
-      setSubmitSuccess('Department response posted successfully');
+      setSubmitSuccess(t('responseSubmitted', { type: selectedAction.label }));
       setTimeout(() => setSubmitSuccess(null), 4000);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to post response';
-      setSubmitError(msg);
+      setSubmitError(getErrorMessage(err, 'Failed to post response'));
     }
   };
 
@@ -258,8 +274,7 @@ export function ResponseForm({
       setSubmitSuccess('Internal note added successfully');
       setTimeout(() => setSubmitSuccess(null), 4000);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to add internal note';
-      setSubmitError(msg);
+      setSubmitError(getErrorMessage(err, 'Failed to add internal note'));
     }
   };
 
@@ -268,11 +283,7 @@ export function ResponseForm({
       <div className="flex border-b border-gray-200">
         <button
           type="button"
-          onClick={() => {
-            setActiveTab('response');
-            setSubmitError(null);
-            setSubmitSuccess(null);
-          }}
+          onClick={() => switchTab('response')}
           className={`flex-1 py-4 px-6 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
             activeTab === 'response'
               ? 'text-emerald-700 bg-emerald-50/50 border-b-2 border-emerald-500'
@@ -283,11 +294,7 @@ export function ResponseForm({
         </button>
         <button
           type="button"
-          onClick={() => {
-            setActiveTab('internal');
-            setSubmitError(null);
-            setSubmitSuccess(null);
-          }}
+          onClick={() => switchTab('internal')}
           className={`flex-1 py-4 px-6 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
             activeTab === 'internal'
               ? 'text-emerald-700 bg-emerald-50/50 border-b-2 border-emerald-500'
@@ -318,28 +325,30 @@ export function ResponseForm({
             <div className="flex gap-4 z-50">
               <AnimatedDropdown
                 label="Response Type"
-                placeholder="Select Response Type"
-                options={['Initial Acknowledgment', 'Investigation Update', 'Final Resolution']}
+                placeholder={actionPlaceholder}
+                options={actionOptions}
                 required
-                value={responseType}
-                onChange={setResponseType}
+                disabled={isLoadingActions || actionOptions.length === 0}
+                value={selectedAction ? action : ''}
+                onChange={handleActionChange}
               />
-              <AnimatedDatePicker
-                label="Proposed Closure Date"
-                placeholder="Select Proposed Closure Date"
-                required
-                value={closureDate}
-                onChange={setClosureDate}
+              <AnimatedDropdown
+                label="Response Template"
+                placeholder={templatePlaceholder}
+                options={templateOptions}
+                disabled={isLoadingTemplates || templateOptions.length === 0}
+                value={template}
+                onChange={handleTemplateChange}
               />
             </div>
             <div className="z-10 relative">
               <label className="block text-sm font-bold text-gray-700 mb-1.5">
                 Action Taken <span className="text-red-500">*</span>{' '}
-                <span className="text-gray-400 font-normal">({actionTaken.length}/500)</span>
+                <span className="text-gray-400 font-normal">({actionTaken.length}/{ACTION_TAKEN_MAX})</span>
               </label>
               <textarea
                 rows={3}
-                maxLength={500}
+                maxLength={ACTION_TAKEN_MAX}
                 value={actionTaken}
                 onChange={(e) => setActionTaken(e.target.value)}
                 placeholder="Describe the specific action taken by the department..."
@@ -358,6 +367,17 @@ export function ResponseForm({
                 className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white resize-none"
               ></textarea>
             </div>
+            {onUploadFiles && (
+              <SupportingDocumentsField
+                files={files}
+                onChange={(next) => {
+                  setFiles(next);
+                  setSubmitError(null);
+                }}
+                onRejected={() => setSubmitError(tDocs('rejected'))}
+                disabled={isSubmitting}
+              />
+            )}
             <div className="z-10 relative">
               <label className="block text-sm font-bold text-[#203628] mb-1.5 flex items-center gap-1.5">
                 <EyeOff className="h-4 w-4 text-gray-500" /> Internal Notes{' '}
@@ -384,7 +404,7 @@ export function ResponseForm({
                 }`}
               >
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                {isSubmitting ? 'Posting…' : 'Submit Response'}
+                {isSubmitting ? 'Submitting…' : 'Submit Response'}
               </button>
             </div>
           </>

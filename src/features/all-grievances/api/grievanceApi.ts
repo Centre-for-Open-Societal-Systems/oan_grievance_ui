@@ -13,6 +13,7 @@ import type {
   GrievanceSummaryData,
   GrievanceTimelineData,
   GrievanceTimelineQueryParams,
+  ResponseTemplatesData,
   RaiseChangeRequestPayload,
   ReassignGrievancePayload,
 } from '../types';
@@ -129,14 +130,16 @@ export async function fetchGrievanceTimeline(
 }
 
 /**
- * Appends a public message to the grievance conversation thread, visible to both
- * citizens and case officers.
+ * Posts to the case thread: a public message, or an internal note when staff
+ * send `isInternal`. Never moves the case — a reply to an information request
+ * is the `Submitter Reply` action on /action.
  *
  * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/message
  */
 export async function postGrievanceMessage(
   ticketNumber: string,
   body: string,
+  isInternal = false,
   options: RequestOptions = {}
 ): Promise<GrievanceActionResult> {
   return fetchApi<GrievanceActionResult>(
@@ -145,32 +148,6 @@ export async function postGrievanceMessage(
       method: 'POST',
       body: JSON.stringify({
         ticket_number: ticketNumber,
-        message: body,
-        body,
-      }),
-      signal: options.signal,
-    }
-  );
-}
-
-/**
- * Records an internal or public staff note on the grievance case (staff only).
- *
- * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/note
- */
-export async function addGrievanceNote(
-  ticketNumber: string,
-  body: string,
-  isInternal = true,
-  options: RequestOptions = {}
-): Promise<GrievanceActionResult> {
-  return fetchApi<GrievanceActionResult>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/note`,
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        ticket_number: ticketNumber,
-        note: body,
         body,
         is_internal: isInternal,
       }),
@@ -180,7 +157,41 @@ export async function addGrievanceNote(
 }
 
 /**
- * Executes a lifecycle state transition or workflow action on a grievance.
+ * Response templates for a response type, rendered with this grievance's details.
+ *
+ * Corresponding REST endpoint: GET /api/v1/grievances/:ticket_number/response-templates
+ */
+export async function fetchResponseTemplates(
+  ticketNumber: string,
+  action: string,
+  options: RequestOptions = {}
+): Promise<ResponseTemplatesData> {
+  const query = new URLSearchParams({ action }).toString();
+  return fetchApi<ResponseTemplatesData>(
+    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/response-templates?${query}`,
+    { method: 'GET', signal: options.signal }
+  );
+}
+
+/**
+ * Records an internal staff note on the grievance case (staff only). The
+ * service has no separate note route: a note is a message with `is_internal`.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/message
+ */
+export async function addGrievanceNote(
+  ticketNumber: string,
+  body: string,
+  isInternal = true,
+  options: RequestOptions = {}
+): Promise<GrievanceActionResult> {
+  return postGrievanceMessage(ticketNumber, body, isInternal, options);
+}
+
+/**
+ * Takes a workflow action on a grievance — one of the case's `available_actions`,
+ * by an officer or the submitter. Every action carries a `reason` the
+ * submitter sees; an officer action that response types map onto names one.
  *
  * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/action
  */
@@ -193,9 +204,20 @@ export async function executeGrievanceAction(
     `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/action`,
     {
       method: 'POST',
+      // The request model forbids unknown fields, so only the spec's
+      // fields are sent, and unset optional ones are left out entirely.
       body: JSON.stringify({
         ticket_number: ticketNumber,
-        ...payload,
+        action: payload.action,
+        ...('reason' in payload
+          ? { reason: payload.reason }
+          : {
+              action_taken: payload.action_taken,
+              resolution_summary: payload.resolution_summary,
+            }),
+        ...(payload.internal_notes ? { internal_notes: payload.internal_notes } : {}),
+        ...(payload.template ? { template: payload.template } : {}),
+        ...(payload.rating != null ? { rating: payload.rating } : {}),
       }),
       signal: options.signal,
     }
@@ -371,6 +393,7 @@ export const grievanceService = {
   getSummary: fetchGrievanceSummary,
   getTimeline: fetchGrievanceTimeline,
   postMessage: postGrievanceMessage,
+  getResponseTemplates: fetchResponseTemplates,
   addNote: addGrievanceNote,
   executeAction: executeGrievanceAction,
   reassign: reassignGrievance,

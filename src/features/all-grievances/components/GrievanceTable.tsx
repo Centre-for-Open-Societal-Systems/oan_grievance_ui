@@ -34,6 +34,24 @@ const statusColors: Record<string, string> = {
   'Under Review': 'bg-purple-50 text-purple-600 border border-purple-200/60',
 };
 
+function renderSubmittedAt(submittedAt?: string | null) {
+  if (!submittedAt) {
+    return <span className="text-gray-400 text-xs">—</span>;
+  }
+  const lastCommaIndex = submittedAt.lastIndexOf(',');
+  if (lastCommaIndex !== -1) {
+    const datePart = submittedAt.slice(0, lastCommaIndex).trim();
+    const timePart = submittedAt.slice(lastCommaIndex + 1).trim();
+    return (
+      <div className="flex flex-col text-xs leading-tight">
+        <span className="font-medium text-gray-700">{datePart}</span>
+        {timePart ? <span className="text-gray-400 text-[11px] mt-0.5">{timePart}</span> : null}
+      </div>
+    );
+  }
+  return <span className="text-xs text-gray-600 leading-tight">{submittedAt}</span>;
+}
+
 export function GrievanceTable({
   searchTerm,
   setSearchTerm,
@@ -126,16 +144,26 @@ export function GrievanceTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-auto flex-1 [scrollbar-color:#16A34A_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#16A34A] [&::-webkit-scrollbar-thumb]:rounded-full">
-        <table className="w-full text-sm text-left">
-          <thead className="text-sm text-slate-500 bg-[#F8F9FA] border-b border-gray-200 font-semibold">
+      <div className="overflow-x-auto flex-1 [scrollbar-color:#16A34A_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#16A34A] [&::-webkit-scrollbar-thumb]:rounded-full">
+        <table className="w-full text-sm text-left table-fixed min-w-[700px]">
+          <colgroup>
+            <col className="w-[12%]" />
+            <col className="w-[28%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[12%]" />
+            <col className="w-[11%]" />
+            <col className="w-[9%]" />
+          </colgroup>
+          <thead className="text-xs sm:text-sm text-slate-500 bg-[#F8F9FA] border-b border-gray-200 font-semibold">
             <tr>
-              <th className="px-6 py-3 whitespace-nowrap">Ticket ID</th>
-              <th className="px-6 py-3 w-full min-w-[280px]">Details</th>
-              <th className="px-6 py-3 whitespace-nowrap">Location</th>
-              <th className="px-6 py-3 cursor-pointer hover:text-gray-700 relative">
-                <div className="flex items-center gap-1.5 group" onClick={() => setOpenFilter(openFilter === 'category' ? null : 'category')}>
-                  Category <Filter className={`h-4 w-4 transition-colors duration-300 ${openFilter === 'category' ? 'text-emerald-500' : 'text-gray-400 group-hover:text-emerald-500'}`} />
+              <th className="px-3.5 py-3 whitespace-nowrap">Ticket ID</th>
+              <th className="px-3.5 py-3">Details</th>
+              <th className="px-3.5 py-3">Location</th>
+              <th className="px-3.5 py-3 cursor-pointer hover:text-gray-700 relative">
+                <div className="flex items-center gap-1 group" onClick={() => setOpenFilter(openFilter === 'category' ? null : 'category')}>
+                  <span>Category</span>
+                  <Filter className={`h-3.5 w-3.5 shrink-0 transition-colors duration-300 ${openFilter === 'category' ? 'text-emerald-500' : 'text-gray-400 group-hover:text-emerald-500'}`} />
                 </div>
                 <FilterPopup
                   options={categoryOptions}
@@ -145,9 +173,10 @@ export function GrievanceTable({
                   onClose={() => setOpenFilter(null)}
                 />
               </th>
-              <th className="px-6 py-3 cursor-pointer hover:text-gray-700 relative">
-                <div className="flex items-center gap-1.5 group" onClick={() => setOpenFilter(openFilter === 'status' ? null : 'status')}>
-                  Status <Filter className={`h-4 w-4 transition-colors duration-300 ${openFilter === 'status' ? 'text-emerald-500' : 'text-gray-400 group-hover:text-emerald-500'}`} />
+              <th className="px-3.5 py-3 cursor-pointer hover:text-gray-700 relative">
+                <div className="flex items-center gap-1 group" onClick={() => setOpenFilter(openFilter === 'status' ? null : 'status')}>
+                  <span>Status</span>
+                  <Filter className={`h-3.5 w-3.5 shrink-0 transition-colors duration-300 ${openFilter === 'status' ? 'text-emerald-500' : 'text-gray-400 group-hover:text-emerald-500'}`} />
                 </div>
                 <FilterPopup
                   options={statusOptions}
@@ -157,8 +186,8 @@ export function GrievanceTable({
                   onClose={() => setOpenFilter(null)}
                 />
               </th>
-              <th className="px-6 py-3 whitespace-nowrap">Submitted</th>
-              <th className="px-6 py-3 whitespace-nowrap">Actions</th>
+              <th className="px-3.5 py-3">Submitted</th>
+              <th className="px-3.5 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -184,7 +213,7 @@ export function GrievanceTable({
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={`skeleton-${i}`} className="animate-pulse">
                   {Array.from({ length: 7 }).map((__, cell) => (
-                    <td key={cell} className="px-6 py-5">
+                    <td key={cell} className="px-3.5 py-4">
                       <div className="h-3 bg-gray-100 rounded" />
                     </td>
                   ))}
@@ -193,41 +222,53 @@ export function GrievanceTable({
             ) : grievances.length > 0 ? (
               grievances.map((grievance: Grievance) => (
                 <tr key={grievance.id} className="hover:bg-gray-50/80 transition-colors group">
-                  <td className="px-6 py-4 font-semibold text-gray-900 whitespace-nowrap">
-                    {grievance.ticketId}
+                  <td className="px-3.5 py-4 font-semibold text-gray-900 text-xs sm:text-sm">
+                    <span className="truncate block font-mono sm:font-sans" title={grievance.ticketId}>
+                      {grievance.ticketId}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 w-full min-w-[280px]">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-semibold text-gray-900 line-clamp-1">{grievance.title}</span>
-                      <span className="text-gray-500 text-xs line-clamp-1">{grievance.type}</span>
+                  <td className="px-3.5 py-4">
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <span className="font-semibold text-gray-900 text-sm line-clamp-2 leading-snug break-words" title={grievance.title}>
+                        {grievance.title}
+                      </span>
+                      {grievance.type && (
+                        <span className="text-gray-500 text-xs line-clamp-1 break-words" title={grievance.type}>
+                          {grievance.type}
+                        </span>
+                      )}
                       {grievance.escalated && (
                         <div className="flex items-center gap-1.5 text-orange-600 text-xs mt-0.5 font-medium">
-                          <ArrowUpCircle className="h-3 w-3" />
+                          <ArrowUpCircle className="h-3.5 w-3.5 shrink-0" />
                           <span>Escalated</span>
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-700 font-medium whitespace-nowrap">
-                    {grievance.location || '—'}
+                  <td className="px-3.5 py-4 text-gray-700 font-medium text-xs sm:text-sm leading-snug">
+                    <span className="line-clamp-2 break-words" title={grievance.location || undefined}>
+                      {grievance.location || '—'}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-700 font-medium whitespace-nowrap">
-                    {grievance.category || '—'}
+                  <td className="px-3.5 py-4 text-gray-700 font-medium text-xs sm:text-sm leading-snug">
+                    <span className="line-clamp-2 break-words" title={grievance.category || undefined}>
+                      {grievance.category || '—'}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-2 rounded-full text-sm font-semibold ${statusColors[grievance.status] || 'bg-gray-100 text-gray-700'}`}>
+                  <td className="px-3.5 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold leading-tight ${statusColors[grievance.status] || 'bg-gray-100 text-gray-700'}`}>
                       {grievance.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-500 whitespace-nowrap text-xs font-medium">
-                    {grievance.submittedAt}
+                  <td className="px-3.5 py-4">
+                    {renderSubmittedAt(grievance.submittedAt)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3.5 py-4 text-right">
                     <button
                       onClick={() => onViewGrievance(grievance)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#E6F3EA] border border-[#C9E5D2] text-green-600 hover:bg-[#C8E6C9] rounded-full text-sm font-bold transition-colors opacity-90 group-hover:opacity-100"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#E6F3EA] border border-[#C9E5D2] text-green-700 hover:bg-[#C8E6C9] rounded-full text-xs font-semibold transition-colors opacity-90 group-hover:opacity-100"
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-3.5 w-3.5 shrink-0" />
                       View
                     </button>
                   </td>
@@ -440,7 +481,7 @@ function FilterPopup({
     <div
       ref={popupRef}
       onClick={(e) => e.stopPropagation()}
-      className="absolute z-10 mt-2 w-max pr-0 min-w-[160px] bg-white border border-gray-200 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] rounded-lg flex flex-col font-normal top-full left-6 overflow-hidden"
+      className="absolute z-30 mt-2 w-max pr-0 min-w-[160px] bg-white border border-gray-200 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] rounded-lg flex flex-col font-normal top-full left-0 overflow-hidden"
     >
       <div className="flex flex-col divide-y divide-gray-100">
         {options.length === 0 ? (

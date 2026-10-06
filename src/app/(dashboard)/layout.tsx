@@ -2,6 +2,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { IdleSessionGuard } from "@/features/auth/components/IdleSessionGuard";
+import { RealtimeConnection } from "@/components/realtime/RealtimeConnection";
 
 export default function DashboardLayout({
   children,
@@ -20,6 +21,7 @@ export default function DashboardLayout({
         </div>
       </div>
       <IdleSessionGuard />
+      <RealtimeConnection />
     </SidebarProvider>
   );
 }
