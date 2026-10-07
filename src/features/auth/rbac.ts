@@ -37,20 +37,28 @@ export function isProtectedRoute(pathname: string): boolean {
 }
 
 /**
- * The three role strings this app routes by, confirmed against a live
- * `oan_auth_service` (2026-09-16): Frappe Role records named exactly these
- * three exist (via `oan_grievance_service`'s fixtures), and a role assigned
+ * The role strings this app routes by. The first three are confirmed against
+ * a live `oan_auth_service` (2026-09-16): Frappe Role records named exactly
+ * these exist (via `oan_grievance_service`'s fixtures), and a role assigned
  * through Frappe Desk round-trips correctly through login into this claim.
  *
  * The one confirmed gap: self-registration still assigns no role at all
  * (`jwt_default_registration_role` isn't set on that site's config) — a
  * self-registered user's JWT `roles` claim is `[]`, handled by
  * `effectiveRoles` below as submitter-equivalent until that's configured.
+ *
+ * `REVIEW_OFFICER` is NOT yet confirmed live: it ships in
+ * `oan_grievance_service` PR #47 (STG-434), still open/unmerged as of
+ * 2026-10-07. The exact string here is pinned to that PR's own note that the
+ * role name is `Grievance Review Officer` (the Jira ticket just says "Review
+ * Officer") — re-verify against a real login once that PR merges, the same
+ * way the other three were confirmed above.
  */
 export const ROLES = {
   SUBMITTER: 'Grievance Submitter',
   OFFICER: 'Grievance Officer',
   ADMIN: 'Grievance Admin',
+  REVIEW_OFFICER: 'Grievance Review Officer',
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -83,21 +91,29 @@ function isUnrestrictedRoute(pathname: string): boolean {
 const ROUTE_ROLES: Record<string, Role[]> = {
   '/dashboard': [ROLES.OFFICER, ROLES.ADMIN],
   '/submit-grievance': [ROLES.SUBMITTER],
-  '/all-grievances': [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN],
-  '/grievances': [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN],
+  '/all-grievances': [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
+  '/grievances': [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
   '/analytics-reporting': [ROLES.OFFICER, ROLES.ADMIN],
-  '/user-management': [ROLES.ADMIN],
-  '/administration': [ROLES.ADMIN],
+  // Read-only per PR #47: officer list/stats and L1/L2 officers, and category
+  // assignments — but NOT response templates or dashboard charts. That split
+  // is finer than this route-level gate can express; the Administration and
+  // User Management screens still need their own per-control hide/disable
+  // pass (hide Add/Edit actions, hide the Response Templates tab) once the
+  // role can be tested against a real backend session. Tracked as the
+  // remaining STG-436 work — see this file's ROLES comment.
+  '/user-management': [ROLES.ADMIN, ROLES.REVIEW_OFFICER],
+  '/administration': [ROLES.ADMIN, ROLES.REVIEW_OFFICER],
   '/settings': [ROLES.OFFICER, ROLES.ADMIN],
 };
 
 /** Highest-privilege role first — decides which home route wins for a multi-role user. */
-const ROLE_PRIORITY: Role[] = [ROLES.ADMIN, ROLES.OFFICER, ROLES.SUBMITTER];
+const ROLE_PRIORITY: Role[] = [ROLES.ADMIN, ROLES.OFFICER, ROLES.REVIEW_OFFICER, ROLES.SUBMITTER];
 
 /** Where each role lands right after login, and where it's sent back to if it's bounced off a route it can't access. */
 const ROLE_HOME_ROUTE: Record<Role, string> = {
   [ROLES.ADMIN]: '/dashboard',
   [ROLES.OFFICER]: '/all-grievances',
+  [ROLES.REVIEW_OFFICER]: '/all-grievances',
   [ROLES.SUBMITTER]: '/submit-grievance',
 };
 
@@ -152,6 +168,11 @@ export function homeRouteForRoles(roles: string[]): string {
  * detail view to gate case-management controls and internal-only content
  * (case assignment, SLA deferral, internal notes) that a submitter should
  * never see, same unverified-claim caveat as the rest of this file.
+ *
+ * Deliberately excludes `REVIEW_OFFICER`: per PR #47 (STG-434) that role can
+ * read a case but is refused every assign/resolve/defer call, and internal
+ * notes stay hidden from it same as a submitter — this function gating both
+ * is what keeps that true on the frontend without a separate check.
  */
 export function isOfficerOrAdmin(roles: string[]): boolean {
   return effectiveRoles(roles).some((role) => role === ROLES.OFFICER || role === ROLES.ADMIN);
