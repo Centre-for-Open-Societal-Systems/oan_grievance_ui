@@ -88,6 +88,8 @@ ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" "$SSH_USER@$RKE2_NODE" \
     bash -s -- "$DEPLOYMENT_NAME" "$CONTAINER_NAME" "$FULL_IMAGE" "$K8S_NAMESPACE" <<'ENDSSH'
 set -euo pipefail
 DEPLOY="$1"; CONTAINER="$2"; IMAGE="$3"; NS="$4"
+# Non-interactive SSH sessions do not load the login PATH; RKE2 keeps kubectl in its own bin dir
+export PATH="$PATH:/var/lib/rancher/rke2/bin:/usr/local/bin:/snap/bin"
 export KUBECONFIG="$HOME/.kube/config"
 
 # Fail fast if the names in the Jenkinsfile do not match the cluster

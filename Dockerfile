@@ -9,8 +9,9 @@ FROM node:${NODE_VERSION}-alpine AS deps
 ARG PNPM_VERSION
 WORKDIR /app
 RUN npm install -g pnpm@${PNPM_VERSION}
-COPY package.json pnpm-lock.yaml ./
-# If the repo has pnpm-workspace.yaml or .npmrc, also copy them here (needed for install settings)
+# pnpm-workspace.yaml / .npmrc carry pnpm settings (e.g. which dependencies may run build scripts);
+# the wildcards copy them only if they exist.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* .npmrc* ./
 RUN pnpm install --frozen-lockfile
 
 # ---- build: compile the Next.js app ----
