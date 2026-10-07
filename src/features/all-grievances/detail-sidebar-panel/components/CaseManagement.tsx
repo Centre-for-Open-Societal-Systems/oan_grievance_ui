@@ -40,7 +40,7 @@ export function CaseManagement({
   const initialDepartment = timelineData?.assignment?.department || '';
   const initialOfficer = timelineData?.assignment?.assigned_to || '';
   const activeReassignment = timelineData?.assignment?.active_reassignment_request;
-  const user = useAppSelector((state) => state.auth.user);
+  const user = useAppSelector((state) => state.auth?.user);
   const isApprover = !!activeReassignment && activeReassignment.pending_with === user?.email;
 
   // Re-sync only when the ticket or its server-side department actually
