@@ -25,17 +25,17 @@ export const env = {
    * throws, same as AUTH_API_BASE_URL.
    */
   get REALTIME(): { url: string; site: string; path: string } | null {
-    const url = process.env.REALTIME_URL;
+    const url = process.env.REALTIME_PUBLIC_URL;
     const site = process.env.REALTIME_SITE;
     if (!url || !site) return null;
     let parsed: URL;
     try {
       parsed = new URL(url);
     } catch {
-      throw new Error(`[env] Invalid environment configuration: REALTIME_URL must be a valid URL (got "${url}")`);
+      throw new Error(`[env] Invalid environment configuration: REALTIME_PUBLIC_URL must be a valid URL (got "${url}")`);
     }
     if (parsed.protocol !== 'wss:' && parsed.protocol !== 'ws:') {
-      throw new Error(`[env] Invalid environment configuration: REALTIME_URL must use ws:// or wss:// (got "${url}")`);
+      throw new Error(`[env] Invalid environment configuration: REALTIME_PUBLIC_URL must use ws:// or wss:// (got "${url}")`);
     }
     return {
       url: parsed.origin,

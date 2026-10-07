@@ -149,19 +149,29 @@ export function useAdministrativeAreaAncestors(
  * Hook to retrieve staff-facing grievance options (departments, lifecycle statuses, categories, channels).
  */
 export function useGrievanceOptions(
-  params?: GrievanceOptionsQueryParams
+  params?: GrievanceOptionsQueryParams,
+  options?: { skip?: boolean }
 ): UseAsyncState<GrievanceOptionsData> {
   const [data, setData] = useState<GrievanceOptionsData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(!options?.skip);
   const [error, setError] = useState<string | null>(null);
 
   const serviceCategory = params?.service_category;
+  const department = params?.department;
+  const skip = options?.skip;
 
   useEffect(() => {
+    if (skip) {
+      setIsLoading(false);
+      return;
+    }
+
     let ignore = false;
+    setIsLoading(true);
 
     fetchGrievanceOptions({
       service_category: serviceCategory,
+      department: department,
     })
       .then((result) => {
         if (!ignore) {
@@ -180,7 +190,7 @@ export function useGrievanceOptions(
     return () => {
       ignore = true;
     };
-  }, [serviceCategory]);
+  }, [serviceCategory, department, skip]);
 
   const refetch = useCallback(async () => {
     setIsLoading(true);
@@ -188,6 +198,7 @@ export function useGrievanceOptions(
     try {
       const result = await fetchGrievanceOptions({
         service_category: serviceCategory,
+        department: department,
       });
       setData(result);
     } catch (err) {
@@ -195,7 +206,7 @@ export function useGrievanceOptions(
     } finally {
       setIsLoading(false);
     }
-  }, [serviceCategory]);
+  }, [serviceCategory, department]);
 
   return { data, isLoading, error, refetch };
 }

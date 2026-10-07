@@ -127,6 +127,7 @@ oan_grievance_ui/
 ├─ messages/                 # next-intl message catalogs (en.json, ar.json, ...)
 ├─ e2e/                      # Playwright specs (*.spec.ts) — not colocated
 ├─ public/
+├─ realtime-gateway/         # WebSocket auth BFF (cookie to Bearer translation)
 └─ src/
    ├─ app/                   # Next.js App Router: routing shell ONLY
    │  ├─ [locale]/

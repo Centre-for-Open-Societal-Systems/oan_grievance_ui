@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { User, Save, Loader2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAppSelector } from '@/store/hooks';
+import { useGrievanceOptions } from '@/features/metadata/hooks/useMetadata';
 import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
 import type { GrievanceChangeResponseData, GrievanceTimelineData, ReassignGrievancePayload } from '../../types';
 
@@ -22,8 +23,10 @@ export function CaseManagement({
   const activeTicket = ticketNumber || timelineData?.ticket_number || '';
   const optionsData = useAppSelector((state) => state.metadata?.grievanceOptions);
   const departmentSelectId = useId();
+  const officerSelectId = useId();
 
   const [department, setDepartment] = useState<string>('');
+  const [targetOfficer, setTargetOfficer] = useState<string>('');
   const [reassignReason, setReassignReason] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(
@@ -31,6 +34,7 @@ export function CaseManagement({
   );
 
   const initialDepartment = timelineData?.assignment?.department || '';
+  const initialOfficer = timelineData?.assignment?.assigned_to || '';
 
   // Re-sync only when the ticket or its server-side department actually
   // changes. Keying on the whole timelineData object reset the form on every
@@ -42,6 +46,19 @@ export function CaseManagement({
     setReassignReason('');
   }, [activeTicket, initialDepartment]);
 
+  useEffect(() => {
+    if (department !== initialDepartment) {
+      setTargetOfficer('');
+    } else {
+      setTargetOfficer(initialOfficer);
+    }
+  }, [department, initialDepartment, initialOfficer]);
+
+  const { data: deptOptions, isLoading: isLoadingOfficers } = useGrievanceOptions(
+    { department },
+    { skip: !department }
+  );
+
   const departmentOptions = useMemo(() => {
     return (optionsData?.departments ?? [])
       .map((d) => d.department_name)
@@ -49,9 +66,17 @@ export function CaseManagement({
       .map((name) => ({ value: name, label: name }));
   }, [optionsData]);
 
+  const officerOptions = useMemo(() => {
+    return (deptOptions?.officers || []).map((o) => ({
+      value: o.user_id,
+      label: o.full_name,
+    }));
+  }, [deptOptions]);
+
   if (!canManageCase) return null;
 
-  const isReassignment = department && department !== initialDepartment;
+  const isReassignment =
+    (department && department !== initialDepartment) || (targetOfficer !== initialOfficer);
 
   const handleSave = async () => {
     if (!onReassign || !activeTicket) return;
@@ -62,6 +87,7 @@ export function CaseManagement({
       if (isReassignment) {
         const result = (await onReassign({
           target_department: department,
+          target_officer: targetOfficer || undefined,
           reason: reassignReason.trim() || undefined,
         })) as GrievanceChangeResponseData | undefined;
 
@@ -125,6 +151,20 @@ export function CaseManagement({
             value={department}
             onChange={setDepartment}
             options={departmentOptions}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={officerSelectId} className="text-[13px] font-semibold text-[#1B362D]">
+            Officer (Optional)
+          </label>
+          <AnimatedSelect
+            id={officerSelectId}
+            placeholder={isLoadingOfficers ? "Loading officers..." : "Select Officer"}
+            value={targetOfficer}
+            onChange={setTargetOfficer}
+            options={officerOptions}
+            disabled={isLoadingOfficers || !department}
           />
         </div>
 

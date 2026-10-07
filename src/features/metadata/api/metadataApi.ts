@@ -120,6 +120,7 @@ export async function fetchGrievanceOptions(
 ): Promise<GrievanceOptionsData> {
   const query = buildQueryString({
     service_category: params.service_category,
+    department: params.department,
   });
 
   return fetchApi<GrievanceOptionsData>(`/api/v1/grievances/options${query}`, {

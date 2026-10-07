@@ -110,6 +110,13 @@ export interface GrievanceDepartmentOption {
   head_of_dept?: string;
 }
 
+export interface GrievanceOfficerOption {
+  user_id: string;
+  full_name: string;
+  role_level: string;
+  is_primary: boolean;
+}
+
 export interface GrievanceStatusOption {
   status: string;
   label: string;
@@ -124,10 +131,12 @@ export interface GrievanceOptionsData {
   service_categories: ServiceCategoryOption[];
   grievance_types: GrievanceTypeOption[];
   submission_channels: string[];
+  officers?: GrievanceOfficerOption[];
 }
 
 export interface GrievanceOptionsQueryParams {
   service_category?: string;
+  department?: string;
 }
 
 /** Standard envelope returned by Frappe / OAN REST endpoints */

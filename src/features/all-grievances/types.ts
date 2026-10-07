@@ -26,6 +26,8 @@ export interface GrievanceListItem {
   administrative_hierarchy?: Record<string, string> | null;
   service_category?: string | null;
   grievance_type?: string | null;
+  grievance_type_name?: string | null;
+  grievance_type_id?: string | null;
   description?: string | null;
   assigned_dept?: string | null;
   /** Alias of `assigned_dept` added by the backend for convenience. */
@@ -152,6 +154,7 @@ export interface TimelineEntry {
     | 'note'
     | 'message'
     | 'response'
+    | 'dept_response'
     | 'info_request'
     | 'info_response'
     | 'status_change'
@@ -166,6 +169,9 @@ export interface TimelineEntry {
   body: string;
   /** `body` split into its two parts when it is a two-part department response. */
   body_parts?: ResponseParts | null;
+  action_taken?: string | null;
+  resolution_summary?: string | null;
+  response_number?: number;
   author_user?: string | null;
   author_submitter?: string | null;
   author_type?: 'submitter' | 'officer' | 'system' | string;
@@ -198,6 +204,8 @@ export interface GrievanceTimelineSummary {
   desired_outcome?: string | null;
   service_category?: string | null;
   grievance_type?: string | null;
+  grievance_type_name?: string | null;
+  grievance_type_id?: string | null;
   administrative_area?: string | null;
   administrative_hierarchy?: Record<string, string> | null;
   location?: string | null;
@@ -225,12 +233,14 @@ export interface GrievanceTimelineSla {
   sla_consumed_percent?: number | null;
   next_escalation_at?: string | null;
   confirmation_deadline?: string | null;
+  active_deferral_request?: ChangeRequestData | null;
 }
 
 export interface GrievanceTimelineAssignment {
   department?: string | null;
   assigned_to?: string | null;
   routed_automatically?: boolean;
+  active_reassignment_request?: ChangeRequestData | null;
 }
 
 export interface GrievanceAvailableAction {

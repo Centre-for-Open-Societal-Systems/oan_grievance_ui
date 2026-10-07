@@ -53,13 +53,6 @@ const L1_OFFICER_OPTIONS = [
   { value: 'biruk', label: 'Biruk Tesfaye — Agricultural Finance Institute (AFI)', displayLabel: 'Biruk Tesfaye' },
 ];
 
-const L2_OFFICER_OPTIONS = [
-  { value: 'none', label: 'None', displayLabel: 'None' },
-  { value: 'yonas', label: 'Yonas Mekonnen — Inputs Supply & Distribution Agency', displayLabel: 'Yonas Mekonnen' },
-  { value: 'almaz', label: 'Almaz Worku — Market Development & Trade Bureau', displayLabel: 'Almaz Worku' },
-  { value: 'mekdes', label: 'Mekdes Solomon — Agricultural Finance Institute (AFI)', displayLabel: 'Mekdes Solomon' },
-  { value: 'fikadu', label: 'Fikadu Negash — Ministry of Agriculture (MoA)', displayLabel: 'Fikadu Negash' },
-];
 
 export const AssignmentCard: React.FC<AssignmentCardProps> = ({ assignment, isInitiallyExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(isInitiallyExpanded);
@@ -164,13 +157,11 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({ assignment, isIn
 
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-gray-800">
-                  L2 Senior Nodal Officer <span className="text-red-500">*</span>
+                  L2 Senior Nodal Officer
                 </label>
-                <CustomSelect
-                  options={L2_OFFICER_OPTIONS}
-                  defaultValue={L2_OFFICER_OPTIONS.find(o => o.displayLabel === assignment.l2Officer)?.value}
-                  placeholder="Select L2 Senior Nodal Officer"
-                />
+                <div className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-600 cursor-not-allowed">
+                  {assignment.l2Officer || 'None'}
+                </div>
               </div>
 
               <div className="flex flex-col gap-2">
