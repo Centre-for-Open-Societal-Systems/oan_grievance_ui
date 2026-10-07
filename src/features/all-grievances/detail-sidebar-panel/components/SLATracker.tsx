@@ -21,11 +21,10 @@ export function SLATracker({ canManageCase, grievance, timelineData, onDefer, on
   const [showPopup, setShowPopup] = useState(false);
   const [showViewPopup, setShowViewPopup] = useState(false);
   const user = useAppSelector((state) => state.auth.user);
-  const canDefer = canManageCase;
-
   const slaData = timelineData?.sla;
   const activeDeferral = slaData?.active_deferral_request;
   const isApprover = !!activeDeferral && activeDeferral.pending_with === user?.email;
+  const canDefer = canManageCase || isApprover;
   const consumedPercent = Math.min(
     100,
     Math.max(0, slaData?.sla_consumed_percent ?? (grievance.status === 'Resolved' ? 100 : 50))

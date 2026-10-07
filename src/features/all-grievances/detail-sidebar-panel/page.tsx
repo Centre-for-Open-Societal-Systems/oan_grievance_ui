@@ -50,6 +50,12 @@ export function GrievanceDetailSidebar({
     await refetch();
   };
 
+  const handleDecideReassignment = async (name: string, decision: string, note: string) => {
+    const { decideChangeRequest } = await import('../api/grievanceApi');
+    await decideChangeRequest(name, { decision, note });
+    await refetch();
+  };
+
   const baseCanManageCase = userRoles.includes('Grievance Officer') || userRoles.includes('Grievance Admin');
   const isEscalated = timelineData?.escalated;
   const assignedToMe = timelineData?.assignment?.assigned_to === user?.email;
@@ -137,6 +143,7 @@ export function GrievanceDetailSidebar({
                 ticketNumber={activeTicket}
                 timelineData={timelineData}
                 onReassign={reassign}
+                onDecideReassignment={handleDecideReassignment}
               />
 
               {grievance ? (
