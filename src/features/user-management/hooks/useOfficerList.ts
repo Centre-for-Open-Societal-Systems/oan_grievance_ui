@@ -40,8 +40,7 @@ interface ListResult {
 
 /**
  * Server-side listing, filtering, and pagination over `GET /api/v1/officers` for the
- * Nodal Officers (L1) / Senior Nodal Officers (L2) tabs — see `officerApi.ts`'s module
- * doc for why this isn't live against the local backend yet.
+ * Nodal Officers (L1) / Senior Nodal Officers (L2) tabs.
  *
  * Profile data and performance stats are two separate endpoints (an officer's assigned/
  * resolved/resolution-rate figures are computed live from Grievance on every call, so the
@@ -88,9 +87,8 @@ export function useOfficerList({ level, search, category, region, status, page, 
         },
         { signal: controller.signal }
       ),
-      // Statistics (PR #40) lags the profile list (#34) into `develop` — a failure here
-      // (today, always: the route doesn't exist yet) degrades to zeroed-out stats rather
-      // than sinking the whole list, which *is* live.
+      // A statistics failure degrades to zeroed-out stats rather than sinking the whole
+      // list — the two endpoints are independent, and the list is the more important half.
       fetchOfficerStatistics({ level: params.level, page: 1, page_size: 1000 }, { signal: controller.signal }).catch(
         () => null
       ),

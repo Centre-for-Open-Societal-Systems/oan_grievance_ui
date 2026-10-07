@@ -49,16 +49,20 @@ const PASSWORD_ALL_CHARS = PASSWORD_LOWER + PASSWORD_UPPER + PASSWORD_DIGITS + P
  */
 export function generateRandomPassword(length = 16): string {
   const pools = [PASSWORD_LOWER, PASSWORD_UPPER, PASSWORD_DIGITS, PASSWORD_SYMBOLS];
-  const random = new Uint32Array(length);
-  crypto.getRandomValues(random);
+  // Two independent draws — picking a char and shuffling its position from the same
+  // random value would make each position's destination derivable from its own character.
+  const picks = new Uint32Array(length);
+  const shuffles = new Uint32Array(length);
+  crypto.getRandomValues(picks);
+  crypto.getRandomValues(shuffles);
 
-  const chars = pools.map((pool, i) => pool[random[i]! % pool.length]!);
+  const chars = pools.map((pool, i) => pool[picks[i]! % pool.length]!);
   for (let i = pools.length; i < length; i++) {
-    chars.push(PASSWORD_ALL_CHARS[random[i]! % PASSWORD_ALL_CHARS.length]!);
+    chars.push(PASSWORD_ALL_CHARS[picks[i]! % PASSWORD_ALL_CHARS.length]!);
   }
 
   for (let i = chars.length - 1; i > 0; i--) {
-    const j = random[i]! % (i + 1);
+    const j = shuffles[i]! % (i + 1);
     [chars[i], chars[j]] = [chars[j]!, chars[i]!];
   }
 

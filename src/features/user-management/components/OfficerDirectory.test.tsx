@@ -87,10 +87,10 @@ describe('OfficerDirectory', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /Nodal Officers \(L1\)/ }));
 
-    expect(await screen.findByText(/officer management API is still pending review/)).toBeTruthy();
+    expect(await screen.findByText('Not Found')).toBeTruthy();
   });
 
-  it('still renders the officer list when only the (unmerged) statistics endpoint fails', async () => {
+  it('still renders the officer list when only the statistics endpoint fails', async () => {
     const woredaOfficer = {
       name: 'woreda.officer@example.et',
       full_name: 'Woreda Officer',
@@ -124,6 +124,6 @@ describe('OfficerDirectory', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Nodal Officers \(L1\)/ }));
 
     expect(await screen.findByText('Woreda Officer')).toBeTruthy();
-    expect(screen.queryByText(/officer management API is still pending review/)).toBeNull();
+    expect(screen.queryByText('Not Found')).toBeNull();
   });
 });

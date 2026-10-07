@@ -193,9 +193,6 @@ export function OfficerDirectory() {
       {isApiTab && apiResult.error ? (
         <div className="bg-white rounded-xl border border-red-200 p-12 flex flex-col items-center justify-center gap-3 text-center">
           <p className="text-sm text-red-600 max-w-md">{apiResult.error}</p>
-          <p className="text-xs text-gray-400 max-w-md">
-            The officer management API is still pending review (not yet merged) — this is expected until it lands.
-          </p>
           <button
             type="button"
             onClick={apiResult.refetch}
