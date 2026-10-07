@@ -58,6 +58,55 @@ describe('fetchApi error messages', () => {
   });
 });
 
+describe('fetchApi pagination merging', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function respond(body: unknown) {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => body,
+    } as Response);
+  }
+
+  it('merges top-level pagination into data when data has none of its own (officers-style)', async () => {
+    respond({
+      status: 'success',
+      data: { officers: [] },
+      pagination: { page: 1, page_size: 20, total_count: 0, total_pages: 1, has_next: false, has_prev: false },
+    });
+
+    const result = await fetchApi<{ officers: unknown[]; pagination: { total_count: number } }>('api/v1/officers');
+    expect(result.pagination.total_count).toBe(0);
+  });
+
+  it('leaves an already-nested pagination alone (grievances-style double delivery)', async () => {
+    respond({
+      status: 'success',
+      data: { items: [], pagination: { total_count: 11 } },
+      pagination: { total_count: 999 },
+    });
+
+    const result = await fetchApi<{ items: unknown[]; pagination: { total_count: number } }>('api/v1/grievances');
+    expect(result.pagination.total_count).toBe(11);
+  });
+
+  it('merges the envelope message in too, e.g. officer creation\'s "existing password unchanged" notice', async () => {
+    respond({
+      status: 'success',
+      message: 'Officer created. verify.officer@example.et already had a login, so their existing password is unchanged.',
+      data: { officer: { name: 'verify.officer@example.et' } },
+    });
+
+    const result = await fetchApi<{ officer: { name: string }; message?: string }>('api/v1/officers');
+    expect(result.message).toContain('existing password is unchanged');
+  });
+});
+
 describe('fetchApi utilities', () => {
   describe('ApiError', () => {
     it('constructs an ApiError with message, responseData, and status', () => {

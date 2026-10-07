@@ -221,5 +221,30 @@ export async function fetchApi<T = unknown>(
     throw new ApiError(typeof errorMsg === 'string' ? errorMsg : 'Application Error', responseData);
   }
 
-  return (responseData?.data ?? responseData?.message?.data ?? responseData?.message ?? responseData) as T;
+  const unwrapped = responseData?.data ?? responseData?.message?.data ?? responseData?.message ?? responseData;
+
+  // `page_meta`'s pagination, and the envelope's own human-readable `message` (e.g. officer
+  // creation's "... already had a login, so their existing password is unchanged" — a caller
+  // needs that to warn the admin a temporary password they just set won't actually work),
+  // both ride as siblings of `data` in the envelope (`_envelope_success` in
+  // `oan_auth_service.api.utils`), not inside it. Some REST routes (grievances) additionally
+  // duplicate pagination inside `data` themselves, which is what let a bare `responseData.data`
+  // return value look correct for those; routes that don't duplicate it (officers) would
+  // otherwise lose it entirely. Merging each sibling in here — only when `data` doesn't already
+  // carry its own key of that name — covers both without every endpoint needing to remember to
+  // self-duplicate it.
+  if (unwrapped && typeof unwrapped === 'object' && !Array.isArray(unwrapped)) {
+    const extra: Record<string, unknown> = {};
+    if (!('pagination' in unwrapped) && responseData?.pagination) {
+      extra.pagination = responseData.pagination;
+    }
+    if (!('message' in unwrapped) && typeof responseData?.message === 'string') {
+      extra.message = responseData.message;
+    }
+    if (Object.keys(extra).length > 0) {
+      return { ...unwrapped, ...extra } as T;
+    }
+  }
+
+  return unwrapped as T;
 }

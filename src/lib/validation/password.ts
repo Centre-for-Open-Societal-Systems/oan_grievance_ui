@@ -33,3 +33,34 @@ export function validatePassword(value: string): string | null {
   const failed = PASSWORD_RULES.find((rule) => !rule.test(value));
   return failed ? failed.message : null;
 }
+
+// Excludes visually-confusable characters (0/O, 1/l/I) — this is read off a screen and
+// handed to someone, not typed from memory.
+const PASSWORD_LOWER = 'abcdefghjkmnpqrstuvwxyz';
+const PASSWORD_UPPER = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+const PASSWORD_DIGITS = '23456789';
+const PASSWORD_SYMBOLS = '!@#$%^&*-_';
+const PASSWORD_ALL_CHARS = PASSWORD_LOWER + PASSWORD_UPPER + PASSWORD_DIGITS + PASSWORD_SYMBOLS;
+
+/**
+ * A random password that always satisfies `PASSWORD_RULES` — one character from each
+ * category is placed first, so the length/letter/number/symbol rules can never fail, then
+ * the rest (and a final shuffle) come from the combined pool via `crypto.getRandomValues`.
+ */
+export function generateRandomPassword(length = 16): string {
+  const pools = [PASSWORD_LOWER, PASSWORD_UPPER, PASSWORD_DIGITS, PASSWORD_SYMBOLS];
+  const random = new Uint32Array(length);
+  crypto.getRandomValues(random);
+
+  const chars = pools.map((pool, i) => pool[random[i]! % pool.length]!);
+  for (let i = pools.length; i < length; i++) {
+    chars.push(PASSWORD_ALL_CHARS[random[i]! % PASSWORD_ALL_CHARS.length]!);
+  }
+
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = random[i]! % (i + 1);
+    [chars[i], chars[j]] = [chars[j]!, chars[i]!];
+  }
+
+  return chars.join('');
+}

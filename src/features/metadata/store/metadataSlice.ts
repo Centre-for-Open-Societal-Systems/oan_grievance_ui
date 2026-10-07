@@ -315,6 +315,19 @@ export const selectStatusFilterOptions = createSelector(
   }
 );
 
+export const selectDepartmentOptions = createSelector(
+  [(state: MetadataRootState) => state.metadata.grievanceOptions?.departments],
+  (departments): Array<{ value: string; label: string }> => {
+    const map = new Map<string, string>();
+    for (const d of departments ?? []) {
+      if (d.department_name && !map.has(d.department_name)) {
+        map.set(d.department_name, d.department_name);
+      }
+    }
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }
+);
+
 export const selectCategoryFilterOptions = createSelector(
   [
     (state: MetadataRootState) =>

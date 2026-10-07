@@ -139,6 +139,10 @@ export const RATE_LIMITS = {
   // earlier.
   forgotPassword: limitFromEnv('FORGOT_PASSWORD', 5, 60_000),
   resetPassword: limitFromEnv('RESET_PASSWORD', 5, 60_000),
+  // Mirrors oan_auth_service's own ceiling on `/api/v1/auth/password/initial` (10 per
+  // address per 5 minutes) — this one just stops a burst a hop earlier, same reasoning
+  // as forgotPassword/resetPassword above.
+  setInitialPassword: limitFromEnv('SET_INITIAL_PASSWORD', 10, 300_000),
   // Fired on real user activity while a session is open (see
   // `/api/auth/heartbeat`); throttled client-side to roughly once a minute
   // per open tab. Scoped by a hash of the session's refresh-token cookie

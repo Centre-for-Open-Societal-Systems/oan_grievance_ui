@@ -56,7 +56,17 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof BackendAuthError) {
       // The backend's reason is logged, never returned — relaying it verbatim
-      // turns a login form into an account-enumeration oracle.
+      // turns a login form into an account-enumeration oracle. The one exception is
+      // PASSWORD_CHANGE_REQUIRED: unlike a wrong password, it only ever fires once the
+      // credentials have already verified correctly (see oan_auth_service's `login()`,
+      // which calls it after `LoginManager.authenticate` succeeds), so it reveals nothing
+      // an attacker couldn't already tell from a correct guess, and collapsing it into
+      // "incorrect email or password" would send someone who typed their temporary
+      // password exactly right down the wrong troubleshooting path.
+      if (error.code === 'PASSWORD_CHANGE_REQUIRED') {
+        logger.security(`Login blocked for ${clientIp}: temporary password not yet replaced`);
+        return NextResponse.json({ message: AUTH_MESSAGES.passwordChangeRequired, code: error.code }, { status: 403 });
+      }
       logger.security(`Login rejected for ${clientIp} with status ${error.status}: ${error.message}`);
       const status = error.status >= 500 ? 502 : 401;
       const message = error.status >= 500 ? AUTH_MESSAGES.signInUnavailable : AUTH_MESSAGES.invalidCredentials;

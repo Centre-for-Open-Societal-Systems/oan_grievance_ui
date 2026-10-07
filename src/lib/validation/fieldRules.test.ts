@@ -9,8 +9,10 @@ import {
   validateLocalPhone,
   validateLoginPassword,
   validateNewPassword,
+  validateOptionalLocalPhone,
   validatePasswordConfirmation,
   validateRequired,
+  validateTemporaryPassword,
 } from './fieldRules';
 
 describe('validateEmail', () => {
@@ -100,6 +102,35 @@ describe('validateLocalPhone', () => {
       expect(validateLocalPhone('1'.repeat(15), '+254')).toBe(GENERIC_INVALID_MESSAGE); // too long
       expect(validateLocalPhone('abc1234567', '+254')).toBe(GENERIC_INVALID_MESSAGE); // not digits
     });
+  });
+});
+
+describe('validateTemporaryPassword', () => {
+  it('requires a value, unlike validateOptionalLocalPhone', () => {
+    expect(validateTemporaryPassword('')).toBe('Enter a temporary password.');
+  });
+
+  it('accepts 8+ characters with a letter and a number — no symbol required', () => {
+    expect(validateTemporaryPassword('Welcome2026')).toBeNull();
+  });
+
+  it('rejects too short, letter-only, or digit-only values', () => {
+    expect(validateTemporaryPassword('Ab1')).toBe('Password must be at least 8 characters.');
+    expect(validateTemporaryPassword('aaaaaaaa')).toBe('Password must contain at least one letter and one number.');
+    expect(validateTemporaryPassword('12345678')).toBe('Password must contain at least one letter and one number.');
+  });
+});
+
+describe('validateOptionalLocalPhone', () => {
+  it('is fine left blank, unlike validateLocalPhone', () => {
+    expect(validateOptionalLocalPhone('', '+251')).toBeNull();
+  });
+
+  it('still enforces the same per-country shape once something is typed', () => {
+    expect(validateOptionalLocalPhone('911000000', '+251')).toBeNull();
+    expect(validateOptionalLocalPhone('123', '+251')).toBe(
+      'Enter a valid Ethiopian mobile number, e.g. 0911234567 or 911234567 (starts with 09, 07, 9, or 7).'
+    );
   });
 });
 

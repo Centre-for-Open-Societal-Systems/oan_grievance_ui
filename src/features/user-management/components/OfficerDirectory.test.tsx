@@ -1,0 +1,129 @@
+/** @vitest-environment jsdom */
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { makeStore } from '@/store';
+import { OfficerDirectory } from './OfficerDirectory';
+
+const fetchOfficers = vi.hoisted(() => vi.fn().mockRejectedValue(new Error('Not Found')));
+const fetchOfficerStatistics = vi.hoisted(() => vi.fn().mockRejectedValue(new Error('Not Found')));
+vi.mock('../api/officerApi', () => ({ fetchOfficers, fetchOfficerStatistics }));
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+function renderDirectory() {
+  return render(
+    <Provider store={makeStore()}>
+      <OfficerDirectory />
+    </Provider>
+  );
+}
+
+describe('OfficerDirectory', () => {
+  it('defaults to the Admin tab, showing its officers and status counts', () => {
+    renderDirectory();
+
+    expect(screen.getByRole('heading', { name: 'Admin' })).toBeTruthy();
+    expect(screen.getByText('Tigist Alemu')).toBeTruthy();
+    expect(screen.getByText('20 Active')).toBeTruthy();
+    expect(screen.getByText('5 On Leave')).toBeTruthy();
+    expect(screen.getByText('5 Inactive')).toBeTruthy();
+  });
+
+  it('switches tabs to show a different officer list and description', () => {
+    renderDirectory();
+
+    fireEvent.click(screen.getByRole('tab', { name: /Nodal Officers \(L1\)/ }));
+
+    expect(screen.getByRole('heading', { name: 'Nodal Officers (L1)' })).toBeTruthy();
+    expect(screen.queryByText('Tigist Alemu')).toBeNull();
+  });
+
+  it('filters the current tab by search query', () => {
+    renderDirectory();
+
+    fireEvent.change(screen.getByPlaceholderText('Search officers...'), { target: { value: 'Tigist' } });
+
+    expect(screen.getByText('Tigist Alemu')).toBeTruthy();
+    expect(screen.queryByText('Dawit Haile')).toBeNull();
+  });
+
+  it('paginates results and advances to the next page', () => {
+    const { container } = renderDirectory();
+
+    expect(container.textContent).toContain('Showing 9 of 30 Admins lists');
+    expect(screen.queryByText('Abel Dereje')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: '2' }));
+
+    expect(screen.getByText('Abel Dereje')).toBeTruthy();
+  });
+
+  it('opens the add-officer modal with a tab-specific title', () => {
+    renderDirectory();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Admin' }));
+
+    expect(screen.getByRole('heading', { name: 'Add Admin' })).toBeTruthy();
+  });
+
+  it('opens the advanced filters drawer with Category, Regions, and Status fields', () => {
+    renderDirectory();
+
+    fireEvent.click(screen.getByRole('button', { name: /Advanced Filters/ }));
+
+    expect(screen.getByRole('heading', { name: 'Advanced Filters' })).toBeTruthy();
+    expect(screen.getByText('Category')).toBeTruthy();
+    expect(screen.getByText('Regions')).toBeTruthy();
+    expect(screen.getByText('Status')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Reset Filters' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Apply Filters/ })).toBeTruthy();
+  });
+
+  it('shows a loading state then an error for the API-backed Nodal Officers tab when the list itself fails', async () => {
+    renderDirectory();
+
+    fireEvent.click(screen.getByRole('tab', { name: /Nodal Officers \(L1\)/ }));
+
+    expect(await screen.findByText(/officer management API is still pending review/)).toBeTruthy();
+  });
+
+  it('still renders the officer list when only the (unmerged) statistics endpoint fails', async () => {
+    const woredaOfficer = {
+      name: 'woreda.officer@example.et',
+      full_name: 'Woreda Officer',
+      designation: 'Woreda Grievance Officer',
+      level: 'L1',
+      department: 'Woreda Agriculture Office',
+      email: 'woreda.officer@example.et',
+      phone: null,
+      must_change_password: false,
+      region: null,
+      region_name: null,
+      status: 'Active',
+      service_categories: ['Inputs'],
+      reports_to: null,
+      reports_to_name: null,
+      assignments: [],
+    };
+    // `page_size: 1` is the tab-badge count probe (useOfficerCount); the full page fetch
+    // (useOfficerList) is what the test actually cares about — distinguishing by that
+    // param, rather than call order, keeps this robust to how many count probes fire.
+    fetchOfficers.mockImplementation((params: { page_size?: number }) =>
+      params?.page_size === 1
+        ? Promise.resolve({ officers: [], pagination: { page: 1, page_size: 1, total_count: 1, total_pages: 1, has_next: false, has_prev: false } })
+        : Promise.resolve({
+            officers: [woredaOfficer],
+            pagination: { page: 1, page_size: 9, total_count: 1, total_pages: 1, has_next: false, has_prev: false },
+          })
+    );
+
+    renderDirectory();
+    fireEvent.click(screen.getByRole('tab', { name: /Nodal Officers \(L1\)/ }));
+
+    expect(await screen.findByText('Woreda Officer')).toBeTruthy();
+    expect(screen.queryByText(/officer management API is still pending review/)).toBeNull();
+  });
+});
