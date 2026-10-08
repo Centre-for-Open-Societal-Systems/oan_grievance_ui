@@ -4,9 +4,11 @@ import { DEFAULT_TAG_STYLE, STATUS_STYLES, TAG_STYLES, type Officer } from '../d
 interface OfficerCardProps {
   officer: Officer;
   onEdit: (officer: Officer) => void;
+  /** False hides the Edit button — for a read-only role (Review Officer) the backend refuses the write anyway. */
+  canEdit?: boolean;
 }
 
-export function OfficerCard({ officer, onEdit }: OfficerCardProps) {
+export function OfficerCard({ officer, onEdit, canEdit = true }: OfficerCardProps) {
   const statusStyle = STATUS_STYLES[officer.status];
   const rate = Math.min(100, Math.max(0, officer.resolutionRate));
   const barColor = rate >= 75 ? 'bg-[#16A34A]' : rate >= 50 ? 'bg-amber-500' : 'bg-red-500';
@@ -14,14 +16,16 @@ export function OfficerCard({ officer, onEdit }: OfficerCardProps) {
 
   return (
     <div className="group relative bg-white rounded-xl border border-[#F1F3F4] p-5 shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col gap-4">
-      <button
-        type="button"
-        onClick={() => onEdit(officer)}
-        aria-label={`Edit ${officer.name}`}
-        className="absolute top-4 right-4 text-gray-400 hover:text-[#16A34A] transition-colors p-1 rounded-md hover:bg-gray-50"
-      >
-        <Pencil size={16} />
-      </button>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => onEdit(officer)}
+          aria-label={`Edit ${officer.name}`}
+          className="absolute top-4 right-4 text-gray-400 hover:text-[#16A34A] transition-colors p-1 rounded-md hover:bg-gray-50"
+        >
+          <Pencil size={16} />
+        </button>
+      )}
 
       <div className="flex items-start gap-3 pr-6">
         <div className={`w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-sm ${officer.avatarBg} ${officer.avatarColor}`}>

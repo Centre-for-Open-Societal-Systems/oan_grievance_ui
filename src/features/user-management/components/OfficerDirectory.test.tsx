@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
+import { loginThunk } from '@/features/auth/store/authSlice';
 import { makeStore } from '@/store';
 import { OfficerDirectory } from './OfficerDirectory';
 
@@ -13,9 +14,14 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderDirectory() {
+/** `role` seeds the store with a signed-in user holding that role, as `loginThunk` would. */
+function renderDirectory(role?: string) {
+  const store = makeStore();
+  if (role) {
+    store.dispatch({ type: loginThunk.fulfilled.type, payload: { email: 'user@example.et', roles: [role] } });
+  }
   return render(
-    <Provider store={makeStore()}>
+    <Provider store={store}>
       <OfficerDirectory />
     </Provider>
   );
@@ -125,5 +131,21 @@ describe('OfficerDirectory', () => {
 
     expect(await screen.findByText('Woreda Officer')).toBeTruthy();
     expect(screen.queryByText('Not Found')).toBeNull();
+  });
+
+  it('hides the Add and Edit controls for a signed-in Grievance Review Officer', () => {
+    renderDirectory('Grievance Review Officer');
+
+    expect(screen.queryByRole('button', { name: 'Add Admin' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit Tigist Alemu' })).toBeNull();
+    // Still fully readable — only the write controls are gone.
+    expect(screen.getByText('Tigist Alemu')).toBeTruthy();
+  });
+
+  it('shows the Add and Edit controls for a role other than Review Officer', () => {
+    renderDirectory('Grievance Admin');
+
+    expect(screen.getByRole('button', { name: 'Add Admin' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit Tigist Alemu' })).toBeTruthy();
   });
 });

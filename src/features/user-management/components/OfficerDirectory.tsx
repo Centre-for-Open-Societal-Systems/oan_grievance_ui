@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useIsReviewOfficer } from '@/features/auth/hooks/useIsReviewOfficer';
 import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { OFFICER_DIRECTORY, OFFICER_TABS, type Officer, type OfficerTabId } from '../data/officers';
@@ -27,6 +28,10 @@ function levelForTab(tab: OfficerTabId): OfficerLevel {
 
 export function OfficerDirectory() {
   const dispatch = useAppDispatch();
+  // A Review Officer can view every tab here (route access — see rbac.ts) but the
+  // backend refuses every create/edit/password-reset call for it (PR #47, STG-434), so
+  // those controls are hidden rather than left to fail with a 403 on click.
+  const canManage = !useIsReviewOfficer();
 
   // Dummy, client-only data for the Admin tab — there is no backend API for admin
   // accounts yet, only for L1/L2 officers (see useOfficerList's doc comment).
@@ -185,6 +190,7 @@ export function OfficerDirectory() {
           onAddClick={() => setIsAddOpen(true)}
           onOpenFilters={() => setIsFiltersOpen(true)}
           activeFilterCount={activeFilterCount}
+          canManage={canManage}
         />
 
         <OfficerStatsBar active={stats.active} onLeave={stats.onLeave} inactive={stats.inactive} />
@@ -215,7 +221,7 @@ export function OfficerDirectory() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {displayedOfficers.map((officer) => (
-            <OfficerCard key={officer.id} officer={officer} onEdit={setEditingOfficer} />
+            <OfficerCard key={officer.id} officer={officer} onEdit={setEditingOfficer} canEdit={canManage} />
           ))}
         </div>
       )}
