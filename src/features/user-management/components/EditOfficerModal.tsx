@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Save, X } from 'lucide-react';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
+import { fetchGrievanceOptionsThunk, selectDepartmentOptions, useAreas } from '@/features/metadata';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
 import { validateEmail, validateFullName, validateOptionalLocalPhone, validateRequired } from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors';
 import { AnimatedSelect } from './AnimatedSelect';
+import { useWiredCategoryOptions } from '../hooks/useWiredCategoryOptions';
 import type { Officer, OfficerStatus } from '../data/officers';
 
 interface EditOfficerModalProps {
@@ -19,13 +22,15 @@ interface EditOfficerModalProps {
 
 const STATUS_OPTIONS: OfficerStatus[] = ['Active', 'On Leave', 'Inactive'];
 
-type FormField = 'name' | 'email' | 'phoneNumber' | 'roleTitle';
+type FormField = 'name' | 'email' | 'phoneNumber' | 'roleTitle' | 'department' | 'category';
 
 const FIELD_IDS: Record<FormField, string> = {
   name: 'edit-admin-full-name',
   email: 'edit-admin-email',
   phoneNumber: 'edit-admin-phone',
   roleTitle: 'edit-admin-role-title',
+  department: 'edit-admin-department',
+  category: 'edit-admin-category',
 };
 
 const FIELD_ORDER: Array<{ key: FormField; id: string }> = (Object.keys(FIELD_IDS) as FormField[]).map((key) => ({
@@ -38,11 +43,23 @@ const FIELD_ORDER: Array<{ key: FormField; id: string }> = (Object.keys(FIELD_ID
  * so the form only ever needs to seed from `officer` once, at mount.
  */
 export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOfficerModalProps) {
+  const dispatch = useAppDispatch();
+  const departmentOptions = useAppSelector(selectDepartmentOptions);
+  const { areas: regionAreas } = useAreas({ level: 'Region' });
+  const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
+  useEffect(() => {
+    if (grievanceOptionsStatus === 'idle') {
+      void dispatch(fetchGrievanceOptionsThunk());
+    }
+  }, [dispatch, grievanceOptionsStatus]);
+
   const initialPhone = officer && officer.phone !== '-' ? splitPhoneNumber(officer.phone) : { phoneCode: '+251', phoneNumber: '' };
 
   const [name, setName] = useState(officer?.name ?? '');
   const [roleTitle, setRoleTitle] = useState(officer?.roleTitle ?? '');
   const [department, setDepartment] = useState(officer?.department ?? '');
+  const [category, setCategory] = useState(officer?.tags[0] ?? '');
+  const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
   const [email, setEmail] = useState(officer?.email ?? '');
   const [countryCode, setCountryCode] = useState(initialPhone.phoneCode);
   const [phoneNumber, setPhoneNumber] = useState(initialPhone.phoneNumber);
@@ -62,6 +79,10 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
         return validateOptionalLocalPhone(phoneNumber, countryCode);
       case 'roleTitle':
         return validateRequired(roleTitle, 'Enter a role title.');
+      case 'department':
+        return validateRequired(department, 'Select a department.');
+      case 'category':
+        return validateRequired(category, 'Select a category.');
     }
   };
 
@@ -83,6 +104,7 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
       email,
       phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : '-',
       region,
+      tags: [category],
       status: status as OfficerStatus,
       avatarInitials:
         name
@@ -174,12 +196,11 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
 
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-gray-900">Region</label>
-                <input
-                  type="text"
+                <AnimatedSelect
+                  options={regionAreas.map((area) => area.area_name)}
                   value={region}
-                  onChange={(e) => setRegion(e.target.value)}
-                  placeholder="Enter Region"
-                  className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors"
+                  onChange={setRegion}
+                  placeholder="Select Region"
                 />
               </div>
 
@@ -199,14 +220,47 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-gray-900">Department</label>
-                <input
-                  type="text"
+                <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
+                  Department <span className="text-red-500">*</span>
+                </label>
+                <AnimatedSelect
+                  options={departmentOptions.map((o) => o.label)}
                   value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="Enter Department"
-                  className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors"
+                  onChange={(value) => {
+                    setDepartment(value);
+                    setError('department', null);
+                    // The wired category list is department-specific — a category picked
+                    // for the old department may not even have a desk under the new one.
+                    setCategory('');
+                    setError('category', null);
+                  }}
+                  placeholder="Select Department"
                 />
+                {fieldError('department')}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor={FIELD_IDS.category} className="text-sm font-bold text-gray-900">
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <AnimatedSelect
+                  options={categoryOptions}
+                  value={category}
+                  onChange={(value) => {
+                    setCategory(value);
+                    setError('category', null);
+                  }}
+                  placeholder={
+                    !department
+                      ? 'Select a department first'
+                      : isCategoryOptionsLoading
+                        ? 'Loading categories…'
+                        : categoryOptions.length === 0
+                          ? 'No category routed to this department yet'
+                          : 'Select Category'
+                  }
+                />
+                {fieldError('category')}
               </div>
 
               <div className="flex flex-col gap-2">

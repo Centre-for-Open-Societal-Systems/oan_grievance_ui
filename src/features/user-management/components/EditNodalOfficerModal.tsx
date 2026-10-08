@@ -5,12 +5,7 @@ import { Check, Copy, KeyRound, RefreshCw, Save, X } from 'lucide-react';
 import { ApiError } from '@/lib/api';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
-import {
-  fetchGrievanceOptionsThunk,
-  selectCategoryFilterOptions,
-  selectDepartmentOptions,
-  useAreas,
-} from '@/features/metadata';
+import { fetchGrievanceOptionsThunk, selectDepartmentOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
 import { generateRandomPassword } from '@/lib/validation/password';
@@ -20,6 +15,7 @@ import { AnimatedSelect } from './AnimatedSelect';
 import { resetTemporaryPassword, updateOfficer } from '../api/officerApi';
 import type { Officer } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
+import { useWiredCategoryOptions } from '../hooks/useWiredCategoryOptions';
 import type { OfficerBackendStatus, OfficerLevel } from '../types';
 
 const STATUS_OPTIONS: OfficerBackendStatus[] = ['Active', 'On Leave', 'Inactive'];
@@ -60,7 +56,6 @@ interface EditNodalOfficerModalProps {
 export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved }: EditNodalOfficerModalProps) {
   const dispatch = useAppDispatch();
   const departmentOptions = useAppSelector(selectDepartmentOptions);
-  const categoryOptions = useAppSelector(selectCategoryFilterOptions);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const { areas: regionAreas } = useAreas({ level: 'Region' });
   const { options: supervisorOptions } = useL2OfficerOptions(isOpen && level === 'L1');
@@ -79,6 +74,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
   const [designation, setDesignation] = useState(officer?.roleTitle ?? '');
   const [department, setDepartment] = useState(officer?.department ?? '');
   const [serviceCategories, setServiceCategories] = useState<string[]>(officer?.tags ?? []);
+  const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
   const [region, setRegion] = useState('');
   const [status, setStatus] = useState<string>(officer?.status ?? 'Active');
   const [reportsTo, setReportsTo] = useState('');
@@ -298,6 +294,10 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
                   onChange={(value) => {
                     setDepartment(value);
                     setError('department', null);
+                    // The wired category list is department-specific — a category picked
+                    // for the old department may not even have a desk under the new one.
+                    setServiceCategories([]);
+                    setError('serviceCategories', null);
                   }}
                   placeholder="Select Department"
                 />
@@ -345,8 +345,12 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
                 aria-describedby={fieldErrors.serviceCategories ? errorIdFor(FIELD_IDS.serviceCategories) : undefined}
                 className="flex flex-wrap gap-2"
               >
-                {categoryOptions.length === 0 ? (
+                {!department ? (
+                  <span className="text-sm text-gray-400">Select a department first.</span>
+                ) : isCategoryOptionsLoading ? (
                   <span className="text-sm text-gray-400">Loading categories…</span>
+                ) : categoryOptions.length === 0 ? (
+                  <span className="text-sm text-gray-400">No service category is routed to this department yet.</span>
                 ) : (
                   categoryOptions.map((option) => (
                     <button

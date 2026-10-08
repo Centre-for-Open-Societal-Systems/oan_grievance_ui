@@ -6,16 +6,21 @@ import { fetchGrievanceOptionsThunk } from '@/features/metadata';
 import { makeStore } from '@/store';
 import { AddOfficerModal } from './AddOfficerModal';
 
+const fetchCategoryAssignments = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    assignments: [{ name: 'GR-RBAC-00001', service_category: 'Inputs', department: 'Ministry of Agriculture', active: true }],
+    pagination: { page: 1, page_size: 100, total_count: 1, total_pages: 1, has_next: false, has_prev: false },
+  })
+);
+vi.mock('../api/officerApi', () => ({ fetchCategoryAssignments }));
+
 function renderModal(onAdd = vi.fn(), tabLabel = 'Admin') {
   const store = makeStore();
-  // Seeds the Department/Category dropdowns the same way a real fetchGrievanceOptionsThunk
+  // Seeds the Department dropdown the same way a real fetchGrievanceOptionsThunk
   // resolution would, without hitting the network.
   store.dispatch({
     type: fetchGrievanceOptionsThunk.fulfilled.type,
-    payload: {
-      departments: [{ department_name: 'Ministry of Agriculture' }],
-      service_categories: [{ category_name: 'Inputs' }],
-    },
+    payload: { departments: [{ department_name: 'Ministry of Agriculture' }] },
   });
   render(
     <Provider store={store}>
@@ -30,10 +35,12 @@ function selectDropdownOption(labelText: string, optionText: string) {
   fireEvent.click(screen.getByText(optionText));
 }
 
-function fillRequiredFields() {
+async function fillRequiredFields() {
   fireEvent.change(screen.getByLabelText('Full Name *'), { target: { value: 'Test Officer' } });
   fireEvent.change(screen.getByLabelText('Role Title *'), { target: { value: 'Case Officer' } });
   selectDropdownOption('Select Department', 'Ministry of Agriculture');
+  // The Category dropdown only has options once its department-scoped fetch resolves.
+  await screen.findByText('Select Category');
   selectDropdownOption('Select Category', 'Inputs');
 }
 
@@ -50,10 +57,50 @@ describe('AddOfficerModal', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  it('rejects a malformed phone number for the selected country (Ethiopia by default)', () => {
+  it("disables category selection until a department is chosen, then only offers that department's wired categories", async () => {
+    renderModal();
+
+    expect(screen.getByText('Select a department first')).toBeTruthy();
+
+    selectDropdownOption('Select Department', 'Ministry of Agriculture');
+
+    await screen.findByText('Select Category');
+    expect(fetchCategoryAssignments).toHaveBeenCalledWith(
+      expect.objectContaining({ department: 'Ministry of Agriculture', active: true }),
+      expect.anything()
+    );
+  });
+
+  it('clears a previously-chosen category when the department changes', async () => {
+    const store = makeStore();
+    store.dispatch({
+      type: fetchGrievanceOptionsThunk.fulfilled.type,
+      payload: {
+        departments: [{ department_name: 'Ministry of Agriculture' }, { department_name: 'Regional Bureau of Agriculture' }],
+      },
+    });
+    render(
+      <Provider store={store}>
+        <AddOfficerModal isOpen onClose={vi.fn()} tabLabel="Admin" onAdd={vi.fn()} />
+      </Provider>
+    );
+
+    selectDropdownOption('Select Department', 'Ministry of Agriculture');
+    await screen.findByText('Select Category');
+    selectDropdownOption('Select Category', 'Inputs');
+    expect(screen.getByText('Inputs')).toBeTruthy();
+
+    // Switching to a different department re-triggers the fetch and resets the
+    // category selection back to its placeholder, since the old pick may not be wired here.
+    selectDropdownOption('Ministry of Agriculture', 'Regional Bureau of Agriculture');
+
+    expect(screen.queryByText('Inputs')).toBeNull();
+  });
+
+  it('rejects a malformed phone number for the selected country (Ethiopia by default)', async () => {
     const onAdd = renderModal();
 
-    fillRequiredFields();
+    await fillRequiredFields();
     fireEvent.change(screen.getByPlaceholderText('Enter Phone Number'), { target: { value: '123' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -62,10 +109,10 @@ describe('AddOfficerModal', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  it('accepts a valid form, sends the phone number in E.164, and carries the chosen department/category', () => {
+  it('accepts a valid form, sends the phone number in E.164, and carries the chosen department/category', async () => {
     const onAdd = renderModal();
 
-    fillRequiredFields();
+    await fillRequiredFields();
     fireEvent.change(screen.getByPlaceholderText('Enter Phone Number'), { target: { value: '911234567' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -82,23 +129,23 @@ describe('AddOfficerModal', () => {
     );
   });
 
-  it('pre-fills a valid temporary password and marks the new officer as awaiting first sign-in', () => {
+  it('pre-fills a valid temporary password and marks the new officer as awaiting first sign-in', async () => {
     const onAdd = renderModal(vi.fn(), 'Reviewer');
 
     const passwordField = screen.getByLabelText('Temporary Password *') as HTMLInputElement;
     expect(passwordField.value.length).toBeGreaterThanOrEqual(8);
 
-    fillRequiredFields();
+    await fillRequiredFields();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ mustChangePassword: true }));
   });
 
-  it('rejects an empty temporary password', () => {
+  it('rejects an empty temporary password', async () => {
     const onAdd = renderModal();
 
-    fillRequiredFields();
+    await fillRequiredFields();
     fireEvent.change(screen.getByLabelText('Temporary Password *'), { target: { value: '' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));

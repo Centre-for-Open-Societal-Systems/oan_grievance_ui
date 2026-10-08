@@ -1,6 +1,8 @@
 import { fetchApi } from '@/lib/api';
 import type {
+  CategoryAssignmentListData,
   CreateOfficerPayload,
+  ListCategoryAssignmentsParams,
   ListOfficersParams,
   ListOfficerStatisticsParams,
   OfficerData,
@@ -124,6 +126,22 @@ export async function fetchOfficerStatistics(
   });
 }
 
+/**
+ * Which service categories already have an active routing desk for a department — see
+ * `CategoryAssignmentRecord`'s own doc comment for why the Add/Edit officer forms need this.
+ *
+ * Corresponding REST endpoint: GET /api/v1/category-assignments
+ */
+export async function fetchCategoryAssignments(
+  params: ListCategoryAssignmentsParams = {},
+  options: RequestOptions = {}
+): Promise<CategoryAssignmentListData> {
+  return fetchApi<CategoryAssignmentListData>(`/api/v1/category-assignments${buildQuery(params)}`, {
+    method: 'GET',
+    signal: options.signal,
+  });
+}
+
 /** Service object matching the OAN A2C enterprise standard */
 export const officerService = {
   listOfficers: fetchOfficers,
@@ -132,4 +150,5 @@ export const officerService = {
   updateOfficer,
   resetTemporaryPassword,
   getStatistics: fetchOfficerStatistics,
+  listCategoryAssignments: fetchCategoryAssignments,
 };

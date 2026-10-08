@@ -139,3 +139,30 @@ export interface UpdateOfficerPayload {
   service_categories?: string[];
   reports_to?: string | null;
 }
+
+/**
+ * `GET /api/v1/category-assignments` row — a Grievance RBAC Assignment "desk" that routes
+ * one service category to one department. Creating an officer on a category/department
+ * combo with no active desk here is refused server-side ("no category assignment found"),
+ * so the Add/Edit forms use this to only offer categories that are actually wired for the
+ * chosen department, instead of surfacing that failure after the fact.
+ */
+export interface CategoryAssignmentRecord {
+  name: string;
+  service_category: string;
+  department: string;
+  active: boolean;
+}
+
+export interface CategoryAssignmentListData {
+  assignments: CategoryAssignmentRecord[];
+  pagination: OfficerListPagination;
+}
+
+export interface ListCategoryAssignmentsParams {
+  department?: string;
+  service_category?: string;
+  active?: boolean;
+  page?: number;
+  page_size?: number;
+}

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Check, Copy, RefreshCw, Save, X } from 'lucide-react';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
-import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, selectDepartmentOptions } from '@/features/metadata';
+import { fetchGrievanceOptionsThunk, selectDepartmentOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { generateRandomPassword } from '@/lib/validation/password';
 import { formatToE164 } from '@/lib/validation/phone';
@@ -17,6 +17,7 @@ import {
 } from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors';
 import { AnimatedSelect } from './AnimatedSelect';
+import { useWiredCategoryOptions } from '../hooks/useWiredCategoryOptions';
 import type { Officer, OfficerStatus } from '../data/officers';
 
 interface AddOfficerModalProps {
@@ -55,7 +56,7 @@ const FIELD_ORDER: Array<{ key: FormField; id: string }> = (Object.keys(FIELD_ID
 export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficerModalProps) {
   const dispatch = useAppDispatch();
   const departmentOptions = useAppSelector(selectDepartmentOptions);
-  const categoryOptions = useAppSelector(selectCategoryFilterOptions);
+  const { areas: regionAreas } = useAreas({ level: 'Region' });
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   useEffect(() => {
     if (grievanceOptionsStatus === 'idle') {
@@ -67,6 +68,7 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
   const [roleTitle, setRoleTitle] = useState('');
   const [department, setDepartment] = useState('');
   const [category, setCategory] = useState('');
+  const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+251');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -293,12 +295,11 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
 
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-gray-900">Region</label>
-                <input
-                  type="text"
+                <AnimatedSelect
+                  options={regionAreas.map((area) => area.area_name)}
                   value={region}
-                  onChange={(e) => setRegion(e.target.value)}
-                  placeholder="Enter Region"
-                  className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors"
+                  onChange={setRegion}
+                  placeholder="Select Region"
                 />
               </div>
 
@@ -327,6 +328,10 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
                   onChange={(value) => {
                     setDepartment(value);
                     setError('department', null);
+                    // The wired category list is department-specific — a category picked
+                    // for the old department may not even have a desk under the new one.
+                    setCategory('');
+                    setError('category', null);
                   }}
                   placeholder="Select Department"
                 />
@@ -344,7 +349,15 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
                     setCategory(value);
                     setError('category', null);
                   }}
-                  placeholder="Select Category"
+                  placeholder={
+                    !department
+                      ? 'Select a department first'
+                      : isCategoryOptionsLoading
+                        ? 'Loading categories…'
+                        : categoryOptions.length === 0
+                          ? 'No category routed to this department yet'
+                          : 'Select Category'
+                  }
                 />
                 {fieldError('category')}
               </div>
