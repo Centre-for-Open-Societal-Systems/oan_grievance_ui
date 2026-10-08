@@ -47,12 +47,14 @@ export function isProtectedRoute(pathname: string): boolean {
  * self-registered user's JWT `roles` claim is `[]`, handled by
  * `effectiveRoles` below as submitter-equivalent until that's configured.
  *
- * `REVIEW_OFFICER` is NOT yet confirmed live: it ships in
- * `oan_grievance_service` PR #47 (STG-434), still open/unmerged as of
- * 2026-10-07. The exact string here is pinned to that PR's own note that the
- * role name is `Grievance Review Officer` (the Jira ticket just says "Review
- * Officer") — re-verify against a real login once that PR merges, the same
- * way the other three were confirmed above.
+ * `REVIEW_OFFICER` ships in `oan_grievance_service` PR #47 (STG-434), merged
+ * to `develop` 2026-10-07. The exact string here is pinned to that PR's own
+ * note that the role name is `Grievance Review Officer` (the Jira ticket
+ * just says "Review Officer"), and confirmed against the merged
+ * `services/constants.py`'s `ROLE_REVIEW_OFFICER`. Not yet confirmed via an
+ * actual login, though — no account holding this role exists on the dev
+ * bench yet (it's brand new), so re-verify the string once one does, the
+ * same way the other three were confirmed above.
  */
 export const ROLES = {
   SUBMITTER: 'Grievance Submitter',
