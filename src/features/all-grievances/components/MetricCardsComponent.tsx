@@ -115,7 +115,7 @@ export function MetricCardsComponent({
   error?: string | null;
   onRetry?: () => void;
 }) {
-  const { scrollRef, activeIndex, scrollTo } = useCarouselScroll({ enableWheelScroll: true });
+  const { scrollRef, activeIndex, scrollProgress, scrollTo } = useCarouselScroll({ enableWheelScroll: true });
 
   if (isLoading && cards.length === 0) {
     return (
@@ -203,9 +203,10 @@ export function MetricCardsComponent({
         <div className="flex justify-center items-center gap-2 mt-4">
           {Array.from({ length: Math.min(totalCards, 3) }).map((_, dotIndex) => {
             const numDots = Math.min(totalCards, 3);
-            const chunkSize = Math.max(1, Math.round(totalCards / numDots));
-            const activeDot = Math.min(numDots - 1, Math.floor(activeIndex / chunkSize));
+            const activeDot = Math.min(numDots - 1, Math.round(scrollProgress * (numDots - 1)));
             const isActive = activeDot === dotIndex;
+
+            const chunkSize = Math.max(1, Math.round(totalCards / numDots));
 
             return (
               <button

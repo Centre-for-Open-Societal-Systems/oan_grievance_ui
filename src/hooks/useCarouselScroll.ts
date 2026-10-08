@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 export function useCarouselScroll(options?: { enableWheelScroll?: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -11,6 +12,13 @@ export function useCarouselScroll(options?: { enableWheelScroll?: boolean }) {
     let ticking = false;
 
     const calculateActiveIndex = () => {
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      if (maxScroll > 0) {
+        setScrollProgress(Math.min(1, Math.max(0, container.scrollLeft / maxScroll)));
+      } else {
+        setScrollProgress(0);
+      }
+
       const containerRect = container.getBoundingClientRect();
       const containerCenter = containerRect.left + containerRect.width / 2;
 
@@ -73,5 +81,5 @@ export function useCarouselScroll(options?: { enableWheelScroll?: boolean }) {
     }
   };
 
-  return { scrollRef, activeIndex, scrollTo };
+  return { scrollRef, activeIndex, scrollProgress, scrollTo };
 }
