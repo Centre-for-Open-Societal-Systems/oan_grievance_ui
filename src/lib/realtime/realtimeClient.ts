@@ -27,6 +27,8 @@ export interface AttachmentScannedEvent {
 export interface RealtimeEventMap {
   /** An attachment the caller uploaded, or one on a subscribed grievance, has a scan verdict. */
   attachment_scanned: AttachmentScannedEvent;
+  /** A timeline event (message, note, action) was recorded on a grievance. */
+  timeline_updated: { grievance: string; ticket_number?: string };
   /** A new in-app notification exists for the caller. Carries no payload. */
   notification: undefined;
   /** Local: the socket reconnected or the tab regained focus, so events may have been missed. */
@@ -48,6 +50,7 @@ const RECONNECT_MAX_MS = 30_000;
 
 const listeners: { [K in RealtimeEventName]: Set<Listener<K>> } = {
   attachment_scanned: new Set(),
+  timeline_updated: new Set(),
   notification: new Set(),
   resync: new Set(),
 };
@@ -153,6 +156,11 @@ async function openSocket() {
       if (event) emitLocal('attachment_scanned', event);
     });
     next.on('notification', () => emitLocal('notification', undefined));
+    next.on('timeline_updated', (raw: unknown) => {
+      if (raw && typeof raw === 'object' && 'grievance' in raw) {
+        emitLocal('timeline_updated', raw as { grievance: string; ticket_number?: string });
+      }
+    });
   } catch (error) {
     logger.error('Realtime token request failed:', error);
     scheduleReconnect();

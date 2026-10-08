@@ -72,6 +72,10 @@ export function useGrievanceTimeline({ ticketNumber }: UseGrievanceTimelineOptio
     dispatch(attachmentScanVerdictReceived(event));
     refreshSilently();
   });
+  useRealtimeEvent('timeline_updated', (event) => {
+    if (!grievanceId || (event.grievance !== grievanceId && event.ticket_number !== ticketNumber)) return;
+    refreshSilently();
+  });
   // A notification may be about this case, and a resync means events may
   // have been missed; either way the open case is re-read through REST.
   useRealtimeEvent('notification', refreshSilently);

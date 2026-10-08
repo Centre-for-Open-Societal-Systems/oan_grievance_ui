@@ -66,9 +66,7 @@ function buildTimelineQuery(params: GrievanceTimelineQueryParams): string {
   if (params.is_internal !== undefined) {
     searchParams.set('is_internal', String(params.is_internal));
   }
-  if (params.limit !== undefined) {
-    searchParams.set('limit', String(params.limit));
-  }
+  searchParams.set('limit', String(params.limit !== undefined ? params.limit : 50));
   if (params.cursor) {
     searchParams.set('cursor', params.cursor);
   }
@@ -136,12 +134,19 @@ export async function fetchGrievanceTimeline(
  *
  * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/message
  */
+export interface PostMessageOptions extends RequestOptions {
+  clientMessageId?: string;
+}
+
 export async function postGrievanceMessage(
   ticketNumber: string,
   body: string,
   isInternal = false,
-  options: RequestOptions = {}
+  options: PostMessageOptions = {}
 ): Promise<GrievanceActionResult> {
+  const client_message_id =
+    options.clientMessageId ||
+    (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined);
   return fetchApi<GrievanceActionResult>(
     `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/message`,
     {
@@ -150,6 +155,7 @@ export async function postGrievanceMessage(
         ticket_number: ticketNumber,
         body,
         is_internal: isInternal,
+        client_message_id,
       }),
       signal: options.signal,
     }
