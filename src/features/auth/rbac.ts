@@ -179,3 +179,14 @@ export function homeRouteForRoles(roles: string[]): string {
 export function isOfficerOrAdmin(roles: string[]): boolean {
   return effectiveRoles(roles).some((role) => role === ROLES.OFFICER || role === ROLES.ADMIN);
 }
+
+/**
+ * True for a Grievance Review Officer. Used to hide/disable the create, edit, and
+ * password-reset controls on screens it can otherwise view (User Management,
+ * Administration) — it can reach those routes (`ROUTE_ROLES` above) but PR #47
+ * (STG-434) refuses it every write there, so a visible but always-403ing button
+ * would just confuse it.
+ */
+export function isReviewOfficer(roles: string[]): boolean {
+  return effectiveRoles(roles).some((role) => role === ROLES.REVIEW_OFFICER);
+}
