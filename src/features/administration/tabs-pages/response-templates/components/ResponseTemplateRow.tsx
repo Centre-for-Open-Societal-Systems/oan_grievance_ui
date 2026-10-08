@@ -10,6 +10,8 @@ interface ResponseTemplateRowProps {
     departmentName: string | null;
     isLast?: boolean;
     isBusy?: boolean;
+    /** False hides Edit/Retire/Reactivate — for a read-only role (Review Officer) the backend refuses the write anyway. */
+    canManage?: boolean;
     onEdit: (template: ResponseTemplate) => void;
     onRetire: (template: ResponseTemplate) => void;
     onReactivate: (template: ResponseTemplate) => void;
@@ -39,6 +41,7 @@ export function ResponseTemplateRow({
     departmentName,
     isLast,
     isBusy = false,
+    canManage = true,
     onEdit,
     onRetire,
     onReactivate,
@@ -123,36 +126,40 @@ export function ResponseTemplateRow({
                                 {t('usedTimes', { count: template.usage_count })}
                             </span>
 
-                            {template.is_active ? (
-                                <button
-                                    type="button"
-                                    disabled={isBusy}
-                                    onClick={() => onRetire(template)}
-                                    className="px-5 py-3 border border-red-200 rounded-lg text-[14px] font-medium text-red-700 hover:bg-red-50 flex items-center gap-2 transition-colors disabled:opacity-50"
-                                >
-                                    <Archive className="w-4 h-4" aria-hidden="true" />
-                                    {t('retire')}
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    disabled={isBusy}
-                                    onClick={() => onReactivate(template)}
-                                    className="px-5 py-3 border border-gray-200 rounded-lg text-[14px] font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors disabled:opacity-50"
-                                >
-                                    <RotateCcw className="w-4 h-4" aria-hidden="true" />
-                                    {t('reactivate')}
-                                </button>
+                            {canManage && (
+                                <>
+                                    {template.is_active ? (
+                                        <button
+                                            type="button"
+                                            disabled={isBusy}
+                                            onClick={() => onRetire(template)}
+                                            className="px-5 py-3 border border-red-200 rounded-lg text-[14px] font-medium text-red-700 hover:bg-red-50 flex items-center gap-2 transition-colors disabled:opacity-50"
+                                        >
+                                            <Archive className="w-4 h-4" aria-hidden="true" />
+                                            {t('retire')}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            disabled={isBusy}
+                                            onClick={() => onReactivate(template)}
+                                            className="px-5 py-3 border border-gray-200 rounded-lg text-[14px] font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors disabled:opacity-50"
+                                        >
+                                            <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                                            {t('reactivate')}
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        disabled={isBusy}
+                                        onClick={() => onEdit(template)}
+                                        className="px-5 py-3 bg-[#16A34A] text-white rounded-lg text-[14px] font-bold hover:bg-[#15803d] flex items-center gap-2 transition-colors disabled:opacity-50"
+                                    >
+                                        <Pencil className="w-4 h-4" aria-hidden="true" />
+                                        {t('edit')}
+                                    </button>
+                                </>
                             )}
-                            <button
-                                type="button"
-                                disabled={isBusy}
-                                onClick={() => onEdit(template)}
-                                className="px-5 py-3 bg-[#16A34A] text-white rounded-lg text-[14px] font-bold hover:bg-[#15803d] flex items-center gap-2 transition-colors disabled:opacity-50"
-                            >
-                                <Pencil className="w-4 h-4" aria-hidden="true" />
-                                {t('edit')}
-                            </button>
                         </div>
                     </div>
                 </div>
