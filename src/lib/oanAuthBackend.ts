@@ -7,10 +7,13 @@ import { env } from '@/lib/env';
 
 export class BackendAuthError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /** The REST envelope's machine-readable `code` (e.g. `PASSWORD_CHANGE_REQUIRED`), when present. */
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = 'BackendAuthError';
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -43,12 +46,13 @@ export async function callBackendAuth<T>(path: string, body: object, clientIp: s
   // (see `authProfile.ts`'s `getMe` for the same distinction on `/auth/me`).
   const envelope = (
     data?.message && typeof data.message === 'object' ? data.message : data
-  ) as { status?: string; message?: string; data?: T } | undefined;
+  ) as { status?: string; message?: string; code?: string; data?: T } | undefined;
 
   if (!response.ok || envelope?.status === 'error') {
     throw new BackendAuthError(
       envelope?.message || `Request failed with status ${response.status}`,
-      response.status
+      response.status,
+      envelope?.code
     );
   }
 

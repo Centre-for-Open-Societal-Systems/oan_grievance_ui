@@ -5,7 +5,7 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { selectUser } from "@/features/auth/store/authSlice";
-import { isOfficerOrAdmin } from "@/features/auth/rbac";
+import { canViewAllGrievances } from "@/features/auth/rbac";
 import { useAppSelector } from "@/store/hooks";
 import { UserProfile } from "./UserProfile";
 import { NotificationBell } from "./NotificationBell";
@@ -24,8 +24,8 @@ export function Header() {
     if (path === "/") return "Dashboard";
     if (path.startsWith("/administration")) return "Administration";
     if (path.startsWith("/all-grievances") || path.startsWith("/grievances")) {
-      const isOfficer = isOfficerOrAdmin(user?.roles ?? []);
-      return isOfficer ? "All Grievances" : "My Grievances";
+      const seesAll = canViewAllGrievances(user?.roles ?? []);
+      return seesAll ? "All Grievances" : "My Grievances";
     }
     if (path.startsWith("/submit-grievance")) return "Submit Grievance";
     if (path.startsWith("/analytics-reporting")) return "Analytics & Reporting";

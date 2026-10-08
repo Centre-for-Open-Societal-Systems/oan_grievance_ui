@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { canAccessRoute, isOfficerOrAdmin } from "@/features/auth/rbac";
+import { canAccessRoute, canViewAllGrievances } from "@/features/auth/rbac";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { useAppSelector } from "@/store/hooks";
 import {
@@ -42,11 +42,11 @@ export function Sidebar() {
   // the role set is stable for the whole session).
   const visibleNavItems = useMemo(() => {
     const userRoles = user?.roles ?? [];
-    const isOfficer = isOfficerOrAdmin(userRoles);
+    const seesAll = canViewAllGrievances(userRoles);
     return navItems
       .filter((item) => canAccessRoute(item.href, userRoles))
       .map((item) => {
-        if (item.href === "/all-grievances" && !isOfficer) {
+        if (item.href === "/all-grievances" && !seesAll) {
           return { ...item, name: "My Grievances" };
         }
         return item;

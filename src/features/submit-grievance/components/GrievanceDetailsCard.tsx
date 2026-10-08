@@ -10,7 +10,6 @@ import { MIN_DESCRIPTION_LENGTH } from "@/lib/validation/fieldRules";
 import { focusFirstError, useFieldErrors, type FieldErrors } from "@/lib/validation/useFieldErrors";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  fetchGrievanceOptionsThunk,
   fetchSubmitterOptionsThunk,
   selectGrievanceTypeOptions,
   selectServiceCategoryOptions,
@@ -243,7 +242,6 @@ export function GrievanceDetailsCard({
     selectGrievanceTypeOptions(state, serviceCategory)
   );
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
-  const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
 
   const regions = useAreas({ level: "Region" });
   const zones = useAreas({ level: "Zone", parents: region ? [region.id] : [] });
@@ -254,10 +252,7 @@ export function GrievanceDetailsCard({
     if (metadataStatus === "idle") {
       void dispatch(fetchSubmitterOptionsThunk());
     }
-    if (grievanceOptionsStatus === "idle") {
-      void dispatch(fetchGrievanceOptionsThunk());
-    }
-  }, [dispatch, metadataStatus, grievanceOptionsStatus]);
+  }, [dispatch, metadataStatus]);
 
   // Which attachment's preview modal is open, if any — null when closed.
   const [previewItem, setPreviewItem] = useState<WizardAttachment | null>(null);

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { ForgotPasswordModal } from '@/features/auth/components/ForgotPasswordModal';
+import { SetInitialPasswordModal } from '@/features/auth/components/SetInitialPasswordModal';
 import { homeRouteForRoles } from '@/features/auth/rbac';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { AUTH_MESSAGES } from '@/lib/authMessages';
@@ -34,6 +35,7 @@ export function LoginForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [showSetPasswordModal, setShowSetPasswordModal] = useState(false);
 
   // Read via `window.location` rather than `useSearchParams()` — this page is
   // otherwise fully static, and `useSearchParams()` would force it (and
@@ -93,7 +95,15 @@ export function LoginForm() {
       return;
     }
 
-    setErrorMessage(result.payload ?? 'Something went wrong. Please try again.');
+    // A correct temporary password answers this distinct message (see authMessages.ts and
+    // the login route's own PASSWORD_CHANGE_REQUIRED branch) — route it to the dedicated
+    // modal instead of the generic error banner, since "fix your password and email" isn't
+    // the actual problem here.
+    if (result.payload === AUTH_MESSAGES.passwordChangeRequired) {
+      setShowSetPasswordModal(true);
+    } else {
+      setErrorMessage(result.payload ?? 'Something went wrong. Please try again.');
+    }
     setIsLoading(false);
   };
 
@@ -226,6 +236,17 @@ export function LoginForm() {
       </form>
 
       {showForgotModal && <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />}
+      {showSetPasswordModal && (
+        <SetInitialPasswordModal
+          email={email.trim()}
+          onClose={() => setShowSetPasswordModal(false)}
+          onDone={() => {
+            setShowSetPasswordModal(false);
+            setPassword('');
+            setSuccessMessage(AUTH_MESSAGES.passwordResetSuccess);
+          }}
+        />
+      )}
     </div>
   );
 }
