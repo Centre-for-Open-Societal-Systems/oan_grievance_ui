@@ -23,7 +23,10 @@ export function useL2OfficerOptions(enabled: boolean): { options: OfficerOption[
     const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
-    fetchOfficers({ level: 'L2', status: 'Active', page: 1, page_size: 200 }, { signal: controller.signal })
+    // page_size is capped at 100 server-side (ListOfficers' own validation) — asking for
+    // more fails the whole request with a 400, which the catch below then silently turns
+    // into an empty dropdown instead of a visible error.
+    fetchOfficers({ level: 'L2', status: 'Active', page: 1, page_size: 100 }, { signal: controller.signal })
       .then((data) => {
         if (controller.signal.aborted) return;
         setOptions(data.officers.map((officer) => ({ value: officer.name, label: officer.full_name })));

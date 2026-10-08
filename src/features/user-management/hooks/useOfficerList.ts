@@ -87,9 +87,11 @@ export function useOfficerList({ level, search, category, region, status, page, 
         },
         { signal: controller.signal }
       ),
-      // A statistics failure degrades to zeroed-out stats rather than sinking the whole
-      // list — the two endpoints are independent, and the list is the more important half.
-      fetchOfficerStatistics({ level: params.level, page: 1, page_size: 1000 }, { signal: controller.signal }).catch(
+      // page_size is capped at 100 server-side — the same cap ListOfficers enforces.
+      // A statistics failure (that cap, or anything else) degrades to zeroed-out stats
+      // rather than sinking the whole list — the two endpoints are independent, and the
+      // list is the more important half.
+      fetchOfficerStatistics({ level: params.level, page: 1, page_size: 100 }, { signal: controller.signal }).catch(
         () => null
       ),
     ])
