@@ -10,6 +10,8 @@ const AVATAR_PALETTE = [
   { bg: 'bg-gray-100', color: 'text-gray-700' },
 ];
 
+const FALLBACK_PALETTE_ENTRY = { bg: 'bg-gray-100', color: 'text-gray-700' };
+
 export function initialsOf(name: string): string {
   return (
     name
@@ -24,6 +26,6 @@ export function initialsOf(name: string): string {
 
 /** Deterministic by name, not random — so a person's avatar color stays stable across refetches. */
 export function avatarForName(name: string): { initials: string; bg: string; color: string } {
-  const palette = AVATAR_PALETTE[name.length % AVATAR_PALETTE.length]!;
+  const palette = AVATAR_PALETTE[name.length % AVATAR_PALETTE.length] ?? FALLBACK_PALETTE_ENTRY;
   return { initials: initialsOf(name), bg: palette.bg, color: palette.color };
 }

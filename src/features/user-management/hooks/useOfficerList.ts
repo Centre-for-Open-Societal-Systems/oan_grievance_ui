@@ -61,15 +61,6 @@ export function useOfficerList({ level, search, category, region, status, page, 
   useEffect(() => {
     if (!enabled) return;
 
-    const params = JSON.parse(queryKey) as {
-      level: OfficerLevel;
-      search: string;
-      category: string;
-      region: string;
-      status: string;
-      page: number;
-    };
-
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -77,12 +68,12 @@ export function useOfficerList({ level, search, category, region, status, page, 
     Promise.all([
       fetchOfficers(
         {
-          level: params.level,
-          service_category: params.category || undefined,
-          region: params.region || undefined,
-          status: params.status ? (params.status as OfficerBackendStatus) : undefined,
-          q: params.search || undefined,
-          page: params.page,
+          level,
+          service_category: category || undefined,
+          region: region || undefined,
+          status: status ? (status as OfficerBackendStatus) : undefined,
+          q: debouncedSearch.trim() || undefined,
+          page,
           page_size: PAGE_SIZE,
         },
         { signal: controller.signal }
@@ -91,9 +82,7 @@ export function useOfficerList({ level, search, category, region, status, page, 
       // A statistics failure (that cap, or anything else) degrades to zeroed-out stats
       // rather than sinking the whole list — the two endpoints are independent, and the
       // list is the more important half.
-      fetchOfficerStatistics({ level: params.level, page: 1, page_size: 100 }, { signal: controller.signal }).catch(
-        () => null
-      ),
+      fetchOfficerStatistics({ level, page: 1, page_size: 100 }, { signal: controller.signal }).catch(() => null),
     ])
       .then(([list, stats]) => {
         if (controller.signal.aborted) return;
@@ -118,7 +107,10 @@ export function useOfficerList({ level, search, category, region, status, page, 
       });
 
     return () => controller.abort();
-  }, [queryKey, enabled]);
+    // queryKey is derived from exactly these same values (plus reloadToken, to force a
+    // refetch) — listed individually so the effect depends on what it actually reads,
+    // not on a JSON-stringified stand-in for it.
+  }, [queryKey, enabled, level, debouncedSearch, category, region, status, page]);
 
   const refetch = () => setReloadToken((t) => t + 1);
 

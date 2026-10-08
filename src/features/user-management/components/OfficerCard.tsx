@@ -98,7 +98,14 @@ export function OfficerCard({ officer, onEdit, canEdit = true }: OfficerCardProp
           <span>Resolution Rate</span>
           <span className={`font-semibold ${rateTextColor}`}>{officer.resolutionRate}%</span>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden"
+          role="progressbar"
+          aria-label="Resolution rate"
+          aria-valuenow={rate}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
           <div className={`h-full rounded-full ${barColor} transition-all duration-500`} style={{ width: `${rate}%` }} />
         </div>
       </div>

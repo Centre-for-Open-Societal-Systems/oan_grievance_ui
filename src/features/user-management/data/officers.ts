@@ -63,6 +63,11 @@ export const OFFICER_TABS: OfficerTabConfig[] = [
   },
 ];
 
+/** `OFFICER_TABS` keyed by id, for an exhaustively-typed O(1) lookup instead of `.find()!`. */
+export const OFFICER_TABS_BY_ID: Record<OfficerTabId, OfficerTabConfig> = Object.fromEntries(
+  OFFICER_TABS.map((tab) => [tab.id, tab])
+) as Record<OfficerTabId, OfficerTabConfig>;
+
 export const STATUS_STYLES: Record<OfficerStatus, { dot: string; text: string; bg: string; border: string }> = {
   Active: { dot: 'bg-[#16A34A]', text: 'text-[#16A34A]', bg: 'bg-[#16A34A]/5', border: 'border-[#16A34A]/30' },
   'On Leave': { dot: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },

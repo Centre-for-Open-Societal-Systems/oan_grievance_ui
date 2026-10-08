@@ -5,9 +5,10 @@ import { RefreshCw } from 'lucide-react';
 import { useIsReviewOfficer } from '@/features/auth/hooks/useIsReviewOfficer';
 import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { OFFICER_DIRECTORY, OFFICER_TABS, type Officer, type OfficerTabId } from '../data/officers';
+import { OFFICER_DIRECTORY, OFFICER_TABS, OFFICER_TABS_BY_ID, type Officer, type OfficerTabId } from '../data/officers';
 import { useOfficerCount } from '../hooks/useOfficerCount';
 import { useOfficerList } from '../hooks/useOfficerList';
+import { useOfficerStatusCounts } from '../hooks/useOfficerStatusCounts';
 import type { OfficerLevel } from '../types';
 import { AddNodalOfficerModal } from './AddNodalOfficerModal';
 import { AddOfficerModal } from './AddOfficerModal';
@@ -49,7 +50,7 @@ export function OfficerDirectory() {
   const isApiTab = activeTab === 'nodal-l1' || activeTab === 'nodal-l2';
   const level = levelForTab(activeTab);
 
-  const activeTabConfig = OFFICER_TABS.find((tab) => tab.id === activeTab)!;
+  const activeTabConfig = OFFICER_TABS_BY_ID[activeTab];
   const dummyOfficers = officersByTab[activeTab];
 
   // Metadata (department/service-category/region options) backs both the API tabs'
@@ -121,18 +122,21 @@ export function OfficerDirectory() {
   const totalPages = isApiTab ? apiResult.totalPages : dummyTotalPages;
   const totalCount = isApiTab ? apiResult.totalCount : filteredDummyOfficers.length;
 
-  // The list/statistics APIs don't expose a global status breakdown — only the current
-  // page's rows are counted here, unlike the Admin tab's exact figure over its full
-  // (client-held) dummy dataset. Good enough as a glance while the page itself is live.
-  const statsSource = isApiTab ? apiResult.officers : dummyOfficers;
-  const stats = useMemo(
+  // The API tabs' breakdown comes from three separate total-count-only requests (below) so
+  // it covers every officer at this level, not just the current page's rows. The Admin tab
+  // has no backend equivalent, so it still counts its full (client-held) dummy dataset.
+  const apiStatusCounts = useOfficerStatusCounts(level, isApiTab);
+  const dummyStats = useMemo(
     () => ({
-      active: statsSource.filter((officer) => officer.status === 'Active').length,
-      onLeave: statsSource.filter((officer) => officer.status === 'On Leave').length,
-      inactive: statsSource.filter((officer) => officer.status === 'Inactive').length,
+      active: dummyOfficers.filter((officer) => officer.status === 'Active').length,
+      onLeave: dummyOfficers.filter((officer) => officer.status === 'On Leave').length,
+      inactive: dummyOfficers.filter((officer) => officer.status === 'Inactive').length,
     }),
-    [statsSource]
+    [dummyOfficers]
   );
+  const stats = isApiTab
+    ? { active: apiStatusCounts.active, onLeave: apiStatusCounts.onLeave, inactive: apiStatusCounts.inactive }
+    : dummyStats;
 
   const activeFilterCount = [categoryFilter, regionFilter, statusFilter].filter(Boolean).length;
 

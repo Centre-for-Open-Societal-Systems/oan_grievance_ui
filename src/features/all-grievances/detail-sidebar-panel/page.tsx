@@ -14,6 +14,7 @@ import { useGrievanceTimeline } from '../hooks/useGrievanceTimeline';
 import type { Grievance } from '../types';
 import { useAppSelector } from '@/store/hooks';
 import { uploadAttachments } from '@/lib/attachments';
+import { isOfficerOrAdmin } from '@/features/auth/rbac';
 
 export function GrievanceDetailSidebar({
   ticketNumber,
@@ -56,7 +57,7 @@ export function GrievanceDetailSidebar({
     await refetch();
   };
 
-  const baseCanManageCase = userRoles.includes('Grievance Officer') || userRoles.includes('Grievance Admin');
+  const baseCanManageCase = isOfficerOrAdmin(userRoles);
   const isEscalated = timelineData?.escalated;
   const assignedToMe = timelineData?.assignment?.assigned_to === user?.email;
   const canManageCase = baseCanManageCase && (!isEscalated || assignedToMe);

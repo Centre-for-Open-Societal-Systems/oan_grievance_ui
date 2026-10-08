@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Copy, KeyRound, RefreshCw, Save, X } from 'lucide-react';
 import { ApiError } from '@/lib/api';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
+import { useCopyFeedback } from '@/components/ui/useCopyFeedback';
+import { useModalA11y } from '@/components/ui/useModalA11y';
 import { fetchGrievanceOptionsThunk, selectDepartmentOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
@@ -85,7 +88,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
   const [isIssuingPassword, setIsIssuingPassword] = useState(false);
   const [newTempPassword, setNewTempPassword] = useState('');
   const [tempPasswordError, setTempPasswordError] = useState<string | null>(null);
-  const [isPasswordCopied, setIsPasswordCopied] = useState(false);
+  const { isCopied: isPasswordCopied, copy: copyNewPassword } = useCopyFeedback();
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [passwordIssuedMessage, setPasswordIssuedMessage] = useState<string | null>(null);
 
@@ -101,6 +104,10 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (match) setRegion(match.area_id);
   }, [region, officer, regionAreas]);
+
+  const dialogRef = useModalA11y<HTMLDivElement>(isOpen, () => {
+    if (!isSubmitting) onClose();
+  });
 
   if (!isOpen || !officer) return null;
 
@@ -129,16 +136,6 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
     setTempPasswordError(null);
     setPasswordIssuedMessage(null);
     setIsIssuingPassword(true);
-  };
-
-  const handleCopyNewPassword = async () => {
-    try {
-      await navigator.clipboard.writeText(newTempPassword);
-      setIsPasswordCopied(true);
-      setTimeout(() => setIsPasswordCopied(false), 2000);
-    } catch {
-      // Clipboard access can be denied/unavailable — the password is still visible to copy by hand.
-    }
   };
 
   const handleIssuePassword = async () => {
@@ -214,12 +211,18 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
     };
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-visible flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-nodal-officer-title"
+        className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-visible flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+      >
         <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900">Edit Officer</h2>
-          <button onClick={onClose} disabled={isSubmitting} className="text-gray-400 hover:text-red-500 transition-all duration-300 p-1.5 rounded-full hover:bg-red-50 hover:rotate-90 hover:scale-110 disabled:opacity-50">
+          <h2 id="edit-nodal-officer-title" className="text-xl font-bold text-gray-900">Edit Officer</h2>
+          <button type="button" onClick={onClose} disabled={isSubmitting} className="text-gray-400 hover:text-red-500 transition-all duration-300 p-1.5 rounded-full hover:bg-red-50 hover:rotate-90 hover:scale-110 disabled:opacity-50">
             <X size={20} />
           </button>
         </div>
@@ -428,7 +431,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
                     </button>
                     <button
                       type="button"
-                      onClick={() => void handleCopyNewPassword()}
+                      onClick={() => void copyNewPassword(newTempPassword)}
                       aria-label="Copy password"
                       className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-white hover:text-gray-700 transition-colors"
                     >
@@ -479,6 +482,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Copy, RefreshCw, Save, X } from 'lucide-react';
 import { ApiError } from '@/lib/api';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
+import { useCopyFeedback } from '@/components/ui/useCopyFeedback';
+import { useModalA11y } from '@/components/ui/useModalA11y';
 import { fetchGrievanceOptionsThunk, selectDepartmentOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { formatToE164 } from '@/lib/validation/phone';
@@ -77,7 +80,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
   const [countryCode, setCountryCode] = useState('+251');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState(() => generateRandomPassword());
-  const [isPasswordCopied, setIsPasswordCopied] = useState(false);
+  const { isCopied: isPasswordCopied, copy: copyPassword, reset: resetPasswordCopied } = useCopyFeedback();
   const [designation, setDesignation] = useState('');
   const [department, setDepartment] = useState('');
   const [serviceCategories, setServiceCategories] = useState<string[]>([]);
@@ -89,8 +92,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
   const [formError, setFormError] = useState<string | null>(null);
   const [passwordUnusedWarning, setPasswordUnusedWarning] = useState<string | null>(null);
   const { errors: fieldErrors, setError, setAll } = useFieldErrors<FormField>();
-
-  if (!isOpen) return null;
 
   const validateField = (field: FormField): string | null => {
     switch (field) {
@@ -117,7 +118,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
     setCountryCode('+251');
     setPhoneNumber('');
     setPassword(generateRandomPassword());
-    setIsPasswordCopied(false);
+    resetPasswordCopied();
     setDesignation('');
     setDepartment('');
     setServiceCategories([]);
@@ -135,20 +136,13 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
     onClose();
   };
 
+  const dialogRef = useModalA11y<HTMLDivElement>(isOpen, handleClose);
+
+  if (!isOpen) return null;
+
   const toggleCategory = (value: string) => {
     setServiceCategories((prev) => (prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value]));
     setError('serviceCategories', null);
-  };
-
-  const handleCopyPassword = async () => {
-    try {
-      await navigator.clipboard.writeText(password);
-      setIsPasswordCopied(true);
-      setTimeout(() => setIsPasswordCopied(false), 2000);
-    } catch {
-      // Clipboard access can be denied/unavailable (permissions, insecure context) — the
-      // password is still plainly visible in the field for a manual copy.
-    }
   };
 
   const handleAdd = async () => {
@@ -209,12 +203,18 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
     };
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-visible flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-nodal-officer-title"
+        className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-visible flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+      >
         <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900">Add {tabLabel}</h2>
-          <button onClick={handleClose} className="text-gray-400 hover:text-red-500 transition-all duration-300 p-1.5 rounded-full hover:bg-red-50 hover:rotate-90 hover:scale-110">
+          <h2 id="add-nodal-officer-title" className="text-xl font-bold text-gray-900">Add {tabLabel}</h2>
+          <button type="button" onClick={handleClose} className="text-gray-400 hover:text-red-500 transition-all duration-300 p-1.5 rounded-full hover:bg-red-50 hover:rotate-90 hover:scale-110">
             <X size={20} />
           </button>
         </div>
@@ -309,7 +309,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
                   </button>
                   <button
                     type="button"
-                    onClick={() => void handleCopyPassword()}
+                    onClick={() => void copyPassword(password)}
                     aria-label="Copy password"
                     className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
                   >
@@ -460,6 +460,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

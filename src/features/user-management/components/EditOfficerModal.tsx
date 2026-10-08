@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Save, X } from 'lucide-react';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
+import { useModalA11y } from '@/components/ui/useModalA11y';
 import { fetchGrievanceOptionsThunk, selectDepartmentOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
@@ -66,6 +68,7 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
   const [region, setRegion] = useState(officer?.region ?? '');
   const [status, setStatus] = useState<string>(officer?.status ?? 'Active');
   const { errors: fieldErrors, setError, setAll } = useFieldErrors<FormField>();
+  const dialogRef = useModalA11y<HTMLDivElement>(isOpen, onClose);
 
   if (!isOpen || !officer) return null;
 
@@ -137,12 +140,18 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
     };
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-visible flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-officer-title"
+        className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-visible flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+      >
         <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900">Edit Officer</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-all duration-300 p-1.5 rounded-full hover:bg-red-50 hover:rotate-90 hover:scale-110">
+          <h2 id="edit-officer-title" className="text-xl font-bold text-gray-900">Edit Officer</h2>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-red-500 transition-all duration-300 p-1.5 rounded-full hover:bg-red-50 hover:rotate-90 hover:scale-110">
             <X size={20} />
           </button>
         </div>
@@ -301,6 +310,7 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
