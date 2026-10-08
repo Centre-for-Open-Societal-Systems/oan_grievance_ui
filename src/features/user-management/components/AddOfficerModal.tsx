@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Copy, RefreshCw, Save, X } from 'lucide-react';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
+import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, selectDepartmentOptions } from '@/features/metadata';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { generateRandomPassword } from '@/lib/validation/password';
 import { formatToE164 } from '@/lib/validation/phone';
 import {
@@ -33,7 +35,7 @@ const AVATAR_PALETTE = [
   { bg: 'bg-orange-100', color: 'text-orange-700' },
 ];
 
-type FormField = 'name' | 'email' | 'phoneNumber' | 'password' | 'roleTitle';
+type FormField = 'name' | 'email' | 'phoneNumber' | 'password' | 'roleTitle' | 'department' | 'category';
 
 const FIELD_IDS: Record<FormField, string> = {
   name: 'add-admin-full-name',
@@ -41,6 +43,8 @@ const FIELD_IDS: Record<FormField, string> = {
   phoneNumber: 'add-admin-phone',
   password: 'add-admin-password',
   roleTitle: 'add-admin-role-title',
+  department: 'add-admin-department',
+  category: 'add-admin-category',
 };
 
 const FIELD_ORDER: Array<{ key: FormField; id: string }> = (Object.keys(FIELD_IDS) as FormField[]).map((key) => ({
@@ -49,9 +53,20 @@ const FIELD_ORDER: Array<{ key: FormField; id: string }> = (Object.keys(FIELD_ID
 }));
 
 export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficerModalProps) {
+  const dispatch = useAppDispatch();
+  const departmentOptions = useAppSelector(selectDepartmentOptions);
+  const categoryOptions = useAppSelector(selectCategoryFilterOptions);
+  const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
+  useEffect(() => {
+    if (grievanceOptionsStatus === 'idle') {
+      void dispatch(fetchGrievanceOptionsThunk());
+    }
+  }, [dispatch, grievanceOptionsStatus]);
+
   const [name, setName] = useState('');
   const [roleTitle, setRoleTitle] = useState('');
   const [department, setDepartment] = useState('');
+  const [category, setCategory] = useState('');
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+251');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -76,6 +91,10 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
         return validateTemporaryPassword(password);
       case 'roleTitle':
         return validateRequired(roleTitle, 'Enter a role title.');
+      case 'department':
+        return validateRequired(department, 'Select a department.');
+      case 'category':
+        return validateRequired(category, 'Select a category.');
     }
   };
 
@@ -83,6 +102,7 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
     setName('');
     setRoleTitle('');
     setDepartment('');
+    setCategory('');
     setEmail('');
     setCountryCode('+251');
     setPhoneNumber('');
@@ -133,11 +153,11 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
       name,
       status: status as OfficerStatus,
       roleTitle,
-      department: department || '-',
+      department,
       email: email || '-',
       phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : '-',
       region: region || '-',
-      tags: [],
+      tags: [category],
       assigned: 0,
       resolved: 0,
       avgTimeDays: 0,
@@ -298,14 +318,35 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-gray-900">Department</label>
-                <input
-                  type="text"
+                <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
+                  Department <span className="text-red-500">*</span>
+                </label>
+                <AnimatedSelect
+                  options={departmentOptions.map((o) => o.label)}
                   value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="Enter Department"
-                  className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors"
+                  onChange={(value) => {
+                    setDepartment(value);
+                    setError('department', null);
+                  }}
+                  placeholder="Select Department"
                 />
+                {fieldError('department')}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor={FIELD_IDS.category} className="text-sm font-bold text-gray-900">
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <AnimatedSelect
+                  options={categoryOptions}
+                  value={category}
+                  onChange={(value) => {
+                    setCategory(value);
+                    setError('category', null);
+                  }}
+                  placeholder="Select Category"
+                />
+                {fieldError('category')}
               </div>
 
               <div className="flex flex-col gap-2">
