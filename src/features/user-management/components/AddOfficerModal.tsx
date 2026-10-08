@@ -1,11 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, X } from 'lucide-react';
+import { Check, Copy, RefreshCw, Save, X } from 'lucide-react';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
+import { generateRandomPassword } from '@/lib/validation/password';
 import { formatToE164 } from '@/lib/validation/phone';
-import { validateEmail, validateFullName, validateOptionalLocalPhone, validateRequired } from '@/lib/validation/fieldRules';
+import {
+  validateEmail,
+  validateFullName,
+  validateOptionalLocalPhone,
+  validateRequired,
+  validateTemporaryPassword,
+} from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors';
 import { AnimatedSelect } from './AnimatedSelect';
 import type { Officer, OfficerStatus } from '../data/officers';
@@ -26,12 +33,13 @@ const AVATAR_PALETTE = [
   { bg: 'bg-orange-100', color: 'text-orange-700' },
 ];
 
-type FormField = 'name' | 'email' | 'phoneNumber' | 'roleTitle';
+type FormField = 'name' | 'email' | 'phoneNumber' | 'password' | 'roleTitle';
 
 const FIELD_IDS: Record<FormField, string> = {
   name: 'add-admin-full-name',
   email: 'add-admin-email',
   phoneNumber: 'add-admin-phone',
+  password: 'add-admin-password',
   roleTitle: 'add-admin-role-title',
 };
 
@@ -47,6 +55,8 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+251');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState(() => generateRandomPassword());
+  const [isPasswordCopied, setIsPasswordCopied] = useState(false);
   const [region, setRegion] = useState('');
   const [status, setStatus] = useState<string>('Active');
   const { errors: fieldErrors, setError, setAll } = useFieldErrors<FormField>();
@@ -62,6 +72,8 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
         return email.trim() ? validateEmail(email) : null;
       case 'phoneNumber':
         return validateOptionalLocalPhone(phoneNumber, countryCode);
+      case 'password':
+        return validateTemporaryPassword(password);
       case 'roleTitle':
         return validateRequired(roleTitle, 'Enter a role title.');
     }
@@ -74,6 +86,8 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
     setEmail('');
     setCountryCode('+251');
     setPhoneNumber('');
+    setPassword(generateRandomPassword());
+    setIsPasswordCopied(false);
     setRegion('');
     setStatus('Active');
     setAll({});
@@ -82,6 +96,16 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
   const handleClose = () => {
     resetForm();
     onClose();
+  };
+
+  const handleCopyPassword = async () => {
+    try {
+      await navigator.clipboard.writeText(password);
+      setIsPasswordCopied(true);
+      setTimeout(() => setIsPasswordCopied(false), 2000);
+    } catch {
+      // Clipboard access can be denied/unavailable — the password is still visible to copy by hand.
+    }
   };
 
   const handleAdd = () => {
@@ -121,7 +145,9 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
       avatarInitials: initials,
       avatarBg: palette.bg,
       avatarColor: palette.color,
-      mustChangePassword: false,
+      // Mirrors the real officer flow: a freshly-issued temporary password must be
+      // replaced before first sign-in. Dummy data only — nothing is actually created.
+      mustChangePassword: true,
     });
 
     handleClose();
@@ -203,6 +229,46 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
                   onBlur={() => setError('phoneNumber', validateField('phoneNumber'))}
                 />
                 {fieldError('phoneNumber')}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor={FIELD_IDS.password} className="text-sm font-bold text-gray-900">
+                  Temporary Password <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    {...a11y('password')}
+                    type="text"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 8 characters, a letter and a number"
+                    className={`flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPassword(generateRandomPassword());
+                      setError('password', null);
+                    }}
+                    aria-label="Generate a new password"
+                    className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+                  >
+                    <RefreshCw size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyPassword()}
+                    aria-label="Copy password"
+                    className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+                  >
+                    {isPasswordCopied ? <Check size={16} className="text-[#16A34A]" /> : <Copy size={16} />}
+                  </button>
+                </div>
+                {fieldError('password') ?? (
+                  <p className="text-xs text-gray-400">
+                    Tell them this directly — it isn&apos;t emailed. They&apos;ll be required to replace it before signing in.
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">

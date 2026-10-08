@@ -44,4 +44,33 @@ describe('AddOfficerModal', () => {
       expect.objectContaining({ name: 'Test Officer', roleTitle: 'Case Officer', phone: '+251911234567' })
     );
   });
+
+  it('pre-fills a valid temporary password and marks the new officer as awaiting first sign-in', () => {
+    const onAdd = vi.fn();
+    render(<AddOfficerModal isOpen onClose={vi.fn()} tabLabel="Reviewer" onAdd={onAdd} />);
+
+    const passwordField = screen.getByLabelText('Temporary Password *') as HTMLInputElement;
+    expect(passwordField.value.length).toBeGreaterThanOrEqual(8);
+
+    fireEvent.change(screen.getByLabelText('Full Name *'), { target: { value: 'Test Reviewer' } });
+    fireEvent.change(screen.getByLabelText('Role Title *'), { target: { value: 'Compliance Reviewer' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ mustChangePassword: true }));
+  });
+
+  it('rejects an empty temporary password', () => {
+    const onAdd = vi.fn();
+    render(<AddOfficerModal isOpen onClose={vi.fn()} tabLabel="Admin" onAdd={onAdd} />);
+
+    fireEvent.change(screen.getByLabelText('Full Name *'), { target: { value: 'Test Officer' } });
+    fireEvent.change(screen.getByLabelText('Role Title *'), { target: { value: 'Case Officer' } });
+    fireEvent.change(screen.getByLabelText('Temporary Password *'), { target: { value: '' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(screen.getByText('Enter a temporary password.')).toBeTruthy();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
 });
