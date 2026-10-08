@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { canAccessRoute, homeRouteForRoles, isOfficerOrAdmin, isProtectedRoute, isPublicRoute, ROLES } from './rbac';
+import {
+  canAccessRoute,
+  canViewAllGrievances,
+  homeRouteForRoles,
+  isOfficerOrAdmin,
+  isProtectedRoute,
+  isPublicRoute,
+  ROLES,
+} from './rbac';
 
 const ALL_ROLES = [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER];
 
@@ -132,5 +140,23 @@ describe('isOfficerOrAdmin', () => {
     expect(isOfficerOrAdmin([ROLES.REVIEW_OFFICER])).toBe(false);
     expect(isOfficerOrAdmin([])).toBe(false);
     expect(isOfficerOrAdmin(['Some Future Role'])).toBe(false);
+  });
+});
+
+describe('canViewAllGrievances', () => {
+  it('is true for Officer, Admin, and Review Officer — the three roles PR #47 lets read every case', () => {
+    expect(canViewAllGrievances([ROLES.OFFICER])).toBe(true);
+    expect(canViewAllGrievances([ROLES.ADMIN])).toBe(true);
+    expect(canViewAllGrievances([ROLES.REVIEW_OFFICER])).toBe(true);
+  });
+
+  it('is false for Submitter and empty/unknown roles, same as isOfficerOrAdmin', () => {
+    expect(canViewAllGrievances([ROLES.SUBMITTER])).toBe(false);
+    expect(canViewAllGrievances([])).toBe(false);
+    expect(canViewAllGrievances(['Some Future Role'])).toBe(false);
+  });
+
+  it('differs from isOfficerOrAdmin exactly on Review Officer — the whole reason it exists', () => {
+    expect(canViewAllGrievances([ROLES.REVIEW_OFFICER])).not.toBe(isOfficerOrAdmin([ROLES.REVIEW_OFFICER]));
   });
 });

@@ -10,6 +10,19 @@ const fetchOfficers = vi.hoisted(() => vi.fn().mockRejectedValue(new Error('Not 
 const fetchOfficerStatistics = vi.hoisted(() => vi.fn().mockRejectedValue(new Error('Not Found')));
 vi.mock('../api/officerApi', () => ({ fetchOfficers, fetchOfficerStatistics }));
 
+const fetchAdministrativeAreas = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    areas: [{ area_id: 'region-ET02', area_name: 'Afar', code: 'ET02', path_code: 'ET.ET02', level_name: 'Region', parent_administrative_area: 'ETH', is_group: 1, depth: 2 }],
+    count: 1,
+    level_name: 'Region',
+    parent: null,
+  })
+);
+vi.mock('@/features/metadata/api/metadataApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/metadata/api/metadataApi')>()),
+  fetchAdministrativeAreas,
+}));
+
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -157,5 +170,29 @@ describe('OfficerDirectory', () => {
 
     expect(screen.getByRole('button', { name: 'Add Admin' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Edit Tigist Alemu' })).toBeTruthy();
+  });
+
+  it('filters the API-backed Nodal Officers tab by the region area id, not its display name', async () => {
+    fetchOfficers.mockResolvedValue({
+      officers: [],
+      pagination: { page: 1, page_size: 9, total_count: 0, total_pages: 1, has_next: false, has_prev: false },
+    });
+
+    renderDirectory();
+    fireEvent.click(screen.getByRole('tab', { name: /Nodal Officers \(L1\)/ }));
+    await screen.findByRole('button', { name: /Advanced Filters/ });
+
+    fireEvent.click(screen.getByRole('button', { name: /Advanced Filters/ }));
+    fireEvent.click(await screen.findByText('Select Regions'));
+    fireEvent.click(await screen.findByText('Afar'));
+
+    // The backend stores an officer's region as an area id — officers are never found by
+    // searching on the display name, which is all the filter UI shows the admin.
+    await screen.findByText(/Afar/);
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ region: 'region-ET02' }),
+      expect.anything()
+    );
+    expect(fetchOfficers).not.toHaveBeenCalledWith(expect.objectContaining({ region: 'Afar' }), expect.anything());
   });
 });

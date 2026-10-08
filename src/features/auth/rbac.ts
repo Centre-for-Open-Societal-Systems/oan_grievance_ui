@@ -190,3 +190,15 @@ export function isOfficerOrAdmin(roles: string[]): boolean {
 export function isReviewOfficer(roles: string[]): boolean {
   return effectiveRoles(roles).some((role) => role === ROLES.REVIEW_OFFICER);
 }
+
+/**
+ * True for anyone who sees every filed case rather than only their own — Officer, Admin,
+ * or Review Officer. Deliberately a different question from `isOfficerOrAdmin`: that one
+ * gates whether the viewer can *act* on a case, this one only decides whether the
+ * all-grievances screen should call itself "All Grievances" or "My Grievances" and whether
+ * its query should be scoped to the signed-in user. A Review Officer answers yes here (per
+ * PR #47 it reads every filed case) and no to `isOfficerOrAdmin` (it can't act on one).
+ */
+export function canViewAllGrievances(roles: string[]): boolean {
+  return isOfficerOrAdmin(roles) || isReviewOfficer(roles);
+}

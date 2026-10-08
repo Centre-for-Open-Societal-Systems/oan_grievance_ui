@@ -174,12 +174,18 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
     setIsSubmitting(true);
     setFormError(null);
     try {
+      // `region` starts blank and the one-time backfill effect above only fills it in once
+      // `regionAreas` has loaded — if the admin saves before that resolves, `region` is
+      // still '' for an officer who does have one. Sending `region: null` in that window
+      // would wipe it, so omit the field entirely (left unchanged server-side) rather than
+      // confusing "hasn't loaded yet" with "admin cleared it".
+      const isRegionResolutionPending = !region && officer.region !== '-' && regionAreas.length === 0;
       await updateOfficer(officer.id, {
         full_name: fullName,
         designation,
         department,
         phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : null,
-        region: region || null,
+        ...(isRegionResolutionPending ? {} : { region: region || null }),
         status: status as OfficerBackendStatus,
         service_categories: serviceCategories,
         ...(level === 'L1' && reportsTo ? { reports_to: reportsTo } : {}),

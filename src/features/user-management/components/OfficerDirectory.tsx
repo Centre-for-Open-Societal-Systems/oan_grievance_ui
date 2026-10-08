@@ -87,7 +87,12 @@ export function OfficerDirectory() {
     () => Array.from(new Set(dummyOfficers.flatMap((officer) => officer.tags))).sort(),
     [dummyOfficers]
   );
-  const availableRegions = isApiTab ? regionAreas.map((area) => area.area_name).sort() : dummyAvailableRegions;
+  // The real tabs filter by the backend's stored region id, not its display name — sending
+  // the name (as the Add/Edit forms' own region id resolution already shows elsewhere)
+  // would silently match nothing, since officers are stored with the id.
+  const availableRegions = isApiTab
+    ? [...regionAreas].sort((a, b) => a.area_name.localeCompare(b.area_name)).map((area) => ({ value: area.area_id, label: area.area_name }))
+    : dummyAvailableRegions;
   const availableCategories = isApiTab ? categoryOptions.map((o) => o.label).sort() : dummyAvailableCategories;
 
   const filteredDummyOfficers = useMemo(() => {

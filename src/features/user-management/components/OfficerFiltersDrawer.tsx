@@ -1,5 +1,5 @@
 import { SlidersHorizontal, X } from 'lucide-react';
-import { AnimatedSelect } from './AnimatedSelect';
+import { AnimatedSelect, type SelectOption } from './AnimatedSelect';
 import type { OfficerStatus } from '../data/officers';
 
 const STATUS_OPTIONS: OfficerStatus[] = ['Active', 'On Leave', 'Inactive'];
@@ -12,7 +12,13 @@ interface OfficerFiltersDrawerProps {
   availableCategories: string[];
   regionFilter: string;
   onRegionFilterChange: (value: string) => void;
-  availableRegions: string[];
+  /**
+   * `{ value, label }` for the real (API) tabs — region is the one filter where the
+   * backend's stored value (an area id) and its display label genuinely differ, unlike
+   * category/status where they're the same string. A plain string shorthand still works
+   * for the dummy Admin/Reviewer tabs, which have no id concept for region at all.
+   */
+  availableRegions: Array<string | SelectOption>;
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
   onReset: () => void;
