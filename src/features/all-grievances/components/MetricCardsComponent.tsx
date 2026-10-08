@@ -115,7 +115,7 @@ export function MetricCardsComponent({
   error?: string | null;
   onRetry?: () => void;
 }) {
-  const { scrollRef, activeIndex, scrollProgress, scrollTo } = useCarouselScroll({ enableWheelScroll: true });
+  const { scrollRef, scrollProgress, scrollTo } = useCarouselScroll({ enableWheelScroll: true });
 
   if (isLoading && cards.length === 0) {
     return (
