@@ -30,5 +30,6 @@ export function mapOfficerRecord(record: OfficerRecord, stats: OfficerStatistics
     avatarBg: avatar.bg,
     avatarColor: avatar.color,
     mustChangePassword: record.must_change_password,
+    reportsTo: record.reports_to,
   };
 }

@@ -22,7 +22,7 @@ interface EditOfficerModalProps {
 
 const STATUS_OPTIONS: OfficerStatus[] = ['Active', 'On Leave', 'Inactive'];
 
-type FormField = 'name' | 'email' | 'phoneNumber' | 'roleTitle' | 'department' | 'category';
+type FormField = 'name' | 'email' | 'phoneNumber' | 'roleTitle' | 'department' | 'serviceCategories';
 
 const FIELD_IDS: Record<FormField, string> = {
   name: 'edit-admin-full-name',
@@ -30,7 +30,7 @@ const FIELD_IDS: Record<FormField, string> = {
   phoneNumber: 'edit-admin-phone',
   roleTitle: 'edit-admin-role-title',
   department: 'edit-admin-department',
-  category: 'edit-admin-category',
+  serviceCategories: 'edit-admin-categories',
 };
 
 const FIELD_ORDER: Array<{ key: FormField; id: string }> = (Object.keys(FIELD_IDS) as FormField[]).map((key) => ({
@@ -58,7 +58,7 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
   const [name, setName] = useState(officer?.name ?? '');
   const [roleTitle, setRoleTitle] = useState(officer?.roleTitle ?? '');
   const [department, setDepartment] = useState(officer?.department ?? '');
-  const [category, setCategory] = useState(officer?.tags[0] ?? '');
+  const [serviceCategories, setServiceCategories] = useState<string[]>(officer?.tags ?? []);
   const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
   const [email, setEmail] = useState(officer?.email ?? '');
   const [countryCode, setCountryCode] = useState(initialPhone.phoneCode);
@@ -81,9 +81,14 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
         return validateRequired(roleTitle, 'Enter a role title.');
       case 'department':
         return validateRequired(department, 'Select a department.');
-      case 'category':
-        return validateRequired(category, 'Select a category.');
+      case 'serviceCategories':
+        return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
+  };
+
+  const toggleCategory = (value: string) => {
+    setServiceCategories((prev) => (prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value]));
+    setError('serviceCategories', null);
   };
 
   const handleSave = () => {
@@ -104,7 +109,7 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
       email,
       phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : '-',
       region,
-      tags: [category],
+      tags: serviceCategories,
       status: status as OfficerStatus,
       avatarInitials:
         name
@@ -231,36 +236,12 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
                     setError('department', null);
                     // The wired category list is department-specific — a category picked
                     // for the old department may not even have a desk under the new one.
-                    setCategory('');
-                    setError('category', null);
+                    setServiceCategories([]);
+                    setError('serviceCategories', null);
                   }}
                   placeholder="Select Department"
                 />
                 {fieldError('department')}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor={FIELD_IDS.category} className="text-sm font-bold text-gray-900">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <AnimatedSelect
-                  options={categoryOptions}
-                  value={category}
-                  onChange={(value) => {
-                    setCategory(value);
-                    setError('category', null);
-                  }}
-                  placeholder={
-                    !department
-                      ? 'Select a department first'
-                      : isCategoryOptionsLoading
-                        ? 'Loading categories…'
-                        : categoryOptions.length === 0
-                          ? 'No category routed to this department yet'
-                          : 'Select Category'
-                  }
-                />
-                {fieldError('category')}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -269,6 +250,43 @@ export function EditOfficerModal({ isOpen, onClose, officer, onSave }: EditOffic
                 </label>
                 <AnimatedSelect options={STATUS_OPTIONS} value={status} onChange={setStatus} placeholder="Select Status" />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label id={`${FIELD_IDS.serviceCategories}-label`} className="text-sm font-bold text-gray-900">
+                Service Categories <span className="text-red-500">*</span>
+              </label>
+              <div
+                id={FIELD_IDS.serviceCategories}
+                role="group"
+                aria-labelledby={`${FIELD_IDS.serviceCategories}-label`}
+                aria-describedby={fieldErrors.serviceCategories ? errorIdFor(FIELD_IDS.serviceCategories) : undefined}
+                className="flex flex-wrap gap-2"
+              >
+                {!department ? (
+                  <span className="text-sm text-gray-400">Select a department first.</span>
+                ) : isCategoryOptionsLoading ? (
+                  <span className="text-sm text-gray-400">Loading categories…</span>
+                ) : categoryOptions.length === 0 ? (
+                  <span className="text-sm text-gray-400">No service category is routed to this department yet.</span>
+                ) : (
+                  categoryOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => toggleCategory(option.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        serviceCategories.includes(option.value)
+                          ? 'bg-[#16A34A] text-white border-[#16A34A]'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))
+                )}
+              </div>
+              {fieldError('serviceCategories')}
             </div>
           </div>
 

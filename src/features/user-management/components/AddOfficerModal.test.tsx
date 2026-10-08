@@ -39,9 +39,8 @@ async function fillRequiredFields() {
   fireEvent.change(screen.getByLabelText('Full Name *'), { target: { value: 'Test Officer' } });
   fireEvent.change(screen.getByLabelText('Role Title *'), { target: { value: 'Case Officer' } });
   selectDropdownOption('Select Department', 'Ministry of Agriculture');
-  // The Category dropdown only has options once its department-scoped fetch resolves.
-  await screen.findByText('Select Category');
-  selectDropdownOption('Select Category', 'Inputs');
+  // The category tag-buttons only render once the department-scoped fetch resolves.
+  fireEvent.click(await screen.findByRole('button', { name: 'Inputs' }));
 }
 
 describe('AddOfficerModal', () => {
@@ -53,25 +52,25 @@ describe('AddOfficerModal', () => {
     expect(screen.getByText('Enter your full name.')).toBeTruthy();
     expect(screen.getByText('Enter a role title.')).toBeTruthy();
     expect(screen.getByText('Select a department.')).toBeTruthy();
-    expect(screen.getByText('Select a category.')).toBeTruthy();
+    expect(screen.getByText('Select at least one service category.')).toBeTruthy();
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  it("disables category selection until a department is chosen, then only offers that department's wired categories", async () => {
+  it("shows no category buttons until a department is chosen, then only offers that department's wired categories", async () => {
     renderModal();
 
-    expect(screen.getByText('Select a department first')).toBeTruthy();
+    expect(screen.getByText('Select a department first.')).toBeTruthy();
 
     selectDropdownOption('Select Department', 'Ministry of Agriculture');
 
-    await screen.findByText('Select Category');
+    expect(await screen.findByRole('button', { name: 'Inputs' })).toBeTruthy();
     expect(fetchCategoryAssignments).toHaveBeenCalledWith(
       expect.objectContaining({ department: 'Ministry of Agriculture', active: true }),
       expect.anything()
     );
   });
 
-  it('clears a previously-chosen category when the department changes', async () => {
+  it('clears previously-chosen categories when the department changes', async () => {
     const store = makeStore();
     store.dispatch({
       type: fetchGrievanceOptionsThunk.fulfilled.type,
@@ -86,15 +85,16 @@ describe('AddOfficerModal', () => {
     );
 
     selectDropdownOption('Select Department', 'Ministry of Agriculture');
-    await screen.findByText('Select Category');
-    selectDropdownOption('Select Category', 'Inputs');
-    expect(screen.getByText('Inputs')).toBeTruthy();
+    const inputsButton = await screen.findByRole('button', { name: 'Inputs' });
+    fireEvent.click(inputsButton);
+    expect(inputsButton.className).toContain('bg-[#16A34A]');
 
     // Switching to a different department re-triggers the fetch and resets the
-    // category selection back to its placeholder, since the old pick may not be wired here.
+    // category selection, since the old pick may not be wired under the new one.
     selectDropdownOption('Ministry of Agriculture', 'Regional Bureau of Agriculture');
 
-    expect(screen.queryByText('Inputs')).toBeNull();
+    const inputsButtonAgain = await screen.findByRole('button', { name: 'Inputs' });
+    expect(inputsButtonAgain.className).not.toContain('bg-[#16A34A]');
   });
 
   it('rejects a malformed phone number for the selected country (Ethiopia by default)', async () => {
@@ -109,7 +109,7 @@ describe('AddOfficerModal', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  it('accepts a valid form, sends the phone number in E.164, and carries the chosen department/category', async () => {
+  it('accepts a valid form, sends the phone number in E.164, and carries the chosen department/categories', async () => {
     const onAdd = renderModal();
 
     await fillRequiredFields();

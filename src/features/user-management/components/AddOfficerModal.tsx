@@ -36,7 +36,7 @@ const AVATAR_PALETTE = [
   { bg: 'bg-orange-100', color: 'text-orange-700' },
 ];
 
-type FormField = 'name' | 'email' | 'phoneNumber' | 'password' | 'roleTitle' | 'department' | 'category';
+type FormField = 'name' | 'email' | 'phoneNumber' | 'password' | 'roleTitle' | 'department' | 'serviceCategories';
 
 const FIELD_IDS: Record<FormField, string> = {
   name: 'add-admin-full-name',
@@ -45,7 +45,7 @@ const FIELD_IDS: Record<FormField, string> = {
   password: 'add-admin-password',
   roleTitle: 'add-admin-role-title',
   department: 'add-admin-department',
-  category: 'add-admin-category',
+  serviceCategories: 'add-admin-categories',
 };
 
 const FIELD_ORDER: Array<{ key: FormField; id: string }> = (Object.keys(FIELD_IDS) as FormField[]).map((key) => ({
@@ -67,7 +67,7 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
   const [name, setName] = useState('');
   const [roleTitle, setRoleTitle] = useState('');
   const [department, setDepartment] = useState('');
-  const [category, setCategory] = useState('');
+  const [serviceCategories, setServiceCategories] = useState<string[]>([]);
   const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+251');
@@ -95,8 +95,8 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
         return validateRequired(roleTitle, 'Enter a role title.');
       case 'department':
         return validateRequired(department, 'Select a department.');
-      case 'category':
-        return validateRequired(category, 'Select a category.');
+      case 'serviceCategories':
+        return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
   };
 
@@ -104,7 +104,7 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
     setName('');
     setRoleTitle('');
     setDepartment('');
-    setCategory('');
+    setServiceCategories([]);
     setEmail('');
     setCountryCode('+251');
     setPhoneNumber('');
@@ -118,6 +118,11 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
   const handleClose = () => {
     resetForm();
     onClose();
+  };
+
+  const toggleCategory = (value: string) => {
+    setServiceCategories((prev) => (prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value]));
+    setError('serviceCategories', null);
   };
 
   const handleCopyPassword = async () => {
@@ -159,7 +164,7 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
       email: email || '-',
       phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : '-',
       region: region || '-',
-      tags: [category],
+      tags: serviceCategories,
       assigned: 0,
       resolved: 0,
       avgTimeDays: 0,
@@ -170,6 +175,7 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
       // Mirrors the real officer flow: a freshly-issued temporary password must be
       // replaced before first sign-in. Dummy data only — nothing is actually created.
       mustChangePassword: true,
+      reportsTo: null,
     });
 
     handleClose();
@@ -330,36 +336,12 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
                     setError('department', null);
                     // The wired category list is department-specific — a category picked
                     // for the old department may not even have a desk under the new one.
-                    setCategory('');
-                    setError('category', null);
+                    setServiceCategories([]);
+                    setError('serviceCategories', null);
                   }}
                   placeholder="Select Department"
                 />
                 {fieldError('department')}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor={FIELD_IDS.category} className="text-sm font-bold text-gray-900">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <AnimatedSelect
-                  options={categoryOptions}
-                  value={category}
-                  onChange={(value) => {
-                    setCategory(value);
-                    setError('category', null);
-                  }}
-                  placeholder={
-                    !department
-                      ? 'Select a department first'
-                      : isCategoryOptionsLoading
-                        ? 'Loading categories…'
-                        : categoryOptions.length === 0
-                          ? 'No category routed to this department yet'
-                          : 'Select Category'
-                  }
-                />
-                {fieldError('category')}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -368,6 +350,43 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
                 </label>
                 <AnimatedSelect options={STATUS_OPTIONS} value={status} onChange={setStatus} placeholder="Select Status" />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label id={`${FIELD_IDS.serviceCategories}-label`} className="text-sm font-bold text-gray-900">
+                Service Categories <span className="text-red-500">*</span>
+              </label>
+              <div
+                id={FIELD_IDS.serviceCategories}
+                role="group"
+                aria-labelledby={`${FIELD_IDS.serviceCategories}-label`}
+                aria-describedby={fieldErrors.serviceCategories ? errorIdFor(FIELD_IDS.serviceCategories) : undefined}
+                className="flex flex-wrap gap-2"
+              >
+                {!department ? (
+                  <span className="text-sm text-gray-400">Select a department first.</span>
+                ) : isCategoryOptionsLoading ? (
+                  <span className="text-sm text-gray-400">Loading categories…</span>
+                ) : categoryOptions.length === 0 ? (
+                  <span className="text-sm text-gray-400">No service category is routed to this department yet.</span>
+                ) : (
+                  categoryOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => toggleCategory(option.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        serviceCategories.includes(option.value)
+                          ? 'bg-[#16A34A] text-white border-[#16A34A]'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))
+                )}
+              </div>
+              {fieldError('serviceCategories')}
             </div>
           </div>
 

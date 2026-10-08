@@ -45,10 +45,10 @@ interface EditNodalOfficerModalProps {
 
 /**
  * Updates an officer via the real `PATCH /api/v1/officers/:officer` endpoint (see
- * `officerApi.ts`). `reports_to` isn't on the list view's mapped `Officer` shape (it comes
- * from the single-officer detail endpoint, not the list), so it starts blank here; leaving
- * it blank omits it from the PATCH body and the officer's existing supervisor is left
- * untouched.
+ * `officerApi.ts`). Seeds `reportsTo` from the officer's existing supervisor so an L1's
+ * current L2 shows pre-selected rather than blank; leaving the field untouched on save
+ * omits `reports_to` from the PATCH body, so the existing supervisor is left alone either
+ * way — this only changes what the admin sees, not the save behavior.
  *
  * Caller remounts this on `officer` change (`key={officer?.id ?? 'closed'}`), so the form
  * only needs to seed from `officer` once, at mount — same convention as `EditOfficerModal`.
@@ -77,7 +77,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
   const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
   const [region, setRegion] = useState('');
   const [status, setStatus] = useState<string>(officer?.status ?? 'Active');
-  const [reportsTo, setReportsTo] = useState('');
+  const [reportsTo, setReportsTo] = useState(officer?.reportsTo ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const { errors: fieldErrors, setError, setAll } = useFieldErrors<FormField>();

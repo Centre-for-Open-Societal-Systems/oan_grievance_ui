@@ -20,6 +20,8 @@ export interface Officer {
   avatarColor: string;
   /** True while a real officer still holds an admin-issued temporary password. Always false for dummy data. */
   mustChangePassword: boolean;
+  /** The L1 officer's L2 supervisor (user id/email), or null. Always null for dummy data. */
+  reportsTo: string | null;
 }
 
 export interface OfficerTabConfig {
@@ -168,6 +170,7 @@ function buildOfficer(seed: number, template: OfficerTemplate, status: OfficerSt
     avatarBg: palette.bg,
     avatarColor: palette.color,
     mustChangePassword: false,
+    reportsTo: null,
   };
 }
 
@@ -227,6 +230,7 @@ const adminSeedOfficers: Officer[] = ADMIN_SEED.map((seed, i) => {
     avatarBg: palette.bg,
     avatarColor: palette.color,
     mustChangePassword: false,
+    reportsTo: null,
   };
 });
 
