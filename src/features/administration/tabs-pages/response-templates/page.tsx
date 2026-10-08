@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search, Info } from 'lucide-react';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { useIsReviewOfficer } from '@/features/auth/hooks/useIsReviewOfficer';
 import { useGrievanceOptions } from '@/features/metadata';
 import {
   createResponseTemplate,
@@ -26,6 +27,11 @@ type FormState = null | 'new' | ResponseTemplate;
 
 export default function ResponseTemplatesPage() {
     const t = useTranslations('admin.responseTemplates');
+    // A Review Officer can view this tab (route access — see rbac.ts) but PR #47/STG-434
+    // refuses every create/edit/retire call for it server-side, so those controls are
+    // hidden here rather than left to fail with a 403 on click — same pattern as the
+    // officer-management screens' `canManage`/`canEdit`.
+    const canManage = !useIsReviewOfficer();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
 
@@ -146,13 +152,15 @@ export default function ResponseTemplatesPage() {
                         onChange={setSelectedCategory}
                     />
 
-                    <button
-                        type="button"
-                        onClick={() => setForm('new')}
-                        className="mt-5 px-4 py-2.5 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#15803d] transition-colors"
-                    >
-                        {t('addButton')}
-                    </button>
+                    {canManage && (
+                        <button
+                            type="button"
+                            onClick={() => setForm('new')}
+                            className="mt-5 px-4 py-2.5 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#15803d] transition-colors"
+                        >
+                            {t('addButton')}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -187,6 +195,7 @@ export default function ResponseTemplatesPage() {
                                     departmentName={departmentName(template.department)}
                                     isLast={index === filteredTemplates.length - 1}
                                     isBusy={busyTemplate === template.template}
+                                    canManage={canManage}
                                     onEdit={setForm}
                                     onRetire={handleRetire}
                                     onReactivate={handleReactivate}

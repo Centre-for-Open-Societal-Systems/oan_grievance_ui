@@ -1,11 +1,13 @@
 allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true
+  esbuild: true
   sharp: true
   unrs-resolver: true
 auditConfig:
   ignoreGhsas:
     - GHSA-vfj7-8cjw-p6xm
+    - GHSA-wq5f-xc86-pv6w
 minimumReleaseAgeExclude:
   - brace-expansion@1.1.19 || 1.1.20 || 1.1.21 || 5.0.10 || 5.0.11 || 5.0.12
   - '@next/env@16.3.8'

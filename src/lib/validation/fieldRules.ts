@@ -51,6 +51,27 @@ export function validateLocalPhone(digits: string, dialCode: string): string | n
   return null;
 }
 
+/**
+ * For a temporary password an admin types on someone else's behalf (creating an officer, or
+ * issuing a new one). Deliberately weaker than `validateNewPassword`/`PASSWORD_RULES` — no
+ * symbol required — mirroring `oan_auth_service`'s own `validate_temporary_password`: it's
+ * handed off by hand and used exactly once, after which `/api/v1/auth/password/initial`
+ * demands the full rule for the password that replaces it.
+ */
+export function validateTemporaryPassword(value: string): string | null {
+  if (!value) return 'Enter a temporary password.';
+  if (value.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[A-Za-z]/.test(value) || !/\d/.test(value)) {
+    return 'Password must contain at least one letter and one number.';
+  }
+  return null;
+}
+
+/** Same rule as `validateLocalPhone`, but empty is valid — for forms where the phone is optional. */
+export function validateOptionalLocalPhone(digits: string, dialCode: string): string | null {
+  return digits ? validateLocalPhone(digits, dialCode) : null;
+}
+
 /** For choosing a new password (register, reset). Reports the first unmet rule. */
 export function validateNewPassword(value: string): string | null {
   if (!value) return 'Enter a password.';

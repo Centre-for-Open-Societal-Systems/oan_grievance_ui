@@ -16,16 +16,20 @@ export function SubmitterDetails({ grievance, timelineData }: SubmitterDetailsPr
       : grievance.isAnonymous;
   const submitterName =
     (isAnonymous
-      ? 'Anonymous'
-      : timelineData?.submitter?.name || grievance.submitterName) || 'Anonymous';
+      ? 'Anonymous Submitter'
+      : timelineData?.submitter?.name || grievance.submitterName) || 'Anonymous Submitter';
 
   const submitterType =
     (isAnonymous
-      ? 'Anonymous Submitter'
-      : timelineData?.submitter?.submitter_type || grievance.submitterType) || 'Citizen Submitter';
+      ? 'Anonymous'
+      : timelineData?.submitter?.submitter_type || grievance.submitterType) || 'Individual';
 
   const category = timelineData?.summary?.service_category || grievance.category || 'General';
-  const grievanceType = timelineData?.summary?.grievance_type || grievance.type || 'General Inquiry';
+  const grievanceType =
+    timelineData?.summary?.grievance_type_name ||
+    timelineData?.summary?.grievance_type ||
+    grievance.type ||
+    'General Inquiry';
   const hierarchy =
     timelineData?.summary?.administrative_hierarchy ||
     timelineData?.administrative_hierarchy;

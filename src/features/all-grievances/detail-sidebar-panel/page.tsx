@@ -14,6 +14,7 @@ import { useGrievanceTimeline } from '../hooks/useGrievanceTimeline';
 import type { Grievance } from '../types';
 import { useAppSelector } from '@/store/hooks';
 import { uploadAttachments } from '@/lib/attachments';
+import { isOfficerOrAdmin } from '@/features/auth/rbac';
 
 export function GrievanceDetailSidebar({
   ticketNumber,
@@ -25,8 +26,8 @@ export function GrievanceDetailSidebar({
   onClose: () => void;
 }) {
   const activeTicket = ticketNumber || grievance?.ticketNumber || grievance?.ticketId || null;
-  const userRoles = useAppSelector((state) => state.auth.user?.roles ?? []);
-  const canManageCase = userRoles.includes('Grievance Officer') || userRoles.includes('Grievance Admin');
+  const user = useAppSelector((state) => state.auth.user);
+  const userRoles = user?.roles ?? [];
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Load live timeline, conversation, and case state from Redux
@@ -43,6 +44,23 @@ export function GrievanceDetailSidebar({
   } = useGrievanceTimeline({
     ticketNumber: activeTicket,
   });
+
+  const handleDecideDeferral = async (name: string, decision: string, note: string) => {
+    const { decideChangeRequest } = await import('../api/grievanceApi');
+    await decideChangeRequest(name, { decision, note });
+    await refetch();
+  };
+
+  const handleDecideReassignment = async (name: string, decision: string, note: string) => {
+    const { decideChangeRequest } = await import('../api/grievanceApi');
+    await decideChangeRequest(name, { decision, note });
+    await refetch();
+  };
+
+  const baseCanManageCase = isOfficerOrAdmin(userRoles);
+  const isEscalated = timelineData?.escalated;
+  const assignedToMe = timelineData?.assignment?.assigned_to === user?.email;
+  const canManageCase = baseCanManageCase && (!isEscalated || assignedToMe);
 
   if (!activeTicket) return null;
 
@@ -118,6 +136,7 @@ export function GrievanceDetailSidebar({
                   grievance={grievance}
                   timelineData={timelineData}
                   onDefer={deferSLA}
+                  onDecideDeferral={handleDecideDeferral}
                 />
               ) : null}
               <CaseManagement
@@ -125,6 +144,7 @@ export function GrievanceDetailSidebar({
                 ticketNumber={activeTicket}
                 timelineData={timelineData}
                 onReassign={reassign}
+                onDecideReassignment={handleDecideReassignment}
               />
 
               {grievance ? (

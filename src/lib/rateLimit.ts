@@ -139,6 +139,10 @@ export const RATE_LIMITS = {
   // earlier.
   forgotPassword: limitFromEnv('FORGOT_PASSWORD', 5, 60_000),
   resetPassword: limitFromEnv('RESET_PASSWORD', 5, 60_000),
+  // Mirrors oan_auth_service's own ceiling on `/api/v1/auth/password/initial` (10 per
+  // address per 5 minutes) — this one just stops a burst a hop earlier, same reasoning
+  // as forgotPassword/resetPassword above.
+  setInitialPassword: limitFromEnv('SET_INITIAL_PASSWORD', 10, 300_000),
   // Fired on real user activity while a session is open (see
   // `/api/auth/heartbeat`); throttled client-side to roughly once a minute
   // per open tab. Scoped by a hash of the session's refresh-token cookie
@@ -152,8 +156,8 @@ export const RATE_LIMITS = {
   // write an unbounded stream of requests, so it gets a limit too, just a
   // generous one.
   locale: limitFromEnv('LOCALE', 30, 60_000),
-  // Hands the access token to the socket.io handshake (see
-  // `/api/realtime/token`). Called once per connect and once per reconnect,
+  // Hands the socket.io config to the client (see
+  // `/api/realtime/config`). Called once per connect and once per reconnect,
   // so a tab only reaches this on a flapping connection.
-  realtimeToken: limitFromEnv('REALTIME_TOKEN', 30, 60_000),
+  realtimeConfig: limitFromEnv('REALTIME_CONFIG', 30, 60_000),
 } as const;

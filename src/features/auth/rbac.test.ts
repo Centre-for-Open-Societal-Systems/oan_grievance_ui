@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { canAccessRoute, homeRouteForRoles, isOfficerOrAdmin, isProtectedRoute, isPublicRoute, ROLES } from './rbac';
+import {
+  canAccessRoute,
+  canViewAllGrievances,
+  homeRouteForRoles,
+  isOfficerOrAdmin,
+  isProtectedRoute,
+  isPublicRoute,
+  ROLES,
+} from './rbac';
 
-const ALL_ROLES = [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN];
+const ALL_ROLES = [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER];
 
 describe('isPublicRoute / isProtectedRoute', () => {
   it('treats /login, /register and /reset-password (and their sub-paths) as public', () => {
@@ -43,21 +51,23 @@ describe('canAccessRoute — per-role gates', () => {
     expect(canAccessRoute('/submit-grievance', [ROLES.ADMIN])).toBe(false);
   });
 
-  it('/dashboard is Officer/Admin only', () => {
+  it('/dashboard is Officer/Admin only — Review Officer is not granted dashboard charts (PR #47)', () => {
     expect(canAccessRoute('/dashboard', [ROLES.OFFICER])).toBe(true);
     expect(canAccessRoute('/dashboard', [ROLES.ADMIN])).toBe(true);
     expect(canAccessRoute('/dashboard', [ROLES.SUBMITTER])).toBe(false);
+    expect(canAccessRoute('/dashboard', [ROLES.REVIEW_OFFICER])).toBe(false);
   });
 
-  it('/user-management and /administration are Admin-only', () => {
+  it('/user-management and /administration admit Admin and Review Officer (read-only) but not Officer/Submitter', () => {
     for (const path of ['/user-management', '/administration']) {
       expect(canAccessRoute(path, [ROLES.ADMIN])).toBe(true);
+      expect(canAccessRoute(path, [ROLES.REVIEW_OFFICER])).toBe(true);
       expect(canAccessRoute(path, [ROLES.OFFICER])).toBe(false);
       expect(canAccessRoute(path, [ROLES.SUBMITTER])).toBe(false);
     }
   });
 
-  it('/all-grievances and /grievances are open to all three roles', () => {
+  it('/all-grievances and /grievances are open to all four roles', () => {
     for (const path of ['/all-grievances', '/grievances']) {
       for (const role of ALL_ROLES) expect(canAccessRoute(path, [role])).toBe(true);
     }
@@ -85,6 +95,7 @@ describe('homeRouteForRoles', () => {
     expect(homeRouteForRoles([ROLES.SUBMITTER])).toBe('/submit-grievance');
     expect(homeRouteForRoles([ROLES.OFFICER])).toBe('/all-grievances');
     expect(homeRouteForRoles([ROLES.ADMIN])).toBe('/dashboard');
+    expect(homeRouteForRoles([ROLES.REVIEW_OFFICER])).toBe('/all-grievances');
   });
 
   it('picks the highest-privilege role home route for a multi-role user', () => {
@@ -122,11 +133,30 @@ describe('homeRouteForRoles', () => {
 });
 
 describe('isOfficerOrAdmin', () => {
-  it('is true for Officer and Admin, false for Submitter and empty/unknown roles', () => {
+  it('is true for Officer and Admin, false for Submitter, Review Officer, and empty/unknown roles', () => {
     expect(isOfficerOrAdmin([ROLES.OFFICER])).toBe(true);
     expect(isOfficerOrAdmin([ROLES.ADMIN])).toBe(true);
     expect(isOfficerOrAdmin([ROLES.SUBMITTER])).toBe(false);
+    expect(isOfficerOrAdmin([ROLES.REVIEW_OFFICER])).toBe(false);
     expect(isOfficerOrAdmin([])).toBe(false);
     expect(isOfficerOrAdmin(['Some Future Role'])).toBe(false);
+  });
+});
+
+describe('canViewAllGrievances', () => {
+  it('is true for Officer, Admin, and Review Officer — the three roles PR #47 lets read every case', () => {
+    expect(canViewAllGrievances([ROLES.OFFICER])).toBe(true);
+    expect(canViewAllGrievances([ROLES.ADMIN])).toBe(true);
+    expect(canViewAllGrievances([ROLES.REVIEW_OFFICER])).toBe(true);
+  });
+
+  it('is false for Submitter and empty/unknown roles, same as isOfficerOrAdmin', () => {
+    expect(canViewAllGrievances([ROLES.SUBMITTER])).toBe(false);
+    expect(canViewAllGrievances([])).toBe(false);
+    expect(canViewAllGrievances(['Some Future Role'])).toBe(false);
+  });
+
+  it('differs from isOfficerOrAdmin exactly on Review Officer — the whole reason it exists', () => {
+    expect(canViewAllGrievances([ROLES.REVIEW_OFFICER])).not.toBe(isOfficerOrAdmin([ROLES.REVIEW_OFFICER]));
   });
 });

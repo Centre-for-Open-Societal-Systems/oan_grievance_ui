@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { canViewAllGrievances } from '@/features/auth/rbac';
 import {
   fetchGrievanceOptionsThunk,
   selectCategoryFilterOptions,
@@ -133,9 +134,14 @@ export default function AllGrievancesPage() {
     }
   };
 
+  const user = useAppSelector((state) => state.auth.user);
+  const userRoles = user?.roles ?? [];
+  const pageTitle = canViewAllGrievances(userRoles) ? 'All Grievances' : 'My Grievances';
+
   return (
     <div className="flex flex-col gap-6 h-full font-sans">
       <TopHeader
+        title={pageTitle}
         totalCount={totalCount}
         summaryLoading={metricsPending}
         summaryUnavailable={Boolean(metricsError)}

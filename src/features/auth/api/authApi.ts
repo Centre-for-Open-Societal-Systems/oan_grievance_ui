@@ -150,6 +150,26 @@ export async function resetPassword(key: string, newPassword: string): Promise<v
 }
 
 /**
+ * Replaces an admin-issued temporary password with one only the account holder knows.
+ * Like `resetPassword`, this does not sign anyone in and the backend ends the account's
+ * existing sessions — the caller signs in fresh afterwards.
+ */
+export async function setInitialPassword(usr: string, currentPassword: string, newPassword: string): Promise<void> {
+  const res = await fetch('/api/auth/set-initial-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ usr, current_password: currentPassword, new_password: newPassword }),
+  });
+
+  const data = (await res.json().catch(() => ({}))) as { message?: string };
+
+  if (!res.ok) {
+    throw new Error(data.message || AUTH_MESSAGES.unexpected);
+  }
+}
+
+/**
  * Clears the server-side session cookies. Returns whether the server
  * confirmed it — callers should still reset client auth state either way.
  */

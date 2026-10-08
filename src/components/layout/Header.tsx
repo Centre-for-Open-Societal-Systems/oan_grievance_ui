@@ -4,6 +4,9 @@ import { Search, Menu } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { selectUser } from "@/features/auth/store/authSlice";
+import { canViewAllGrievances } from "@/features/auth/rbac";
+import { useAppSelector } from "@/store/hooks";
 import { UserProfile } from "./UserProfile";
 import { NotificationBell } from "./NotificationBell";
 import { LanguageSelector } from "@/components/ui/LanguageSelector";
@@ -11,6 +14,7 @@ import { LanguageSelector } from "@/components/ui/LanguageSelector";
 export function Header() {
   const { toggleSidebar } = useSidebar();
   const pathname = usePathname();
+  const user = useAppSelector(selectUser);
   // Only "No Access" is translated so far — the rest of these titles predate
   // this PR's i18n setup and still need their own translation pass (see
   // messages/README.md).
@@ -19,7 +23,10 @@ export function Header() {
   const getPageTitle = (path: string) => {
     if (path === "/") return "Dashboard";
     if (path.startsWith("/administration")) return "Administration";
-    if (path.startsWith("/all-grievances")) return "All Grievances";
+    if (path.startsWith("/all-grievances") || path.startsWith("/grievances")) {
+      const seesAll = canViewAllGrievances(user?.roles ?? []);
+      return seesAll ? "All Grievances" : "My Grievances";
+    }
     if (path.startsWith("/submit-grievance")) return "Submit Grievance";
     if (path.startsWith("/analytics-reporting")) return "Analytics & Reporting";
     if (path.startsWith("/user-management")) return "User Management";
