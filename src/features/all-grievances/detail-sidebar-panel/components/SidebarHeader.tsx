@@ -32,6 +32,7 @@ export function SidebarHeader({ ticketNumber, timelineData, grievance, onClose, 
 
   const title =
     timelineData?.summary?.description?.split(/\r?\n/).find((l) => l.trim().length > 0) ||
+    timelineData?.summary?.grievance_type_name ||
     timelineData?.summary?.grievance_type ||
     grievance?.title ||
     'Grievance Case';

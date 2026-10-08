@@ -40,7 +40,6 @@ interface RealtimeConnection {
   url: string;
   site: string;
   path: string;
-  token: string;
 }
 
 const SCAN_VERDICTS: readonly string[] = ['Clean', 'Infected', 'Failed'];
@@ -83,11 +82,11 @@ function parseAttachmentScanned(raw: unknown): AttachmentScannedEvent | null {
 }
 
 async function fetchConnection(): Promise<RealtimeConnection | null> {
-  const response = await fetch('/api/realtime/token', { method: 'POST', credentials: 'same-origin' });
+  const response = await fetch('/api/realtime/config', { method: 'POST', credentials: 'same-origin' });
   if (!response.ok) return null;
   const data = (await response.json()) as Partial<RealtimeConnection> & { enabled?: boolean };
-  if (!data.enabled || !data.url || !data.site || !data.path || !data.token) return null;
-  return { url: data.url, site: data.site, path: data.path, token: data.token };
+  if (!data.enabled || !data.url || !data.site || !data.path) return null;
+  return { url: data.url, site: data.site, path: data.path };
 }
 
 function scheduleReconnect() {
@@ -109,10 +108,8 @@ function teardownSocket() {
 }
 
 /**
- * Opens a fresh socket with a freshly issued token. The token is checked only
- * at the handshake, so every reconnect goes back through the token route
- * instead of socket.io's built-in reconnection, which would replay the old,
- * possibly expired, query string.
+ * Opens a fresh socket connecting to the portal gateway. The gateway reads
+ * the httpOnly cookie and passes it upstream.
  */
 async function openSocket() {
   if (!active || connecting) return;
@@ -129,9 +126,10 @@ async function openSocket() {
     teardownSocket();
     const next = io(`${connection.url}/${connection.site}`, {
       path: connection.path,
-      transports: ['websocket'],
-      query: { access_token: connection.token },
+      extraHeaders: { 'x-frappe-site-name': connection.site },
       reconnection: false,
+      withCredentials: true,
+      transports: ['websocket'],
     });
     socket = next;
 

@@ -133,9 +133,15 @@ export default function AllGrievancesPage() {
     }
   };
 
+  const user = useAppSelector((state) => state.auth.user);
+  const userRoles = user?.roles ?? [];
+  const isOfficerOrAdmin = userRoles.includes('Grievance Officer') || userRoles.includes('Grievance Admin');
+  const pageTitle = isOfficerOrAdmin ? 'All Grievances' : 'My Grievances';
+
   return (
     <div className="flex flex-col gap-6 h-full font-sans">
       <TopHeader
+        title={pageTitle}
         totalCount={totalCount}
         summaryLoading={metricsPending}
         summaryUnavailable={Boolean(metricsError)}

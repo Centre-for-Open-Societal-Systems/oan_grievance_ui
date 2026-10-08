@@ -20,7 +20,7 @@ import {
   Paperclip,
 } from 'lucide-react';
 import type { Grievance, GrievanceTimelineData, TimelineEntry, TimelineEventItem } from '../../types';
-import { normalizeTimelineEntry, type FormattedTimelineEvent } from '../../utils/mapGrievance';
+import { normalizeTimelineEntry, getInitials, type FormattedTimelineEvent, type TimelineContext } from '../../utils/mapGrievance';
 
 interface CommentsAndCommunicationProps {
   canManageCase: boolean;
@@ -48,7 +48,16 @@ export function CommentsAndCommunication({
     const rawItems: Array<TimelineEntry | TimelineEventItem> =
       timelineData?.timeline || timelineData?.events || [];
 
-    const list = rawItems.map((item, idx) => normalizeTimelineEntry(item, idx));
+    const isAnonymous = Boolean(timelineData?.submitter?.is_anonymous ?? grievance?.isAnonymous);
+    const submitterContext: TimelineContext = {
+      submitterName: isAnonymous
+        ? 'Anonymous Submitter'
+        : (timelineData?.submitter?.name || grievance?.submitterName || null),
+      submitterType: timelineData?.submitter?.submitter_type || grievance?.submitterType || null,
+      isAnonymous,
+    };
+
+    const list = rawItems.map((item, idx) => normalizeTimelineEntry(item, idx, submitterContext));
 
     // If no explicit submission event is in the timeline list but grievance description is available,
     // inject the initial intake submission event at the bottom/beginning
@@ -60,11 +69,9 @@ export function CommentsAndCommunication({
       const desc =
         timelineData?.summary?.description || grievance?.description || grievance?.title || '';
       const submitterName =
-        timelineData?.submitter?.name ||
-        grievance?.submitterName ||
-        (grievance?.isAnonymous ? 'Anonymous' : 'Grievance Submitter');
-      const submitterRole =
-        timelineData?.submitter?.submitter_type || grievance?.submitterType || 'Grievance Submitter';
+        submitterContext.submitterName ||
+        (submitterContext.submitterType ? `Submitter (${submitterContext.submitterType})` : 'Submitter');
+      const submitterRole = submitterContext.submitterType || undefined;
       const createdDate = grievance?.submittedAt || '';
 
       list.push({
@@ -76,7 +83,7 @@ export function CommentsAndCommunication({
         authorName: submitterName,
         authorRole: submitterRole,
         authorType: 'submitter',
-        initials: submitterName.slice(0, 2).toUpperCase() || 'SB',
+        initials: getInitials(submitterName),
         formattedDate: createdDate,
         rawDate: createdDate,
       });
@@ -253,7 +260,7 @@ export function CommentsAndCommunication({
                           <span className="font-bold text-gray-900 whitespace-nowrap truncate">
                             {event.authorName}
                           </span>
-                          {event.authorRole && (
+                          {event.authorRole && event.authorRole !== event.authorName && (
                             <span className="text-xs text-gray-500 font-medium whitespace-nowrap truncate">
                               {event.authorRole}
                             </span>
@@ -283,78 +290,98 @@ export function CommentsAndCommunication({
                         expanded ? 'opacity-100 max-h-[1000px]' : 'opacity-0 max-h-0'
                       }`}
                     >
-                      <div className={`ml-[60px] p-4 rounded-xl rounded-tl-none ${styling.cardBg}`}>
-                        {event.body ? (
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{event.body}</p>
-                        ) : (
-                          <p className="text-sm italic opacity-70">No message text recorded for this event.</p>
-                        )}
-
-                        {/* Inline attachments if present for this timeline event */}
-                        {event.attachments && event.attachments.length > 0 && (
-                          <div className="mt-3 pt-2.5 border-t border-gray-200/60 flex flex-wrap gap-2">
-                            {event.attachments.map((att) => (
-                              <button
-                                key={att.name || att.id || att.file_name}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const attId = att.name || att.id;
-                                  if (attId) {
-                                    const viewUrl = `/api/proxy/api/v1/attachments/${encodeURIComponent(attId)}/view`;
-                                    window.open(viewUrl, '_blank', 'noopener,noreferrer');
-                                  } else if (att.file_url) {
-                                    const proxyUrl = att.file_url.startsWith('/api/proxy')
-                                      ? att.file_url
-                                      : `/api/proxy${att.file_url.startsWith('/') ? '' : '/'}${att.file_url}`;
-                                    window.open(proxyUrl, '_blank', 'noopener,noreferrer');
-                                  } else if (att.file_name) {
-                                    console.warn('Cannot open attachment without URL or ID:', att.file_name);
-                                  }
-                                }}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 font-medium transition-colors shadow-2xs group"
-                              >
-                                <Paperclip className="h-3 w-3 text-gray-400 group-hover:text-indigo-600" />
-                                <span className="truncate max-w-[200px]">{att.file_name || att.name}</span>
-                                {att.file_size ? (
-                                  <span className="text-[10px] text-gray-400 font-normal">
-                                    ({(att.file_size / 1024).toFixed(0)} KB)
-                                  </span>
-                                ) : null}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Status transition pill if applicable */}
-                        {(event.fromStatus || event.toStatus || event.action) && (
-                          <div className="mt-3 pt-2 border-t border-gray-200/50 flex items-center gap-2 text-xs font-medium text-gray-600 flex-wrap">
-                            <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-xs">
-                              <ChevronRight className="h-3 w-3 text-gray-400" />
+                      {/* Message card */}
+                      {(Boolean(event.body) ||
+                        Boolean(event.attachments && event.attachments.length > 0) ||
+                        !(event.fromStatus || event.toStatus || event.action)) && (
+                        <div className={`ml-[60px] p-4 rounded-xl rounded-tl-none ${styling.cardBg}`}>
+                          {event.actionTaken ? (
+                            <div className="space-y-3">
+                              <div>
+                                <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Action Taken</h4>
+                                <p className="text-sm text-gray-900 font-medium leading-relaxed whitespace-pre-wrap">{event.actionTaken}</p>
+                              </div>
+                              {event.resolutionSummary && (
+                                <div>
+                                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Resolution Summary</h4>
+                                  <p className="text-sm text-gray-900 font-medium leading-relaxed whitespace-pre-wrap">{event.resolutionSummary}</p>
+                                </div>
+                              )}
                             </div>
-                            
-                            {event.action && (
-                              <span className="px-2 py-0.5 bg-gray-100 border border-gray-200 text-gray-800 font-semibold rounded">
-                                {event.action}
-                              </span>
-                            )}
-                            
-                            {event.action && (event.fromStatus || event.toStatus) && <span className="text-gray-400 mx-1">•</span>}
+                          ) : event.body ? (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{event.body}</p>
+                          ) : !event.attachments || event.attachments.length === 0 ? (
+                            <p className="text-sm italic opacity-70">No message text recorded for this event.</p>
+                          ) : null}
 
-                            {event.fromStatus && (
-                              <span className="px-2 py-0.5 bg-white border border-gray-200 rounded text-gray-700">
-                                {event.fromStatus}
-                              </span>
-                            )}
-                            {event.fromStatus && event.toStatus && <span className="text-gray-400">→</span>}
-                            {event.toStatus && (
-                              <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold rounded">
-                                {event.toStatus}
-                              </span>
-                            )}
+                          {/* Inline attachments if present for this timeline event */}
+                          {event.attachments && event.attachments.length > 0 && (
+                            <div className={`${event.body ? 'mt-3 pt-2.5 border-t border-gray-200/60' : ''} flex flex-wrap gap-2`}>
+                              {event.attachments.map((att) => (
+                                <button
+                                  key={att.name || att.id || att.file_name}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const attId = att.name || att.id;
+                                    if (attId) {
+                                      const viewUrl = `/api/proxy/api/v1/attachments/${encodeURIComponent(attId)}/view`;
+                                      window.open(viewUrl, '_blank', 'noopener,noreferrer');
+                                    } else if (att.file_url) {
+                                      const proxyUrl = att.file_url.startsWith('/api/proxy')
+                                        ? att.file_url
+                                        : `/api/proxy${att.file_url.startsWith('/') ? '' : '/'}${att.file_url}`;
+                                      window.open(proxyUrl, '_blank', 'noopener,noreferrer');
+                                    } else if (att.file_name) {
+                                      console.warn('Cannot open attachment without URL or ID:', att.file_name);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 font-medium transition-colors shadow-2xs group"
+                                >
+                                  <Paperclip className="h-3 w-3 text-gray-400 group-hover:text-indigo-600" />
+                                  <span className="truncate max-w-[200px]">{att.file_name || att.name}</span>
+                                  {att.file_size ? (
+                                    <span className="text-[10px] text-gray-400 font-normal">
+                                      ({(att.file_size / 1024).toFixed(0)} KB)
+                                    </span>
+                                  ) : null}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Status transition pill outside the card container */}
+                      {(event.fromStatus || event.toStatus || event.action) && (
+                        <div className="ml-[60px] mt-2.5 flex items-center gap-2 text-xs font-medium text-gray-500 flex-wrap">
+                          <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                            <ChevronRight className="h-3 w-3 text-gray-400" />
                           </div>
-                        )}
-                      </div>
+
+                          {event.action && (
+                            <span className="px-2 py-0.5 bg-gray-100 border border-gray-200 text-gray-700 font-medium rounded whitespace-nowrap">
+                              {event.action}
+                            </span>
+                          )}
+
+                          {event.action && (event.fromStatus || event.toStatus) && (
+                            <span className="text-gray-400 mx-0.5">•</span>
+                          )}
+
+                          {event.fromStatus && (
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded whitespace-nowrap">
+                              {event.fromStatus}
+                            </span>
+                          )}
+                          {event.fromStatus && event.toStatus && <span className="text-gray-400">→</span>}
+                          {event.toStatus && (
+                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded font-medium whitespace-nowrap">
+                              {event.toStatus}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

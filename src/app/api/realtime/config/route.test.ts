@@ -25,18 +25,18 @@ const nowSeconds = () => Math.floor(Date.now() / 1000);
 
 describe('POST /api/realtime/token', () => {
   beforeEach(() => {
-    process.env.REALTIME_URL = 'wss://grievance.example.org';
+    process.env.REALTIME_PUBLIC_URL = 'wss://grievance.example.org';
     process.env.REALTIME_SITE = 'grievance.local';
   });
 
   afterEach(() => {
-    delete process.env.REALTIME_URL;
+    delete process.env.REALTIME_PUBLIC_URL;
     delete process.env.REALTIME_SITE;
     vi.mocked(performRefresh).mockReset();
   });
 
   it('reports realtime as disabled when it is not configured', async () => {
-    delete process.env.REALTIME_URL;
+    delete process.env.REALTIME_PUBLIC_URL;
     const response = await POST(request({ auth_token: tokenWithExp(nowSeconds() + 600), last_activity: '1' }));
     expect(await response.json()).toEqual({ enabled: false });
   });
@@ -52,7 +52,6 @@ describe('POST /api/realtime/token', () => {
       url: 'wss://grievance.example.org',
       site: 'grievance.local',
       path: '/socket.io/',
-      token,
     });
     expect(performRefresh).not.toHaveBeenCalled();
   });
@@ -68,7 +67,7 @@ describe('POST /api/realtime/token', () => {
       request({ auth_token: tokenWithExp(nowSeconds() + 10), refresh_token: 'r1', last_activity: '1' })
     );
 
-    expect((await response.json()).token).toBe(fresh);
+    expect(response.status).toBe(200);
     expect(response.cookies.get('auth_token')?.value).toBe(fresh);
   });
 

@@ -152,8 +152,8 @@ export const RATE_LIMITS = {
   // write an unbounded stream of requests, so it gets a limit too, just a
   // generous one.
   locale: limitFromEnv('LOCALE', 30, 60_000),
-  // Hands the access token to the socket.io handshake (see
-  // `/api/realtime/token`). Called once per connect and once per reconnect,
+  // Hands the socket.io config to the client (see
+  // `/api/realtime/config`). Called once per connect and once per reconnect,
   // so a tab only reaches this on a flapping connection.
-  realtimeToken: limitFromEnv('REALTIME_TOKEN', 30, 60_000),
+  realtimeConfig: limitFromEnv('REALTIME_CONFIG', 30, 60_000),
 } as const;

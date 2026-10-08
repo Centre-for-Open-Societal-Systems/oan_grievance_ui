@@ -1,6 +1,5 @@
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect } from 'react';
 import { X, CalendarClock, AlertTriangle, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
 import type { DeferSLAPayload, GrievanceChangeResponseData } from '../../types';
 
 interface DeferSLAPopupProps {
@@ -11,29 +10,12 @@ interface DeferSLAPopupProps {
 }
 
 export function DeferSLAPopup({ onDefer, onClose, onSuccess }: DeferSLAPopupProps) {
-  const approverSelectId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [days, setDays] = useState('7');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Start with Fikadu selected to match the visual reference
-  const [selectedApprover, setSelectedApprover] = useState<{ name: string, role: string, email?: string, org?: string, initials?: string } | null>({
-    name: 'Fikadu Negash',
-    role: 'State Minister for Agricultural Services',
-    email: 'fikadu.negash@moa.gov.et',
-    org: 'Ministry of Agriculture (MoA)',
-    initials: 'FN'
-  });
-
-  const approvers = [
-    { name: 'Yonas Mekonnen', role: 'Director, Input Quality & Standards' },
-    { name: 'Almaz Worku', role: 'Deputy Director, Market Governance' },
-    { name: 'Mekdes Solomon', role: 'Head of Credit Policy, AFI' },
-    { name: 'Fikadu Negash', role: 'State Minister for Agricultural Services', email: 'fikadu.negash@moa.gov.et', org: 'Ministry of Agriculture (MoA)', initials: 'FN' },
-  ];
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -102,7 +84,7 @@ export function DeferSLAPopup({ onDefer, onClose, onSuccess }: DeferSLAPopupProp
               <CalendarClock className="h-5 w-5 text-indigo-600" />
               <h2 className="text-md font-bold text-gray-900">Defer SLA</h2>
             </div>
-            <p className="text-sm text-gray-500">Requires approval from a Senior Nodal Officer (L2)</p>
+            <p className="text-sm text-gray-500">Requires supervisor approval</p>
           </div>
           <button
             type="button"
@@ -159,33 +141,6 @@ export function DeferSLAPopup({ onDefer, onClose, onSuccess }: DeferSLAPopupProp
             <div className="text-[11px] text-gray-500">
               Maximum 30 additional days. Subject to approver discretion.
             </div>
-          </div>
-
-          {/* Approver Dropdown */}
-          <div className="flex flex-col gap-2 relative">
-            <label htmlFor={approverSelectId} className="text-sm font-bold text-gray-700">Senior Nodal Officer (L2) Approver *</label>
-
-            <AnimatedSelect
-              id={approverSelectId}
-              placeholder="Select Senior Nodal Officer"
-              searchable={false}
-              value={selectedApprover?.name ?? ''}
-              onChange={(name) => setSelectedApprover(approvers.find((a) => a.name === name) ?? null)}
-              options={approvers.map((a) => ({ value: a.name, label: `${a.name} — ${a.role}` }))}
-            />
-
-            {selectedApprover && (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <div className="w-8 h-8 rounded-full bg-emerald-800 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                  {selectedApprover.initials || 'UN'}
-                </div>
-                <div className="flex flex-col">
-                  <div className="text-sm text-gray-700">
-                    {selectedApprover.name} · {selectedApprover.org} · {selectedApprover.email}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Warning */}

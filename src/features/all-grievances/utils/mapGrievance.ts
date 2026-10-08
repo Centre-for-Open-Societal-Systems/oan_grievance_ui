@@ -110,7 +110,7 @@ export function mapGrievanceListItem(item: GrievanceListItem): Grievance {
     ticketNumberDisplay: item.ticket_number_display ?? undefined,
     title: deriveTitle(item.description),
     location,
-    type: item.grievance_type ?? '',
+    type: (item.grievance_type_name || item.grievance_type) ?? '',
     category: item.service_category ?? '',
     status: item.status,
     submittedAt: formatDateTime(item.submitted_on),
@@ -137,6 +137,10 @@ export function getInitials(name?: string | null): string {
   if (parts.length === 0) return '??';
   const first = parts[0] ?? '';
   if (parts.length === 1) {
+    if (first.includes('@')) {
+      const emailUser = first.split('@')[0] || '';
+      return emailUser.length >= 2 ? emailUser.slice(0, 2).toUpperCase() : emailUser.toUpperCase() || '??';
+    }
     return first.length >= 2 ? first.slice(0, 2).toUpperCase() : (first || '??').toUpperCase();
   }
   const last = parts[parts.length - 1] ?? '';
@@ -161,13 +165,23 @@ export interface FormattedTimelineEvent {
   fromStatus?: string | null;
   toStatus?: string | null;
   action?: string | null;
+  responseNumber?: number;
+  actionTaken?: string | null;
+  resolutionSummary?: string | null;
   attachments?: GrievanceTimelineAttachment[];
+}
+
+export interface TimelineContext {
+  submitterName?: string | null;
+  submitterType?: string | null;
+  isAnonymous?: boolean;
 }
 
 const ENTRY_TYPE_LABELS: Record<string, string> = {
   note: 'Internal Note',
   message: 'Public Message',
   response: 'Dept Response',
+  dept_response: 'Dept Response',
   info_request: 'Info Request',
   info_response: 'Info Response',
   status_change: 'Status Change',
@@ -190,32 +204,63 @@ const ENTRY_TYPE_LABELS: Record<string, string> = {
 
 export function normalizeTimelineEntry(
   entry: TimelineEntry | TimelineEventItem,
-  index = 0
+  index = 0,
+  context?: TimelineContext
 ): FormattedTimelineEvent {
   // Support both backend schema (`TimelineEntry`) and OpenAPI schema (`TimelineEventItem`)
   const rawType = (entry as TimelineEntry).entry_type || (entry as TimelineEventItem).event_type || 'message';
   const rawCreated = (entry as TimelineEntry).created_on || (entry as TimelineEventItem).creation || '';
   const isInternal = Boolean(entry.is_internal);
 
-  let authorName = (entry as TimelineEntry).author_name;
-  if (!authorName && (entry as TimelineEventItem).actor) {
-    authorName = (entry as TimelineEventItem).actor;
-  }
-  if (!authorName) {
-    authorName = isInternal ? 'Case Officer' : 'Citizen Submitter';
-  }
-
   const authorRole = (entry as TimelineEntry).author_role || (entry as TimelineEventItem).actor_role || undefined;
 
   let authorType: 'submitter' | 'officer' | 'system' = 'submitter';
   if ((entry as TimelineEntry).author_type) {
     authorType = (entry as TimelineEntry).author_type as 'submitter' | 'officer' | 'system';
-  } else if (isInternal || authorRole || rawType === 'response' || rawType === 'status_change') {
+  } else if ((entry as TimelineEntry).author_user) {
+    authorType = 'officer';
+  } else if ((entry as TimelineEntry).author_submitter) {
+    authorType = 'submitter';
+  } else if (
+    isInternal ||
+    rawType === 'response' ||
+    rawType === 'dept_response' ||
+    rawType === 'status_change' ||
+    rawType === 'assignment' ||
+    rawType === 'resolution' ||
+    rawType === 'rejection'
+  ) {
     authorType = 'officer';
   }
 
+  const explicitName = (entry as TimelineEntry).author_name || (entry as TimelineEventItem).actor;
+  const authorSubmitter = (entry as TimelineEntry).author_submitter;
+
+  let authorName: string;
+  if (explicitName) {
+    authorName = explicitName;
+  } else if (authorType === 'officer') {
+    // Officers should be displayed by their official role/designation (e.g. 'Nodal Officer'),
+    // never exposing personal names/emails to preserve officer anonymity.
+    authorName = authorRole || 'Grievance Officer';
+  } else if (authorType === 'submitter') {
+    if (context?.isAnonymous) {
+      authorName = 'Anonymous Submitter';
+    } else {
+      authorName = context?.submitterName || (authorSubmitter ? `Submitter (${authorSubmitter})` : (authorRole || 'Submitter'));
+    }
+  } else if (authorType === 'system') {
+    authorName = 'System';
+  } else {
+    authorName = authorRole || (isInternal ? 'Grievance Officer' : 'Submitter');
+  }
+
   const body = (entry as TimelineEntry).body || (entry as TimelineEventItem).message || '';
-  const typeLabel = ENTRY_TYPE_LABELS[rawType] || rawType;
+  const respNum = (entry as TimelineEntry).response_number;
+  const typeLabel =
+    (rawType === 'dept_response' || rawType === 'response') && respNum
+      ? `Dept Response #${respNum}`
+      : (ENTRY_TYPE_LABELS[rawType] || rawType);
   const entryId = (entry as TimelineEntry).id || (entry as TimelineEntry).name || `evt-${index}-${rawCreated}`;
 
   return {
@@ -233,6 +278,9 @@ export function normalizeTimelineEntry(
     fromStatus: (entry as TimelineEntry).from_status || (entry as TimelineEventItem).from_status,
     toStatus: (entry as TimelineEntry).to_status || (entry as TimelineEventItem).to_status,
     action: (entry as TimelineEntry).action || null,
+    responseNumber: (entry as TimelineEntry).response_number,
+    actionTaken: (entry as TimelineEntry).action_taken,
+    resolutionSummary: (entry as TimelineEntry).resolution_summary,
     attachments: entry.attachments,
   };
 }

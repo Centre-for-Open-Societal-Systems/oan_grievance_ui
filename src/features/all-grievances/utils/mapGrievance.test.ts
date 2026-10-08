@@ -197,4 +197,56 @@ describe('normalizeTimelineEntry', () => {
     expect(normRejection.entryType).toBe('rejection');
     expect(normRejection.typeLabel).toBe('Rejection');
   });
+
+  it('resolves officer author from author_user without ambiguous fallbacks', () => {
+    const officerEntry: TimelineEntry = {
+      name: 'GR-TIME-005628',
+      action: 'Start Work',
+      author_role: 'Nodal Officer',
+      author_submitter: null,
+      author_type: 'officer',
+      author_user: 'officer@oan.com',
+      body: 'Action taken:\nhi\n\nResolution summary:\nhi',
+      entry_type: 'status_change',
+      is_internal: false,
+      created_on: '2026-10-07T06:05:25.945830+03:00',
+    };
+
+    const normalized = normalizeTimelineEntry(officerEntry);
+    expect(normalized.authorName).toBe('Nodal Officer');
+    expect(normalized.authorRole).toBe('Nodal Officer');
+    expect(normalized.authorType).toBe('officer');
+    expect(normalized.initials).toBe('NO');
+  });
+
+  it('resolves submitter author using submitterContext without falling back to generic Citizen Submitter', () => {
+    const submitterEntry: TimelineEntry = {
+      name: 'GR-TIME-005608',
+      action: null,
+      author_role: 'Individual Farmer',
+      author_submitter: 'SUB-00141',
+      author_type: 'submitter',
+      author_user: null,
+      body: 'sssssssssssssssssssssssss',
+      entry_type: 'submission',
+      is_internal: false,
+      created_on: '2026-10-07T06:00:44.969430+03:00',
+    };
+
+    const normalized = normalizeTimelineEntry(submitterEntry, 0, {
+      submitterName: 'Abebe Bikila',
+      isAnonymous: false,
+    });
+    expect(normalized.authorName).toBe('Abebe Bikila');
+    expect(normalized.authorRole).toBe('Individual Farmer');
+    expect(normalized.authorType).toBe('submitter');
+    expect(normalized.initials).toBe('AB');
+
+    const anonymousNorm = normalizeTimelineEntry(submitterEntry, 0, {
+      submitterName: null,
+      isAnonymous: true,
+    });
+    expect(anonymousNorm.authorName).toBe('Anonymous Submitter');
+    expect(anonymousNorm.initials).toBe('AS');
+  });
 });

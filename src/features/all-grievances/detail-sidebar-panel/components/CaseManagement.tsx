@@ -3,7 +3,9 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { User, Save, Loader2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAppSelector } from '@/store/hooks';
+import { useGrievanceOptions } from '@/features/metadata/hooks/useMetadata';
 import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
+import { ReviewReassignmentPopup } from './ReviewReassignmentPopup';
 import type { GrievanceChangeResponseData, GrievanceTimelineData, ReassignGrievancePayload } from '../../types';
 
 interface CaseManagementProps {
@@ -11,6 +13,7 @@ interface CaseManagementProps {
   ticketNumber?: string | null;
   timelineData?: GrievanceTimelineData | null;
   onReassign?: (payload: ReassignGrievancePayload) => Promise<unknown>;
+  onDecideReassignment?: (name: string, decision: 'Approved' | 'Rejected', comments: string) => Promise<void>;
 }
 
 export function CaseManagement({
@@ -18,19 +21,27 @@ export function CaseManagement({
   ticketNumber,
   timelineData,
   onReassign,
+  onDecideReassignment,
 }: CaseManagementProps) {
   const activeTicket = ticketNumber || timelineData?.ticket_number || '';
   const optionsData = useAppSelector((state) => state.metadata?.grievanceOptions);
   const departmentSelectId = useId();
+  const officerSelectId = useId();
 
   const [department, setDepartment] = useState<string>('');
+  const [targetOfficer, setTargetOfficer] = useState<string>('');
   const [reassignReason, setReassignReason] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showViewPopup, setShowViewPopup] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(
     null
   );
 
   const initialDepartment = timelineData?.assignment?.department || '';
+  const initialOfficer = timelineData?.assignment?.assigned_to || '';
+  const activeReassignment = timelineData?.assignment?.active_reassignment_request;
+  const user = useAppSelector((state) => state.auth?.user);
+  const isApprover = !!activeReassignment && activeReassignment.pending_with === user?.email;
 
   // Re-sync only when the ticket or its server-side department actually
   // changes. Keying on the whole timelineData object reset the form on every
@@ -42,6 +53,19 @@ export function CaseManagement({
     setReassignReason('');
   }, [activeTicket, initialDepartment]);
 
+  useEffect(() => {
+    if (department !== initialDepartment) {
+      setTargetOfficer('');
+    } else {
+      setTargetOfficer(initialOfficer);
+    }
+  }, [department, initialDepartment, initialOfficer]);
+
+  const { data: deptOptions, isLoading: isLoadingOfficers } = useGrievanceOptions(
+    { department },
+    { skip: !department }
+  );
+
   const departmentOptions = useMemo(() => {
     return (optionsData?.departments ?? [])
       .map((d) => d.department_name)
@@ -49,9 +73,17 @@ export function CaseManagement({
       .map((name) => ({ value: name, label: name }));
   }, [optionsData]);
 
-  if (!canManageCase) return null;
+  const officerOptions = useMemo(() => {
+    return (deptOptions?.officers || []).map((o) => ({
+      value: o.user_id,
+      label: o.full_name,
+    }));
+  }, [deptOptions]);
 
-  const isReassignment = department && department !== initialDepartment;
+  if (!canManageCase && !isApprover) return null;
+
+  const isReassignment =
+    (department && department !== initialDepartment) || (targetOfficer !== initialOfficer);
 
   const handleSave = async () => {
     if (!onReassign || !activeTicket) return;
@@ -62,6 +94,7 @@ export function CaseManagement({
       if (isReassignment) {
         const result = (await onReassign({
           target_department: department,
+          target_officer: targetOfficer || undefined,
           reason: reassignReason.trim() || undefined,
         })) as GrievanceChangeResponseData | undefined;
 
@@ -115,49 +148,97 @@ export function CaseManagement({
           </div>
         )}
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={departmentSelectId} className="text-[13px] font-semibold text-[#1B362D]">
-            Department
-          </label>
-          <AnimatedSelect
-            id={departmentSelectId}
-            placeholder="Select Department"
-            value={department}
-            onChange={setDepartment}
-            options={departmentOptions}
-          />
-        </div>
-
-        {/* Reason for Reassignment (visible when department is modified) */}
-        {isReassignment && (
-          <div className="flex flex-col gap-1.5 p-3 bg-amber-50/70 border border-amber-200 rounded-lg">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-              <RefreshCw className="h-3.5 w-3.5 text-amber-700" />
-              <span>Reassignment Justification</span>
+        {activeReassignment && (
+          <div className="flex flex-col gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg mb-2">
+            <div className="flex items-center gap-2 text-blue-800 text-sm font-semibold">
+              <RefreshCw className="h-4 w-4" />
+              Reassignment Pending
             </div>
-            <p className="text-[11px] text-amber-700 leading-tight">
-              Junior officer reassignment requests will be routed to your supervisor for review.
+            <p className="text-xs text-blue-700">
+              A request to reassign to {activeReassignment.changes?.find(c => c.fieldname === 'department')?.new_value || 'another department'} is pending.
             </p>
-            <textarea
-              rows={2}
-              value={reassignReason}
-              onChange={(e) => setReassignReason(e.target.value)}
-              placeholder="Provide justification for routing to this department..."
-              className="w-full mt-1 border border-amber-200 rounded-md p-2 text-xs text-gray-800 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
-            />
+            <button
+              onClick={() => setShowViewPopup(true)}
+              className="mt-1 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-md transition-colors cursor-pointer"
+            >
+              {isApprover ? 'Review Request' : 'View Request'}
+            </button>
           </div>
         )}
 
-        <button
-          type="button"
-          disabled={isSaving}
-          onClick={handleSave}
-          className="w-full py-2.5 bg-[#1E9E49] hover:bg-[#18803B] text-white font-bold text-sm rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-xs mt-1 cursor-pointer disabled:opacity-60"
-        >
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {isSaving ? 'Saving…' : isReassignment ? 'Submit Reassignment Request' : 'Save Changes'}
-        </button>
+        {canManageCase && (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={departmentSelectId} className="text-[13px] font-semibold text-[#1B362D]">
+                Department
+              </label>
+              <AnimatedSelect
+                id={departmentSelectId}
+                placeholder="Select Department"
+                value={department}
+                onChange={setDepartment}
+                options={departmentOptions}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={officerSelectId} className="text-[13px] font-semibold text-[#1B362D]">
+                Officer (Optional)
+              </label>
+              <AnimatedSelect
+                id={officerSelectId}
+                placeholder={isLoadingOfficers ? "Loading officers..." : "Select Officer"}
+                value={targetOfficer}
+                onChange={setTargetOfficer}
+                options={officerOptions}
+                disabled={isLoadingOfficers || !department}
+              />
+            </div>
+
+            {/* Reason for Reassignment (visible when department is modified) */}
+            {isReassignment && (
+              <div className="flex flex-col gap-1.5 p-3 bg-amber-50/70 border border-amber-200 rounded-lg">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                  <RefreshCw className="h-3.5 w-3.5 text-amber-700" />
+                  <span>Reassignment Justification</span>
+                </div>
+                <p className="text-[11px] text-amber-700 leading-tight">
+                  Junior officer reassignment requests will be routed to your supervisor for review.
+                </p>
+                <textarea
+                  rows={2}
+                  value={reassignReason}
+                  onChange={(e) => setReassignReason(e.target.value)}
+                  placeholder="Provide justification for routing to this department..."
+                  className="w-full mt-1 border border-amber-200 rounded-md p-2 text-xs text-gray-800 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
+                />
+              </div>
+            )}
+
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={handleSave}
+              className="w-full py-2.5 bg-[#1E9E49] hover:bg-[#18803B] text-white font-bold text-sm rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-xs mt-1 cursor-pointer disabled:opacity-60"
+            >
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {isSaving ? 'Saving…' : isReassignment ? 'Submit Reassignment Request' : 'Save Changes'}
+            </button>
+          </>
+        )}
       </div>
+
+      {showViewPopup && activeReassignment && (
+        <ReviewReassignmentPopup
+          request={activeReassignment}
+          onClose={() => setShowViewPopup(false)}
+          onDecide={
+            isApprover && onDecideReassignment
+              ? (decision, comments) => onDecideReassignment(activeReassignment.name, decision, comments)
+              : async () => {} // If readonly, we don't need a real onDecide, but wait ReviewReassignmentPopup requires it
+          }
+        />
+      )}
     </div>
   );
 }

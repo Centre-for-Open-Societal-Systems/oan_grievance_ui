@@ -131,5 +131,29 @@
     "rejected": "አንዳንድ ፋይሎች ተዘለዋል። እስከ 10MB የሆኑ PDF፣ JPG ወይም PNG ፋይሎች ብቻ ሊያያዙ ይችላሉ።",
     "remove": "{name}ን አስወግድ",
     "uploadFailed": "ሰነዶቹ ሊሰቀሉ ስላልቻሉ ምላሹ አልተላከም። እባክዎ እንደገና ይሞክሩ።"
+  },
+  "reviewPopups": {
+    "reassignmentTitle": "Review Reassignment",
+    "deferralTitle": "Review Deferral",
+    "reviewingRequestFrom": "Reviewing request from {role}",
+    "requestedByRole": "Requested by {role}",
+    "requestedChange": "Requested Change",
+    "currentDeadline": "Current Deadline",
+    "requestedExtension": "Requested Extension",
+    "department": "Department",
+    "officer": "Officer",
+    "unassigned": "Unassigned",
+    "requestedBy": "Requested By",
+    "justification": "Justification",
+    "noJustification": "No justification provided.",
+    "submittedAt": "Submitted {date}",
+    "yourComments": "Your Comments",
+    "requiredRejecting": "(required if rejecting, min. 20 characters)",
+    "optionalApproving": "Optional when approving.",
+    "auditWarning": "Your decision is logged in the audit trail. The officer will be notified immediately.",
+    "reject": "Reject",
+    "approve": "Approve",
+    "failedSubmit": "Failed to submit decision",
+    "officerRole": "Grievance Officer"
   }
 }

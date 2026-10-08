@@ -16,7 +16,7 @@ describe('DeferSLAPopup', () => {
     render(<DeferSLAPopup onDefer={vi.fn()} onClose={onClose} />);
 
     expect(screen.getByText('Defer SLA')).toBeInTheDocument();
-    expect(screen.getByText('Requires approval from a Senior Nodal Officer (L2)')).toBeInTheDocument();
+    expect(screen.getByText('Requires supervisor approval')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Describe why the SLA requires extension/i)).toBeInTheDocument();
     expect(screen.getByDisplayValue('7')).toBeInTheDocument();
 
@@ -112,15 +112,4 @@ describe('DeferSLAPopup', () => {
     });
   });
 
-  it('exposes the approver picker as a labelled, keyboard-operable combobox', () => {
-    // jsdom doesn't implement scrollIntoView, which AnimatedSelect calls on the highlighted option.
-    Element.prototype.scrollIntoView = vi.fn();
-    render(<DeferSLAPopup onDefer={vi.fn()} onClose={vi.fn()} />);
-
-    const combobox = screen.getByRole('combobox', { name: /Senior Nodal Officer \(L2\) Approver/i });
-    combobox.focus();
-    fireEvent.keyDown(combobox, { key: 'ArrowDown' });
-    expect(combobox).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('option', { name: /Yonas Mekonnen/ })).toBeInTheDocument();
-  });
 });

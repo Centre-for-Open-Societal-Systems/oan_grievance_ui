@@ -3,21 +3,28 @@
 import { useState } from 'react';
 import { AlertCircle, CalendarClock, CheckCircle2, Clock, Timer } from 'lucide-react';
 import { DeferSLAPopup } from './DeferSLAPopup';
+import { ReviewDeferralPopup } from './ReviewDeferralPopup';
 import type { DeferSLAPayload, Grievance, GrievanceChangeResponseData, GrievanceTimelineData } from '../../types';
 import { formatDate } from '../../utils/mapGrievance';
+
+import { useAppSelector } from '@/store/hooks';
 
 interface SLATrackerProps {
   canManageCase: boolean;
   grievance: Grievance;
   timelineData?: GrievanceTimelineData | null;
   onDefer: (payload: DeferSLAPayload) => Promise<GrievanceChangeResponseData | undefined>;
+  onDecideDeferral?: (name: string, decision: string, comments: string) => Promise<void>;
 }
 
-export function SLATracker({ canManageCase, grievance, timelineData, onDefer }: SLATrackerProps) {
+export function SLATracker({ canManageCase, grievance, timelineData, onDefer, onDecideDeferral }: SLATrackerProps) {
   const [showPopup, setShowPopup] = useState(false);
-  const canDefer = canManageCase;
-
+  const [showViewPopup, setShowViewPopup] = useState(false);
+  const user = useAppSelector((state) => state.auth.user);
   const slaData = timelineData?.sla;
+  const activeDeferral = slaData?.active_deferral_request;
+  const isApprover = !!activeDeferral && activeDeferral.pending_with === user?.email;
+  const canDefer = canManageCase || isApprover;
   const consumedPercent = Math.min(
     100,
     Math.max(0, slaData?.sla_consumed_percent ?? (grievance.status === 'Resolved' ? 100 : 50))
@@ -123,10 +130,21 @@ export function SLATracker({ canManageCase, grievance, timelineData, onDefer }: 
           {canDefer && !isResolved && (
             <button
               type="button"
-              onClick={() => setShowPopup(true)}
-              className="w-full py-2.5 bg-[#1ca848] hover:bg-[#1a9c42] text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs text-sm"
+              onClick={() => {
+                if (activeDeferral) {
+                  setShowViewPopup(true);
+                } else {
+                  setShowPopup(true);
+                }
+              }}
+              className={`w-full py-2.5 font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs text-sm ${
+                activeDeferral
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-[#1ca848] hover:bg-[#1a9c42] text-white'
+              }`}
             >
-              <CalendarClock className="h-4 w-4" /> Defer SLA
+              <CalendarClock className="h-4 w-4" /> 
+              {activeDeferral ? (isApprover ? 'Review Deferral' : 'View Deferral') : 'Defer SLA'}
             </button>
           )}
         </div>
@@ -136,6 +154,20 @@ export function SLATracker({ canManageCase, grievance, timelineData, onDefer }: 
         <DeferSLAPopup
           onDefer={onDefer}
           onClose={() => setShowPopup(false)}
+        />
+      )}
+
+      {canDefer && showViewPopup && activeDeferral && (
+        <ReviewDeferralPopup
+          request={activeDeferral}
+          timelineData={timelineData || null}
+          onClose={() => setShowViewPopup(false)}
+          readOnly={!isApprover}
+          onDecide={
+            isApprover && onDecideDeferral
+              ? (decision, comments) => onDecideDeferral(activeDeferral.name, decision, comments)
+              : undefined
+          }
         />
       )}
     </>

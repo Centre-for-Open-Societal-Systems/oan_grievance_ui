@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { canAccessRoute } from "@/features/auth/rbac";
+import { canAccessRoute, isOfficerOrAdmin } from "@/features/auth/rbac";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { useAppSelector } from "@/store/hooks";
 import {
@@ -40,10 +40,18 @@ export function Sidebar() {
   // Memoized on the role set, not recomputed on every pathname change this
   // component re-renders for (usePathname changes on every navigation, but
   // the role set is stable for the whole session).
-  const visibleNavItems = useMemo(
-    () => navItems.filter((item) => canAccessRoute(item.href, user?.roles ?? [])),
-    [user?.roles]
-  );
+  const visibleNavItems = useMemo(() => {
+    const userRoles = user?.roles ?? [];
+    const isOfficer = isOfficerOrAdmin(userRoles);
+    return navItems
+      .filter((item) => canAccessRoute(item.href, userRoles))
+      .map((item) => {
+        if (item.href === "/all-grievances" && !isOfficer) {
+          return { ...item, name: "My Grievances" };
+        }
+        return item;
+      });
+  }, [user?.roles]);
 
   return (
     <div className={`h-screen bg-[#0e3b25] flex flex-col flex-shrink-0 font-sans shadow-xl z-40 relative transition-all duration-300 ${isSidebarCollapsed ? 'w-[88px]' : 'w-[280px]'}`}>
