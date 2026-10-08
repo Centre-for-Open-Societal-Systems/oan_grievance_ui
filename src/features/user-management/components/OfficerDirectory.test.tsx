@@ -47,6 +47,16 @@ describe('OfficerDirectory', () => {
     expect(screen.queryByText('Tigist Alemu')).toBeNull();
   });
 
+  it('has a Reviewer tab with its own dummy, read-only-flavored officers', () => {
+    renderDirectory();
+
+    fireEvent.click(screen.getByRole('tab', { name: /Reviewer/ }));
+
+    expect(screen.getByRole('heading', { name: 'Reviewer' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add Reviewer' })).toBeTruthy();
+    expect(screen.queryByText('Tigist Alemu')).toBeNull();
+  });
+
   it('filters the current tab by search query', () => {
     renderDirectory();
 

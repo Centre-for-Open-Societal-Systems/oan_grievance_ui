@@ -1,5 +1,5 @@
 export type OfficerStatus = 'Active' | 'On Leave' | 'Inactive';
-export type OfficerTabId = 'admin' | 'nodal-l1' | 'nodal-l2';
+export type OfficerTabId = 'admin' | 'nodal-l1' | 'nodal-l2' | 'reviewer';
 
 export interface Officer {
   id: string;
@@ -51,6 +51,13 @@ export const OFFICER_TABS: OfficerTabConfig[] = [
     description: 'Manage senior nodal officers overseeing escalations and regional reviews.',
     addButtonLabel: 'Add Senior Nodal Officer',
     listLabel: 'Senior Nodal Officers',
+  },
+  {
+    id: 'reviewer',
+    label: 'Reviewer',
+    description: 'Read-only oversight accounts — can view grievances, officers, and category assignments, but cannot create, edit, or resolve anything.',
+    addButtonLabel: 'Add Reviewer',
+    listLabel: 'Reviewers',
   },
 ];
 
@@ -265,8 +272,25 @@ export const NODAL_L2_OFFICERS: Officer[] = Array.from({ length: 48 }, (_, i) =>
   buildOfficer(i + 201, NODAL_L2_TEMPLATES[i % NODAL_L2_TEMPLATES.length]!, statusForIndex(i + 3), 'nodal-l2')
 );
 
+const REVIEWER_TEMPLATES: OfficerTemplate[] = [
+  { roleTitle: 'Grievance Review Officer', department: 'Office of the Inspector General', tags: [], emailDomain: 'oig.gov.et' },
+  { roleTitle: 'Compliance Reviewer', department: 'Internal Audit & Compliance Unit', tags: [], emailDomain: 'iacu.gov.et' },
+  { roleTitle: 'Oversight Analyst', department: 'Ministry of Agriculture (MoA)', tags: [], emailDomain: 'moa.gov.et' },
+];
+
+// Read-only: no service categories, no assigned/resolved caseload of its own — it reads
+// everyone else's, never carries any (buildOfficer's stats are zeroed out below instead).
+export const REVIEWER_OFFICERS: Officer[] = Array.from({ length: 16 }, (_, i) => ({
+  ...buildOfficer(i + 301, REVIEWER_TEMPLATES[i % REVIEWER_TEMPLATES.length]!, statusForIndex(i + 1), 'reviewer'),
+  assigned: 0,
+  resolved: 0,
+  avgTimeDays: 0,
+  resolutionRate: 0,
+}));
+
 export const OFFICER_DIRECTORY: Record<OfficerTabId, Officer[]> = {
   admin: ADMIN_OFFICERS,
   'nodal-l1': NODAL_L1_OFFICERS,
   'nodal-l2': NODAL_L2_OFFICERS,
+  reviewer: REVIEWER_OFFICERS,
 };

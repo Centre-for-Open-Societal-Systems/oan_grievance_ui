@@ -1,10 +1,11 @@
-import { Shield, ShieldCheck, User } from 'lucide-react';
+import { Eye, Shield, ShieldCheck, User } from 'lucide-react';
 import type { OfficerTabConfig, OfficerTabId } from '../data/officers';
 
 const TAB_ICONS: Record<OfficerTabId, typeof ShieldCheck> = {
   admin: ShieldCheck,
   'nodal-l1': User,
   'nodal-l2': Shield,
+  reviewer: Eye,
 };
 
 interface OfficerTabsProps {

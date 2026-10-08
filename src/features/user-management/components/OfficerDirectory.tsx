@@ -46,7 +46,7 @@ export function OfficerDirectory() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingOfficer, setEditingOfficer] = useState<Officer | null>(null);
 
-  const isApiTab = activeTab !== 'admin';
+  const isApiTab = activeTab === 'nodal-l1' || activeTab === 'nodal-l2';
   const level = levelForTab(activeTab);
 
   const activeTabConfig = OFFICER_TABS.find((tab) => tab.id === activeTab)!;
@@ -175,6 +175,7 @@ export function OfficerDirectory() {
           onChange={handleTabChange}
           counts={{
             admin: officersByTab.admin.length,
+            reviewer: officersByTab.reviewer.length,
             'nodal-l1': activeTab === 'nodal-l1' && !apiResult.isLoading ? totalCount : l1Count,
             'nodal-l2': activeTab === 'nodal-l2' && !apiResult.isLoading ? totalCount : l2Count,
           }}
