@@ -88,7 +88,12 @@ describe('SubmitGrievancePage URL step filter', () => {
       expect(screen.getByText('Grievance Details', { selector: 'h3' })).toBeInTheDocument();
     });
     expect(screen.queryByText('Review & Submit', { selector: 'h3' })).not.toBeInTheDocument();
-    expect(replaceMock).toHaveBeenCalledWith('/submit-grievance?step=2', { scroll: false });
+    // A separate effect from the one that renders Step 2 is what calls replace() — waiting
+    // for it independently (rather than assuming it already happened by the time the DOM
+    // waitFor above resolved) is what makes this deterministic instead of a timing race.
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/submit-grievance?step=2', { scroll: false });
+    });
   });
 
   it('pushes the new step to the URL when Next is clicked', async () => {
