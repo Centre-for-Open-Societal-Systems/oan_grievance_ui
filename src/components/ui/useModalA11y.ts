@@ -15,6 +15,16 @@ const FOCUSABLE_SELECTOR =
 export function useModalA11y<T extends HTMLElement>(isOpen: boolean, onClose: () => void) {
   const dialogRef = useRef<T>(null);
 
+  // Callers routinely pass an inline closure (a new reference every render) rather than a
+  // `useCallback`-wrapped one. Reading the latest one through a ref — instead of listing
+  // `onClose` itself as an effect dependency — keeps the effect below from tearing down and
+  // reinstalling on every keystroke in the form; without this, its cleanup's
+  // `previouslyFocused?.focus()` would yank focus out of whatever the caller is typing into.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -22,7 +32,7 @@ export function useModalA11y<T extends HTMLElement>(isOpen: boolean, onClose: ()
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab' || !dialogRef.current) return;
@@ -44,7 +54,7 @@ export function useModalA11y<T extends HTMLElement>(isOpen: boolean, onClose: ()
       document.removeEventListener('keydown', onKeyDown);
       previouslyFocused?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   return dialogRef;
 }

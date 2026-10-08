@@ -9,7 +9,16 @@ export interface Officer {
   department: string;
   email: string;
   phone: string;
+  /** Display label — the area's name when the backend sent one, else its raw id, else `'-'`. */
   region: string;
+  /**
+   * The area's own id, independent of whether `region` above is a display name or (when
+   * the backend omitted `region_name`) that same raw id shown as if it were one. Editing an
+   * officer must seed the region picker from this, never from re-matching `region` against
+   * the area list by name — that match silently fails whenever `region` already holds a raw
+   * id, and used to send `region: null` on save, wiping it. Always null for dummy data.
+   */
+  regionId: string | null;
   tags: string[];
   assigned: number;
   resolved: number;
@@ -166,6 +175,7 @@ function buildOfficer(seed: number, template: OfficerTemplate, status: OfficerSt
     email: `${first.toLowerCase()}.${last.toLowerCase()}@${template.emailDomain}`,
     phone: makePhone(seed),
     region,
+    regionId: null,
     tags: template.tags,
     assigned,
     resolved,
@@ -226,6 +236,7 @@ const adminSeedOfficers: Officer[] = ADMIN_SEED.map((seed, i) => {
     email: seed.email,
     phone: seed.phone,
     region: seed.region,
+    regionId: null,
     tags: template.tags,
     assigned: seed.assigned,
     resolved: seed.resolved,

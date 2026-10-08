@@ -21,6 +21,7 @@ export function mapOfficerRecord(record: OfficerRecord, stats: OfficerStatistics
     email: record.email,
     phone: record.phone || '-',
     region: record.region_name || record.region || '-',
+    regionId: record.region,
     tags: record.service_categories,
     assigned: stats?.assigned ?? 0,
     resolved: stats?.resolved ?? 0,

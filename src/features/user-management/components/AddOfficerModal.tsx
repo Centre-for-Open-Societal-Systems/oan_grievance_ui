@@ -159,6 +159,7 @@ export function AddOfficerModal({ isOpen, onClose, tabLabel, onAdd }: AddOfficer
       email: email || '-',
       phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : '-',
       region: region || '-',
+      regionId: null,
       tags: serviceCategories,
       assigned: 0,
       resolved: 0,

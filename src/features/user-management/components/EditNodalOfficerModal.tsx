@@ -78,7 +78,12 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
   const [department, setDepartment] = useState(officer?.department ?? '');
   const [serviceCategories, setServiceCategories] = useState<string[]>(officer?.tags ?? []);
   const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
-  const [region, setRegion] = useState('');
+  // Seeded directly from the officer's own area id (not by re-matching `officer.region`'s
+  // display label against the loaded area list) — that match used to fail silently whenever
+  // the backend had no region_name to show, leaving `region` blank and wiping the officer's
+  // real region on save. Safe to read synchronously: the caller remounts this component on
+  // `officer` change (see this file's own doc comment), so there's no stale-officer risk.
+  const [region, setRegion] = useState(officer?.regionId ?? '');
   const [status, setStatus] = useState<string>(officer?.status ?? 'Active');
   const [reportsTo, setReportsTo] = useState(officer?.reportsTo ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,19 +96,6 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
   const { isCopied: isPasswordCopied, copy: copyNewPassword } = useCopyFeedback();
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [passwordIssuedMessage, setPasswordIssuedMessage] = useState<string | null>(null);
-
-  // The mapped `Officer` only carries the region's display name, but the API now wants its
-  // id — resolve the existing region to an id once the region list has loaded, so editing
-  // an officer doesn't look like their region was cleared.
-  useEffect(() => {
-    if (region || !officer || officer.region === '-' || regionAreas.length === 0) return;
-    const match = regionAreas.find((area) => area.area_name === officer.region);
-    // One-time backfill once the region list loads — not derivable at render time since
-    // the match depends on an async fetch, and the `!region` guard above makes this inert
-    // on every render after the first successful match.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (match) setRegion(match.area_id);
-  }, [region, officer, regionAreas]);
 
   const dialogRef = useModalA11y<HTMLDivElement>(isOpen, () => {
     if (!isSubmitting) onClose();
@@ -171,18 +163,12 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
     setIsSubmitting(true);
     setFormError(null);
     try {
-      // `region` starts blank and the one-time backfill effect above only fills it in once
-      // `regionAreas` has loaded — if the admin saves before that resolves, `region` is
-      // still '' for an officer who does have one. Sending `region: null` in that window
-      // would wipe it, so omit the field entirely (left unchanged server-side) rather than
-      // confusing "hasn't loaded yet" with "admin cleared it".
-      const isRegionResolutionPending = !region && officer.region !== '-' && regionAreas.length === 0;
       await updateOfficer(officer.id, {
         full_name: fullName,
         designation,
         department,
         phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : null,
-        ...(isRegionResolutionPending ? {} : { region: region || null }),
+        region: region || null,
         status: status as OfficerBackendStatus,
         service_categories: serviceCategories,
         ...(level === 'L1' && reportsTo ? { reports_to: reportsTo } : {}),

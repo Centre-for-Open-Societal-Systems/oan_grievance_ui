@@ -13,6 +13,7 @@ const BASE_OFFICER: Officer = {
   email: 'tigist.alemu@isda.gov.et',
   phone: '+251911234567',
   region: 'Oromia',
+  regionId: 'region-ET04',
   tags: ['Inputs'],
   assigned: 48,
   resolved: 39,
