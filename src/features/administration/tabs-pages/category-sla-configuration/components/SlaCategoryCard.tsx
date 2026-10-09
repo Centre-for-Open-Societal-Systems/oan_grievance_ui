@@ -1,30 +1,76 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Zap, Bell, BellOff, Edit2, Save, ChevronDown } from 'lucide-react';
 import { SlaCategory } from './types';
+import { fetchGrievanceTypes, MAX_PAGE_SIZE } from '../api/taxonomyApi';
 
 interface SlaCategoryCardProps {
     categoryData: SlaCategory;
     isLast?: boolean;
+    /** Saves the category's SLA window; absent when the SLA can't be edited. */
+    onSaveSla?: (
+        configId: string,
+        values: { sla_days: number; auto_escalate: boolean; notify_on_breach: boolean }
+    ) => Promise<void>;
 }
 
-const GRIEVANCE_TYPES = [
-    "Market access denied",
-    "Market price manipulation",
-    "Cooperative buyer default",
-    "Weighing / measurement dispute",
-    "Market infrastructure failure",
-    "Export permit / certification delay"
-];
-
-export function SlaCategoryCard({ categoryData, isLast = false }: SlaCategoryCardProps) {
+export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: SlaCategoryCardProps) {
+    const t = useTranslations('admin.taxonomy');
     const [isExpanded, setIsExpanded] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [selectedGrievanceType, setSelectedGrievanceType] = useState(GRIEVANCE_TYPES[0]);
+    // The category's active grievance types, loaded once the card is first opened.
+    const [grievanceTypes, setGrievanceTypes] = useState<string[]>([]);
+    const [pickedGrievanceType, setPickedGrievanceType] = useState('');
+    const selectedGrievanceType = grievanceTypes.includes(pickedGrievanceType) ? pickedGrievanceType : (grievanceTypes[0] ?? '');
+    const setSelectedGrievanceType = setPickedGrievanceType;
+    const [typesRequested, setTypesRequested] = useState(false);
+    useEffect(() => {
+        if (!isExpanded) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- marks the first open so the fetch below runs once
+        setTypesRequested(true);
+    }, [isExpanded]);
+    useEffect(() => {
+        if (!typesRequested) return;
+        const controller = new AbortController();
+        fetchGrievanceTypes(
+            { service_category: categoryData.category, is_active: true, page_size: MAX_PAGE_SIZE },
+            { signal: controller.signal }
+        )
+            .then((data) => setGrievanceTypes((data?.grievance_types ?? []).map((type) => type.type_name)))
+            // The dropdown is context for the SLA form; leave it empty if the types can't load.
+            .catch(() => {
+                if (!controller.signal.aborted) setGrievanceTypes([]);
+            });
+        return () => controller.abort();
+    }, [typesRequested, categoryData.category]);
     const [autoEscalate, setAutoEscalate] = useState(categoryData.autoEscalate);
-    const [notifyOnEscalation, setNotifyOnEscalation] = useState(categoryData.notifyOnEscalation);
+    const [notifyOnEscalation, setNotifyOnEscalation] = useState(categoryData.notifyOnBreach);
     const [slaDays, setSlaDays] = useState(categoryData.slaDays);
+    const [isSavingSla, setIsSavingSla] = useState(false);
+    const [slaMessage, setSlaMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+    const configId = categoryData.configId;
+    // Without a save handler the viewer can't change the SLA (a Review Officer), so the form is read-only.
+    const canEdit = !!onSaveSla;
+
+    const handleSaveSla = async () => {
+        if (!configId || !onSaveSla) return;
+        if (!Number.isInteger(slaDays) || slaDays < 1) {
+            setSlaMessage({ kind: 'error', text: t('slaDaysInvalid') });
+            return;
+        }
+        setIsSavingSla(true);
+        setSlaMessage(null);
+        try {
+            await onSaveSla(configId, { sla_days: slaDays, auto_escalate: autoEscalate, notify_on_breach: notifyOnEscalation });
+            setSlaMessage({ kind: 'success', text: t('slaSaved') });
+        } catch (err) {
+            setSlaMessage({ kind: 'error', text: err instanceof Error && err.message ? err.message : t('saveFailed') });
+        } finally {
+            setIsSavingSla(false);
+        }
+    };
 
     const reminderDays = Math.round(slaDays * 0.5);
     const urgentDays = Math.round(slaDays * 0.8);
@@ -118,7 +164,7 @@ export function SlaCategoryCard({ categoryData, isLast = false }: SlaCategoryCar
                                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                             className="w-full bg-white border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent flex items-center justify-between transition-colors"
                                         >
-                                            <span className="truncate">{selectedGrievanceType}</span>
+                                            <span className="truncate">{selectedGrievanceType || '—'}</span>
                                             <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                                         </button>
 
@@ -127,7 +173,7 @@ export function SlaCategoryCard({ categoryData, isLast = false }: SlaCategoryCar
                                                 isDropdownOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
                                             }`}
                                         >
-                                            {GRIEVANCE_TYPES.map((option, idx) => (
+                                            {grievanceTypes.map((option, idx) => (
                                                 <button
                                                     key={idx}
                                                     type="button"
@@ -152,6 +198,7 @@ export function SlaCategoryCard({ categoryData, isLast = false }: SlaCategoryCar
                                     <input
                                         type="number"
                                         value={slaDays}
+                                        disabled={!canEdit}
                                         onChange={(e) => setSlaDays(parseInt(e.target.value) || 0)}
                                         placeholder="Enter SLA Days"
                                         className="w-full bg-white border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent"
@@ -167,6 +214,7 @@ export function SlaCategoryCard({ categoryData, isLast = false }: SlaCategoryCar
                                                     type="checkbox"
                                                     className="sr-only"
                                                     checked={autoEscalate}
+                                                    disabled={!canEdit}
                                                     onChange={() => setAutoEscalate(!autoEscalate)}
                                                 />
                                                 <div className={`block w-9 h-5 rounded-full transition-colors ${autoEscalate ? 'bg-[#16A34A]' : 'bg-gray-300'}`}></div>
@@ -187,6 +235,7 @@ export function SlaCategoryCard({ categoryData, isLast = false }: SlaCategoryCar
                                                     type="checkbox"
                                                     className="sr-only"
                                                     checked={notifyOnEscalation}
+                                                    disabled={!canEdit}
                                                     onChange={() => setNotifyOnEscalation(!notifyOnEscalation)}
                                                 />
                                                 <div className={`block w-9 h-5 rounded-full transition-colors ${notifyOnEscalation ? 'bg-[#16A34A]' : 'bg-gray-300'}`}></div>
@@ -302,17 +351,32 @@ export function SlaCategoryCard({ categoryData, isLast = false }: SlaCategoryCar
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 py-6 px-6 border-t border-[#ECECF0]">
+                        <div className="flex items-center justify-end gap-3 py-6 px-6 border-t border-[#ECECF0]">
+                            {slaMessage && (
+                                <span
+                                    role={slaMessage.kind === 'error' ? 'alert' : 'status'}
+                                    className={`mr-auto text-xs font-medium ${slaMessage.kind === 'error' ? 'text-red-600' : 'text-[#16A34A]'}`}
+                                >
+                                    {slaMessage.text}
+                                </span>
+                            )}
                             <button
                                 className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                                 onClick={() => setIsExpanded(false)}
                             >
                                 Cancel
                             </button>
-                            <button className="px-6 py-2.5 text-sm font-bold text-white bg-[#16A34A] rounded-lg hover:bg-[#10883c] transition-colors flex items-center gap-2">
-                                <Save className="w-4 h-4" />
-                                Save SLA
-                            </button>
+                            {canEdit && (
+                                <button
+                                    type="button"
+                                    disabled={!configId || isSavingSla}
+                                    onClick={() => void handleSaveSla()}
+                                    className="px-6 py-2.5 text-sm font-bold text-white bg-[#16A34A] rounded-lg hover:bg-[#10883c] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    Save SLA
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
