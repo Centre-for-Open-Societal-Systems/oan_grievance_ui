@@ -6,6 +6,14 @@ import { Save } from 'lucide-react';
 import { fetchGlobalSlaPolicy, updateGlobalSlaPolicy } from '../api/slaSettingsApi';
 import type { DeferralApproval } from './slaSettingsTypes';
 
+/** The backend's `requires_supervisor_approval` boolean, as this radio group's two values. */
+function approvalFromBoolean(requiresSupervisorApproval: boolean): DeferralApproval {
+    return requiresSupervisorApproval ? 'l2_approval' : 'l1_self_approve';
+}
+function booleanFromApproval(value: DeferralApproval): boolean {
+    return value === 'l2_approval';
+}
+
 const inputClass =
     'w-full bg-white border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400';
 
@@ -28,7 +36,7 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
             .then((data) => {
                 setMaxDeferralDays(String(data.policy.max_deferral_days));
                 setThreshold(String(data.policy.auto_escalation_threshold));
-                setDeferralPolicy(data.policy.deferral_approval);
+                setDeferralPolicy(approvalFromBoolean(data.policy.requires_supervisor_approval));
                 setLoaded(true);
             })
             .catch((err) => {
@@ -54,11 +62,11 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
             const data = await updateGlobalSlaPolicy({
                 max_deferral_days: days,
                 auto_escalation_threshold: percent,
-                deferral_approval: deferralPolicy,
+                requires_supervisor_approval: booleanFromApproval(deferralPolicy),
             });
             setMaxDeferralDays(String(data.policy.max_deferral_days));
             setThreshold(String(data.policy.auto_escalation_threshold));
-            setDeferralPolicy(data.policy.deferral_approval);
+            setDeferralPolicy(approvalFromBoolean(data.policy.requires_supervisor_approval));
             setMessage({ kind: 'success', text: t('saved') });
         } catch (err) {
             setMessage({ kind: 'error', text: err instanceof Error && err.message ? err.message : t('saveFailed') });

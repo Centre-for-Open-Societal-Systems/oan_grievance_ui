@@ -33,10 +33,10 @@ describe('slaSettingsApi', () => {
     expect(lastCall(fetchMock)).toMatchObject({ method: 'GET' });
     expect(lastCall(fetchMock).url).toMatch(/\/api\/proxy\/api\/v1\/sla-policy$/);
 
-    await updateGlobalSlaPolicy({ auto_escalation_threshold: 80, deferral_approval: 'l1_self_approve' });
+    await updateGlobalSlaPolicy({ auto_escalation_threshold: 80, requires_supervisor_approval: false });
     expect(lastCall(fetchMock)).toMatchObject({
       method: 'PATCH',
-      body: { auto_escalation_threshold: 80, deferral_approval: 'l1_self_approve' },
+      body: { auto_escalation_threshold: 80, requires_supervisor_approval: false },
     });
   });
 
