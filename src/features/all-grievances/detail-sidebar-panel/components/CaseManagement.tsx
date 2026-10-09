@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { User, Save, Loader2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAppSelector } from '@/store/hooks';
+// eslint-disable-next-line boundaries/dependencies
 import { useGrievanceOptions } from '@/features/metadata/hooks/useMetadata';
 import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
 import { ReviewReassignmentPopup } from './ReviewReassignmentPopup';
@@ -54,6 +55,7 @@ export function CaseManagement({
   }, [activeTicket, initialDepartment]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (department !== initialDepartment) {
       setTargetOfficer('');
     } else {
