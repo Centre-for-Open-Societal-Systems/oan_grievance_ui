@@ -87,10 +87,6 @@
     "noTemplates": "Unkaaleen jiran hin jiru"
   },
   "admin": {
-    "header": {
-      "title": "Bulchiinsa",
-      "description": "Qondaaltota nodaalaa, ramaddii gosoota, qaacceewwan beeksisaa, fi qaacceewwan deebii sadarkaa addunyaa to'adhu."
-    },
     "responseTemplates": {
       "searchPlaceholder": "Unkaalee deebii barbaadaa…",
       "serviceCategory": "Gosa tajaajilaa",

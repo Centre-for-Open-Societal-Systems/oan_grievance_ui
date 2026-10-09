@@ -87,10 +87,6 @@
     "noTemplates": "No templates available"
   },
   "admin": {
-    "header": {
-      "title": "Administration",
-      "description": "Manage nodal officers, category assignments, notification templates, and standard response templates."
-    },
     "responseTemplates": {
       "searchPlaceholder": "Search response templates…",
       "serviceCategory": "Service Category",

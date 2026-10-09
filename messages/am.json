@@ -87,10 +87,6 @@
     "noTemplates": "ምንም የሚገኙ አብነቶች የሉም"
   },
   "admin": {
-    "header": {
-      "title": "አስተዳደር",
-      "description": "የኖዳል ባለስልጣናትን፣ የምድብ ምደባዎችን፣ የማሳወቂያ ቅጦችን እና መደበኛ የምላሽ ቅጦችን ያስተዳድሩ።"
-    },
     "responseTemplates": {
       "searchPlaceholder": "የምላሽ አብነቶችን ይፈልጉ…",
       "serviceCategory": "የአገልግሎት ምድብ",
