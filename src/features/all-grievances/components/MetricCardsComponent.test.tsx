@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, within } from '@testing-library/react';
+import { fireEvent, render, waitFor, within } from '@testing-library/react';
 import { MetricCardsComponent } from './MetricCardsComponent';
 import type { GrievanceSummaryCard } from '../types';
 
@@ -137,5 +137,91 @@ describe('MetricCardsComponent', () => {
 
     fireEvent.click(view.getByRole('button', { name: 'Try again' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders pagination dots and moves the active dot indicator on scroll', async () => {
+    const { container } = render(<MetricCardsComponent cards={cards} />);
+    const dots = container.querySelectorAll('button[aria-label^="Go to page"]');
+
+    // 6 cards -> Math.min(6, 3) = 3 dots
+    expect(dots).toHaveLength(3);
+
+    // Initial state: Dot 1 is active (green pill)
+    expect(dots[0]!.className).toContain('bg-[#16A34A]');
+    expect(dots[1]!.className).toContain('bg-gray-300');
+    expect(dots[2]!.className).toContain('bg-gray-300');
+
+    const scrollContainer = container.querySelector('.overflow-x-auto') as HTMLDivElement;
+    expect(scrollContainer).toBeTruthy();
+
+    // Mock dimensions: maxScroll = 1000 - 400 = 600
+    Object.defineProperty(scrollContainer, 'scrollWidth', { value: 1000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientWidth', { value: 400, configurable: true });
+    Object.defineProperty(scrollContainer, 'scrollLeft', { value: 600, writable: true, configurable: true });
+
+    fireEvent.scroll(scrollContainer);
+
+    // Wait for rAF to execute
+    await waitFor(() => {
+      // Scrolled to end: Dot 3 (index 2) should now be active
+      expect(dots[2]!.className).toContain('bg-[#16A34A]');
+      expect(dots[0]!.className).toContain('bg-gray-300');
+    });
+  });
+
+  it('scrolls the carousel to the corresponding progress when a dot is clicked', () => {
+    const { container } = render(<MetricCardsComponent cards={cards} />);
+    const dots = container.querySelectorAll('button[aria-label^="Go to page"]');
+    const scrollContainer = container.querySelector('.overflow-x-auto') as HTMLDivElement;
+
+    Object.defineProperty(scrollContainer, 'scrollWidth', { value: 1000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientWidth', { value: 400, configurable: true });
+    scrollContainer.scrollTo = vi.fn();
+
+    // Click last dot (page 3 / progress 1.0)
+    fireEvent.click(dots[2]!);
+
+    expect(scrollContainer.scrollTo).toHaveBeenCalledWith({
+      left: 600,
+      behavior: 'smooth',
+    });
+
+    // Click middle dot (page 2 / progress 0.5)
+    fireEvent.click(dots[1]!);
+
+    expect(scrollContainer.scrollTo).toHaveBeenCalledWith({
+      left: 300,
+      behavior: 'smooth',
+    });
+  });
+
+  it('attaches scroll listeners and updates active dot even after mounting initially in loading state', async () => {
+    const { container, rerender } = render(<MetricCardsComponent cards={[]} isLoading />);
+
+    // Initially skeleton
+    expect(container.querySelectorAll('button[aria-label^="Go to page"]')).toHaveLength(0);
+
+    // Now cards finish loading
+    rerender(<MetricCardsComponent cards={cards} isLoading={false} />);
+
+    const dots = container.querySelectorAll('button[aria-label^="Go to page"]');
+    expect(dots).toHaveLength(3);
+    expect(dots[0]!.className).toContain('bg-[#16A34A]');
+
+    const scrollContainer = container.querySelector('.overflow-x-auto') as HTMLDivElement;
+    expect(scrollContainer).toBeTruthy();
+
+    Object.defineProperty(scrollContainer, 'scrollWidth', { value: 1000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientWidth', { value: 400, configurable: true });
+    Object.defineProperty(scrollContainer, 'scrollLeft', { value: 300, writable: true, configurable: true });
+
+    fireEvent.scroll(scrollContainer);
+
+    await waitFor(() => {
+      // Scrolled to 50% (300 / 600 = 0.5): Dot 2 (middle dot, index 1) should now be active
+      expect(dots[1]!.className).toContain('bg-[#16A34A]');
+      expect(dots[0]!.className).toContain('bg-gray-300');
+      expect(dots[2]!.className).toContain('bg-gray-300');
+    });
   });
 });

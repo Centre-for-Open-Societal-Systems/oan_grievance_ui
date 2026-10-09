@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, CheckCircle2, Info, Send, Workflow } from "lucide-react";
+import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { StarRating } from "@/components/ui/StarRating";
@@ -44,6 +45,40 @@ const isReopenAction = (a: GrievanceAvailableAction | null | undefined): boolean
   return a.action_code === "reopen" || a.action.trim().toLowerCase() === "reopen";
 };
 
+export const createCaseActionSchema = ({
+  reasonRequired,
+  minReasonLength = MIN_REASON_LENGTH,
+  needsRating,
+  reasonTooShortMsg,
+  ratingRequiredMsg,
+}: {
+  reasonRequired: boolean;
+  minReasonLength?: number;
+  needsRating: boolean;
+  reasonTooShortMsg?: string;
+  ratingRequiredMsg?: string;
+}) =>
+  z.object({
+    action: z.string().min(1),
+    rating: needsRating
+      ? z
+          .number({
+            message: ratingRequiredMsg ?? "Please select a rating.",
+          })
+          .min(1, ratingRequiredMsg ?? "Please select a rating.")
+          .max(5)
+      : z.number().nullable().optional(),
+    reason: reasonRequired
+      ? z
+          .string()
+          .trim()
+          .min(
+            minReasonLength,
+            reasonTooShortMsg ?? `Must be at least ${minReasonLength} characters.`
+          )
+      : z.string().optional(),
+  });
+
 /**
  * The submitter's workflow-action form, shown where officers get the
  * department response form: pick one of the case's available actions
@@ -60,6 +95,8 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
   const tDocs = useTranslations("supportingDocuments");
   const reasonId = useId();
   const reasonHelpId = useId();
+  const reasonErrorId = useId();
+  const ratingHelpId = useId();
 
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [reason, setReason] = useState("");
@@ -68,6 +105,8 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ reason?: string; rating?: string }>({});
+  const [reasonTouched, setReasonTouched] = useState(false);
 
   // The case moves on after an action (here or elsewhere), so a selection
   // that is no longer offered is treated as no selection. A lone action is
@@ -83,8 +122,30 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
   const takesFiles = !!selected && !needsRating;
   const reasonRequired = selected?.requires_reason ?? true;
   const busy = isSubmitting || isUploading;
-  const reasonOk = reasonRequired ? reason.trim().length >= MIN_REASON_LENGTH : true;
-  const canSubmit = !!selected && reasonOk && (!needsRating || rating !== null);
+
+  const trimmedLength = reason.trim().length;
+  const caseActionSchema = createCaseActionSchema({
+    reasonRequired,
+    minReasonLength: MIN_REASON_LENGTH,
+    needsRating,
+    reasonTooShortMsg: t("reasonTooShort", { min: MIN_REASON_LENGTH, count: trimmedLength }),
+    ratingRequiredMsg: t("ratingRequired"),
+  });
+
+  const validationResult = selected
+    ? caseActionSchema.safeParse({
+        action: selected.action,
+        reason,
+        rating,
+      })
+    : null;
+
+  const canSubmit = !busy && !!validationResult && validationResult.success;
+  const reasonError =
+    fieldErrors.reason ||
+    (reasonTouched && reasonRequired && trimmedLength > 0 && trimmedLength < MIN_REASON_LENGTH
+      ? t("reasonTooShort", { min: MIN_REASON_LENGTH, count: trimmedLength })
+      : null);
 
   if (actions.length === 0) {
     return (
@@ -105,6 +166,8 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
     setSelectedAction(actionName);
     setError(null);
     setSuccess(null);
+    setFieldErrors({});
+    setReasonTouched(false);
     const act = actions.find((a) => a.action === actionName);
     const requiresRating = act ? (act.requires_rating ?? isCloseAction(act)) : actionName.toLowerCase() === "close case";
     if (!requiresRating) setRating(null);
@@ -113,7 +176,28 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!selected || !canSubmit) return;
+    if (!selected) return;
+
+    const parsed = caseActionSchema.safeParse({
+      action: selected.action,
+      reason,
+      rating,
+    });
+
+    if (!parsed.success) {
+      const errors: { reason?: string; rating?: string } = {};
+      for (const issue of parsed.error.issues) {
+        const fieldKey = issue.path[0] as "reason" | "rating";
+        if (fieldKey && !errors[fieldKey]) {
+          errors[fieldKey] = issue.message;
+        }
+      }
+      setFieldErrors(errors);
+      setReasonTouched(true);
+      return;
+    }
+
+    if (!canSubmit) return;
     setError(null);
     setSuccess(null);
     try {
@@ -128,15 +212,17 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
         setFiles([]);
       }
       await onExecute({
-        action: selected.action,
-        reason: reason.trim(),
-        rating: needsRating ? rating : null,
+        action: parsed.data.action,
+        reason: parsed.data.reason?.trim() ?? "",
+        rating: needsRating ? (parsed.data.rating ?? null) : null,
       });
       setSuccess(t("success", { action: selected.label }));
       setSelectedAction(null);
       setReason("");
       setRating(null);
       setFiles([]);
+      setReasonTouched(false);
+      setFieldErrors({});
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : t("failed"));
     }
@@ -184,40 +270,97 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
             <p className="text-sm text-gray-600">{t(`hints.${hintKey}`)}</p>
           )}
           {needsRating && (
-            <StarRating
-              label={t("ratingLabel")}
-              optionLabel={(value) => t("ratingOption", { value })}
-              value={rating}
-              onChange={setRating}
-              required
-            />
+            <div className="flex flex-col gap-1.5">
+              <StarRating
+                label={t("ratingLabel")}
+                optionLabel={(value) => t("ratingOption", { value })}
+                value={rating}
+                onChange={(next) => {
+                  setRating(next);
+                  if (fieldErrors.rating) {
+                    setFieldErrors((prev) => ({ ...prev, rating: undefined }));
+                  }
+                }}
+                required
+                describedBy={fieldErrors.rating ? ratingHelpId : undefined}
+              />
+              {fieldErrors.rating && (
+                <p id={ratingHelpId} className="text-xs text-red-600 font-medium" role="alert">
+                  {fieldErrors.rating}
+                </p>
+              )}
+            </div>
           )}
 
           <div>
-            <label htmlFor={reasonId} className="block text-base font-bold text-gray-800 mb-2">
-              {isReply ? t("detailsLabel") : needsRating ? t("commentsLabel") : t("reasonLabel")}{" "}
-              {reasonRequired ? (
-                <span className="text-red-500" aria-hidden="true">*</span>
-              ) : (
-                <span className="font-normal text-gray-400">{t("optional")}</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <label htmlFor={reasonId} className="block text-base font-bold text-gray-800">
+                {isReply ? t("detailsLabel") : needsRating ? t("commentsLabel") : t("reasonLabel")}{" "}
+                {reasonRequired ? (
+                  <span className="text-red-500" aria-hidden="true">*</span>
+                ) : (
+                  <span className="font-normal text-xs text-gray-500 ml-1">{t("optional")}</span>
+                )}
+              </label>
+              {reasonRequired && (
+                <span
+                  aria-live="polite"
+                  className={`text-xs font-semibold tabular-nums ${
+                    trimmedLength >= MIN_REASON_LENGTH
+                      ? "text-emerald-600"
+                      : trimmedLength > 0
+                        ? "text-amber-600"
+                        : "text-gray-400"
+                  }`}
+                >
+                  {trimmedLength < MIN_REASON_LENGTH
+                    ? t("charCounterMin", { count: trimmedLength, min: MIN_REASON_LENGTH })
+                    : t("charCounter", { count: trimmedLength })}
+                </span>
               )}
-            </label>
+            </div>
+
+            <p id={reasonHelpId} className="text-xs text-gray-500 mb-2">
+              {reasonRequired && (
+                <span className="font-semibold text-gray-700">
+                  {t("minLength", { min: MIN_REASON_LENGTH })}{" "}
+                </span>
+              )}
+              {t("reasonHelp")}
+            </p>
+
             <textarea
               id={reasonId}
               rows={5}
               required={reasonRequired}
               minLength={reasonRequired ? MIN_REASON_LENGTH : undefined}
-              aria-describedby={reasonHelpId}
+              aria-describedby={
+                reasonError ? `${reasonHelpId} ${reasonErrorId}` : reasonHelpId
+              }
+              aria-invalid={!!reasonError}
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => {
+                setReason(e.target.value);
+                if (fieldErrors.reason) {
+                  setFieldErrors((prev) => ({ ...prev, reason: undefined }));
+                }
+              }}
+              onBlur={() => setReasonTouched(true)}
               placeholder={
                 isReply ? t("detailsPlaceholder") : needsRating ? t("commentsPlaceholder") : t("reasonPlaceholder")
               }
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50 resize-none"
+              className={`w-full border rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-gray-50 resize-none transition-colors ${
+                reasonError
+                  ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50/20"
+                  : "border-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              }`}
             />
-            <p id={reasonHelpId} className="mt-2 text-xs text-gray-500">
-              {reasonRequired && t("minLength", { min: MIN_REASON_LENGTH })} {t("reasonHelp")}
-            </p>
+
+            {reasonError && (
+              <p id={reasonErrorId} className="mt-1.5 text-xs text-red-600 font-medium" role="alert">
+                {reasonError}
+              </p>
+            )}
           </div>
 
           {takesFiles && (

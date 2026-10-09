@@ -154,4 +154,51 @@ describe('CaseActionsPanel', () => {
       })
     );
   });
+
+  it('displays character counter and validates minimum length via Zod when reason is required', async () => {
+    const onExecute = vi.fn().mockResolvedValue({});
+    renderPanel({
+      caseStatus: 'Resolved',
+      actions: [
+        { action: 'Reopen', action_code: 'reopen', label: 'Reopen', requires_reason: true },
+        { action: 'Close Case', action_code: 'close_case', label: 'Close Case', requires_reason: true, requires_rating: true },
+      ],
+      onExecute,
+    });
+
+    const submit = screen.getByRole('button', { name: 'Confirm & Close Grievance' });
+    expect(submit).toBeDisabled();
+
+    // Star rating selected
+    fireEvent.click(screen.getByLabelText('5 of 5 stars'));
+    expect(submit).toBeDisabled();
+
+    // Initial counter: 0/10 min
+    expect(screen.getByText('0/10 min')).toBeInTheDocument();
+
+    const commentsInput = screen.getByLabelText(/Comments/);
+
+    // Type 7 characters ("thanks!")
+    fireEvent.change(commentsInput, { target: { value: 'thanks!' } });
+    expect(screen.getByText('7/10 min')).toBeInTheDocument();
+    expect(submit).toBeDisabled();
+
+    // On blur, error appears
+    fireEvent.blur(commentsInput);
+    expect(screen.getByRole('alert')).toHaveTextContent('Must be at least 10 characters (currently 7).');
+
+    // Type enough characters
+    fireEvent.change(commentsInput, { target: { value: 'thanks! issue resolved.' } });
+    expect(screen.getByText('23 chars')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(submit).toBeEnabled();
+
+    fireEvent.click(submit);
+    await waitFor(() => expect(onExecute).toHaveBeenCalled());
+    expect(onExecute).toHaveBeenCalledWith({
+      action: 'Close Case',
+      reason: 'thanks! issue resolved.',
+      rating: 5,
+    });
+  });
 });
