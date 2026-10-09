@@ -1,8 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Pencil, FileText, X, Loader2, AlertCircle } from 'lucide-react';
-import { NotificationTemplate, PlaceholderItem, UpdateNotificationTemplatePayload } from './types';
+import { useTranslations } from 'next-intl';
+import { NotificationTemplate, PlaceholderItem, UpdateNotificationTemplatePayload, FlatRecipientOption } from './types';
 import { TemplateBody } from './TemplateBody';
 
 interface NotificationRowProps {
@@ -10,43 +12,24 @@ interface NotificationRowProps {
     isLast?: boolean;
     onUpdate?: (templateName: string, payload: UpdateNotificationTemplatePayload) => Promise<void>;
     placeholders?: PlaceholderItem[];
+    recipientOptions?: FlatRecipientOption[];
 }
 
-interface FlatRecipientOption {
-    id: string;
-    label: string;
-    recipientType: string;
-    roleLevel: string | null;
-}
-
-const FLAT_RECIPIENT_OPTIONS: FlatRecipientOption[] = [
-    { id: 'submitter', label: 'Submitter', recipientType: 'Submitter', roleLevel: null },
-    { id: 'assigned_officer', label: 'Assigned Officer', recipientType: 'Assigned Officer', roleLevel: null },
-    { id: 'nodal_officer', label: 'Nodal Officer (L1)', recipientType: 'Role Level', roleLevel: 'nodal_officer' },
-    { id: 'senior_nodal_officer', label: 'Senior Nodal Officer (L2)', recipientType: 'Role Level', roleLevel: 'senior_nodal_officer' },
-    { id: 'department_head', label: 'Department Head (L3)', recipientType: 'Role Level', roleLevel: 'department_head' },
-];
-
-function getInitialRecipientId(notification: NotificationTemplate): string {
+function getInitialRecipientId(notification: NotificationTemplate, options: FlatRecipientOption[]): string {
     if (notification.role_level) {
+        const matched = options.find((o) => o.id === notification.role_level || o.role_level === notification.role_level);
+        if (matched) return matched.id;
         return notification.role_level;
     }
-    if (notification.recipient_type === 'Submitter') {
-        return 'submitter';
-    }
-    if (notification.recipient_type === 'Assigned Officer') {
-        return 'assigned_officer';
-    }
-    if (notification.recipient_type === 'Department Officer' || notification.recipient_type === 'Department Head') {
-        return 'department_head';
-    }
-    if (notification.recipient_type === 'Nodal Officer') {
-        return 'nodal_officer';
-    }
-    if (notification.recipient_type === 'Top Level Authority') {
-        return 'senior_nodal_officer';
-    }
-    return 'submitter';
+    const matchedType = options.find((o) => o.recipient_type === notification.recipient_type || o.id === notification.recipient_type || o.label === notification.recipient_type);
+    if (matchedType) return matchedType.id;
+
+    if (notification.recipient_type === 'Submitter') return 'submitter';
+    if (notification.recipient_type === 'Assigned Officer') return 'assigned_officer';
+    if (notification.recipient_type === 'Department Officer' || notification.recipient_type === 'Department Head') return 'department_head';
+    if (notification.recipient_type === 'Nodal Officer') return 'nodal_officer';
+    if (notification.recipient_type === 'Top Level Authority') return 'senior_nodal_officer';
+    return options.length > 0 ? (options[0]?.id ?? 'submitter') : 'submitter';
 }
 
 function formatEventTitle(name: string, event: string): string {
@@ -55,31 +38,39 @@ function formatEventTitle(name: string, event: string): string {
     return event.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function NotificationRow({ notification, isLast, onUpdate, placeholders }: NotificationRowProps) {
+export function NotificationRow({ notification, isLast, onUpdate, placeholders, recipientOptions = [] }: NotificationRowProps) {
+    const t = useTranslations('admin.notifications');
     const [isExpanded, setIsExpanded] = useState(false);
     const [isActive, setIsActive] = useState(notification.enabled);
     const [subject, setSubject] = useState(notification.subject || '');
     const [body, setBody] = useState(notification.body || '');
-    const [selectedRecipientId, setSelectedRecipientId] = useState(() => getInitialRecipientId(notification));
+    const [selectedRecipientId, setSelectedRecipientId] = useState(() => getInitialRecipientId(notification, recipientOptions));
     const [isSaving, setIsSaving] = useState(false);
     const [isToggling, setIsToggling] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Sync draft state when not expanded and when notification prop changes.
+    useEffect(() => {
+        if (!isExpanded) {
+            setSubject(notification.subject || '');
+            setBody(notification.body || '');
+            setSelectedRecipientId(getInitialRecipientId(notification, recipientOptions));
+            setError(null);
+        }
+        setIsActive(notification.enabled);
+    }, [notification, isExpanded, recipientOptions]);
+
     const title = formatEventTitle(notification.name, notification.event);
 
     const displayRecipientLabel = useMemo(() => {
-        if (notification.role_level_name) {
-            return notification.role_level_name;
-        }
+        if (notification.role_level_name) return notification.role_level_name;
         if (notification.role_level) {
-            const found = FLAT_RECIPIENT_OPTIONS.find((o) => o.id === notification.role_level);
+            const found = recipientOptions.find((o) => o.id === notification.role_level);
             if (found) return found.label;
         }
-        if (notification.recipient_type === 'Department Officer') {
-            return 'Department Head (L3)';
-        }
+        if (notification.recipient_type === 'Department Officer') return 'Department Head (L3)';
         return notification.recipient_type || 'Submitter';
-    }, [notification]);
+    }, [notification, recipientOptions]);
 
     const handleToggleActive = async (newVal: boolean) => {
         setIsActive(newVal);
@@ -89,7 +80,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
             await onUpdate(notification.name, { enabled: newVal });
         } catch (err) {
             setIsActive(!newVal);
-            setError(err instanceof Error ? err.message : 'Failed to update status');
+            setError(err instanceof Error ? err.message : t('failedUpdateStatus'));
         } finally {
             setIsToggling(false);
         }
@@ -103,17 +94,17 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
         setIsSaving(true);
         setError(null);
         try {
-            const opt = FLAT_RECIPIENT_OPTIONS.find((o) => o.id === selectedRecipientId) ?? FLAT_RECIPIENT_OPTIONS[0]!;
+            const opt = recipientOptions.find((o) => o.id === selectedRecipientId) || recipientOptions[0] || { id: 'submitter', label: 'Submitter', recipient_type: 'Submitter', role_level: null };
             await onUpdate(notification.name, {
                 subject,
                 body,
                 enabled: isActive,
-                recipient_type: opt.recipientType,
-                role_level: opt.roleLevel,
+                recipient_type: opt.recipient_type,
+                role_level: opt.role_level ?? null,
             });
             setIsExpanded(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save template');
+            setError(err instanceof Error ? err.message : t('failedSaveTemplate'));
         } finally {
             setIsSaving(false);
         }
@@ -122,8 +113,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
     const handleCancel = () => {
         setSubject(notification.subject || '');
         setBody(notification.body || '');
-        setIsActive(notification.enabled);
-        setSelectedRecipientId(getInitialRecipientId(notification));
+        setSelectedRecipientId(getInitialRecipientId(notification, recipientOptions));
         setError(null);
         setIsExpanded(false);
     };
@@ -144,7 +134,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                         {/* Badges */}
                         <div className="flex items-center gap-1.5 ml-2">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${isActive ? 'bg-[#DCFCE7] text-[#008236] border border-[#92F2B3]' : 'bg-[#F1F1F4] text-[#717182] border border-[#D4DBE9]'}`}>
-                                {isActive ? 'Active' : 'Disabled'}
+                                {isActive ? t('active') : t('disabled')}
                             </span>
                             <span
                                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${notification.channel === 'SMS' ? 'bg-[#FFF7D8] border-[#FEE685] text-[#BB4D00]' : 'bg-[#EFF6FF] border-[#C9E0FF] text-[#1447E6]'}`}
@@ -169,14 +159,14 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                             </p>
                         )}
                         <div className="flex flex-wrap items-center gap-2 text-[12px] text-gray-400">
-                            <span>Trigger: <span className="font-semibold text-gray-600">{notification.event}</span></span>
+                            <span>{t('trigger')}: <span className="font-semibold text-gray-600">{notification.event}</span></span>
                             <span>•</span>
-                            <span>To: <span className="font-semibold text-gray-600">{displayRecipientLabel}</span></span>
+                            <span>{t('to')}: <span className="font-semibold text-gray-600">{displayRecipientLabel}</span></span>
                             {notification.placeholders && notification.placeholders.length > 0 && (
                                 <>
                                     <span>•</span>
                                     <span className="text-[11px] font-mono text-blue-600 bg-blue-50/70 border border-blue-200/60 px-1.5 py-0.5 rounded">
-                                        Variables: {notification.placeholders.join(', ')}
+                                        {t('variables')}: {notification.placeholders.join(', ')}
                                     </span>
                                 </>
                             )}
@@ -184,7 +174,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                                 <>
                                     <span>•</span>
                                     <span className="font-mono text-[11px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
-                                        Condition: {notification.condition}
+                                        {t('condition')}: {notification.condition}
                                     </span>
                                 </>
                             )}
@@ -194,7 +184,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
 
                 {/* Actions */}
                 <div className="flex items-center gap-3 shrink-0 ml-2">
-                    <label className="relative inline-flex items-center cursor-pointer" title={isActive ? 'Disable rule' : 'Enable rule'}>
+                    <label className="relative inline-flex items-center cursor-pointer" title={isActive ? t('disableRule') : t('enableRule')}>
                         <input
                             type="checkbox"
                             className="sr-only peer"
@@ -209,7 +199,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                         type="button"
                         onClick={() => setIsExpanded(!isExpanded)}
                         className={`relative w-8 h-8 rounded-lg border flex items-center justify-center transition-all duration-200 active:scale-95 ${isExpanded ? 'bg-[#F7F8FA] border-gray-300' : 'bg-white hover:bg-gray-50 border-gray-200'}`}
-                        title={isExpanded ? 'Close editor' : 'Edit notification template'}
+                        title={isExpanded ? t('closeEditor') : t('editTemplate')}
                     >
                         <X className={`absolute w-4 h-4 text-gray-500 transition-all duration-200 ${isExpanded ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'}`} />
                         <Pencil className={`absolute w-3.5 h-3.5 text-gray-500 transition-all duration-200 ${!isExpanded ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 rotate-90 scale-50'}`} />
@@ -233,10 +223,10 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                                 <div className="md:col-span-2">
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="block text-[13px] font-medium text-gray-500">
-                                            Email Subject <span className="text-red-500">*</span>
+                                            {t('emailSubject')} <span className="text-red-500">*</span>
                                         </label>
                                         <div className="flex items-center gap-1">
-                                            <span className="text-[11px] text-gray-400">Insert:</span>
+                                            <span className="text-[11px] text-gray-400">{t('insert')}</span>
                                             {['{ticket_number}', '{status}'].map((token) => (
                                                 <button
                                                     key={token}
@@ -244,7 +234,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                                                     disabled={isSaving}
                                                     onClick={() => setSubject((prev) => (prev ? `${prev} ${token}` : token))}
                                                     className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-50"
-                                                    title={`Insert ${token} into subject`}
+                                                    title={t('insertSubject', { token })}
                                                 >
                                                     {token}
                                                 </button>
@@ -261,7 +251,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                             )}
 
                             <div>
-                                <label className="block text-[13px] font-medium text-gray-500 mb-2">Channel</label>
+                                <label className="block text-[13px] font-medium text-gray-500 mb-2">{t('channel')}</label>
                                 <span className={`inline-flex px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border ${notification.channel === 'SMS' ? 'bg-[#FFF7D8] border-[#FEE685] text-[#BB4D00]' : 'bg-[#EFF6FF] border-[#C9E0FF] text-[#1447E6]'}`}>
                                     {notification.channel}
                                 </span>
@@ -269,9 +259,11 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-[13px] font-medium text-gray-500 mb-2">Recipient</label>
+                            <label className="block text-[13px] font-medium text-gray-500 mb-2">
+                                {t('recipient')}
+                            </label>
                             <div className="flex flex-wrap gap-2">
-                                {FLAT_RECIPIENT_OPTIONS.map((opt) => {
+                                {recipientOptions.map((opt) => {
                                     const isSelected = selectedRecipientId === opt.id;
                                     return (
                                         <button
@@ -299,7 +291,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                             disabled={isSaving}
                             className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                         >
-                            Cancel
+                            {t('cancel')}
                         </button>
                         <button
                             type="button"
@@ -310,12 +302,12 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders }
                             {isSaving ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span>Saving...</span>
+                                    <span>{t('saving')}</span>
                                 </>
                             ) : (
                                 <>
                                     <FileText className="w-4 h-4" />
-                                    <span>Save Template</span>
+                                    <span>{t('saveTemplate')}</span>
                                 </>
                             )}
                         </button>

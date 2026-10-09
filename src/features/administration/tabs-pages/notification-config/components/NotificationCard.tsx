@@ -1,19 +1,23 @@
 "use client";
 
 import { NotificationRow } from './NotificationRow';
-import { NotificationTemplate, PlaceholderItem, UpdateNotificationTemplatePayload } from './types';
+import { NotificationTemplate, PlaceholderItem, UpdateNotificationTemplatePayload, FlatRecipientOption } from './types';
+import { useTranslations } from 'next-intl';
 
 interface NotificationCardProps {
     notifications: NotificationTemplate[];
     onUpdate?: (templateName: string, payload: UpdateNotificationTemplatePayload) => Promise<void>;
     placeholders?: PlaceholderItem[];
+    recipientOptions?: FlatRecipientOption[];
 }
 
-export function NotificationCard({ notifications, onUpdate, placeholders }: NotificationCardProps) {
+export function NotificationCard({ notifications, onUpdate, placeholders, recipientOptions }: NotificationCardProps) {
+    const t = useTranslations('admin.notifications');
+    
     if (notifications.length === 0) {
         return (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500 font-medium">
-                No notification templates found matching your filters.
+                {t('noTemplatesFound')}
             </div>
         );
     }
@@ -27,6 +31,7 @@ export function NotificationCard({ notifications, onUpdate, placeholders }: Noti
                     isLast={index === notifications.length - 1} 
                     onUpdate={onUpdate}
                     placeholders={placeholders}
+                    recipientOptions={recipientOptions}
                 />
             ))}
         </div>

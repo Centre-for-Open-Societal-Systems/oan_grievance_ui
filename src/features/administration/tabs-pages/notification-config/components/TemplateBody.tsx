@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { Tag } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { PlaceholderItem } from './types';
 
 export const DEFAULT_PLACEHOLDERS: PlaceholderItem[] = [
@@ -26,6 +27,7 @@ interface TemplateBodyProps {
 }
 
 export function TemplateBody({ value, onChange, disabled = false, placeholders }: TemplateBodyProps) {
+    const t = useTranslations('admin.notifications');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const allPlaceholders = (placeholders && placeholders.length > 0) ? placeholders : DEFAULT_PLACEHOLDERS;
@@ -61,11 +63,11 @@ export function TemplateBody({ value, onChange, disabled = false, placeholders }
         <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
                 <label className="block text-[13px] font-medium text-gray-500">
-                    Template Body
+                    {t('templateBody')}
                 </label>
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
                     <Tag className="w-3 h-3" />
-                    <span>Click tag to insert:</span>
+                    <span>{t('clickToInsert')}</span>
                 </div>
             </div>
 
@@ -93,7 +95,7 @@ export function TemplateBody({ value, onChange, disabled = false, placeholders }
                 onChange={(e) => onChange(e.target.value)}
                 disabled={disabled}
                 className="w-full bg-white border border-gray-200 rounded-lg p-4 text-[14px] text-gray-700 min-h-48 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] resize-y leading-relaxed disabled:bg-gray-50 disabled:text-gray-400"
-                placeholder="Enter template body here..."
+                placeholder={t('bodyPlaceholder')}
             />
         </div>
     );

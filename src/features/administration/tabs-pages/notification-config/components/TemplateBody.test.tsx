@@ -1,12 +1,22 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import en from '../../../../../../messages/en.json';
 import { TemplateBody } from './TemplateBody';
+
+const renderWithIntl = (ui: React.ReactElement) => {
+    return render(
+        <NextIntlClientProvider locale="en" messages={en}>
+            {ui}
+        </NextIntlClientProvider>
+    );
+};
 
 describe('TemplateBody', () => {
     it('renders common placeholders by default and inserts tag on click', () => {
         const handleChange = vi.fn();
-        const { getByText, getByPlaceholderText } = render(
+        const { getByText, getByPlaceholderText } = renderWithIntl(
             <TemplateBody value="Hello" onChange={handleChange} />
         );
 
@@ -24,7 +34,7 @@ describe('TemplateBody', () => {
 
     it('renders all default placeholders directly and inserts tag on click', () => {
         const handleChange = vi.fn();
-        const { getByText, getByPlaceholderText } = render(
+        const { getByText, getByPlaceholderText } = renderWithIntl(
             <TemplateBody value="" onChange={handleChange} />
         );
 
@@ -48,7 +58,7 @@ describe('TemplateBody', () => {
             },
         ];
 
-        const { getByText, queryByText } = render(
+        const { getByText, queryByText } = renderWithIntl(
             <TemplateBody
                 value="Dear User"
                 onChange={handleChange}
@@ -62,7 +72,7 @@ describe('TemplateBody', () => {
 
     it('does not insert when disabled', () => {
         const handleChange = vi.fn();
-        const { getByText } = render(
+        const { getByText } = renderWithIntl(
             <TemplateBody value="Static" onChange={handleChange} disabled={true} />
         );
 
@@ -74,7 +84,7 @@ describe('TemplateBody', () => {
 
     it('inserts at cursor position when textarea is focused', () => {
         const handleChange = vi.fn();
-        const { getByText, getByPlaceholderText } = render(
+        const { getByText, getByPlaceholderText } = renderWithIntl(
             <TemplateBody value="Hello world" onChange={handleChange} />
         );
 

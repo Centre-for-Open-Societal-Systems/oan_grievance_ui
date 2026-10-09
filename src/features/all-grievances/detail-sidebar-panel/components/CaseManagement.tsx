@@ -55,8 +55,8 @@ export function CaseManagement({
   }, [activeTicket, initialDepartment]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (department !== initialDepartment) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTargetOfficer('');
     } else {
       setTargetOfficer(initialOfficer);

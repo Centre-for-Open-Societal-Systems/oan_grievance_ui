@@ -87,6 +87,10 @@
     "noTemplates": "No templates available"
   },
   "admin": {
+    "header": {
+      "title": "Administration",
+      "description": "Manage nodal officers, category assignments, notification templates, and standard response templates."
+    },
     "responseTemplates": {
       "searchPlaceholder": "Search response templates…",
       "serviceCategory": "Service Category",
@@ -235,6 +239,48 @@
       "l2ApprovalLabel": "Require L2 Senior Officer approval",
       "l1SelfApproveLabel": "L1 officer self-approve (not recommended)",
       "saveButton": "Save Global Policy"
+    },
+    "notifications": {
+      "banner": "FSD Appendix C — Notification Matrix & Rules. Allowed variables: '{ticket_number}', '{service_category}', '{grievance_type}', '{assigned_dept}', '{status}', and more.",
+      "total": "Total",
+      "active": "Active",
+      "disabled": "Disabled",
+      "sms": "SMS",
+      "email": "Email",
+      "searchPlaceholder": "Search by event, trigger, subject or body…",
+      "allChannels": "All Channels",
+      "allStatus": "All Status",
+      "allRecipients": "All Recipients",
+      "refreshTooltip": "Refresh templates",
+      "loading": "Loading notification templates…",
+      "loadFailed": "Failed to load notification templates.",
+      "tryAgain": "Try again",
+      "noTemplatesFound": "No notification templates found matching your filters.",
+      "paginationWarning": "Showing {count} of {total} templates. Some templates may not be displayed on this page.",
+      "previous": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {total}",
+      "trigger": "Trigger",
+      "to": "To",
+      "variables": "Variables",
+      "condition": "Condition",
+      "enableRule": "Enable rule",
+      "disableRule": "Disable rule",
+      "editTemplate": "Edit notification template",
+      "closeEditor": "Close editor",
+      "emailSubject": "Email Subject",
+      "insert": "Insert:",
+      "insertSubject": "Insert {token} into subject",
+      "channel": "Channel",
+      "recipient": "Recipient",
+      "templateBody": "Template Body",
+      "clickToInsert": "Click tag to insert:",
+      "bodyPlaceholder": "Enter template body here...",
+      "cancel": "Cancel",
+      "saveTemplate": "Save Template",
+      "saving": "Saving…",
+      "failedUpdateStatus": "Failed to update status",
+      "failedSaveTemplate": "Failed to save template"
     }
   },
   "supportingDocuments": {
