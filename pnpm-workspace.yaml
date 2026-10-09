@@ -29,3 +29,9 @@ overrides:
   brace-expansion@>=4.0.0 <5.0.10: ^5.0.10
   brace-expansion@>=4.0.0 <5.0.11: ^5.0.11
   brace-expansion@>=4.0.0 <5.0.12: ^5.0.12
+  # eslint-plugin-boundaries@7.2.0 (latest, devDependency-only) pulls handlebars@4.7.9
+  # via @boundaries/elements, vulnerable to GHSA-8r5x-fm3f-whwj and GHSA-p8wg-vrv2-v86f
+  # (both critical, CI's `pnpm audit --audit-level=high` step). Not shipped to users —
+  # handlebars here only runs inside the linter's own tooling — but still worth pinning
+  # to the patched release rather than ignoring the GHSAs outright.
+  handlebars@<4.7.10: ^4.7.10
