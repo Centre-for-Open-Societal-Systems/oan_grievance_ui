@@ -215,11 +215,9 @@ export interface GrievanceTimelineSummary {
 
 export interface GrievanceTimelineSubmitter {
   name?: string | null;
-  mobile?: string | null;
   contact_mobile?: string | null;
   country_code?: string | null;
   phone_number?: string | null;
-  email?: string | null;
   contact_email?: string | null;
   submitter_type?: string | null;
   is_anonymous?: boolean;

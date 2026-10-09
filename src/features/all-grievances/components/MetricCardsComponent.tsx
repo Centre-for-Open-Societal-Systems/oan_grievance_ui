@@ -115,7 +115,9 @@ export function MetricCardsComponent({
   error?: string | null;
   onRetry?: () => void;
 }) {
-  const { scrollRef, activeIndex, scrollTo } = useCarouselScroll({ enableWheelScroll: true });
+  const { scrollRef, scrollProgress, scrollToProgress, handleScroll } = useCarouselScroll({
+    enableWheelScroll: true,
+  });
 
   if (isLoading && cards.length === 0) {
     return (
@@ -180,6 +182,7 @@ export function MetricCardsComponent({
       `}</style>
       <div
         ref={scrollRef}
+        onScroll={handleScroll}
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar pb-2 px-1"
       >
         {cards.map((card) => {
@@ -200,19 +203,28 @@ export function MetricCardsComponent({
 
       {/* Pagination Dots */}
       {totalCards > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-4">
+        <div
+          className="flex justify-center items-center gap-2 mt-4"
+          role="tablist"
+          aria-label="Grievance metric cards pagination"
+        >
           {Array.from({ length: Math.min(totalCards, 3) }).map((_, dotIndex) => {
             const numDots = Math.min(totalCards, 3);
-            const chunkSize = Math.max(1, Math.round(totalCards / numDots));
-            const activeDot = Math.min(numDots - 1, Math.floor(activeIndex / chunkSize));
+            const activeDot = Math.min(numDots - 1, Math.round(scrollProgress * (numDots - 1)));
             const isActive = activeDot === dotIndex;
 
             return (
               <button
                 key={dotIndex}
                 type="button"
-                onClick={() => scrollTo(dotIndex * chunkSize)}
-                className={`transition-all duration-300 rounded-full ${
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => {
+                  if (numDots > 1) {
+                    scrollToProgress(dotIndex / (numDots - 1));
+                  }
+                }}
+                className={`transition-all duration-300 rounded-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#16A34A] focus-visible:ring-offset-2 ${
                   isActive ? 'bg-[#16A34A] w-6 h-2' : 'bg-gray-300 w-2 h-2 hover:bg-gray-400'
                 }`}
                 aria-label={`Go to page ${dotIndex + 1}`}

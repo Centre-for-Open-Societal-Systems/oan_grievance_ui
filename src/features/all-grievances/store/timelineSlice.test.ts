@@ -36,7 +36,7 @@ describe('timelineSlice', () => {
     },
     submitter: {
       name: 'Abebe Bekele',
-      mobile: '+251911223344',
+      contact_mobile: '+251911223344',
       submitter_type: 'Individual Farmer',
       is_anonymous: false,
     },

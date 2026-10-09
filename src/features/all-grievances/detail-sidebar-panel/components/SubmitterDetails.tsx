@@ -58,8 +58,8 @@ export function SubmitterDetails({ grievance, timelineData }: SubmitterDetailsPr
   const initials = getInitials(submitterName);
 
   const contactMobile =
-    timelineData?.submitter?.contact_mobile || timelineData?.submitter?.mobile || grievance.contactMobile;
-  const contactEmail = timelineData?.submitter?.contact_email || timelineData?.submitter?.email || grievance.contactEmail;
+    timelineData?.submitter?.contact_mobile || grievance.contactMobile;
+  const contactEmail = timelineData?.submitter?.contact_email || grievance.contactEmail;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
