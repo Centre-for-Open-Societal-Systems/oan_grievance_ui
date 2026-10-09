@@ -13,6 +13,7 @@ import {
 } from './api/taxonomyApi';
 import { fetchSlaConfigurations, updateSlaConfiguration } from './api/slaSettingsApi';
 import { AddCategoryModal } from './components/AddCategoryModal';
+import { describeSaveError } from './components/apiErrorMessage';
 import { GlobalSlaPolicyCard } from './components/GlobalSlaPolicyCard';
 import { SlaCategoryCard } from './components/SlaCategoryCard';
 import type { ServiceCategoryRecord } from './components/taxonomyTypes';
@@ -20,16 +21,22 @@ import type { SlaConfiguration } from './components/slaSettingsTypes';
 import { CATEGORY_COLORS, type SlaCategory } from './components/types';
 
 /**
+ * A fixed reference window for the card's length-of-SLA bar, not a business rule — just
+ * something stable to compare against. Previously this was the longest `sla_days` among
+ * whichever categories happened to be loaded, so every bar's meaning silently shifted
+ * depending on what else was on the page (a 5-day SLA read as "3/4 full" purely because
+ * the longest other category was 7 days). 30 matches the Global SLA Policy card's own
+ * `max_deferral_days` default shown above it on this same page, so the two numbers agree
+ * instead of implying two different "typical maximums".
+ */
+const SLA_BAR_REFERENCE_DAYS = 30;
+
+/**
  * One card per category: its SLA window, auto-escalate and notify-on-breach
  * flags (GET /api/v1/sla-configurations), shared by every department that
  * serves the category. The card names those departments.
  */
-function toSlaCategory(
-    config: SlaConfiguration,
-    colorIndex: number,
-    departmentNames: string,
-    maxSlaDays: number
-): SlaCategory {
+function toSlaCategory(config: SlaConfiguration, colorIndex: number, departmentNames: string): SlaCategory {
     return {
         id: config.name,
         category: config.service_category,
@@ -39,7 +46,7 @@ function toSlaCategory(
         slaDays: config.sla_days,
         autoEscalate: config.auto_escalate,
         notifyOnBreach: config.notify_on_breach,
-        progressPercentage: maxSlaDays > 0 ? Math.round((config.sla_days / maxSlaDays) * 100) : 0,
+        progressPercentage: Math.min(100, Math.round((config.sla_days / SLA_BAR_REFERENCE_DAYS) * 100)),
     };
 }
 
@@ -57,6 +64,12 @@ export default function CategorySlaConfigurationPage() {
     const [isAdding, setIsAdding] = useState(false);
     // Said after a category is added: it has no SLA window yet, so no card shows for it.
     const [notice, setNotice] = useState<string | null>(null);
+    // Category creation and its first grievance type are two separate calls; if the category
+    // succeeds but the type fails, the modal stays open so the admin can retry — but retrying
+    // naively would call createServiceCategory again and hit a duplicate-name rejection, since
+    // the category already exists. Remembering which name already succeeded lets a retry skip
+    // straight to creating the type instead. Cleared whenever the modal is opened fresh.
+    const [categoryAlreadyCreated, setCategoryAlreadyCreated] = useState<string | null>(null);
     const { data: grievanceOptions } = useGrievanceOptions();
 
     const reload = useCallback(() => setReloadKey((key) => key + 1), []);
@@ -84,14 +97,22 @@ export default function CategorySlaConfigurationPage() {
 
     const cards = useMemo(() => {
         const departments = new Map((grievanceOptions?.departments ?? []).map((d) => [d.department_id, d.department_name]));
-        const colorOf = (name: string) => Math.max(0, categories.findIndex((c) => c.category_name === name));
-        const maxSlaDays = Math.max(0, ...configs.map((c) => c.sla_days));
+        // A config's category missing from `categories` (a stale fetch race, or a category
+        // beyond the page_size cap) used to collapse to the same color as "found at index 0"
+        // (`Math.max(0, -1)` is 0 either way) — falls back to a hash of the name instead, so a
+        // genuine index-0 match and a true miss don't silently look identical.
+        const colorOf = (name: string) => {
+            const index = categories.findIndex((c) => c.category_name === name);
+            if (index >= 0) return index;
+            let hash = 0;
+            for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+            return Math.abs(hash);
+        };
         return configs.map((config) =>
             toSlaCategory(
                 config,
                 colorOf(config.service_category),
-                config.departments.map((id) => departments.get(id) ?? id).join(', ') || t('noDepartment'),
-                maxSlaDays
+                config.departments.map((id) => departments.get(id) ?? id).join(', ') || t('noDepartment')
             )
         );
     }, [categories, configs, grievanceOptions, t]);
@@ -166,21 +187,35 @@ export default function CategorySlaConfigurationPage() {
                 <AddCategoryModal
                     takenCodes={categories.map((c) => c.code)}
                     onCreate={async (payload, firstType) => {
-                        await createServiceCategory(payload);
-                        reload();
+                        // A retry after the type-creation step failed: the category already
+                        // exists under this exact name, so skip straight to the type instead of
+                        // repeating createServiceCategory and hitting a duplicate-name rejection.
+                        if (categoryAlreadyCreated !== payload.category_name) {
+                            await createServiceCategory(payload);
+                            setCategoryAlreadyCreated(payload.category_name);
+                            reload();
+                        }
                         try {
                             await createGrievanceType({ service_category: payload.category_name, type_name: firstType });
+                            setCategoryAlreadyCreated(null);
                             setNotice(t('categoryCreatedNotice', { name: payload.category_name }));
                         } catch (err) {
-                            // The category exists now, so a retry of this form would hit a duplicate.
                             throw new Error(
                                 t('categoryCreatedTypeFailed', {
-                                    reason: err instanceof Error && err.message ? err.message : t('saveFailed'),
+                                    reason: describeSaveError(err, {
+                                        auth: t('authError'),
+                                        forbidden: t('forbiddenError'),
+                                        connection: t('connectionError'),
+                                        fallback: t('saveFailed'),
+                                    }),
                                 })
                             );
                         }
                     }}
-                    onClose={() => setIsAdding(false)}
+                    onClose={() => {
+                        setCategoryAlreadyCreated(null);
+                        setIsAdding(false);
+                    }}
                 />
             )}
         </div>

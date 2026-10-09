@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Zap, Bell, BellOff, Edit2, Save, ChevronDown } from 'lucide-react';
+import { z } from 'zod';
 import { SlaCategory } from './types';
 import { fetchGrievanceTypes, MAX_PAGE_SIZE } from '../api/taxonomyApi';
+import { describeSaveError } from './apiErrorMessage';
 
 interface SlaCategoryCardProps {
     categoryData: SlaCategory;
@@ -47,17 +49,51 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
     }, [typesRequested, categoryData.category]);
     const [autoEscalate, setAutoEscalate] = useState(categoryData.autoEscalate);
     const [notifyOnEscalation, setNotifyOnEscalation] = useState(categoryData.notifyOnBreach);
-    const [slaDays, setSlaDays] = useState(categoryData.slaDays);
+    // A string, not a number: a plain `number` state snaps to 0 the instant the field is
+    // cleared (`parseInt('') || 0`), fighting the ordinary "clear then retype" editing
+    // pattern — same shape as GlobalSlaPolicyCard's own numeric fields.
+    const [slaDaysText, setSlaDaysText] = useState(String(categoryData.slaDays));
     const [isSavingSla, setIsSavingSla] = useState(false);
     const [slaMessage, setSlaMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
     const configId = categoryData.configId;
     // Without a save handler the viewer can't change the SLA (a Review Officer), so the form is read-only.
     const canEdit = !!onSaveSla;
 
+    const categoryLabelId = useId();
+    const grievanceTypeLabelId = useId();
+    const slaDaysInputId = useId();
+
+    // Re-seeds the editable fields from the latest server data whenever the card is
+    // (re)opened — fixes two things at once: a stale display after this same component
+    // instance survives a reload (the card is keyed by configId, which doesn't change, so
+    // its local state was never re-initialized from fresh props), and "Cancel" not actually
+    // discarding an in-progress edit (it only collapsed the card; the edited values stayed
+    // in state and could be saved later without the admin touching anything else).
+    useEffect(() => {
+        if (!isExpanded) return;
+        // Re-seeding on every open (not just once) is the point — each open should reflect
+        // whatever the server now holds, not whatever was in state from a previous visit.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setAutoEscalate(categoryData.autoEscalate);
+        setNotifyOnEscalation(categoryData.notifyOnBreach);
+        setSlaDaysText(String(categoryData.slaDays));
+        setSlaMessage(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately re-seeds only on open, not on every categoryData change while mid-edit
+    }, [isExpanded]);
+
+    const slaDays = Number(slaDaysText);
+
     const handleSaveSla = async () => {
         if (!configId || !onSaveSla) return;
-        if (!Number.isInteger(slaDays) || slaDays < 1) {
-            setSlaMessage({ kind: 'error', text: t('slaDaysInvalid') });
+        const schema = z.object({
+            slaDaysText: z
+                .string()
+                .trim()
+                .refine((v) => /^[1-9]\d*$/.test(v), t('slaDaysInvalid')),
+        });
+        const parsed = schema.safeParse({ slaDaysText });
+        if (!parsed.success) {
+            setSlaMessage({ kind: 'error', text: parsed.error.issues[0]?.message ?? t('slaDaysInvalid') });
             return;
         }
         setIsSavingSla(true);
@@ -66,14 +102,23 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
             await onSaveSla(configId, { sla_days: slaDays, auto_escalate: autoEscalate, notify_on_breach: notifyOnEscalation });
             setSlaMessage({ kind: 'success', text: t('slaSaved') });
         } catch (err) {
-            setSlaMessage({ kind: 'error', text: err instanceof Error && err.message ? err.message : t('saveFailed') });
+            setSlaMessage({
+                kind: 'error',
+                text: describeSaveError(err, {
+                    auth: t('authError'),
+                    forbidden: t('forbiddenError'),
+                    connection: t('connectionError'),
+                    fallback: t('saveFailed'),
+                }),
+            });
         } finally {
             setIsSavingSla(false);
         }
     };
 
-    const reminderDays = Math.round(slaDays * 0.5);
-    const urgentDays = Math.round(slaDays * 0.8);
+    const safeSlaDays = Number.isFinite(slaDays) ? slaDays : 0;
+    const reminderDays = Math.round(safeSlaDays * 0.5);
+    const urgentDays = Math.round(safeSlaDays * 0.8);
 
     return (
         <div className={`bg-white border border-gray-200 ${isLast ? 'mb-0' : 'mb-4'} last:mb-0 shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl`}>
@@ -144,10 +189,11 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                                 {/* Row 1: Service Category and Grievance Type */}
                                 <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
-                                    <label className="text-sm font-medium text-gray-800">
-                                        Service Category
+                                    <label htmlFor={categoryLabelId} className="text-sm font-medium text-gray-800">
+                                        {t('serviceCategory')}
                                     </label>
                                     <input
+                                        id={categoryLabelId}
                                         type="text"
                                         value={categoryData.category}
                                         readOnly
@@ -155,12 +201,15 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     />
                                 </div>
                                 <div className="col-span-1 md:col-span-2 flex flex-col gap-2 relative">
-                                    <label className="text-sm font-medium text-gray-800">
-                                        Grievance Type
+                                    <label id={grievanceTypeLabelId} className="text-sm font-medium text-gray-800">
+                                        {t('grievanceTypeLabel')}
                                     </label>
                                     <div className="relative">
                                         <button
                                             type="button"
+                                            aria-labelledby={grievanceTypeLabelId}
+                                            aria-haspopup="listbox"
+                                            aria-expanded={isDropdownOpen}
                                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                             className="w-full bg-white border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent flex items-center justify-between transition-colors"
                                         >
@@ -168,7 +217,9 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                             <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                                         </button>
 
-                                        <div 
+                                        <div
+                                            role="listbox"
+                                            aria-labelledby={grievanceTypeLabelId}
                                             className={`absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden transition-all duration-200 origin-top ${
                                                 isDropdownOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
                                             }`}
@@ -177,6 +228,8 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                                 <button
                                                     key={idx}
                                                     type="button"
+                                                    role="option"
+                                                    aria-selected={selectedGrievanceType === option}
                                                     onClick={() => {
                                                         setSelectedGrievanceType(option);
                                                         setIsDropdownOpen(false);
@@ -192,21 +245,22 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
 
                                 {/* Row 2: SLA Days and Toggles */}
                                 <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
-                                    <label className="text-sm font-medium text-gray-800">
-                                        SLA Days <span className="text-red-500">*</span>
+                                    <label htmlFor={slaDaysInputId} className="text-sm font-medium text-gray-800">
+                                        {t('slaDays')} <span className="text-red-500">*</span>
                                     </label>
                                     <input
+                                        id={slaDaysInputId}
                                         type="number"
-                                        value={slaDays}
+                                        value={slaDaysText}
                                         disabled={!canEdit}
-                                        onChange={(e) => setSlaDays(parseInt(e.target.value) || 0)}
-                                        placeholder="Enter SLA Days"
+                                        onChange={(e) => setSlaDaysText(e.target.value)}
+                                        placeholder={t('slaDaysPlaceholder')}
                                         className="w-full bg-white border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent"
                                     />
                                 </div>
 
                                 <div className="col-span-1 flex flex-col gap-3">
-                                    <span className="text-[13px] font-medium text-gray-500">Auto-escalate on breach</span>
+                                    <span className="text-[13px] font-medium text-gray-500">{t('autoEscalateOnBreach')}</span>
                                     <div className="flex flex-col gap-1.5">
                                         <label className="flex items-center cursor-pointer w-max">
                                             <div className="relative">
@@ -220,14 +274,14 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                                 <div className={`block w-9 h-5 rounded-full transition-colors ${autoEscalate ? 'bg-[#16A34A]' : 'bg-gray-300'}`}></div>
                                                 <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform transform shadow-sm ${autoEscalate ? 'translate-x-4' : ''}`}></div>
                                             </div>
-                                            <div className="ml-3 text-sm text-gray-500">{autoEscalate ? 'Enabled' : 'Disabled'}</div>
+                                            <div className="ml-3 text-sm text-gray-500">{autoEscalate ? t('enabled') : t('disabled')}</div>
                                         </label>
-                                        <span className="text-[11px] text-gray-500">Triggers EC-016 SLA breach notification</span>
+                                        <span className="text-[11px] text-gray-500">{t('breachNotificationHint')}</span>
                                     </div>
                                 </div>
 
                                 <div className="col-span-1 flex flex-col gap-3">
-                                    <span className="text-[13px] font-medium text-gray-500">Notify on escalation</span>
+                                    <span className="text-[13px] font-medium text-gray-500">{t('notifyOnEscalation')}</span>
                                     <div className="flex flex-col gap-1.5">
                                         <label className="flex items-center cursor-pointer w-max">
                                             <div className="relative">
@@ -241,23 +295,23 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                                 <div className={`block w-9 h-5 rounded-full transition-colors ${notifyOnEscalation ? 'bg-[#16A34A]' : 'bg-gray-300'}`}></div>
                                                 <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform transform shadow-sm ${notifyOnEscalation ? 'translate-x-4' : ''}`}></div>
                                             </div>
-                                            <div className="ml-3 text-sm text-gray-500">{notifyOnEscalation ? 'Enabled' : 'Disabled'}</div>
+                                            <div className="ml-3 text-sm text-gray-500">{notifyOnEscalation ? t('enabled') : t('disabled')}</div>
                                         </label>
-                                        <span className="text-[11px] text-gray-500">Triggers EC-016 SLA breach notification</span>
+                                        <span className="text-[11px] text-gray-500">{t('breachNotificationHint')}</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Milestone Preview */}
                             <div className="bg-white border border-gray-200 rounded-xl p-6 mb-2">
-                                <h4 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-6 sm:mb-4">SLA Milestone Preview</h4>
+                                <h4 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-6 sm:mb-4">{t('milestonePreview')}</h4>
 
                                 {/* Mobile/Vertical View (Hidden on sm) */}
                                 <div className="flex sm:hidden flex-col w-full pl-2">
                                     {/* Start point */}
                                     <div className="flex items-center gap-4">
                                         <div className="w-2.5 h-2.5 rounded-full bg-[#16A34A] shrink-0"></div>
-                                        <span className="text-[12px] text-gray-500">Submit</span>
+                                        <span className="text-[12px] text-gray-500">{t('milestoneSubmit')}</span>
                                     </div>
                                     
                                     {/* 50% segment */}
@@ -272,7 +326,7 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     <div className="flex items-center gap-4">
                                         <div className="w-2.5 h-2.5 rounded-full bg-[#16A34A] shrink-0"></div>
                                         <div className="flex flex-col">
-                                            <span className="text-[12px] text-gray-500 leading-tight">50% reminder</span>
+                                            <span className="text-[12px] text-gray-500 leading-tight">{t('milestoneReminder')}</span>
                                             <span className="text-[14px] font-bold text-gray-800">{reminderDays}d</span>
                                         </div>
                                     </div>
@@ -289,7 +343,7 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     <div className="flex items-center gap-4">
                                         <div className="w-2.5 h-2.5 rounded-full bg-orange-400 shrink-0"></div>
                                         <div className="flex flex-col">
-                                            <span className="text-[12px] text-gray-500 leading-tight">80% urgent</span>
+                                            <span className="text-[12px] text-gray-500 leading-tight">{t('milestoneUrgent')}</span>
                                             <span className="text-[14px] font-bold text-gray-800">{urgentDays}d</span>
                                         </div>
                                     </div>
@@ -306,8 +360,8 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     <div className="flex items-center gap-4">
                                         <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></div>
                                         <div className="flex flex-col">
-                                            <span className="text-[12px] text-gray-500 leading-tight">Deadline</span>
-                                            <span className="text-[14px] font-bold text-gray-800">{slaDays}d</span>
+                                            <span className="text-[12px] text-gray-500 leading-tight">{t('milestoneDeadline')}</span>
+                                            <span className="text-[14px] font-bold text-gray-800">{safeSlaDays}d</span>
                                         </div>
                                     </div>
                                 </div>
@@ -323,28 +377,28 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     <div className="absolute left-[0%] top-1/2 -translate-x-1/2 flex flex-col items-center">
                                         <div className="w-2.5 h-2.5 rounded-full bg-[#16A34A] -mt-[5px]"></div>
                                         <div className="flex flex-col items-center mt-2">
-                                            <span className="text-[12px] text-gray-500 whitespace-nowrap">Submit</span>
+                                            <span className="text-[12px] text-gray-500 whitespace-nowrap">{t('milestoneSubmit')}</span>
                                         </div>
                                     </div>
                                     <div className="absolute left-[50%] top-1/2 -translate-x-1/2 flex flex-col items-center">
                                         <div className="w-2.5 h-2.5 rounded-full bg-[#16A34A] -mt-[5px]"></div>
                                         <div className="flex flex-col items-center mt-2">
-                                            <span className="text-[12px] text-gray-500 whitespace-nowrap">50% reminder</span>
+                                            <span className="text-[12px] text-gray-500 whitespace-nowrap">{t('milestoneReminder')}</span>
                                             <span className="text-[14px] font-bold text-gray-800">{reminderDays}d</span>
                                         </div>
                                     </div>
                                     <div className="absolute left-[80%] top-1/2 -translate-x-1/2 flex flex-col items-center">
                                         <div className="w-2.5 h-2.5 rounded-full bg-orange-400 -mt-[5px]"></div>
                                         <div className="flex flex-col items-center mt-2">
-                                            <span className="text-[12px] text-gray-500 whitespace-nowrap">80% urgent</span>
+                                            <span className="text-[12px] text-gray-500 whitespace-nowrap">{t('milestoneUrgent')}</span>
                                             <span className="text-[14px] font-bold text-gray-800">{urgentDays}d</span>
                                         </div>
                                     </div>
                                     <div className="absolute left-[100%] top-1/2 -translate-x-1/2 flex flex-col items-center">
                                         <div className="w-2.5 h-2.5 rounded-full bg-red-500 -mt-[5px]"></div>
                                         <div className="flex flex-col items-center mt-2">
-                                            <span className="text-[12px] text-gray-500 whitespace-nowrap">Deadline</span>
-                                            <span className="text-[14px] font-bold text-gray-800">{slaDays}d</span>
+                                            <span className="text-[12px] text-gray-500 whitespace-nowrap">{t('milestoneDeadline')}</span>
+                                            <span className="text-[14px] font-bold text-gray-800">{safeSlaDays}d</span>
                                         </div>
                                     </div>
                                 </div>
@@ -361,10 +415,20 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                 </span>
                             )}
                             <button
+                                type="button"
                                 className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                                onClick={() => setIsExpanded(false)}
+                                onClick={() => {
+                                    // Revert immediately rather than relying solely on the
+                                    // reseed-on-reopen effect, so a save triggered from outside
+                                    // this card in between can never pick up a discarded edit.
+                                    setAutoEscalate(categoryData.autoEscalate);
+                                    setNotifyOnEscalation(categoryData.notifyOnBreach);
+                                    setSlaDaysText(String(categoryData.slaDays));
+                                    setSlaMessage(null);
+                                    setIsExpanded(false);
+                                }}
                             >
-                                Cancel
+                                {t('cancel')}
                             </button>
                             {canEdit && (
                                 <button
@@ -374,7 +438,7 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     className="px-6 py-2.5 text-sm font-bold text-white bg-[#16A34A] rounded-lg hover:bg-[#10883c] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
                                 >
                                     <Save className="w-4 h-4" />
-                                    Save SLA
+                                    {t('saveSla')}
                                 </button>
                             )}
                         </div>

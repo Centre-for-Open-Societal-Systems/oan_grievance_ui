@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Save } from 'lucide-react';
+import { z } from 'zod';
 import { fetchGlobalSlaPolicy, updateGlobalSlaPolicy } from '../api/slaSettingsApi';
+import { describeSaveError } from './apiErrorMessage';
 import type { DeferralApproval } from './slaSettingsTypes';
 
 /** The backend's `requires_supervisor_approval` boolean, as this radio group's two values. */
@@ -41,7 +43,15 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
             })
             .catch((err) => {
                 if (controller.signal.aborted) return;
-                setMessage({ kind: 'error', text: err instanceof Error && err.message ? err.message : t('loadFailed') });
+                setMessage({
+                    kind: 'error',
+                    text: describeSaveError(err, {
+                        auth: t('authError'),
+                        forbidden: t('forbiddenError'),
+                        connection: t('connectionError'),
+                        fallback: t('loadFailed'),
+                    }),
+                });
             })
             .finally(() => {
                 if (!controller.signal.aborted) setIsLoading(false);
@@ -50,12 +60,24 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
     }, [t]);
 
     const handleSave = async () => {
+        const schema = z.object({
+            maxDeferralDays: z
+                .string()
+                .trim()
+                .refine((v) => /^[1-9]\d*$/.test(v), t('deferralDaysInvalid')),
+            threshold: z
+                .string()
+                .trim()
+                .refine((v) => /^[1-9]\d*$/.test(v) && Number(v) <= 100, t('thresholdInvalid')),
+        });
+        const parsed = schema.safeParse({ maxDeferralDays, threshold });
+        if (!parsed.success) {
+            const firstIssue = parsed.error.issues[0];
+            setMessage({ kind: 'error', text: firstIssue?.message ?? t('saveFailed') });
+            return;
+        }
         const days = Number(maxDeferralDays);
         const percent = Number(threshold);
-        if (!Number.isInteger(days) || days < 1) return setMessage({ kind: 'error', text: t('deferralDaysInvalid') });
-        if (!Number.isInteger(percent) || percent < 1 || percent > 100) {
-            return setMessage({ kind: 'error', text: t('thresholdInvalid') });
-        }
         setIsSaving(true);
         setMessage(null);
         try {
@@ -69,7 +91,15 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
             setDeferralPolicy(approvalFromBoolean(data.policy.requires_supervisor_approval));
             setMessage({ kind: 'success', text: t('saved') });
         } catch (err) {
-            setMessage({ kind: 'error', text: err instanceof Error && err.message ? err.message : t('saveFailed') });
+            setMessage({
+                kind: 'error',
+                text: describeSaveError(err, {
+                    auth: t('authError'),
+                    forbidden: t('forbiddenError'),
+                    connection: t('connectionError'),
+                    fallback: t('saveFailed'),
+                }),
+            });
         } finally {
             setIsSaving(false);
         }
@@ -99,14 +129,14 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
     return (
         <div className="bg-white border border-gray-200 rounded-xl shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 mb-6">
             <div className="p-6 pb-4 border-b border-gray-200">
-                <h2 className="text-base font-semibold text-gray-900 mb-1">Global SLA Policy</h2>
-                <p className="text-sm text-gray-500">System-wide defaults applied across all grievance categories unless overridden.</p>
+                <h2 className="text-base font-semibold text-gray-900 mb-1">{t('title')}</h2>
+                <p className="text-sm text-gray-500">{t('description')}</p>
             </div>
 
             <div className="p-6">
                 <div className="grid grid-cols-2 gap-8 mb-8">
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="sla-max-deferral" className="text-sm font-medium text-gray-800">Max SLA Deferral (days)</label>
+                        <label htmlFor="sla-max-deferral" className="text-sm font-medium text-gray-800">{t('maxDeferralLabel')}</label>
                         <input
                             id="sla-max-deferral"
                             type="text"
@@ -116,11 +146,11 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
                             onChange={(e) => setMaxDeferralDays(e.target.value)}
                             className={inputClass}
                         />
-                        <p className="text-xs text-gray-500 mt-1">Maximum days any single deferral request may add to the SLA clock.</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('maxDeferralHint')}</p>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="sla-threshold" className="text-sm font-medium text-gray-800">Auto-escalate Threshold (%)</label>
+                        <label htmlFor="sla-threshold" className="text-sm font-medium text-gray-800">{t('thresholdLabel')}</label>
                         <input
                             id="sla-threshold"
                             type="text"
@@ -130,15 +160,15 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
                             onChange={(e) => setThreshold(e.target.value)}
                             className={inputClass}
                         />
-                        <p className="text-xs text-gray-500 mt-1">Escalate when SLA is consumed by this percentage (100% = at deadline).</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('thresholdHint')}</p>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-3">
-                    <span className="text-sm font-medium text-gray-500">Deferral Approval Policy</span>
+                    <span className="text-sm font-medium text-gray-500">{t('deferralPolicyLabel')}</span>
                     <div className="flex items-center gap-6">
-                        {radio('l2_approval', 'Require L2 Senior Officer approval')}
-                        {radio('l1_self_approve', 'L1 officer self-approve (not recommended)')}
+                        {radio('l2_approval', t('l2ApprovalLabel'))}
+                        {radio('l1_self_approve', t('l1SelfApproveLabel'))}
                     </div>
                 </div>
             </div>
@@ -161,7 +191,7 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
                         className="flex items-center gap-2 bg-[#16A34A] hover:bg-[#10883c] text-white px-5 py-3 rounded-lg font-bold transition-colors text-sm disabled:opacity-50 disabled:pointer-events-none"
                     >
                         <Save className="w-4 h-4" />
-                        Save Global Policy
+                        {t('saveButton')}
                     </button>
                 )}
             </div>

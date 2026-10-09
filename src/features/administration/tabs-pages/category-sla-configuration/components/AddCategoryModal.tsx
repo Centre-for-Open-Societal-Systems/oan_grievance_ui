@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { Field, FormShell, inputClass } from './FormShell';
 import { fetchGrievanceTypes, MAX_PAGE_SIZE } from '../api/taxonomyApi';
+import { describeSaveError } from './apiErrorMessage';
 import { SuggestionInput } from './SuggestionInput';
 import { suggestTicketCode } from './ticketCode';
 import type { CreateServiceCategoryPayload } from './taxonomyTypes';
@@ -127,7 +128,14 @@ export function AddCategoryModal({ takenCodes, onCreate, onClose }: AddCategoryM
       await onCreate({ category_name: parsed.data.name, code }, parsed.data.grievanceType);
       onClose();
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : t('saveFailed'));
+      setError(
+        describeSaveError(err, {
+          auth: t('authError'),
+          forbidden: t('forbiddenError'),
+          connection: t('connectionError'),
+          fallback: t('saveFailed'),
+        })
+      );
     } finally {
       setIsSaving(false);
     }
