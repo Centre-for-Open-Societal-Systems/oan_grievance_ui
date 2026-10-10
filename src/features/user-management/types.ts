@@ -9,14 +9,22 @@
  * `name` is the user id (the officer's email).
  */
 
-export type OfficerLevel = 'L1' | 'L2';
+/** L3 is a department head: the department's final escalation rung, shown on the Admin tab. */
+export type OfficerLevel = 'L1' | 'L2' | 'L3';
 export type OfficerBackendStatus = 'Active' | 'On Leave' | 'Inactive';
+/**
+ * `Officer` covers L1/L2/L3 (level distinguishes them); `Reviewer` is a separate, desk-scoped
+ * read-only account with no level of its own — see `oan_grievance_service/api/v1/officer.py`'s
+ * own module doc comment (STG-443). There is no literal "Admin" role on the wire: the
+ * Administration tab's "Admin" tab is `role: 'Officer', level: 'L3'`, not a distinct role.
+ */
+export type OfficerRole = 'Officer' | 'Reviewer';
 
 export interface OfficerAssignment {
   assignment: string;
   service_category: string | null;
   department: string | null;
-  level: OfficerLevel;
+  level: OfficerLevel | null;
   region: string | null;
   active: boolean;
   on_leave: boolean;
@@ -26,9 +34,12 @@ export interface OfficerAssignment {
 export interface OfficerRecord {
   name: string;
   full_name: string;
+  role: OfficerRole;
   designation: string | null;
-  level: OfficerLevel;
-  department: string;
+  /** Null for a Reviewer — only an Officer (L1/L2/L3) has a level. */
+  level: OfficerLevel | null;
+  /** Null only in principle (the backend requires it on create for both roles today). */
+  department: string | null;
   email: string;
   phone: string | null;
   /** True while the officer still holds an admin-issued temporary password and hasn't replaced it yet. */
@@ -85,6 +96,8 @@ export interface OfficerData {
 }
 
 export interface ListOfficersParams {
+  /** Defaults to `'Officer'` server-side. Omit `level` entirely when this is `'Reviewer'` — a Reviewer has no level, and sending one is refused (400). */
+  role?: OfficerRole;
   level?: OfficerLevel;
   department?: string;
   status?: OfficerBackendStatus;
@@ -96,19 +109,36 @@ export interface ListOfficersParams {
 }
 
 export interface ListOfficerStatisticsParams {
-  level?: OfficerLevel;
+  /** Statistics only exist for L1/L2 — L3 (department heads) and Reviewers are refused (400). */
+  level?: 'L1' | 'L2';
   department?: string;
   page?: number;
   page_size?: number;
 }
 
+/** `GET /api/v1/officers/status-counts` params — the list's own filters, without `status`. */
+export interface ListOfficerStatusCountsParams {
+  role?: OfficerRole;
+  level?: OfficerLevel;
+  department?: string;
+  service_category?: string;
+  region?: string;
+  q?: string;
+}
+
+/** `GET /api/v1/officers/status-counts` response body — `data` itself, not nested under a key. */
+export interface OfficerStatusCounts {
+  active: number;
+  on_leave: number;
+  inactive: number;
+  total: number;
+}
+
 export interface CreateOfficerPayload {
+  /** Defaults to `'Officer'` server-side. */
+  role?: OfficerRole;
   full_name: string;
-  designation: string;
-  level: OfficerLevel;
-  department: string;
   email: string;
-  service_categories: string[];
   /**
    * Required. At least 8 characters with a letter and a number (weaker than a self-chosen
    * password — see `validateTemporaryPassword`). Applied only when `email` is a brand-new
@@ -116,9 +146,17 @@ export interface CreateOfficerPayload {
    * create response's `message`, not in the returned officer record.
    */
   temporary_password: string;
+  department: string;
+  service_categories: string[];
+  /** Required when `role` is `'Officer'`; rejected (400) for a Reviewer. */
+  designation?: string | null;
+  /** Required when `role` is `'Officer'`; rejected (400) for a Reviewer. */
+  level?: OfficerLevel | null;
   phone?: string | null;
   region?: string | null;
+  /** A Reviewer is Active or Inactive only — 'On Leave' is refused (400). */
   status?: OfficerBackendStatus;
+  /** An L1's L2 supervisor. Rejected (400) for anything but role `'Officer'`, level `'L1'`. */
   reports_to?: string | null;
 }
 
@@ -127,7 +165,7 @@ export interface ResetTemporaryPasswordPayload {
   temporary_password: string;
 }
 
-/** Partial update. Only the fields present are sent — the backend treats omitted fields as unchanged. */
+/** Partial update. Only the fields present are sent — the backend treats omitted fields as unchanged. `email` and `role` are fixed once created. */
 export interface UpdateOfficerPayload {
   level?: OfficerLevel;
   full_name?: string;

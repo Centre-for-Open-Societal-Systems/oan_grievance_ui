@@ -22,11 +22,10 @@ import {
 import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors';
 import { AnimatedSelect } from './AnimatedSelect';
 import { createOfficer } from '../api/officerApi';
+import { OFFICER_STATUS_OPTIONS, REVIEWER_STATUS_OPTIONS } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
 import { useWiredCategoryOptions } from '../hooks/useWiredCategoryOptions';
-import type { OfficerBackendStatus, OfficerLevel } from '../types';
-
-const STATUS_OPTIONS: OfficerBackendStatus[] = ['Active', 'On Leave', 'Inactive'];
+import type { OfficerBackendStatus, OfficerLevel, OfficerRole } from '../types';
 
 type FormField = 'fullName' | 'email' | 'phoneNumber' | 'password' | 'designation' | 'department' | 'serviceCategories';
 
@@ -48,21 +47,26 @@ const FIELD_ORDER: Array<{ key: FormField; id: string }> = (Object.keys(FIELD_ID
 interface AddNodalOfficerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  level: OfficerLevel;
+  role: OfficerRole;
+  /** Required when `role` is `'Officer'`; ignored (and never sent) for a Reviewer. */
+  level?: OfficerLevel;
   tabLabel: string;
   onCreated: () => void;
 }
 
 /**
- * Creates an officer via the real `POST /api/v1/officers` endpoint (see `officerApi.ts`).
- * `temporary_password` is required by the backend: the officer can't sign in with it directly
- * (login answers 403 `PASSWORD_CHANGE_REQUIRED`) — they replace it via
- * `POST /api/v1/auth/password/initial` first. If `email` already belongs to a login, that
- * login's existing password is left alone instead — the response `message` says so, and this
- * form holds the success screen open on that specific message rather than auto-closing, so
- * the admin doesn't hand the officer a password that silently won't work.
+ * Creates an officer, department head, or Reviewer via the real `POST /api/v1/officers`
+ * endpoint (see `officerApi.ts`). A Reviewer needs no designation, level, or supervisor —
+ * see `CreateOfficerPayload`'s own doc comment (STG-443) for exactly which fields each role
+ * requires or rejects. `temporary_password` is required by the backend: the account can't
+ * sign in with it directly (login answers 403 `PASSWORD_CHANGE_REQUIRED`) — they replace it
+ * via `POST /api/v1/auth/password/initial` first. If `email` already belongs to a login,
+ * that login's existing password is left alone instead — the response `message` says so, and
+ * this form holds the success screen open on that specific message rather than auto-closing,
+ * so the admin doesn't hand the officer a password that silently won't work.
  */
-export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreated }: AddNodalOfficerModalProps) {
+export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, onCreated }: AddNodalOfficerModalProps) {
+  const isReviewer = role === 'Reviewer';
   const dispatch = useAppDispatch();
   const departmentOptions = useAppSelector(selectDepartmentOptions);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
@@ -104,7 +108,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
       case 'password':
         return validateTemporaryPassword(password);
       case 'designation':
-        return validateRequired(designation, 'Enter a designation.');
+        return isReviewer ? null : validateRequired(designation, 'Enter a designation.');
       case 'department':
         return validateRequired(department, 'Select a department.');
       case 'serviceCategories':
@@ -159,9 +163,10 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
     setFormError(null);
     try {
       const result = await createOfficer({
+        role,
         full_name: fullName,
-        designation,
-        level,
+        designation: isReviewer ? null : designation,
+        level: isReviewer ? null : level,
         department,
         email,
         service_categories: serviceCategories,
@@ -323,20 +328,22 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
                 )}
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label htmlFor={FIELD_IDS.designation} className="text-sm font-bold text-gray-900">
-                  Designation <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...a11y('designation')}
-                  type="text"
-                  value={designation}
-                  onChange={(e) => setDesignation(e.target.value)}
-                  placeholder="e.g. Inputs Quality Grievance Officer"
-                  className={`border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
-                />
-                {fieldError('designation')}
-              </div>
+              {!isReviewer && (
+                <div className="flex flex-col gap-2">
+                  <label htmlFor={FIELD_IDS.designation} className="text-sm font-bold text-gray-900">
+                    Designation <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...a11y('designation')}
+                    type="text"
+                    value={designation}
+                    onChange={(e) => setDesignation(e.target.value)}
+                    placeholder="e.g. Inputs Quality Grievance Officer"
+                    className={`border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
+                  />
+                  {fieldError('designation')}
+                </div>
+              )}
 
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
@@ -372,7 +379,12 @@ export function AddNodalOfficerModal({ isOpen, onClose, level, tabLabel, onCreat
                 <label className="text-sm font-bold text-gray-900">
                   Status <span className="text-red-500">*</span>
                 </label>
-                <AnimatedSelect options={STATUS_OPTIONS} value={status} onChange={setStatus} placeholder="Select Status" />
+                <AnimatedSelect
+                  options={isReviewer ? REVIEWER_STATUS_OPTIONS : OFFICER_STATUS_OPTIONS}
+                  value={status}
+                  onChange={setStatus}
+                  placeholder="Select Status"
+                />
               </div>
 
               {level === 'L1' && (

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchOfficers } from '../api/officerApi';
-import type { OfficerBackendStatus, OfficerLevel } from '../types';
+import { fetchOfficerStatusCounts } from '../api/officerApi';
+import type { OfficerLevel, OfficerRole } from '../types';
 
 export interface OfficerStatusCounts {
   active: number;
@@ -12,25 +12,14 @@ export interface OfficerStatusCounts {
 
 const ZERO_COUNTS: OfficerStatusCounts = { active: 0, onLeave: 0, inactive: 0 };
 
-async function fetchStatusTotal(
-  level: OfficerLevel,
-  status: OfficerBackendStatus,
-  signal: AbortSignal
-): Promise<number> {
-  const data = await fetchOfficers({ level, status, page: 1, page_size: 1 }, { signal });
-  return data.pagination?.total_count ?? 0;
-}
-
 /**
- * The true Active/On Leave/Inactive breakdown for `level`, across every officer on every
- * page — not just the page currently displayed. Three `page_size: 1` requests (one per
- * status) each read `pagination.total_count`, the same trick `useOfficerCount` uses for a
- * tab's overall badge, rather than counting the rows already in hand client-side.
+ * The true Active/On Leave/Inactive breakdown for a tab, across every officer regardless of
+ * page — one call to `GET /api/v1/officers/status-counts`, which takes the same role/level
+ * filters as the list itself (minus `status`, which this breaks down by).
  *
- * `enabled` lets the caller skip the three requests entirely while a non-API (dummy) tab
- * is active — `level` is meaningless there, so there is nothing real to fetch.
+ * `enabled` lets the caller skip the request entirely while a different tab is active.
  */
-export function useOfficerStatusCounts(level: OfficerLevel, enabled: boolean): OfficerStatusCounts {
+export function useOfficerStatusCounts(role: OfficerRole, level: OfficerLevel | undefined, enabled: boolean): OfficerStatusCounts {
   // Only ever set from the fetch's own then/catch below, never reset directly for the
   // `!enabled` case — that keeps this hook from needing a setState call in the effect's
   // early-return branch (see useWiredCategoryOptions for the same shape).
@@ -39,20 +28,16 @@ export function useOfficerStatusCounts(level: OfficerLevel, enabled: boolean): O
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-    Promise.all([
-      fetchStatusTotal(level, 'Active', controller.signal),
-      fetchStatusTotal(level, 'On Leave', controller.signal),
-      fetchStatusTotal(level, 'Inactive', controller.signal),
-    ])
-      .then(([active, onLeave, inactive]) => {
+    fetchOfficerStatusCounts({ role, level: role === 'Officer' ? level : undefined }, { signal: controller.signal })
+      .then((data) => {
         if (controller.signal.aborted) return;
-        setFetchedCounts({ active, onLeave, inactive });
+        setFetchedCounts({ active: data.active, onLeave: data.on_leave, inactive: data.inactive });
       })
       .catch(() => {
         if (!controller.signal.aborted) setFetchedCounts(ZERO_COUNTS);
       });
     return () => controller.abort();
-  }, [level, enabled]);
+  }, [role, level, enabled]);
 
   return enabled ? fetchedCounts : ZERO_COUNTS;
 }

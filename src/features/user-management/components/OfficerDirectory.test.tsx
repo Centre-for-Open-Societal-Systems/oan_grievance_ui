@@ -1,14 +1,45 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { makeStore } from '@/store';
 import { OfficerDirectory } from './OfficerDirectory';
 
-const fetchOfficers = vi.hoisted(() => vi.fn().mockRejectedValue(new Error('Not Found')));
+function officerRecord(overrides: Record<string, unknown> = {}) {
+  return {
+    name: 'officer@example.et',
+    full_name: 'Tigist Alemu',
+    role: 'Officer',
+    designation: 'Department Head',
+    level: 'L3',
+    department: 'Finance',
+    email: 'officer@example.et',
+    phone: null,
+    must_change_password: false,
+    region: null,
+    region_name: null,
+    status: 'Active',
+    service_categories: ['Inputs'],
+    reports_to: null,
+    reports_to_name: null,
+    assignments: [],
+    ...overrides,
+  };
+}
+
+function listData(officers: ReturnType<typeof officerRecord>[], totalCount = officers.length, page = 1) {
+  const totalPages = Math.max(1, Math.ceil(totalCount / 9));
+  return {
+    officers,
+    pagination: { page, page_size: 9, total_count: totalCount, total_pages: totalPages, has_next: page < totalPages, has_prev: page > 1 },
+  };
+}
+
+const fetchOfficers = vi.hoisted(() => vi.fn().mockResolvedValue({ officers: [], pagination: { page: 1, page_size: 9, total_count: 0, total_pages: 1, has_next: false, has_prev: false } }));
 const fetchOfficerStatistics = vi.hoisted(() => vi.fn().mockRejectedValue(new Error('Not Found')));
-vi.mock('../api/officerApi', () => ({ fetchOfficers, fetchOfficerStatistics }));
+const fetchOfficerStatusCounts = vi.hoisted(() => vi.fn().mockResolvedValue({ active: 0, on_leave: 0, inactive: 0, total: 0 }));
+vi.mock('../api/officerApi', () => ({ fetchOfficers, fetchOfficerStatistics, fetchOfficerStatusCounts }));
 
 const fetchAdministrativeAreas = vi.hoisted(() =>
   vi.fn().mockResolvedValue({
@@ -41,53 +72,41 @@ function renderDirectory(role?: string) {
 }
 
 describe('OfficerDirectory', () => {
-  it('defaults to the Admin tab, showing its officers and status counts', () => {
+  it('defaults to the Admin tab (role Officer, level L3) and shows its officers', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()]));
+
     renderDirectory();
 
     expect(screen.getByRole('heading', { name: 'Admin' })).toBeTruthy();
-    expect(screen.getByText('Tigist Alemu')).toBeTruthy();
-    expect(screen.getByText('20 Active')).toBeTruthy();
-    expect(screen.getByText('5 On Leave')).toBeTruthy();
-    expect(screen.getByText('5 Inactive')).toBeTruthy();
+    expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(expect.objectContaining({ role: 'Officer', level: 'L3' }), expect.anything());
   });
 
-  it('switches tabs to show a different officer list and description', () => {
+  it('switches tabs to show a different officer list and description', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()]));
     renderDirectory();
+    await screen.findByText('Tigist Alemu');
 
+    fetchOfficers.mockResolvedValue(listData([officerRecord({ full_name: 'Woreda Officer', level: 'L1' })]));
     fireEvent.click(screen.getByRole('tab', { name: /Nodal Officers \(L1\)/ }));
 
     expect(screen.getByRole('heading', { name: 'Nodal Officers (L1)' })).toBeTruthy();
-    expect(screen.queryByText('Tigist Alemu')).toBeNull();
+    expect(await screen.findByText('Woreda Officer')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(expect.objectContaining({ role: 'Officer', level: 'L1' }), expect.anything());
   });
 
-  it('has a Reviewer tab with its own dummy, read-only-flavored officers', () => {
-    renderDirectory();
+  it('queries the Reviewer tab with no level at all', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord({ full_name: 'Review Officer One', role: 'Reviewer', level: null, designation: null })]));
 
+    renderDirectory();
     fireEvent.click(screen.getByRole('tab', { name: /Reviewer/ }));
 
     expect(screen.getByRole('heading', { name: 'Reviewer' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add Reviewer' })).toBeTruthy();
-    expect(screen.queryByText('Tigist Alemu')).toBeNull();
-  });
-
-  it('filters the current tab by search query', () => {
-    renderDirectory();
-
-    fireEvent.change(screen.getByPlaceholderText('Search officers...'), { target: { value: 'Tigist' } });
-
-    expect(screen.getByText('Tigist Alemu')).toBeTruthy();
-    expect(screen.queryByText('Dawit Haile')).toBeNull();
-  });
-
-  it('paginates results and advances to the next page', () => {
-    const { container } = renderDirectory();
-
-    expect(container.textContent).toContain('Showing 9 of 30 Admins lists');
-    expect(screen.queryByText('Abel Dereje')).toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: '2' }));
-
-    expect(screen.getByText('Abel Dereje')).toBeTruthy();
+    expect(await screen.findByText('Review Officer One')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Reviewer', level: undefined }),
+      expect.anything()
+    );
   });
 
   it('opens the add-officer modal with a tab-specific title', () => {
@@ -111,43 +130,17 @@ describe('OfficerDirectory', () => {
     expect(screen.getByRole('button', { name: /Apply Filters/ })).toBeTruthy();
   });
 
-  it('shows a loading state then an error for the API-backed Nodal Officers tab when the list itself fails', async () => {
-    renderDirectory();
+  it('shows a loading state then an error when the list itself fails', async () => {
+    fetchOfficers.mockRejectedValue(new Error('Not Found'));
 
-    fireEvent.click(screen.getByRole('tab', { name: /Nodal Officers \(L1\)/ }));
+    renderDirectory();
 
     expect(await screen.findByText('Not Found')).toBeTruthy();
   });
 
   it('still renders the officer list when only the statistics endpoint fails', async () => {
-    const woredaOfficer = {
-      name: 'woreda.officer@example.et',
-      full_name: 'Woreda Officer',
-      designation: 'Woreda Grievance Officer',
-      level: 'L1',
-      department: 'Woreda Agriculture Office',
-      email: 'woreda.officer@example.et',
-      phone: null,
-      must_change_password: false,
-      region: null,
-      region_name: null,
-      status: 'Active',
-      service_categories: ['Inputs'],
-      reports_to: null,
-      reports_to_name: null,
-      assignments: [],
-    };
-    // `page_size: 1` is the tab-badge count probe (useOfficerCount); the full page fetch
-    // (useOfficerList) is what the test actually cares about — distinguishing by that
-    // param, rather than call order, keeps this robust to how many count probes fire.
-    fetchOfficers.mockImplementation((params: { page_size?: number }) =>
-      params?.page_size === 1
-        ? Promise.resolve({ officers: [], pagination: { page: 1, page_size: 1, total_count: 1, total_pages: 1, has_next: false, has_prev: false } })
-        : Promise.resolve({
-            officers: [woredaOfficer],
-            pagination: { page: 1, page_size: 9, total_count: 1, total_pages: 1, has_next: false, has_prev: false },
-          })
-    );
+    fetchOfficers.mockResolvedValue(listData([officerRecord({ full_name: 'Woreda Officer', level: 'L1' })]));
+    fetchOfficerStatistics.mockRejectedValue(new Error('Not Found'));
 
     renderDirectory();
     fireEvent.click(screen.getByRole('tab', { name: /Nodal Officers \(L1\)/ }));
@@ -156,23 +149,56 @@ describe('OfficerDirectory', () => {
     expect(screen.queryByText('Not Found')).toBeNull();
   });
 
-  it('hides the Add and Edit controls for a signed-in Grievance Review Officer', () => {
+  it('hides the Add/Edit controls and the Reviewer tab for a signed-in Grievance Review Officer', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()]));
+
     renderDirectory('Grievance Review Officer');
 
     expect(screen.queryByRole('button', { name: 'Add Admin' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Edit Tigist Alemu' })).toBeNull();
-    // Still fully readable — only the write controls are gone.
-    expect(screen.getByText('Tigist Alemu')).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: /Reviewer/ })).toBeNull();
+    // Still fully readable — only the write controls (and the admin-only Reviewer tab) are gone.
+    expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Edit/ })).toBeNull();
   });
 
-  it('shows the Add and Edit controls for a role other than Review Officer', () => {
+  it('shows the Add and Edit controls, and the Reviewer tab, for a role other than Review Officer', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()]));
+
     renderDirectory('Grievance Admin');
 
     expect(screen.getByRole('button', { name: 'Add Admin' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Edit Tigist Alemu' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Reviewer/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Edit Tigist Alemu' })).toBeTruthy();
   });
 
-  it('filters the API-backed Nodal Officers tab by the region area id, not its display name', async () => {
+  it('filters the current tab by search query, sent as the server-side q param', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()]));
+
+    renderDirectory();
+    await screen.findByText('Tigist Alemu');
+
+    fireEvent.change(screen.getByPlaceholderText('Search officers...'), { target: { value: 'Tigist' } });
+
+    await waitFor(() =>
+      expect(fetchOfficers).toHaveBeenCalledWith(expect.objectContaining({ q: 'Tigist' }), expect.anything())
+    );
+  });
+
+  it('paginates by sending the clicked page number as the server-side page param', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()], 30));
+
+    const { container } = renderDirectory();
+    await screen.findByText('Tigist Alemu');
+    expect(container.textContent).toContain('Showing 1 of 30 Admins lists');
+
+    fetchOfficers.mockResolvedValue(listData([officerRecord({ full_name: 'Abel Dereje' })], 30, 2));
+    fireEvent.click(screen.getByRole('button', { name: '2' }));
+
+    expect(await screen.findByText('Abel Dereje')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }), expect.anything());
+  });
+
+  it('filters the Nodal Officers tab by the region area id, not its display name', async () => {
     fetchOfficers.mockResolvedValue({
       officers: [],
       pagination: { page: 1, page_size: 9, total_count: 0, total_pages: 1, has_next: false, has_prev: false },

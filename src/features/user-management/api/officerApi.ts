@@ -5,9 +5,11 @@ import type {
   ListCategoryAssignmentsParams,
   ListOfficersParams,
   ListOfficerStatisticsParams,
+  ListOfficerStatusCountsParams,
   OfficerData,
   OfficerListData,
   OfficerStatisticsListData,
+  OfficerStatusCounts,
   ResetTemporaryPasswordPayload,
   UpdateOfficerPayload,
 } from '../types';
@@ -67,6 +69,24 @@ export async function createOfficer(
   return fetchApi<OfficerData>('/api/v1/officers', {
     method: 'POST',
     body: JSON.stringify(payload),
+    signal: options.signal,
+  });
+}
+
+/**
+ * Active/On Leave/Inactive totals (plus the overall total) for one tab, using the same
+ * filters as its list but without `status` — one call instead of the three separate
+ * `page_size: 1` probes a per-status count would otherwise need. Registered before
+ * `/<officer>` server-side so this path is never swallowed by that dynamic route.
+ *
+ * Corresponding REST endpoint: GET /api/v1/officers/status-counts
+ */
+export async function fetchOfficerStatusCounts(
+  params: ListOfficerStatusCountsParams = {},
+  options: RequestOptions = {}
+): Promise<OfficerStatusCounts> {
+  return fetchApi<OfficerStatusCounts>(`/api/v1/officers/status-counts${buildQuery(params)}`, {
+    method: 'GET',
     signal: options.signal,
   });
 }
@@ -150,5 +170,6 @@ export const officerService = {
   updateOfficer,
   resetTemporaryPassword,
   getStatistics: fetchOfficerStatistics,
+  getStatusCounts: fetchOfficerStatusCounts,
   listCategoryAssignments: fetchCategoryAssignments,
 };

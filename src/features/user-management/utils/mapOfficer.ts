@@ -16,8 +16,17 @@ export function mapOfficerRecord(record: OfficerRecord, stats: OfficerStatistics
     id: record.name,
     name: record.full_name,
     status: record.status,
-    roleTitle: record.designation || (record.level === 'L1' ? 'Nodal Officer' : 'Senior Nodal Officer'),
-    department: record.department,
+    roleTitle:
+      record.designation ||
+      (record.role === 'Reviewer'
+        ? 'Review Officer'
+        : record.level === 'L3'
+          ? 'Department Head'
+          : record.level === 'L1'
+            ? 'Nodal Officer'
+            : 'Senior Nodal Officer'),
+    designation: record.designation,
+    department: record.department || '-',
     email: record.email,
     phone: record.phone || '-',
     region: record.region_name || record.region || '-',

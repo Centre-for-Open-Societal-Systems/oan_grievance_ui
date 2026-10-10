@@ -16,12 +16,10 @@ import { validateFullName, validateOptionalLocalPhone, validateRequired, validat
 import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors';
 import { AnimatedSelect } from './AnimatedSelect';
 import { resetTemporaryPassword, updateOfficer } from '../api/officerApi';
-import type { Officer } from '../data/officers';
+import { OFFICER_STATUS_OPTIONS, REVIEWER_STATUS_OPTIONS, type Officer } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
 import { useWiredCategoryOptions } from '../hooks/useWiredCategoryOptions';
-import type { OfficerBackendStatus, OfficerLevel } from '../types';
-
-const STATUS_OPTIONS: OfficerBackendStatus[] = ['Active', 'On Leave', 'Inactive'];
+import type { OfficerBackendStatus, OfficerLevel, OfficerRole } from '../types';
 
 type FormField = 'fullName' | 'phoneNumber' | 'designation' | 'department' | 'serviceCategories';
 
@@ -42,21 +40,24 @@ interface EditNodalOfficerModalProps {
   isOpen: boolean;
   onClose: () => void;
   officer: Officer | null;
-  level: OfficerLevel;
+  role: OfficerRole;
+  /** Required when `role` is `'Officer'`; ignored for a Reviewer. */
+  level?: OfficerLevel;
   onSaved: () => void;
 }
 
 /**
- * Updates an officer via the real `PATCH /api/v1/officers/:officer` endpoint (see
- * `officerApi.ts`). Seeds `reportsTo` from the officer's existing supervisor so an L1's
- * current L2 shows pre-selected rather than blank; leaving the field untouched on save
- * omits `reports_to` from the PATCH body, so the existing supervisor is left alone either
- * way — this only changes what the admin sees, not the save behavior.
+ * Updates an officer, department head, or Reviewer via the real `PATCH /api/v1/officers/:officer`
+ * endpoint (see `officerApi.ts`). Seeds `reportsTo` from the officer's existing supervisor so
+ * an L1's current L2 shows pre-selected rather than blank; leaving the field untouched on
+ * save omits `reports_to` from the PATCH body, so the existing supervisor is left alone
+ * either way — this only changes what the admin sees, not the save behavior.
  *
  * Caller remounts this on `officer` change (`key={officer?.id ?? 'closed'}`), so the form
- * only needs to seed from `officer` once, at mount — same convention as `EditOfficerModal`.
+ * only needs to seed from `officer` once, at mount.
  */
-export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved }: EditNodalOfficerModalProps) {
+export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, onSaved }: EditNodalOfficerModalProps) {
+  const isReviewer = role === 'Reviewer';
   const dispatch = useAppDispatch();
   const departmentOptions = useAppSelector(selectDepartmentOptions);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
@@ -74,7 +75,11 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
   const [fullName, setFullName] = useState(officer?.name ?? '');
   const [countryCode, setCountryCode] = useState(initialPhone.phoneCode);
   const [phoneNumber, setPhoneNumber] = useState(initialPhone.phoneNumber);
-  const [designation, setDesignation] = useState(officer?.roleTitle ?? '');
+  // Seeded from the officer's real `designation`, never `roleTitle` — that's a display
+  // fallback ("Department Head"/"Nodal Officer"/…) shown when the backend has none, and
+  // saving it back as if it were a real designation would fabricate one on an officer who
+  // never had one.
+  const [designation, setDesignation] = useState(officer?.designation ?? '');
   const [department, setDepartment] = useState(officer?.department ?? '');
   const [serviceCategories, setServiceCategories] = useState<string[]>(officer?.tags ?? []);
   const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
@@ -110,7 +115,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
       case 'phoneNumber':
         return validateOptionalLocalPhone(phoneNumber, countryCode);
       case 'designation':
-        return validateRequired(designation, 'Enter a designation.');
+        return isReviewer ? null : validateRequired(designation, 'Enter a designation.');
       case 'department':
         return validateRequired(department, 'Select a department.');
       case 'serviceCategories':
@@ -165,7 +170,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
     try {
       await updateOfficer(officer.id, {
         full_name: fullName,
-        designation,
+        ...(isReviewer ? {} : { designation }),
         department,
         phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : null,
         region: region || null,
@@ -264,20 +269,22 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
                 {fieldError('phoneNumber')}
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label htmlFor={FIELD_IDS.designation} className="text-sm font-bold text-gray-900">
-                  Designation <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...a11y('designation')}
-                  type="text"
-                  value={designation}
-                  onChange={(e) => setDesignation(e.target.value)}
-                  placeholder="Enter Designation"
-                  className={`border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
-                />
-                {fieldError('designation')}
-              </div>
+              {!isReviewer && (
+                <div className="flex flex-col gap-2">
+                  <label htmlFor={FIELD_IDS.designation} className="text-sm font-bold text-gray-900">
+                    Designation <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...a11y('designation')}
+                    type="text"
+                    value={designation}
+                    onChange={(e) => setDesignation(e.target.value)}
+                    placeholder="Enter Designation"
+                    className={`border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
+                  />
+                  {fieldError('designation')}
+                </div>
+              )}
 
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
@@ -313,7 +320,12 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, level, onSaved
                 <label className="text-sm font-bold text-gray-900">
                   Status <span className="text-red-500">*</span>
                 </label>
-                <AnimatedSelect options={STATUS_OPTIONS} value={status} onChange={setStatus} placeholder="Select Status" />
+                <AnimatedSelect
+                  options={isReviewer ? REVIEWER_STATUS_OPTIONS : OFFICER_STATUS_OPTIONS}
+                  value={status}
+                  onChange={setStatus}
+                  placeholder="Select Status"
+                />
               </div>
 
               {level === 'L1' && (
