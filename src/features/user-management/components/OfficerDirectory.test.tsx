@@ -6,8 +6,16 @@ import { loginThunk } from '@/features/auth/store/authSlice';
 import { makeStore } from '@/store';
 import { OfficerDirectory } from './OfficerDirectory';
 
-const mockRouter = { push: vi.fn(), replace: vi.fn() };
 const currentSearchParams = new URLSearchParams();
+const mockRouter = {
+  push: vi.fn(),
+  replace: vi.fn((url: string) => {
+    const query = url.split('?')[1] ?? '';
+    const newParams = new URLSearchParams(query);
+    Array.from(currentSearchParams.keys()).forEach((key) => currentSearchParams.delete(key));
+    newParams.forEach((val, key) => currentSearchParams.set(key, val));
+  }),
+};
 vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
   usePathname: () => '/user-management',
@@ -64,6 +72,7 @@ vi.mock('@/features/metadata/api/metadataApi', async (importOriginal) => ({
 
 afterEach(() => {
   vi.clearAllMocks();
+  Array.from(currentSearchParams.keys()).forEach((key) => currentSearchParams.delete(key));
 });
 
 /** `role` seeds the store with a signed-in user holding that role, as `loginThunk` would. */
@@ -228,5 +237,69 @@ describe('OfficerDirectory', () => {
       expect.anything()
     );
     expect(fetchOfficers).not.toHaveBeenCalledWith(expect.objectContaining({ region: 'Afar' }), expect.anything());
+  });
+
+  it('activates tab specified in ?tab query param when valid', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord({ full_name: 'Senior Officer', level: 'L2' })]));
+    currentSearchParams.set('tab', 'nodal-l2');
+
+    renderDirectory();
+
+    expect(screen.getByRole('heading', { name: 'Senior Nodal Officers (L2)' })).toBeTruthy();
+    expect(await screen.findByText('Senior Officer')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Officer', level: 'L2' }),
+      expect.anything()
+    );
+  });
+
+  it('safely falls back to Department Admin when ?tab is a prototype property or invalid', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()]));
+    currentSearchParams.set('tab', 'constructor');
+
+    renderDirectory();
+
+    expect(screen.getByRole('heading', { name: 'Department Admin' })).toBeTruthy();
+    expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Officer', level: 'L3' }),
+      expect.anything()
+    );
+  });
+
+  it('prevents Grievance Review Officer from accessing the Reviewer tab via ?tab=reviewer', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()]));
+    currentSearchParams.set('tab', 'reviewer');
+
+    renderDirectory('Grievance Review Officer');
+
+    // UI guard enforces visibleTabs restriction; falls back to default visible tab (Department Admin)
+    expect(screen.getByRole('heading', { name: 'Department Admin' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: /Reviewer/ })).toBeNull();
+    expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Officer', level: 'L3' }),
+      expect.anything()
+    );
+    expect(fetchOfficers).not.toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Reviewer' }),
+      expect.anything()
+    );
+  });
+
+  it('allows an Admin to open the Reviewer tab via ?tab=reviewer', async () => {
+    fetchOfficers.mockResolvedValue(
+      listData([officerRecord({ full_name: 'Review Officer One', role: 'Reviewer', level: null, designation: null })])
+    );
+    currentSearchParams.set('tab', 'reviewer');
+
+    renderDirectory('Grievance Admin');
+
+    expect(screen.getByRole('heading', { name: 'Reviewer' })).toBeTruthy();
+    expect(await screen.findByText('Review Officer One')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Reviewer', level: undefined }),
+      expect.anything()
+    );
   });
 });

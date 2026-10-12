@@ -36,9 +36,16 @@ export function OfficerDirectory() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const tabParam = searchParams?.get('tab') as OfficerTabId | null;
+  const tabParam = searchParams?.get('tab');
+  const isValidTab = (tab: string | null | undefined): tab is OfficerTabId =>
+    Boolean(tab && visibleTabs.some((t) => t.id === tab));
+
   const [localTab, setLocalTab] = useState<OfficerTabId>('admin');
-  const activeTab: OfficerTabId = tabParam && OFFICER_TABS_BY_ID[tabParam] ? tabParam : localTab;
+  const activeTab: OfficerTabId = isValidTab(tabParam)
+    ? tabParam
+    : isValidTab(localTab)
+      ? localTab
+      : (visibleTabs[0]?.id ?? 'admin');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
