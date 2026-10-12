@@ -7,9 +7,6 @@ import en from '../../../../../../messages/en.json';
 import { SlaCategoryCard } from './SlaCategoryCard';
 import type { SlaCategory } from './types';
 
-const fetchGrievanceTypes = vi.hoisted(() => vi.fn().mockResolvedValue({ grievance_types: [] }));
-vi.mock('../api/taxonomyApi', () => ({ fetchGrievanceTypes, MAX_PAGE_SIZE: 100 }));
-
 const baseCategory: SlaCategory = {
   id: 'GR-SLA-1',
   category: 'Credit',
@@ -67,5 +64,12 @@ describe('SlaCategoryCard', () => {
 
     fireEvent.change(slaInput, { target: { value: '' } });
     expect(slaInput).toHaveValue(null);
+  });
+
+  it('does not render a grievance type dropdown', async () => {
+    renderCard();
+    fireEvent.click(screen.getByText('Credit'));
+    await screen.findByLabelText(/SLA Days/i);
+    expect(screen.queryByText(/grievance type/i)).toBeNull();
   });
 });

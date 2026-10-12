@@ -6,14 +6,12 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { useIsReviewOfficer } from '@/features/auth/hooks/useIsReviewOfficer';
 import { useGrievanceOptions } from '@/features/metadata';
 import {
-    createGrievanceType,
     createServiceCategory,
     fetchServiceCategories,
     MAX_PAGE_SIZE,
 } from './api/taxonomyApi';
 import { fetchSlaConfigurations, updateSlaConfiguration } from './api/slaSettingsApi';
 import { AddCategoryModal } from './components/AddCategoryModal';
-import { describeSaveError } from './components/apiErrorMessage';
 import { GlobalSlaPolicyCard } from './components/GlobalSlaPolicyCard';
 import { SlaCategoryCard } from './components/SlaCategoryCard';
 import type { ServiceCategoryRecord } from './components/taxonomyTypes';
@@ -62,14 +60,7 @@ export default function CategorySlaConfigurationPage() {
     const [error, setError] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
     const [isAdding, setIsAdding] = useState(false);
-    // Said after a category is added: it has no SLA window yet, so no card shows for it.
     const [notice, setNotice] = useState<string | null>(null);
-    // Category creation and its first grievance type are two separate calls; if the category
-    // succeeds but the type fails, the modal stays open so the admin can retry — but retrying
-    // naively would call createServiceCategory again and hit a duplicate-name rejection, since
-    // the category already exists. Remembering which name already succeeded lets a retry skip
-    // straight to creating the type instead. Cleared whenever the modal is opened fresh.
-    const [categoryAlreadyCreated, setCategoryAlreadyCreated] = useState<string | null>(null);
     const { data: grievanceOptions } = useGrievanceOptions();
 
     const reload = useCallback(() => setReloadKey((key) => key + 1), []);
@@ -112,10 +103,10 @@ export default function CategorySlaConfigurationPage() {
             toSlaCategory(
                 config,
                 colorOf(config.service_category),
-                config.departments.map((id) => departments.get(id) ?? id).join(', ') || t('noDepartment')
+                config.departments.map((id) => departments.get(id) ?? id).join(', ')
             )
         );
-    }, [categories, configs, grievanceOptions, t]);
+    }, [categories, configs, grievanceOptions]);
 
     const handleSaveSla = async (
         configId: string,
@@ -186,36 +177,12 @@ export default function CategorySlaConfigurationPage() {
             {canManage && isAdding && (
                 <AddCategoryModal
                     takenCodes={categories.map((c) => c.code)}
-                    onCreate={async (payload, firstType) => {
-                        // A retry after the type-creation step failed: the category already
-                        // exists under this exact name, so skip straight to the type instead of
-                        // repeating createServiceCategory and hitting a duplicate-name rejection.
-                        if (categoryAlreadyCreated !== payload.category_name) {
-                            await createServiceCategory(payload);
-                            setCategoryAlreadyCreated(payload.category_name);
-                            reload();
-                        }
-                        try {
-                            await createGrievanceType({ service_category: payload.category_name, type_name: firstType });
-                            setCategoryAlreadyCreated(null);
-                            setNotice(t('categoryCreatedNotice', { name: payload.category_name }));
-                        } catch (err) {
-                            throw new Error(
-                                t('categoryCreatedTypeFailed', {
-                                    reason: describeSaveError(err, {
-                                        auth: t('authError'),
-                                        forbidden: t('forbiddenError'),
-                                        connection: t('connectionError'),
-                                        fallback: t('saveFailed'),
-                                    }),
-                                })
-                            );
-                        }
+                    onCreate={async (payload) => {
+                        await createServiceCategory(payload);
+                        setNotice(t('categoryCreatedNotice', { name: payload.category_name }));
+                        reload();
                     }}
-                    onClose={() => {
-                        setCategoryAlreadyCreated(null);
-                        setIsAdding(false);
-                    }}
+                    onClose={() => setIsAdding(false)}
                 />
             )}
         </div>

@@ -8,7 +8,7 @@ import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/Fi
 import { PhoneField } from '@/components/ui/PhoneField';
 import { useCopyFeedback } from '@/components/ui/useCopyFeedback';
 import { useModalA11y } from '@/components/ui/useModalA11y';
-import { fetchGrievanceOptionsThunk, selectDepartmentOptions, useAreas } from '@/features/metadata';
+import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, selectDepartmentOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { formatToE164 } from '@/lib/validation/phone';
 import { generateRandomPassword } from '@/lib/validation/password';
@@ -89,6 +89,9 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
   const [department, setDepartment] = useState('');
   const [serviceCategories, setServiceCategories] = useState<string[]>([]);
   const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
+  const allCategoryOptions = useAppSelector(selectCategoryFilterOptions);
+  const isCategoriesLoading = level === 'L3' ? grievanceOptionsStatus === 'loading' : isCategoryOptionsLoading;
+  const categoryList = level === 'L3' ? allCategoryOptions : categoryOptions;
   const [region, setRegion] = useState('');
   const [status, setStatus] = useState<string>('Active');
   const [reportsTo, setReportsTo] = useState('');
@@ -110,7 +113,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
       case 'designation':
         return isReviewer ? null : validateRequired(designation, 'Enter a designation.');
       case 'department':
-        return validateRequired(department, 'Select a department.');
+        return validateRequired(department, level === 'L3' ? 'Enter or select a department.' : 'Select a department.');
       case 'serviceCategories':
         return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
@@ -349,19 +352,41 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                 <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
                   Department <span className="text-red-500">*</span>
                 </label>
-                <AnimatedSelect
-                  options={departmentOptions.map((o) => o.label)}
-                  value={department}
-                  onChange={(value) => {
-                    setDepartment(value);
-                    setError('department', null);
-                    // The wired category list is department-specific — a category picked
-                    // for the old department may not even have a desk under the new one.
-                    setServiceCategories([]);
-                    setError('serviceCategories', null);
-                  }}
-                  placeholder="Select Department"
-                />
+                {level === 'L3' ? (
+                  <>
+                    <input
+                      {...a11y('department')}
+                      type="text"
+                      list="existing-departments"
+                      value={department}
+                      onChange={(e) => {
+                        setDepartment(e.target.value);
+                        setError('department', null);
+                      }}
+                      placeholder="Enter or select department"
+                      className={`border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
+                    />
+                    <datalist id="existing-departments">
+                      {departmentOptions.map((o) => (
+                        <option key={o.value} value={o.label} />
+                      ))}
+                    </datalist>
+                  </>
+                ) : (
+                  <AnimatedSelect
+                    options={departmentOptions.map((o) => o.label)}
+                    value={department}
+                    onChange={(value) => {
+                      setDepartment(value);
+                      setError('department', null);
+                      // The wired category list is department-specific — a category picked
+                      // for the old department may not even have a desk under the new one.
+                      setServiceCategories([]);
+                      setError('serviceCategories', null);
+                    }}
+                    placeholder="Select Department"
+                  />
+                )}
                 {fieldError('department')}
               </div>
 
@@ -411,14 +436,18 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                 aria-describedby={fieldErrors.serviceCategories ? errorIdFor(FIELD_IDS.serviceCategories) : undefined}
                 className="flex flex-wrap gap-2"
               >
-                {!department ? (
+                {level !== 'L3' && !department ? (
                   <span className="text-sm text-gray-400">Select a department first.</span>
-                ) : isCategoryOptionsLoading ? (
+                ) : isCategoriesLoading ? (
                   <span className="text-sm text-gray-400">Loading categories…</span>
-                ) : categoryOptions.length === 0 ? (
-                  <span className="text-sm text-gray-400">No service category is routed to this department yet.</span>
+                ) : categoryList.length === 0 ? (
+                  <span className="text-sm text-gray-400">
+                    {level === 'L3'
+                      ? 'No service categories available. Create a category first.'
+                      : 'No service category is routed to this department yet.'}
+                  </span>
                 ) : (
-                  categoryOptions.map((option) => (
+                  categoryList.map((option) => (
                     <button
                       key={option.value}
                       type="button"

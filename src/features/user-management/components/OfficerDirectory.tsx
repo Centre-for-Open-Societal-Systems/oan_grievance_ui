@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 import { useIsReviewOfficer } from '@/features/auth/hooks/useIsReviewOfficer';
 import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, useAreas } from '@/features/metadata';
@@ -31,7 +32,13 @@ export function OfficerDirectory() {
 
   const visibleTabs = useMemo(() => (canManage ? OFFICER_TABS : OFFICER_TABS.filter((tab) => tab.id !== 'reviewer')), [canManage]);
 
-  const [activeTab, setActiveTab] = useState<OfficerTabId>('admin');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const tabParam = searchParams?.get('tab') as OfficerTabId | null;
+  const [localTab, setLocalTab] = useState<OfficerTabId>('admin');
+  const activeTab: OfficerTabId = tabParam && OFFICER_TABS_BY_ID[tabParam] ? tabParam : localTab;
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
@@ -98,7 +105,12 @@ export function OfficerDirectory() {
   };
 
   const handleTabChange = (tab: OfficerTabId) => {
-    setActiveTab(tab);
+    setLocalTab(tab);
+    if (router && pathname) {
+      const params = new URLSearchParams(searchParams?.toString() ?? '');
+      params.set('tab', tab);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
     setSearchQuery('');
     resetFilters();
     setIsFiltersOpen(false);

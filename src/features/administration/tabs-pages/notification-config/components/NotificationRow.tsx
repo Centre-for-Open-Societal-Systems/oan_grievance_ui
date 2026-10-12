@@ -68,7 +68,7 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders, 
             const found = recipientOptions.find((o) => o.id === notification.role_level);
             if (found) return found.label;
         }
-        if (notification.recipient_type === 'Department Officer') return 'Department Head (L3)';
+        if (notification.recipient_type === 'Department Officer') return 'Department Admin';
         return notification.recipient_type || 'Submitter';
     }, [notification, recipientOptions]);
 

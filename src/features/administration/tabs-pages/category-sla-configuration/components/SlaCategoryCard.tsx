@@ -2,10 +2,9 @@
 
 import { useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Zap, Bell, BellOff, Edit2, Save, ChevronDown } from 'lucide-react';
+import { Zap, Bell, BellOff, Edit2, Save, AlertTriangle } from 'lucide-react';
 import { z } from 'zod';
 import { SlaCategory } from './types';
-import { fetchGrievanceTypes, MAX_PAGE_SIZE } from '../api/taxonomyApi';
 import { describeSaveError } from './apiErrorMessage';
 
 interface SlaCategoryCardProps {
@@ -21,32 +20,6 @@ interface SlaCategoryCardProps {
 export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: SlaCategoryCardProps) {
     const t = useTranslations('admin.taxonomy');
     const [isExpanded, setIsExpanded] = useState(false);
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    // The category's active grievance types, loaded once the card is first opened.
-    const [grievanceTypes, setGrievanceTypes] = useState<string[]>([]);
-    const [pickedGrievanceType, setPickedGrievanceType] = useState('');
-    const selectedGrievanceType = grievanceTypes.includes(pickedGrievanceType) ? pickedGrievanceType : (grievanceTypes[0] ?? '');
-    const setSelectedGrievanceType = setPickedGrievanceType;
-    const [typesRequested, setTypesRequested] = useState(false);
-    useEffect(() => {
-        if (!isExpanded) return;
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- marks the first open so the fetch below runs once
-        setTypesRequested(true);
-    }, [isExpanded]);
-    useEffect(() => {
-        if (!typesRequested) return;
-        const controller = new AbortController();
-        fetchGrievanceTypes(
-            { service_category: categoryData.category, is_active: true, page_size: MAX_PAGE_SIZE },
-            { signal: controller.signal }
-        )
-            .then((data) => setGrievanceTypes((data?.grievance_types ?? []).map((type) => type.type_name)))
-            // The dropdown is context for the SLA form; leave it empty if the types can't load.
-            .catch(() => {
-                if (!controller.signal.aborted) setGrievanceTypes([]);
-            });
-        return () => controller.abort();
-    }, [typesRequested, categoryData.category]);
     const [autoEscalate, setAutoEscalate] = useState(categoryData.autoEscalate);
     const [notifyOnEscalation, setNotifyOnEscalation] = useState(categoryData.notifyOnBreach);
     // A string, not a number: a plain `number` state snaps to 0 the instant the field is
@@ -60,7 +33,6 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
     const canEdit = !!onSaveSla;
 
     const categoryLabelId = useId();
-    const grievanceTypeLabelId = useId();
     const slaDaysInputId = useId();
 
     // Re-seeds the editable fields from the latest server data whenever the card is
@@ -133,10 +105,17 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                     </div>
 
                     <div className="flex flex-col gap-0.5 flex-1 w-full min-w-0">
-                        <div className='flex justify-between'>
-                            <span className="text-sm font-medium text-gray-900 truncate">
-                                {categoryData.department}
-                            </span>
+                        <div className='flex justify-between items-center'>
+                            {!categoryData.department ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
+                                    {t('noDepartment')}
+                                </span>
+                            ) : (
+                                <span className="text-sm font-medium text-gray-900 truncate">
+                                    {categoryData.department}
+                                </span>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-3">
@@ -187,7 +166,7 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                     <div className="p-0">
                         <div className=' bg-[#ECECF0]/30 p-6'>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                                {/* Row 1: Service Category and Grievance Type */}
+                                {/* Row 1: Service Category and SLA Days */}
                                 <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
                                     <label htmlFor={categoryLabelId} className="text-sm font-medium text-gray-800">
                                         {t('serviceCategory')}
@@ -200,50 +179,7 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                         className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-500 cursor-not-allowed focus:outline-none"
                                     />
                                 </div>
-                                <div className="col-span-1 md:col-span-2 flex flex-col gap-2 relative">
-                                    <label id={grievanceTypeLabelId} className="text-sm font-medium text-gray-800">
-                                        {t('grievanceTypeLabel')}
-                                    </label>
-                                    <div className="relative">
-                                        <button
-                                            type="button"
-                                            aria-labelledby={grievanceTypeLabelId}
-                                            aria-haspopup="listbox"
-                                            aria-expanded={isDropdownOpen}
-                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                            className="w-full bg-white border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent flex items-center justify-between transition-colors"
-                                        >
-                                            <span className="truncate">{selectedGrievanceType || '—'}</span>
-                                            <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                                        </button>
 
-                                        <div
-                                            role="listbox"
-                                            aria-labelledby={grievanceTypeLabelId}
-                                            className={`absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden transition-all duration-200 origin-top ${
-                                                isDropdownOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
-                                            }`}
-                                        >
-                                            {grievanceTypes.map((option, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    type="button"
-                                                    role="option"
-                                                    aria-selected={selectedGrievanceType === option}
-                                                    onClick={() => {
-                                                        setSelectedGrievanceType(option);
-                                                        setIsDropdownOpen(false);
-                                                    }}
-                                                    className={`w-full text-left px-4 py-2.5 text-[13px] transition-colors ${selectedGrievanceType === option ? 'bg-[#16A34A]/10 text-[#16A34A] font-medium' : 'text-gray-700 hover:bg-gray-50'} ${idx !== 0 ? 'border-t border-gray-100' : ''}`}
-                                                >
-                                                    {option}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Row 2: SLA Days and Toggles */}
                                 <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
                                     <label htmlFor={slaDaysInputId} className="text-sm font-medium text-gray-800">
                                         {t('slaDays')} <span className="text-red-500">*</span>
@@ -259,7 +195,8 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     />
                                 </div>
 
-                                <div className="col-span-1 flex flex-col gap-3">
+                                {/* Row 2: Toggles */}
+                                <div className="col-span-1 md:col-span-2 flex flex-col gap-3">
                                     <span className="text-[13px] font-medium text-gray-500">{t('autoEscalateOnBreach')}</span>
                                     <div className="flex flex-col gap-1.5">
                                         <label className="flex items-center cursor-pointer w-max">
@@ -280,7 +217,7 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     </div>
                                 </div>
 
-                                <div className="col-span-1 flex flex-col gap-3">
+                                <div className="col-span-1 md:col-span-2 flex flex-col gap-3">
                                     <span className="text-[13px] font-medium text-gray-500">{t('notifyOnEscalation')}</span>
                                     <div className="flex flex-col gap-1.5">
                                         <label className="flex items-center cursor-pointer w-max">

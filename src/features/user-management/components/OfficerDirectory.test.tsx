@@ -6,6 +6,14 @@ import { loginThunk } from '@/features/auth/store/authSlice';
 import { makeStore } from '@/store';
 import { OfficerDirectory } from './OfficerDirectory';
 
+const mockRouter = { push: vi.fn(), replace: vi.fn() };
+const currentSearchParams = new URLSearchParams();
+vi.mock('next/navigation', () => ({
+  useRouter: () => mockRouter,
+  usePathname: () => '/user-management',
+  useSearchParams: () => currentSearchParams,
+}));
+
 function officerRecord(overrides: Record<string, unknown> = {}) {
   return {
     name: 'officer@example.et',
@@ -72,12 +80,12 @@ function renderDirectory(role?: string) {
 }
 
 describe('OfficerDirectory', () => {
-  it('defaults to the Admin tab (role Officer, level L3) and shows its officers', async () => {
+  it('defaults to the Department Admin tab (role Officer, level L3) and shows its officers', async () => {
     fetchOfficers.mockResolvedValue(listData([officerRecord()]));
 
     renderDirectory();
 
-    expect(screen.getByRole('heading', { name: 'Admin' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Department Admin' })).toBeTruthy();
     expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
     expect(fetchOfficers).toHaveBeenCalledWith(expect.objectContaining({ role: 'Officer', level: 'L3' }), expect.anything());
   });
@@ -112,9 +120,9 @@ describe('OfficerDirectory', () => {
   it('opens the add-officer modal with a tab-specific title', () => {
     renderDirectory();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Admin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Department Admin' }));
 
-    expect(screen.getByRole('heading', { name: 'Add Admin' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Add Department Admin' })).toBeTruthy();
   });
 
   it('opens the advanced filters drawer with Category, Regions, and Status fields', () => {
@@ -154,7 +162,7 @@ describe('OfficerDirectory', () => {
 
     renderDirectory('Grievance Review Officer');
 
-    expect(screen.queryByRole('button', { name: 'Add Admin' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add Department Admin' })).toBeNull();
     expect(screen.queryByRole('tab', { name: /Reviewer/ })).toBeNull();
     // Still fully readable — only the write controls (and the admin-only Reviewer tab) are gone.
     expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
@@ -166,7 +174,7 @@ describe('OfficerDirectory', () => {
 
     renderDirectory('Grievance Admin');
 
-    expect(screen.getByRole('button', { name: 'Add Admin' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add Department Admin' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /Reviewer/ })).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Edit Tigist Alemu' })).toBeTruthy();
   });
@@ -189,7 +197,7 @@ describe('OfficerDirectory', () => {
 
     const { container } = renderDirectory();
     await screen.findByText('Tigist Alemu');
-    expect(container.textContent).toContain('Showing 1 of 30 Admins lists');
+    expect(container.textContent).toContain('Showing 1 of 30 Department Admins lists');
 
     fetchOfficers.mockResolvedValue(listData([officerRecord({ full_name: 'Abel Dereje' })], 30, 2));
     fireEvent.click(screen.getByRole('button', { name: '2' }));
