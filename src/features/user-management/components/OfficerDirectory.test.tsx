@@ -6,6 +6,22 @@ import { loginThunk } from '@/features/auth/store/authSlice';
 import { makeStore } from '@/store';
 import { OfficerDirectory } from './OfficerDirectory';
 
+const currentSearchParams = new URLSearchParams();
+const mockRouter = {
+  push: vi.fn(),
+  replace: vi.fn((url: string) => {
+    const query = url.split('?')[1] ?? '';
+    const newParams = new URLSearchParams(query);
+    Array.from(currentSearchParams.keys()).forEach((key) => currentSearchParams.delete(key));
+    newParams.forEach((val, key) => currentSearchParams.set(key, val));
+  }),
+};
+vi.mock('next/navigation', () => ({
+  useRouter: () => mockRouter,
+  usePathname: () => '/user-management',
+  useSearchParams: () => currentSearchParams,
+}));
+
 function officerRecord(overrides: Record<string, unknown> = {}) {
   return {
     name: 'officer@example.et',
@@ -56,6 +72,7 @@ vi.mock('@/features/metadata/api/metadataApi', async (importOriginal) => ({
 
 afterEach(() => {
   vi.clearAllMocks();
+  Array.from(currentSearchParams.keys()).forEach((key) => currentSearchParams.delete(key));
 });
 
 /** `role` seeds the store with a signed-in user holding that role, as `loginThunk` would. */
@@ -72,12 +89,12 @@ function renderDirectory(role?: string) {
 }
 
 describe('OfficerDirectory', () => {
-  it('defaults to the Admin tab (role Officer, level L3) and shows its officers', async () => {
+  it('defaults to the Department Admin tab (role Officer, level L3) and shows its officers', async () => {
     fetchOfficers.mockResolvedValue(listData([officerRecord()]));
 
     renderDirectory();
 
-    expect(screen.getByRole('heading', { name: 'Admin' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Department Admin' })).toBeTruthy();
     expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
     expect(fetchOfficers).toHaveBeenCalledWith(expect.objectContaining({ role: 'Officer', level: 'L3' }), expect.anything());
   });
@@ -112,9 +129,9 @@ describe('OfficerDirectory', () => {
   it('opens the add-officer modal with a tab-specific title', () => {
     renderDirectory();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Admin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Department Admin' }));
 
-    expect(screen.getByRole('heading', { name: 'Add Admin' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Add Department Admin' })).toBeTruthy();
   });
 
   it('opens the advanced filters drawer with Category, Regions, and Status fields', () => {
@@ -154,7 +171,7 @@ describe('OfficerDirectory', () => {
 
     renderDirectory('Grievance Review Officer');
 
-    expect(screen.queryByRole('button', { name: 'Add Admin' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add Department Admin' })).toBeNull();
     expect(screen.queryByRole('tab', { name: /Reviewer/ })).toBeNull();
     // Still fully readable — only the write controls (and the admin-only Reviewer tab) are gone.
     expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
@@ -166,7 +183,7 @@ describe('OfficerDirectory', () => {
 
     renderDirectory('Grievance Admin');
 
-    expect(screen.getByRole('button', { name: 'Add Admin' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add Department Admin' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /Reviewer/ })).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Edit Tigist Alemu' })).toBeTruthy();
   });
@@ -189,7 +206,7 @@ describe('OfficerDirectory', () => {
 
     const { container } = renderDirectory();
     await screen.findByText('Tigist Alemu');
-    expect(container.textContent).toContain('Showing 1 of 30 Admins lists');
+    expect(container.textContent).toContain('Showing 1 of 30 Department Admins lists');
 
     fetchOfficers.mockResolvedValue(listData([officerRecord({ full_name: 'Abel Dereje' })], 30, 2));
     fireEvent.click(screen.getByRole('button', { name: '2' }));
@@ -220,5 +237,69 @@ describe('OfficerDirectory', () => {
       expect.anything()
     );
     expect(fetchOfficers).not.toHaveBeenCalledWith(expect.objectContaining({ region: 'Afar' }), expect.anything());
+  });
+
+  it('activates tab specified in ?tab query param when valid', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord({ full_name: 'Senior Officer', level: 'L2' })]));
+    currentSearchParams.set('tab', 'nodal-l2');
+
+    renderDirectory();
+
+    expect(screen.getByRole('heading', { name: 'Senior Nodal Officers (L2)' })).toBeTruthy();
+    expect(await screen.findByText('Senior Officer')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Officer', level: 'L2' }),
+      expect.anything()
+    );
+  });
+
+  it('safely falls back to Department Admin when ?tab is a prototype property or invalid', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()]));
+    currentSearchParams.set('tab', 'constructor');
+
+    renderDirectory();
+
+    expect(screen.getByRole('heading', { name: 'Department Admin' })).toBeTruthy();
+    expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Officer', level: 'L3' }),
+      expect.anything()
+    );
+  });
+
+  it('prevents Grievance Review Officer from accessing the Reviewer tab via ?tab=reviewer', async () => {
+    fetchOfficers.mockResolvedValue(listData([officerRecord()]));
+    currentSearchParams.set('tab', 'reviewer');
+
+    renderDirectory('Grievance Review Officer');
+
+    // UI guard enforces visibleTabs restriction; falls back to default visible tab (Department Admin)
+    expect(screen.getByRole('heading', { name: 'Department Admin' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: /Reviewer/ })).toBeNull();
+    expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Officer', level: 'L3' }),
+      expect.anything()
+    );
+    expect(fetchOfficers).not.toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Reviewer' }),
+      expect.anything()
+    );
+  });
+
+  it('allows an Admin to open the Reviewer tab via ?tab=reviewer', async () => {
+    fetchOfficers.mockResolvedValue(
+      listData([officerRecord({ full_name: 'Review Officer One', role: 'Reviewer', level: null, designation: null })])
+    );
+    currentSearchParams.set('tab', 'reviewer');
+
+    renderDirectory('Grievance Admin');
+
+    expect(screen.getByRole('heading', { name: 'Reviewer' })).toBeTruthy();
+    expect(await screen.findByText('Review Officer One')).toBeTruthy();
+    expect(fetchOfficers).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'Reviewer', level: undefined }),
+      expect.anything()
+    );
   });
 });

@@ -7,17 +7,15 @@ import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { Field, FormShell, inputClass } from './FormShell';
-import { fetchGrievanceTypes, MAX_PAGE_SIZE } from '../api/taxonomyApi';
 import { describeSaveError } from './apiErrorMessage';
-import { SuggestionInput } from './SuggestionInput';
 import { suggestTicketCode } from './ticketCode';
 import type { CreateServiceCategoryPayload } from './taxonomyTypes';
 
 export interface AddCategoryModalProps {
   /** Ticket codes already in use, so the generated one avoids them. */
   takenCodes: readonly string[];
-  /** Creates the category, then its first grievance type. */
-  onCreate: (payload: CreateServiceCategoryPayload, firstType: string) => Promise<unknown>;
+  /** Creates the category along with its SLA configuration. */
+  onCreate: (payload: CreateServiceCategoryPayload) => Promise<unknown>;
   onClose: () => void;
 }
 
@@ -37,6 +35,7 @@ function Toggle({ label, stateLabel, checked, onChange }: ToggleProps) {
           <input
             type="checkbox"
             role="switch"
+            aria-label={label}
             className="sr-only peer"
             checked={checked}
             onChange={(e) => onChange(e.target.checked)}
@@ -51,44 +50,24 @@ function Toggle({ label, stateLabel, checked, onChange }: ToggleProps) {
 }
 
 /**
- * Add Category, as designed: name, first grievance type, and the SLA fields.
- *
- * Only the name and the type reach the service. It also needs a ticket code,
- * which the design has no field for, so one is generated from the name. SLA
- * days and the two toggles have no API yet; they are kept in the form so the
- * layout matches, but are not sent.
+ * Add Category: name and SLA configuration fields.
+ * Generates a 3-character ticket code from the name and establishes
+ * the category and its resolution SLA atomically.
  */
 export function AddCategoryModal({ takenCodes, onCreate, onClose }: AddCategoryModalProps) {
   const t = useTranslations('admin.taxonomy');
   const nameRef = useRef<HTMLInputElement>(null);
-  const typeRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
-  const [grievanceType, setGrievanceType] = useState('');
   const [slaDays, setSlaDays] = useState('');
   const [autoEscalate, setAutoEscalate] = useState(true);
-  const [notifyOnSubmit, setNotifyOnSubmit] = useState(false);
-  // Names of the grievance types that already exist, offered as suggestions. A type can't move
-  // between categories, so choosing one creates a type of that name under the new category.
-  const [typeSuggestions, setTypeSuggestions] = useState<string[]>([]);
+  const [notifyOnBreach, setNotifyOnBreach] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; grievanceType?: string; slaDays?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; slaDays?: string }>({});
 
   useEffect(() => {
     nameRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchGrievanceTypes({ is_active: true, page_size: MAX_PAGE_SIZE }, { signal: controller.signal })
-      .then((data) => {
-        const names = (data?.grievance_types ?? []).map((type) => type.type_name);
-        setTypeSuggestions([...new Set(names)].sort((a, b) => a.localeCompare(b)));
-      })
-      // Suggestions are a convenience; the field still takes any name typed in.
-      .catch(() => undefined);
-    return () => controller.abort();
   }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -96,13 +75,12 @@ export function AddCategoryModal({ takenCodes, onCreate, onClose }: AddCategoryM
 
     const schema = z.object({
       name: z.string().trim().min(1, t('nameRequired')).max(140, t('nameTooLong')),
-      grievanceType: z.string().trim().min(1, t('typeRequired')).max(140, t('nameTooLong')),
       slaDays: z
         .string()
         .trim()
-        .refine((v) => v === '' || /^[1-9]\d*$/.test(v), t('slaDaysInvalid')),
+        .refine((v) => /^[1-9]\d*$/.test(v), t('slaDaysInvalid')),
     });
-    const parsed = schema.safeParse({ name, grievanceType, slaDays });
+    const parsed = schema.safeParse({ name, slaDays });
     if (!parsed.success) {
       const errors: typeof fieldErrors = {};
       for (const issue of parsed.error.issues) {
@@ -111,7 +89,6 @@ export function AddCategoryModal({ takenCodes, onCreate, onClose }: AddCategoryM
       }
       setFieldErrors(errors);
       if (errors.name) nameRef.current?.focus();
-      else if (errors.grievanceType) typeRef.current?.focus();
       return;
     }
 
@@ -125,7 +102,13 @@ export function AddCategoryModal({ takenCodes, onCreate, onClose }: AddCategoryM
     setIsSaving(true);
     setError(null);
     try {
-      await onCreate({ category_name: parsed.data.name, code }, parsed.data.grievanceType);
+      await onCreate({
+        category_name: parsed.data.name,
+        code,
+        sla_days: parseInt(parsed.data.slaDays, 10),
+        auto_escalate: autoEscalate,
+        notify_on_breach: notifyOnBreach,
+      });
       onClose();
     } catch (err) {
       setError(
@@ -165,25 +148,7 @@ export function AddCategoryModal({ takenCodes, onCreate, onClose }: AddCategoryM
             )}
           </Field>
 
-          <Field label={t('grievanceTypeLabel')} required error={fieldErrors.grievanceType}>
-            {(id, describedBy) => (
-              <SuggestionInput
-                id={id}
-                inputRef={typeRef}
-                value={grievanceType}
-                suggestions={typeSuggestions}
-                placeholder={t('grievanceTypePlaceholder')}
-                invalid={!!fieldErrors.grievanceType}
-                describedBy={describedBy}
-                onChange={(next) => {
-                  setGrievanceType(next);
-                  if (fieldErrors.grievanceType) setFieldErrors((p) => ({ ...p, grievanceType: undefined }));
-                }}
-              />
-            )}
-          </Field>
-
-          <Field label={t('slaDays')} error={fieldErrors.slaDays} hint={t('slaNotSaved')}>
+          <Field label={t('slaDays')} required error={fieldErrors.slaDays}>
             {(id, describedBy) => (
               <input
                 id={id}
@@ -201,7 +166,7 @@ export function AddCategoryModal({ takenCodes, onCreate, onClose }: AddCategoryM
             )}
           </Field>
 
-          <div className="flex flex-wrap gap-x-10 gap-y-4">
+          <div className="flex flex-wrap gap-x-10 gap-y-4 sm:col-span-2">
             <Toggle
               label={t('autoEscalate')}
               stateLabel={autoEscalate ? t('active') : t('inactive')}
@@ -209,10 +174,10 @@ export function AddCategoryModal({ takenCodes, onCreate, onClose }: AddCategoryM
               onChange={setAutoEscalate}
             />
             <Toggle
-              label={t('notifyOnSubmit')}
-              stateLabel={notifyOnSubmit ? t('active') : t('inactive')}
-              checked={notifyOnSubmit}
-              onChange={setNotifyOnSubmit}
+              label={t('notifyOnEscalation')}
+              stateLabel={notifyOnBreach ? t('active') : t('inactive')}
+              checked={notifyOnBreach}
+              onChange={setNotifyOnBreach}
             />
           </div>
         </div>

@@ -257,7 +257,7 @@ export default function NotificationConfigPage() {
                                     <option value="Assigned Officer">Assigned Officer</option>
                                     <option value="nodal_officer">Nodal Officer (L1)</option>
                                     <option value="senior_nodal_officer">Senior Nodal Officer (L2)</option>
-                                    <option value="department_head">Department Head (L3)</option>
+                                    <option value="department_head">Department Admin</option>
                                 </>
                             )}
                         </select>

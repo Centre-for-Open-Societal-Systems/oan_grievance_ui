@@ -8,7 +8,7 @@ import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/Fi
 import { PhoneField } from '@/components/ui/PhoneField';
 import { useCopyFeedback } from '@/components/ui/useCopyFeedback';
 import { useModalA11y } from '@/components/ui/useModalA11y';
-import { fetchGrievanceOptionsThunk, selectDepartmentOptions, useAreas } from '@/features/metadata';
+import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, selectDepartmentOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
 import { generateRandomPassword } from '@/lib/validation/password';
@@ -83,6 +83,9 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, o
   const [department, setDepartment] = useState(officer?.department ?? '');
   const [serviceCategories, setServiceCategories] = useState<string[]>(officer?.tags ?? []);
   const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
+  const allCategoryOptions = useAppSelector(selectCategoryFilterOptions);
+  const isCategoriesLoading = level === 'L3' ? grievanceOptionsStatus === 'loading' : isCategoryOptionsLoading;
+  const categoryList = level === 'L3' ? allCategoryOptions : categoryOptions;
   // Seeded directly from the officer's own area id (not by re-matching `officer.region`'s
   // display label against the loaded area list) — that match used to fail silently whenever
   // the backend had no region_name to show, leaving `region` blank and wiping the officer's
@@ -296,10 +299,12 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, o
                   onChange={(value) => {
                     setDepartment(value);
                     setError('department', null);
-                    // The wired category list is department-specific — a category picked
-                    // for the old department may not even have a desk under the new one.
-                    setServiceCategories([]);
-                    setError('serviceCategories', null);
+                    // Below L3 the category list is department-specific — a category picked for
+                    // the old department may not even have a desk under the new one.
+                    if (level !== 'L3') {
+                      setServiceCategories([]);
+                      setError('serviceCategories', null);
+                    }
                   }}
                   placeholder="Select Department"
                 />
@@ -352,14 +357,18 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, o
                 aria-describedby={fieldErrors.serviceCategories ? errorIdFor(FIELD_IDS.serviceCategories) : undefined}
                 className="flex flex-wrap gap-2"
               >
-                {!department ? (
+                {level !== 'L3' && !department ? (
                   <span className="text-sm text-gray-400">Select a department first.</span>
-                ) : isCategoryOptionsLoading ? (
+                ) : isCategoriesLoading ? (
                   <span className="text-sm text-gray-400">Loading categories…</span>
-                ) : categoryOptions.length === 0 ? (
-                  <span className="text-sm text-gray-400">No service category is routed to this department yet.</span>
+                ) : categoryList.length === 0 ? (
+                  <span className="text-sm text-gray-400">
+                    {level === 'L3'
+                      ? 'No service categories available. Create a category first.'
+                      : 'No service category is routed to this department yet.'}
+                  </span>
                 ) : (
-                  categoryOptions.map((option) => (
+                  categoryList.map((option) => (
                     <button
                       key={option.value}
                       type="button"

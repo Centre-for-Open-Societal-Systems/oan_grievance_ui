@@ -21,7 +21,7 @@ export function mapOfficerRecord(record: OfficerRecord, stats: OfficerStatistics
       (record.role === 'Reviewer'
         ? 'Review Officer'
         : record.level === 'L3'
-          ? 'Department Head'
+          ? 'Department Admin'
           : record.level === 'L1'
             ? 'Nodal Officer'
             : 'Senior Nodal Officer'),

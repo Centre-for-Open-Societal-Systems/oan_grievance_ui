@@ -49,10 +49,10 @@ export interface OfficerTabConfig {
 export const OFFICER_TABS: OfficerTabConfig[] = [
   {
     id: 'admin',
-    label: 'Admin',
-    description: 'Manage administrators, roles, and access permissions in one place.',
-    addButtonLabel: 'Add Admin',
-    listLabel: 'Admins',
+    label: 'Department Admin',
+    description: 'Manage department administrators, roles, and access permissions in one place.',
+    addButtonLabel: 'Add Department Admin',
+    listLabel: 'Department Admins',
   },
   {
     id: 'nodal-l1',
@@ -77,9 +77,12 @@ export const OFFICER_TABS: OfficerTabConfig[] = [
   },
 ];
 
-/** `OFFICER_TABS` keyed by id, for an exhaustively-typed O(1) lookup instead of `.find()!`. */
-export const OFFICER_TABS_BY_ID: Record<OfficerTabId, OfficerTabConfig> = Object.fromEntries(
-  OFFICER_TABS.map((tab) => [tab.id, tab])
+/** `OFFICER_TABS` keyed by id, for an exhaustively-typed O(1) lookup without inherited prototype properties. */
+export const OFFICER_TABS_BY_ID: Record<OfficerTabId, OfficerTabConfig> = Object.freeze(
+  OFFICER_TABS.reduce<Record<string, OfficerTabConfig>>((acc, tab) => {
+    acc[tab.id] = tab;
+    return acc;
+  }, Object.create(null))
 ) as Record<OfficerTabId, OfficerTabConfig>;
 
 /**

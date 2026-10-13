@@ -74,6 +74,9 @@ export interface CreateServiceCategoryPayload {
   sort_order?: number;
   is_active?: boolean;
   is_default?: boolean;
+  sla_days?: number;
+  auto_escalate?: boolean;
+  notify_on_breach?: boolean;
 }
 
 /** Partial; `is_default: false` is refused by the service — promote another category instead. */
