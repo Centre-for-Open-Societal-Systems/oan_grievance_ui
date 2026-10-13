@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BackendAuthError } from '@/lib/oanAuthBackend';
 
 const callBackendAuth = vi.fn();
 
@@ -33,7 +34,9 @@ function forwardedBody(): Record<string, unknown> {
   return callBackendAuth.mock.calls[0]![1] as Record<string, unknown>;
 }
 
-describe('POST /api/auth/register — submitter_type', () => {
+const FAYDA_ID = '6557092147530500';
+
+describe('POST /api/auth/register — submitter fields', () => {
   beforeEach(() => {
     callBackendAuth.mockReset();
     callBackendAuth.mockResolvedValue(null);
@@ -55,14 +58,58 @@ describe('POST /api/auth/register — submitter_type', () => {
     expect(forwardedBody()).not.toHaveProperty('submitter_type');
   });
 
-  it('drops a type it does not recognise instead of forwarding it', async () => {
+  it('forwards the submitter type, Fayda ID and channel together', async () => {
+    const res = await post({
+      submitter_type: 'Individual Farmer',
+      fayda_id: FAYDA_ID,
+      submission_channel: 'Web Portal',
+    });
+
+    expect(res.status).toBe(200);
+    expect(forwardedBody()).toMatchObject({
+      submitter_type: 'Individual Farmer',
+      fayda_id: FAYDA_ID,
+      submission_channel: 'Web Portal',
+    });
+  });
+
+  it('refuses a type it does not support, without calling the backend', async () => {
     // Includes a staff-style value: registration must not be a way to pick one.
     for (const submitter_type of ['Grievance Admin', 'Cooperative', '', 42, null, { name: 'Development Agent' }]) {
-      callBackendAuth.mockClear();
       const res = await post({ submitter_type });
-      expect(res.status).toBe(200);
-      expect(forwardedBody()).not.toHaveProperty('submitter_type');
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ message: 'Unsupported submitter type.' });
     }
+    expect(callBackendAuth).not.toHaveBeenCalled();
+  });
+
+  it('refuses a Fayda ID that is not 16 digits, without calling the backend', async () => {
+    for (const fayda_id of ['12345', '65570921475305001', 'ET-FAYDA-344012394', '', 6557092147530500]) {
+      const res = await post({ submitter_type: 'Individual Farmer', fayda_id });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ message: 'Fayda ID must be a 16-digit number.' });
+    }
+    expect(callBackendAuth).not.toHaveBeenCalled();
+  });
+
+  it('refuses an empty submission channel, but leaves an unknown one to the backend to judge', async () => {
+    expect((await post({ submission_channel: '  ' })).status).toBe(400);
+    expect(callBackendAuth).not.toHaveBeenCalled();
+
+    expect((await post({ submission_channel: 'Carrier Pigeon' })).status).toBe(200);
+    expect(forwardedBody()).toMatchObject({ submission_channel: 'Carrier Pigeon' });
+  });
+
+  it('does not pass unknown fields through', async () => {
+    await post({
+      submitter_type: 'Individual Farmer',
+      fayda_id: FAYDA_ID,
+      dedupe_key: 'fayda:1',
+      administrative_area: 'x',
+    });
+    expect(Object.keys(forwardedBody()).sort()).toEqual(
+      ['email', 'fayda_id', 'full_name', 'password', 'phone_number', 'submitter_type'].sort()
+    );
   });
 
   it('never forwards role fields, whatever the caller sends', async () => {
@@ -70,5 +117,32 @@ describe('POST /api/auth/register — submitter_type', () => {
     const body = forwardedBody();
     expect(body).not.toHaveProperty('role');
     expect(body).not.toHaveProperty('roles');
+  });
+});
+
+describe('POST /api/auth/register — backend rejections', () => {
+  beforeEach(() => {
+    callBackendAuth.mockReset();
+  });
+
+  it("passes the backend's validation message through so the form can show it", async () => {
+    callBackendAuth.mockRejectedValue(
+      new BackendAuthError("Submission Channel 'Carrier Pigeon' does not exist or is not active.", 400, 'VALIDATION_ERROR')
+    );
+    const res = await post({ submission_channel: 'Carrier Pigeon' });
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      message: "Submission Channel 'Carrier Pigeon' does not exist or is not active.",
+    });
+  });
+
+  it('keeps a duplicate Fayda ID as a 409 with its message', async () => {
+    const message = "A Submitter Profile with dedupe key 'fayda:6557…' is already registered under another account.";
+    callBackendAuth.mockRejectedValue(new BackendAuthError(message, 409, 'DUPLICATE_ENTRY'));
+    const res = await post({ submitter_type: 'Individual Farmer', fayda_id: FAYDA_ID });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ message });
   });
 });

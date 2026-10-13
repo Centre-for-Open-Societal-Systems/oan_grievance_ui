@@ -8,17 +8,42 @@ describe('authApi - registerUser', () => {
     global.fetch = originalFetch;
   });
 
-  it('sends the chosen submitter type to /api/auth/register, and only when there is one', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true }) } as Response);
-    const base = { email: 'a@example.com', password: 'Str0ng!Passw0rd', full_name: 'A B', phone_number: '+251911000000' };
+  const base = { email: 'a@example.com', password: 'Str0ng!Passw0rd', full_name: 'A B', phone_number: '+251911000000' };
 
-    await registerUser({ ...base, submitter_type: 'Development Agent' });
-    await registerUser(base);
+  it('sends the submitter type, Fayda ID and the Web Portal channel to /api/auth/register', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true }) } as Response);
+
+    await registerUser({ ...base, submitter_type: 'Individual Farmer', fayda_id: '6557092147530500' });
 
     const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls[0]![0]).toBe('/api/auth/register');
-    expect(JSON.parse(calls[0]![1].body)).toEqual({ ...base, submitter_type: 'Development Agent' });
-    expect(JSON.parse(calls[1]![1].body)).toEqual(base);
+    expect(JSON.parse(calls[0]![1].body)).toEqual({
+      ...base,
+      submitter_type: 'Individual Farmer',
+      fayda_id: '6557092147530500',
+      submission_channel: 'Web Portal',
+    });
+  });
+
+  it('sends the Web Portal channel with just the account fields, and no type or ID that was not given', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true }) } as Response);
+
+    await registerUser(base);
+
+    const body = JSON.parse((global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]![1].body);
+    expect(body).toEqual({ ...base, submission_channel: 'Web Portal' });
+  });
+
+  it("rejects with the backend's message, so the form can show it", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ message: 'A Submitter Profile with this dedupe key is already registered.' }),
+    } as Response);
+
+    await expect(registerUser({ ...base, fayda_id: '6557092147530500' })).rejects.toThrow(
+      'A Submitter Profile with this dedupe key is already registered.'
+    );
   });
 });
 
@@ -108,6 +133,9 @@ describe('authApi - getMe()', () => {
             preferred_language: 'en',
             profile_id: 'SUB-00141',
             type: 'Individual Farmer',
+            submitter_type: 'Individual Farmer',
+            submission_channel: 'Web Portal',
+            fayda_id: '6557092147530500',
           },
         },
         roles: ['Grievance Submitter'],
@@ -140,7 +168,10 @@ describe('authApi - getMe()', () => {
     expect(user.type).toBe('Individual Farmer');
     expect(user.email).toBe('abebe.farmer.344012394@example.com');
     expect(user.mobile_no).toBe('+251934401239');
-    expect(user.fayda_id).toBe('ET-FAYDA-344012394');
+    expect(user.submitter_type).toBe('Individual Farmer');
+    expect(user.submission_channel).toBe('Web Portal');
+    // The flat `fayda_id` wins over the identities entry.
+    expect(user.fayda_id).toBe('6557092147530500');
     expect(user.profile_id).toBe('SUB-00141');
     expect(user.roles).toEqual(['Grievance Submitter']);
     expect(user.administrative_area).toBe('kebele-ET140108101008');
@@ -153,6 +184,53 @@ describe('authApi - getMe()', () => {
     expect((user as any).request_id).toBeUndefined(); // eslint-disable-line @typescript-eslint/no-explicit-any
     expect((user as any).profiles).toBeUndefined(); // eslint-disable-line @typescript-eslint/no-explicit-any
     expect((user as any).status).toBeUndefined(); // eslint-disable-line @typescript-eslint/no-explicit-any
+  });
+
+  it('falls back to the identities entry for the Fayda ID while the backend sends no flat fayda_id', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          login_email: 'abebe@example.com',
+          full_name: 'Abebe Bikila',
+          roles: ['Grievance Submitter'],
+          profiles: {
+            grievance: { type: 'Individual Farmer', identities: [{ scheme: 'fayda', value: 'ET-FAYDA-344012394' }] },
+          },
+        },
+        status: 'success',
+      }),
+    } as Response);
+
+    const user = await getMe();
+
+    expect(user.fayda_id).toBe('ET-FAYDA-344012394');
+    expect(user.submitter_type).toBeUndefined();
+    expect(user.submission_channel).toBeUndefined();
+  });
+
+  it('leaves the Fayda ID unset when the profile has none, rather than failing', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          login_email: 'agent@example.com',
+          full_name: 'Tigist Agent',
+          roles: ['Grievance Submitter'],
+          profiles: {
+            grievance: { type: 'Development Agent', submitter_type: 'Development Agent', fayda_id: null, identities: [] },
+          },
+        },
+        status: 'success',
+      }),
+    } as Response);
+
+    const user = await getMe();
+
+    expect(user.fayda_id).toBeUndefined();
+    expect(user.submitter_type).toBe('Development Agent');
   });
 
   it('throws sessionExpired if data is missing or unauthorized', async () => {

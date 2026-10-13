@@ -1,7 +1,7 @@
 'use client';
 
 import { registerUser } from '@/features/auth/api/authApi';
-import { submitsOnBehalfOfOthers } from '@/components/submitter-identity/fields';
+import { ID_FIELD_KEYS, submitsOnBehalfOfOthers } from '@/components/submitter-identity/fields';
 import { useIdentityErrors } from '@/components/submitter-identity/useIdentityErrors';
 import { saveSubmitterProfile } from '@/lib/submitterProfile';
 import {
@@ -34,6 +34,23 @@ const ALREADY_COLLECTED_FIELDS_BY_TYPE: Record<string, string[]> = {
   woreda_kebele: ['fullName', 'phoneNumber', 'email'],
 };
 
+// The identity field holding each type's national ID. Only an Individual Farmer
+// is registered under it as its own; the organisation types are registered with
+// their representative's/official's, since the backend (which registers them as
+// the default type, see submitterType.ts) needs a Fayda ID for every account it
+// creates that way.
+const FAYDA_FIELD_BY_TYPE: Record<string, string> = {
+  individual: 'faydaId',
+  cooperative: 'representativeFaydaId',
+  ngo: 'representativeFaydaId',
+  woreda_kebele: 'officialFaydaId',
+};
+
+// A rejection the profile step caused (a duplicate or unknown Fayda ID, type or
+// channel) is shown there, where it can be fixed; anything else is about the
+// account step's fields.
+const PROFILE_REJECTION_PATTERN = /fayda|submitter type|submission channel/i;
+
 type RegisterStep = 'account' | 'profile' | 'success';
 
 /**
@@ -59,6 +76,8 @@ export function RegisterForm() {
   // A problem with the account as a whole (e.g. the email is already
   // registered). Problems with one field go under that field instead.
   const [error, setError] = useState<string | null>(null);
+  // The same for the profile step: a rejected Fayda ID, type or channel.
+  const [profileError, setProfileError] = useState<string | null>(null);
   const accountErrors = useFieldErrors<AccountField>();
 
   const [submitterType, setSubmitterType] = useState('');
@@ -81,6 +100,7 @@ export function RegisterForm() {
     setIdentityValues({});
     identity.clear();
     setConsentChecked(false);
+    setProfileError(null);
   };
 
   const setIdentityValue = (key: string, value: string) => {
@@ -143,25 +163,34 @@ export function RegisterForm() {
     setStep('profile');
   };
 
-  // Registers the account with the type chosen on the profile step. Any
-  // failure (email already taken, a rule only the backend knows) is a problem
-  // with what was entered on the account step, so it returns there with the
-  // message and everything typed still in place.
+  // Registers the account with the type and Fayda ID chosen on the profile
+  // step. A failure the backend reports about those (duplicate Fayda ID, an
+  // unknown type or channel) stays on this step; any other (email already
+  // taken, a rule only the backend knows) is about what was entered on the
+  // account step, so it returns there. Either way the message is shown and
+  // everything typed is still in place.
   const createAccount = async (): Promise<boolean> => {
     setIsLoading(true);
     try {
       const backendType = backendSubmitterTypeFor(submitterType);
+      const faydaId = identityValues[FAYDA_FIELD_BY_TYPE[submitterType] ?? '']?.trim();
       await registerUser({
         email: email.trim(),
         password,
         full_name: fullName.trim(),
         phone_number: `${countryCode}${stripLeadingZero(phoneNumber)}`,
         ...(backendType ? { submitter_type: backendType } : {}),
+        ...(faydaId ? { fayda_id: faydaId } : {}),
       });
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
-      setStep('account');
+      const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      if (PROFILE_REJECTION_PATTERN.test(message)) {
+        setProfileError(message);
+      } else {
+        setError(message);
+        setStep('account');
+      }
       return false;
     } finally {
       setIsLoading(false);
@@ -212,10 +241,18 @@ export function RegisterForm() {
     }
 
     setError(null);
+    setProfileError(null);
     // Saved only once the account really exists, so a rejected sign-up doesn't
     // leave a profile snapshot behind for an email that never got registered.
+    // The national ID is left out: it now lives on the account's profile and
+    // comes back from /auth/me, so it needn't also sit in localStorage.
     if (!(await createAccount())) return;
-    saveSubmitterProfile(email, profileToSave);
+    saveSubmitterProfile(email, {
+      ...profileToSave,
+      identityValues: Object.fromEntries(
+        Object.entries(profileToSave.identityValues).filter(([key]) => !ID_FIELD_KEYS.includes(key))
+      ),
+    });
     setStep('success');
   };
 
@@ -232,6 +269,7 @@ export function RegisterForm() {
         consentChecked={consentChecked}
         onConsentChange={setConsentChecked}
         isSubmitting={isLoading}
+        submitError={profileError}
         onBack={() => setStep('account')}
         onSubmit={handleProfileSubmit}
       />

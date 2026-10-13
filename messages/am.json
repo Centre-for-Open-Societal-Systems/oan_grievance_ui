@@ -11,7 +11,7 @@
       "submitterTypeLabel": "የአቅራቢ ዓይነት",
       "submitterTypePlaceholder": "የአቅራቢ ዓይነት ይምረጡ",
       "continue": "ቀጥል",
-      "consentNotice": "ከላይ ያለው የፋይዳ መታወቂያ ቅሬታው ሲገመገም ማንነትዎን ያረጋግጣል። በነባሪነት በስክሪኑ ላይ የተደበቀ ሲሆን፣ ለቀጣዩ ጊዜ ቅሬታ ለማቅረብ አስቀድሞ ለመሙላት በዚህ መሣሪያ ላይ ይቀመጣል።",
+      "consentNotice": "ከላይ ያለው የፋይዳ መታወቂያ ቅሬታው ሲገመገም ማንነትዎን ያረጋግጣል። በነባሪነት በስክሪኑ ላይ የተደበቀ ሲሆን፣ ለቀጣዩ ጊዜ ቅሬታ ለማቅረብ አስቀድሞ ለመሙላት በመለያዎ ላይ ይቀመጣል።",
       "consentCheckboxLabel": "ብሔራዊ መታወቂያ ቁጥሬን ለማንነት ማረጋገጫ ለመስጠት እስማማለሁ።",
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
@@ -27,7 +27,10 @@
     "identityStep": {
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
-      "fieldRequired": "ይህ መስክ ያስፈልጋል።"
+      "fieldRequired": "ይህ መስክ ያስፈልጋል።",
+      "channelsLoadFailed": "የማቅረቢያ መንገዶችን መጫን አልተቻለም።",
+      "channelsEmpty": "በአሁኑ ጊዜ ምንም የማቅረቢያ መንገድ የለም።",
+      "retry": "እንደገና ይሞክሩ"
     },
     "detailsStep": {
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",

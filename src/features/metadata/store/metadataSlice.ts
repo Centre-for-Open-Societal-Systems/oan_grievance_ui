@@ -210,9 +210,14 @@ export const selectPreferredLanguageOptions = createSelector(
 
 export const selectSubmissionChannelOptions = createSelector(
   [
-    (state: MetadataRootState) =>
-      state.metadata.submitterOptions?.submission_types ??
-      state.metadata.grievanceOptions?.submission_channels,
+    // An empty `submission_types` counts as missing, so the grievance options'
+    // channel list still gets a say — `??` alone would keep the empty array.
+    (state: MetadataRootState) => {
+      const submissionTypes = state.metadata.submitterOptions?.submission_types;
+      return submissionTypes && submissionTypes.length > 0
+        ? submissionTypes
+        : state.metadata.grievanceOptions?.submission_channels;
+    },
   ],
   (backendChannels): Array<{ value: string; label: string }> => {
     if (backendChannels && backendChannels.length > 0) {

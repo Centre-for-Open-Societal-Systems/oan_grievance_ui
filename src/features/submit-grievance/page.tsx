@@ -12,7 +12,12 @@ import {
   selectSubmitterTypeOptions,
   type AreaRef,
 } from "@/features/metadata";
-import { buildInitialIdentityValues, identityAfterReset, resolveInitialSubmitterType } from "./initialIdentity";
+import {
+  buildInitialIdentityValues,
+  identityAfterReset,
+  resolveInitialSubmissionChannel,
+  resolveInitialSubmitterType,
+} from "./initialIdentity";
 import { buildSaveDraftPayload } from "./draftPayload";
 import { firstIncompleteStep, type WizardStep } from "./wizardSteps";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
@@ -97,7 +102,7 @@ export default function SubmitGrievancePage() {
 
   // Step 1 — Submitter Identity
   const [submitterType, setSubmitterType] = useState(() => resolveInitialSubmitterType(user, savedProfile));
-  const [submissionChannel, setSubmissionChannel] = useState(() => (user ? "web" : ""));
+  const [submissionChannel, setSubmissionChannel] = useState(() => resolveInitialSubmissionChannel(user));
   const [identityValues, setIdentityValues] = useState<Record<string, string>>(() =>
     buildInitialIdentityValues(user, savedProfile, resolveInitialSubmitterType(user, savedProfile))
   );
@@ -430,6 +435,8 @@ export default function SubmitGrievancePage() {
             setSubmissionChannel={setSubmissionChannel}
             identityValues={identityValues}
             setIdentityValue={setIdentityValue}
+            profileSubmitterType={user?.submitter_type || user?.type}
+            profileSubmissionChannel={user?.submission_channel}
           />
         )}
         {currentStep === 2 && (

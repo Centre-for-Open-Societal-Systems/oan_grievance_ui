@@ -1,6 +1,7 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { fetchApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
+import { DEFAULT_SUBMISSION_CHANNEL } from '@/lib/validation/registerSubmitter';
 import type { User } from '@/features/auth/store/authSlice';
 
 interface LoginCredentials {
@@ -41,6 +42,12 @@ export interface BackendAuthMeData {
       role?: string | null;
       role_level?: string | null;
       type?: string | null;
+      /** The backend submitter type name, e.g. `Individual Farmer` — same value as `type` for a submitter. */
+      submitter_type?: string | null;
+      /** The channel the account was registered through, by name, e.g. `Web Portal`. */
+      submission_channel?: string | null;
+      /** The Fayda ID itself. `null` unless the profile is Fayda-anchored. */
+      fayda_id?: string | null;
     };
     [key: string]: unknown;
   };
@@ -48,12 +55,13 @@ export interface BackendAuthMeData {
 }
 
 /**
- * The backend never sends a flat `fayda_id` — a submitter's national ID
- * comes back as one entry in `profiles.grievance.identities` (the same
- * scheme/value pairs `dedupe_key` is built from; see
- * `grievance_submitter_profile.py`'s `split_dedupe_key`). Not every
- * submitter has one: a Development Agent or a phone-only registrant's
- * `identities` array simply won't contain a `"fayda"` entry.
+ * A submitter's national ID as one entry in `profiles.grievance.identities`
+ * (the same scheme/value pairs `dedupe_key` is built from; see
+ * `grievance_submitter_profile.py`'s `split_dedupe_key`). `getMe` prefers the
+ * flat `fayda_id` the backend now sends and uses this only when that is
+ * missing — a backend that hasn't rolled out yet. Not every submitter has
+ * one: a Development Agent or a phone-only registrant's `identities` array
+ * simply won't contain a `"fayda"` entry.
  */
 export function resolveFaydaId(
   identities: Array<{ scheme?: string | null; value?: string | null }> | null | undefined
@@ -89,6 +97,10 @@ export interface RegisterFields {
   phone_number: string;
   /** Backend submitter type to register as (see `backendSubmitterTypeFor`). Omit for the default, Individual Farmer. */
   submitter_type?: string;
+  /** 16-digit Fayda ID. The backend requires one for an Individual Farmer. */
+  fayda_id?: string;
+  /** Channel name the account registers through. Defaults to `Web Portal`: the form has no channel selector. */
+  submission_channel?: string;
 }
 
 /** Does not sign the caller in — see the route: registration is "account created, now log in". */
@@ -97,7 +109,7 @@ export async function registerUser(fields: RegisterFields): Promise<void> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     credentials: 'include',
-    body: JSON.stringify(fields),
+    body: JSON.stringify({ ...fields, submission_channel: fields.submission_channel ?? DEFAULT_SUBMISSION_CHANNEL }),
   });
 
   const data = (await res.json().catch(() => ({}))) as { message?: string };
@@ -237,8 +249,10 @@ export async function getMe(): Promise<User> {
     country_code: d.country_code || grievanceProfile?.country_code || undefined,
     phone_number: d.phone_number || grievanceProfile?.phone_number || undefined,
     type,
+    submitter_type: grievanceProfile?.submitter_type || undefined,
+    submission_channel: grievanceProfile?.submission_channel || undefined,
     profile_id: grievanceProfile?.profile_id || undefined,
-    fayda_id: resolveFaydaId(grievanceProfile?.identities),
+    fayda_id: grievanceProfile?.fayda_id || resolveFaydaId(grievanceProfile?.identities),
     administrative_area: grievanceProfile?.administrative_area || undefined,
     administrative_unit: grievanceProfile?.administrative_unit || undefined,
     preferred_language: grievanceProfile?.preferred_language || undefined,

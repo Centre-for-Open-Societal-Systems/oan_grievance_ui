@@ -41,7 +41,7 @@ describe('saveSubmitterProfile / loadSubmitterProfile', () => {
     vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
     saveSubmitterProfile(EMAIL, { submitterType: 'individual', identityValues: { fullName: 'A Farmer' } });
 
-    vi.setSystemTime(new Date('2026-01-03T00:00:00Z')); // 2 days later, past the 24h TTL
+    vi.setSystemTime(new Date('2026-01-03T00:00:00Z')); // 2 days later, past the 1h TTL
     expect(loadSubmitterProfile(EMAIL)).toBeNull();
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
@@ -51,7 +51,7 @@ describe('saveSubmitterProfile / loadSubmitterProfile', () => {
     vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
     saveSubmitterProfile(EMAIL, { submitterType: 'individual', identityValues: { fullName: 'A Farmer' } });
 
-    vi.setSystemTime(new Date('2026-01-01T23:00:00Z')); // 23h later, still within the 24h TTL
+    vi.setSystemTime(new Date('2026-01-01T00:50:00Z')); // 50 minutes later, still within the 1h TTL
     expect(loadSubmitterProfile(EMAIL)).not.toBeNull();
   });
 

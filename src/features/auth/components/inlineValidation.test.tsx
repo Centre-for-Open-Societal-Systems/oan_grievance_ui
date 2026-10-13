@@ -222,7 +222,7 @@ describe('Register — profile step', () => {
     expect(await screen.findByText('Account Created!')).toBeInTheDocument();
   });
 
-  it('sends no submitter type for an individual farmer, leaving the backend default', async () => {
+  it('registers an individual farmer with that type and their Fayda ID', async () => {
     registerUser.mockResolvedValue(undefined);
     renderRegister();
     await completeAccountStep();
@@ -233,7 +233,72 @@ describe('Register — profile step', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
-    expect(registerUser.mock.calls[0]![0]).not.toHaveProperty('submitter_type');
+    expect(registerUser).toHaveBeenCalledWith(
+      expect.objectContaining({ submitter_type: 'Individual Farmer', fayda_id: '1234567890123456' })
+    );
+  });
+
+  it('sends no Fayda ID for a Development Agent, who has none to give', async () => {
+    registerUser.mockResolvedValue(undefined);
+    renderRegister();
+    await completeAccountStep();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Development Agent (on behalf)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
+    expect(registerUser.mock.calls[0]![0]).not.toHaveProperty('fayda_id');
+  });
+
+  it('registers an organisation under the default type, with its representative’s Fayda ID', async () => {
+    registerUser.mockResolvedValue(undefined);
+    renderRegister();
+    await completeAccountStep();
+
+    fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
+    fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
+    fireEvent.change(document.getElementById('si-orgName')!, { target: { value: 'Green NGO' } });
+    fireEvent.change(document.getElementById('si-registrationNumber')!, { target: { value: 'NGO-123' } });
+    fireEvent.change(document.getElementById('si-representativeName')!, { target: { value: 'Tigist Bekele' } });
+    fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: '6557092147530500' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
+    const fields = registerUser.mock.calls[0]![0] as Record<string, unknown>;
+    expect(fields).not.toHaveProperty('submitter_type');
+    expect(fields.fayda_id).toBe('6557092147530500');
+  });
+
+  it('stays on the profile step with the backend’s message when the Fayda ID is already registered, keeping what was typed', async () => {
+    const message = "A Submitter Profile with dedupe key 'fayda:6557…' is already registered under another account.";
+    registerUser.mockImplementation(async () => {
+      throw new Error(message);
+    });
+    renderRegister();
+    await completeAccountStep();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Individual Farmer' }));
+    fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
+    fireEvent.change(document.getElementById('si-faydaId')!, { target: { value: '6557092147530500' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+    expect(screen.getByText('Almost done!')).toBeInTheDocument();
+    expect(document.getElementById('si-faydaId')).toHaveValue('6557092147530500');
+  });
+
+  it('clears that message once the next attempt goes through', async () => {
+    registerUser.mockRejectedValueOnce(new Error("Submission Channel 'Web Portal' does not exist or is not active."));
+    registerUser.mockResolvedValueOnce(undefined);
+    renderRegister();
+    await completeAccountStep();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Development Agent (on behalf)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Submission Channel/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText('Account Created!')).toBeInTheDocument();
   });
 
   it('returns to the account step with the backend’s message if registration is rejected', async () => {
