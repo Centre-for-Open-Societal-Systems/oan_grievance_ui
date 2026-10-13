@@ -155,6 +155,108 @@ describe('authApi - getMe()', () => {
     expect((user as any).status).toBeUndefined(); // eslint-disable-line @typescript-eslint/no-explicit-any
   });
 
+  // The shape of a registered NGO's real /api/v1/auth/me response.
+  const ngoMe = (organization: Record<string, unknown> | null | undefined) => ({
+    data: {
+      country_code: '+251',
+      first_name: 'Test',
+      full_name: 'Test NGO',
+      last_name: 'NGO',
+      login_email: 'test_ngo@gmail.com',
+      mobile_no: '+251987654312',
+      phone_number: '987654312',
+      profiles: {
+        grievance: {
+          contact_email: 'test_ngo@gmail.com',
+          contact_mobile: '+251987654312',
+          country_code: '+251',
+          identities: [{ scheme: 'org', value: '1234567890' }],
+          ...(organization === undefined ? {} : { organization }),
+          phone_number: '987654312',
+          profile_id: 'SUB-02215',
+          registration_number: '1234567890',
+          representative_name: 'Test NGO',
+          submitter_name: 'Test NGO Org',
+          type: 'NGO',
+        },
+      },
+      roles: ['Grievance Submitter'],
+      user: '34cacb286e50bc68@id.openagrinet.internal',
+    },
+    status: 'success',
+  });
+
+  const mockMe = (body: unknown) => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body } as Response);
+  };
+
+  const REGISTERED_ORG = {
+    brand_name: 'NGO Org',
+    can_file: false,
+    entity_type: 'International NGO',
+    id: 'ORG-02216',
+    legal_name: 'Test NGO Org',
+    org_type: 'NGO',
+    registration_number: '1234567890',
+    representative_name: 'Test NGO',
+    status: 'In Review',
+    status_reason: null,
+  };
+
+  it("maps a registered NGO's organization block, including that it may not file yet", async () => {
+    mockMe(ngoMe(REGISTERED_ORG));
+    const user = await getMe();
+
+    expect(user.type).toBe('NGO');
+    expect(user.organisation).toEqual({
+      id: 'ORG-02216',
+      legalName: 'Test NGO Org',
+      brandName: 'NGO Org',
+      orgType: 'NGO',
+      entityType: 'International NGO',
+      registrationNumber: '1234567890',
+      representativeName: 'Test NGO',
+      status: 'In Review',
+      statusReason: null,
+      canFile: false,
+    });
+  });
+
+  it('reads no Fayda ID for an NGO or FPO, even if the backend sent one among its identities', async () => {
+    const body = ngoMe(REGISTERED_ORG);
+    body.data.profiles.grievance.identities = [
+      { scheme: 'org', value: '1234567890' },
+      { scheme: 'fayda', value: '1234567890123456' },
+    ];
+    mockMe(body);
+    expect((await getMe()).fayda_id).toBeUndefined();
+
+    body.data.profiles.grievance.type = 'FPO';
+    mockMe(body);
+    expect((await getMe()).fayda_id).toBeUndefined();
+  });
+
+  it('reports an Active organization as able to file', async () => {
+    mockMe(ngoMe({ ...REGISTERED_ORG, status: 'Active', can_file: true }));
+    expect((await getMe()).organisation).toMatchObject({ status: 'Active', canFile: true });
+  });
+
+  it('works out canFile itself when the backend leaves it out: only Active may file', async () => {
+    const { can_file: _omitted, ...withoutFlag } = REGISTERED_ORG;
+    void _omitted;
+    mockMe(ngoMe({ ...withoutFlag, status: 'Active' }));
+    expect((await getMe()).organisation?.canFile).toBe(true);
+    mockMe(ngoMe({ ...withoutFlag, status: 'Suspended', status_reason: 'Certificate not confirmed' }));
+    expect((await getMe()).organisation).toMatchObject({ canFile: false, statusReason: 'Certificate not confirmed' });
+  });
+
+  it('has no organisation for a farmer, or an NGO that has not registered one', async () => {
+    mockMe(ngoMe(undefined));
+    expect((await getMe()).organisation).toBeUndefined();
+    mockMe(ngoMe(null));
+    expect((await getMe()).organisation).toBeUndefined();
+  });
+
   it('throws sessionExpired if data is missing or unauthorized', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,

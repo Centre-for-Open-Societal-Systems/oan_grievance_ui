@@ -26,6 +26,8 @@ interface SubmitterIdentityCardProps {
   setSubmissionChannel: (value: string) => void;
   identityValues: Record<string, string>;
   setIdentityValue: (key: string, value: string) => void;
+  /** The account's type is fixed (a registered NGO / FPO files as itself), so the dropdown is shown but not editable. */
+  submitterTypeLocked?: boolean;
 }
 
 export function SubmitterIdentityCard({
@@ -37,6 +39,7 @@ export function SubmitterIdentityCard({
   setSubmissionChannel,
   identityValues,
   setIdentityValue,
+  submitterTypeLocked = false,
 }: SubmitterIdentityCardProps) {
   const dispatch = useAppDispatch();
   const dynamicSubmitterTypes = useAppSelector(selectSubmitterTypeOptions);
@@ -165,6 +168,7 @@ export function SubmitterIdentityCard({
               placeholder="Select Submitter Type"
               value={submitterType}
               onChange={handleSubmitterTypeChange}
+              disabled={submitterTypeLocked}
               invalid={!!identity.errors.submitterType}
               describedBy={identity.errors.submitterType ? errorIdFor("submitter-type") : undefined}
             />

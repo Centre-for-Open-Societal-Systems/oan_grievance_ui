@@ -15,15 +15,136 @@
       "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
-      "fieldRequired": "This field is required."
+      "fieldRequired": "This field is required.",
+      "organisationNotice": "After you sign in, we'll ask for your organisation's registration details — legal name, tax number, address and contacts."
     },
     "success": {
       "title": "Account Created!",
       "body": "Your account has been created successfully. You can now log in using your email and password.",
+      "organisationBody": "Your account has been created successfully. Log in to register your organisation.",
       "proceedToLogin": "Proceed to Login"
     }
   },
+  "organisation": {
+    "header": {
+      "completeRegistration": "Complete Registration",
+      "registered": "Organisation"
+    },
+    "loading": "Loading your organisation…",
+    "intro": {
+      "eyebrow": "Organisation Onboarding.",
+      "heading": {
+        "ngo": "Register your NGO",
+        "fpo": "Register your FPO"
+      },
+      "body": "A few details to confirm your organisation on the OAN grievance network. KYC documents are collected after registration."
+    },
+    "sections": {
+      "organisation": "Organisation",
+      "address": "Registered Address",
+      "contact": "Contact Details"
+    },
+    "fields": {
+      "legalName": { "label": "Legal entity name", "placeholder": "Enter Legal entity name" },
+      "brandName": {
+        "label": "Brand / display name",
+        "placeholder": "Enter if different from legal name",
+        "hint": "If different from legal name"
+      },
+      "entityType": { "label": "Entity type", "placeholder": "Select Entity type" },
+      "taxId": {
+        "label": "Tax registration number",
+        "placeholder": "Enter Tax registration number",
+        "hint": "Tax Identification number (9-10 characters)"
+      },
+      "streetAddress": { "label": "Street address", "placeholder": "Enter Street address" },
+      "kebele": { "label": "Kebele / Village", "placeholder": "Enter Kebele / Village" },
+      "woreda": { "label": "Woreda / District", "placeholder": "Enter Woreda / District" },
+      "zone": { "label": "Zone", "placeholder": "Enter Zone" },
+      "region": { "label": "Region", "placeholder": "Enter Region" },
+      "country": { "label": "Country", "placeholder": "Enter Country" },
+      "postalCode": { "label": "Postal code", "placeholder": "Enter Postal code" },
+      "website": {
+        "label": "Website",
+        "placeholder": "Enter Website",
+        "hint": "Your website - used as your network address - can be added later"
+      },
+      "email": {
+        "label": "Work email",
+        "placeholder": "Enter email address",
+        "hint": "Use your work email — we'll send onboarding updates here"
+      },
+      "phone": { "label": "Phone", "placeholder": "Enter phone number" }
+    },
+    "entityTypes": {
+      "localNgo": "Local NGO",
+      "internationalNgo": "International NGO",
+      "cbo": "Community-Based Organisation",
+      "cso": "Civil Society Organisation",
+      "fpo": "Farmer Producer Organisation",
+      "primaryCooperative": "Primary Cooperative",
+      "cooperativeUnion": "Cooperative Union",
+      "cooperativeFederation": "Cooperative Federation"
+    },
+    "consent": "I confirm I am authorised to register this organisation and agree to the <policy>OAN Privacy Policy</policy>. I understand that network participation is subject to the <agreement>OAN Network Participation Agreement</agreement>, which I will review and accept before going live.",
+    "actions": {
+      "back": "Back",
+      "backToSignIn": "Back to Sign In",
+      "register": "Register Organization",
+      "retry": "Try again"
+    },
+    "errors": {
+      "required": "This field is required.",
+      "tooLong": "Use {max} characters or fewer.",
+      "entityType": "Choose one of the listed entity types.",
+      "taxId": "Enter 9 or 10 letters or numbers, with no spaces or symbols.",
+      "postalCode": "Enter a valid postal code, e.g. 1000.",
+      "website": "Enter a valid website address, e.g. www.example.org.",
+      "email": "Enter a valid email address, e.g. name@example.com.",
+      "phoneEthiopia": "Enter a valid Ethiopian mobile number, e.g. 0911234567 or 911234567 (starts with 09, 07, 9, or 7).",
+      "phone": "Enter a valid phone number for the selected country.",
+      "generic": "We could not complete that. Please try again.",
+      "forbidden": "Your account is not permitted to register an organisation.",
+      "connection": "We could not reach the server. Please try again in a moment.",
+      "session": "Your session has expired. Please sign in again."
+    },
+    "status": {
+      "details": {
+        "legalName": "Legal entity name",
+        "brandName": "Brand / display name",
+        "entityType": "Entity type",
+        "registrationNumber": "Tax registration number",
+        "reason": "Note from the administrator",
+        "status": "Status"
+      },
+      "inReview": {
+        "badge": "In Review",
+        "title": "Your organisation is registered and in review",
+        "body": "A platform administrator will review your organisation before it goes live. We'll let you know once it has been approved."
+      },
+      "active": {
+        "badge": "Active",
+        "title": "Your organisation is active",
+        "body": "Your organisation is approved on the network. You can now submit and track grievances.",
+        "submit": "Submit a grievance",
+        "track": "Track grievances"
+      },
+      "suspended": {
+        "badge": "Suspended",
+        "title": "Your organisation is suspended",
+        "body": "Your organisation's access has been suspended. Please contact the platform administrator."
+      }
+    }
+  },
   "submitGrievance": {
+    "organisation": {
+      "inReviewTitle": "Your organisation is awaiting verification",
+      "inReviewBody": "{name} is still In Review. You can prepare and save your grievance now, but it can only be submitted once an administrator verifies your organisation.",
+      "suspendedTitle": "Your organisation is suspended",
+      "suspendedBody": "{name} is suspended, so grievances cannot be submitted for it. Please contact the platform administrator.",
+      "reason": "Note from the administrator: {reason}",
+      "submitBlocked": "You can't submit until your organisation is verified. Your details can be saved as a draft."
+    },
     "identityStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",

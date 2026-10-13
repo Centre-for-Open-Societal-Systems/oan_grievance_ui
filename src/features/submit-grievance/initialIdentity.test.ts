@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { User } from '@/features/auth/store/authSlice';
-import { buildInitialIdentityValues, identityAfterReset, resolveInitialSubmitterType } from './initialIdentity';
+import {
+  buildInitialIdentityValues,
+  identityAfterReset,
+  isSubmitterTypeLocked,
+  resolveInitialSubmitterType,
+} from './initialIdentity';
 
 const FULL_USER: User = {
   email: 'agent@example.com',
@@ -44,6 +49,88 @@ describe('buildInitialIdentityValues', () => {
 
   it('returns an empty object when there is no account and no snapshot', () => {
     expect(buildInitialIdentityValues(null, null, 'individual')).toEqual({});
+  });
+});
+
+describe('a registered NGO / FPO', () => {
+  const ORG_USER: User = {
+    email: 'test_ngo@gmail.com',
+    roles: ['Grievance Submitter'],
+    full_name: 'Test NGO',
+    mobile_no: '+251987654312',
+    phone_number: '987654312',
+    country_code: '+251',
+    type: 'NGO',
+    organisation: {
+      id: 'ORG-02216',
+      legalName: 'Test NGO Org',
+      brandName: 'NGO Org',
+      orgType: 'NGO',
+      entityType: 'International NGO',
+      registrationNumber: '1234567890',
+      representativeName: 'Amanuel Tadesse',
+      status: 'In Review',
+      statusReason: null,
+      canFile: false,
+    },
+  };
+
+  it('starts Step 1 as that organisation: its name, registration number and representative, plus the account contact', () => {
+    expect(buildInitialIdentityValues(ORG_USER, null, 'ngo')).toMatchObject({
+      orgName: 'Test NGO Org',
+      registrationNumber: '1234567890',
+      representativeName: 'Amanuel Tadesse',
+      phoneCode: '+251',
+      phoneNumber: '987654312',
+      email: 'test_ngo@gmail.com',
+    });
+  });
+
+  it("falls back to the account's name when the organisation has no representative name", () => {
+    const user = { ...ORG_USER, organisation: { ...ORG_USER.organisation!, representativeName: null } };
+    expect(buildInitialIdentityValues(user, null, 'ngo').representativeName).toBe('Test NGO');
+  });
+
+  it('takes the organisation on record over a stale registration snapshot', () => {
+    const saved = { submitterType: 'ngo', identityValues: { orgName: 'Old Name' } };
+    expect(buildInitialIdentityValues(ORG_USER, saved, 'ngo').orgName).toBe('Test NGO Org');
+  });
+
+  it('never carries a Fayda ID into an organisation — not from an old snapshot, not from the account', () => {
+    const saved = {
+      submitterType: 'ngo',
+      identityValues: { representativeFaydaId: '1234567890123456', faydaId: '1234567890123456' },
+    };
+    for (const submitterType of ['ngo', 'cooperative']) {
+      const values = buildInitialIdentityValues({ ...ORG_USER, fayda_id: 'ET-FAYDA-111' }, saved, submitterType);
+      expect(values).not.toHaveProperty('representativeFaydaId');
+      expect(values).not.toHaveProperty('faydaId');
+    }
+  });
+
+  it('still carries the Fayda ID for an individual farmer', () => {
+    expect(buildInitialIdentityValues(FULL_USER, null, 'individual').faydaId).toBe('ET-FAYDA-111');
+  });
+
+  it('fills the FPO form the same way', () => {
+    const fpo = { ...ORG_USER, type: 'FPO', organisation: { ...ORG_USER.organisation!, orgType: 'FPO' } };
+    expect(buildInitialIdentityValues(fpo, null, 'cooperative')).toMatchObject({
+      orgName: 'Test NGO Org',
+      registrationNumber: '1234567890',
+    });
+  });
+
+  it('adds no organisation fields if Step 1 is on another type, or the user has no organisation', () => {
+    expect(buildInitialIdentityValues(ORG_USER, null, 'individual')).not.toHaveProperty('orgName');
+    expect(buildInitialIdentityValues({ ...ORG_USER, organisation: undefined }, null, 'ngo')).not.toHaveProperty('orgName');
+  });
+
+  it('opens Step 1 on the NGO type, and the type cannot be changed once the organisation is registered', () => {
+    expect(resolveInitialSubmitterType(ORG_USER, null)).toBe('ngo');
+    expect(isSubmitterTypeLocked(ORG_USER)).toBe(true);
+    expect(isSubmitterTypeLocked({ ...ORG_USER, organisation: undefined })).toBe(false);
+    expect(isSubmitterTypeLocked(FULL_USER)).toBe(false);
+    expect(isSubmitterTypeLocked(null)).toBe(false);
   });
 });
 

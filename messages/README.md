@@ -5,7 +5,8 @@
 `am.json` (Amharic) and `om.json` (Afaan Oromo) are **machine/AI-assisted draft
 translations**, not reviewed by a native speaker. They cover only the strings
 introduced by the RBAC PR (no-access page, registration's profile/success
-steps, the grievance-detail message count) — the rest of the app has no
+steps, the grievance-detail message count) and the NGO / FPO organisation
+onboarding screen (`organisation`, STG-450) — the rest of the app has no
 translation coverage yet and still renders hardcoded English regardless of
 the selected locale.
 

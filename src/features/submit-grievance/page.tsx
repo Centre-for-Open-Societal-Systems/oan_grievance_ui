@@ -12,7 +12,13 @@ import {
   selectSubmitterTypeOptions,
   type AreaRef,
 } from "@/features/metadata";
-import { buildInitialIdentityValues, identityAfterReset, resolveInitialSubmitterType } from "./initialIdentity";
+import { useTranslations } from "next-intl";
+import {
+  buildInitialIdentityValues,
+  identityAfterReset,
+  isSubmitterTypeLocked,
+  resolveInitialSubmitterType,
+} from "./initialIdentity";
 import { buildSaveDraftPayload } from "./draftPayload";
 import { firstIncompleteStep, type WizardStep } from "./wizardSteps";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
@@ -28,6 +34,7 @@ import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
 import { ReviewAndSubmitCard } from "./components/ReviewAndSubmitCard";
 import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
+import { OrganisationVerificationNotice } from "./components/OrganisationVerificationNotice";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
@@ -74,6 +81,7 @@ export default function SubmitGrievancePage() {
   // phone, submitter type), so they aren't asked for the same details
   // twice.
   const user = useAppSelector(selectUser);
+  const tOrganisation = useTranslations("submitGrievance.organisation");
 
   const savedProfile = useMemo(
     () => (user?.email ? loadSubmitterProfile(user.email) : null),
@@ -328,6 +336,10 @@ export default function SubmitGrievancePage() {
     desiredOutcome,
   });
 
+  // An NGO / FPO may only file once its organisation is verified — see OrganisationVerificationNotice.
+  const submissionBlockedMessage =
+    user?.organisation && !user.organisation.canFile ? tOrganisation("submitBlocked") : undefined;
+
   if (submitted) {
     return (
       <div className="font-sans pb-2">
@@ -415,6 +427,8 @@ export default function SubmitGrievancePage() {
         </div>
       )}
 
+      <OrganisationVerificationNotice organisation={user?.organisation} />
+
       {/* Stepper */}
       <Stepper currentStep={currentStep} onStepClick={(step) => goToStep(step)} />
 
@@ -430,6 +444,7 @@ export default function SubmitGrievancePage() {
             setSubmissionChannel={setSubmissionChannel}
             identityValues={identityValues}
             setIdentityValue={setIdentityValue}
+            submitterTypeLocked={isSubmitterTypeLocked(user)}
           />
         )}
         {currentStep === 2 && (
@@ -483,6 +498,7 @@ export default function SubmitGrievancePage() {
             desiredOutcome={desiredOutcome}
             serviceProvider={serviceProvider}
             attachments={attachments}
+            submissionBlockedMessage={submissionBlockedMessage}
           />
         )}
       </div>

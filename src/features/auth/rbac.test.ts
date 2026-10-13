@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { ORGANISATION_KINDS } from '@/lib/organisationKind';
 import {
   canAccessRoute,
   canViewAllGrievances,
   homeRouteForRoles,
+  homeRouteForUser,
   isOfficerOrAdmin,
   isProtectedRoute,
   isPublicRoute,
@@ -129,6 +131,41 @@ describe('homeRouteForRoles', () => {
     const unrecognizedRoles = ['Some Future Role'];
     const home = homeRouteForRoles(unrecognizedRoles);
     expect(canAccessRoute(home, unrecognizedRoles)).toBe(true);
+  });
+});
+
+describe('homeRouteForUser', () => {
+  it('sends an NGO or FPO representative (Submitter role) to their own onboarding screen', () => {
+    expect(homeRouteForUser([ROLES.SUBMITTER], 'ngo')).toBe('/ngo');
+    expect(homeRouteForUser([ROLES.SUBMITTER], 'fpo')).toBe('/fpo');
+    // A self-registered account has no role at all yet, which counts as Submitter.
+    expect(homeRouteForUser([], 'ngo')).toBe('/ngo');
+  });
+
+  it('leaves everyone else on the home route of their role', () => {
+    expect(homeRouteForUser([ROLES.SUBMITTER], null)).toBe('/submit-grievance');
+    expect(homeRouteForUser([ROLES.OFFICER], null)).toBe('/all-grievances');
+    expect(homeRouteForUser([ROLES.ADMIN], null)).toBe('/dashboard');
+  });
+
+  it('never takes a staff role to an organisation screen, whatever its profile type says', () => {
+    expect(homeRouteForUser([ROLES.ADMIN], 'ngo')).toBe('/dashboard');
+    expect(homeRouteForUser([ROLES.SUBMITTER, ROLES.OFFICER], 'fpo')).toBe('/all-grievances');
+    expect(homeRouteForUser([ROLES.REVIEW_OFFICER], 'ngo')).toBe('/all-grievances');
+  });
+
+  it('lands an organisation on a route its Submitter role can open — or proxy.ts would bounce it', () => {
+    for (const kind of ORGANISATION_KINDS) {
+      expect(canAccessRoute(homeRouteForUser([ROLES.SUBMITTER], kind), [ROLES.SUBMITTER])).toBe(true);
+    }
+  });
+
+  it('keeps the organisation screens closed to staff roles', () => {
+    for (const path of ['/ngo', '/fpo']) {
+      for (const role of [ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER]) {
+        expect(canAccessRoute(path, [role])).toBe(false);
+      }
+    }
   });
 });
 

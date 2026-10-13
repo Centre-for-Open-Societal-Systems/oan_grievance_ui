@@ -13,6 +13,7 @@ import { FIELDS as DEVELOPMENT_AGENT_FIELDS } from "./SI-DevelopmentAgentForm";
 import type { SIFieldMeta } from "./SI-types";
 import { isEthiopianDialCode, isValidPhoneNumber } from "@/lib/validation/phone";
 import { EMAIL_PATTERN } from "@/lib/validation/fieldRules";
+import { organisationKindFor } from "@/lib/organisationKind";
 
 /** Which field set applies to each submitter type. */
 export const SI_FIELDS_BY_TYPE: Record<string, SIFieldMeta[]> = {
@@ -49,6 +50,17 @@ export const submissionChannelOptions = [
  */
 export function submitsOnBehalfOfOthers(submitterType: string): boolean {
   return submitterType === "development_agent";
+}
+
+/**
+ * True for a submitter type that is an organisation the portal onboards in its
+ * own step after the representative first signs in (NGO, and Cooperative /
+ * FPO — see features/organisation). Registration collects nothing about such
+ * an organisation: its legal name, tax number, address and contacts are asked
+ * once, on that onboarding screen, rather than here and again there.
+ */
+export function onboardsOrganisationAfterSignIn(submitterType: string): boolean {
+  return organisationKindFor(submitterType) !== null;
 }
 
 /**
@@ -98,7 +110,7 @@ const REGISTRATION_PATTERN = /^(?=.{3,60}$)[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*$/;
  * field set this module validates as a Fayda ID, rather than keeping its own
  * copy that could drift from this one.
  */
-export const ID_FIELD_KEYS = ["faydaId", "representativeFaydaId", "officialFaydaId"];
+export const ID_FIELD_KEYS = ["faydaId", "officialFaydaId"];
 
 /**
  * Why a non-empty value is wrong, in two phrasings: `hint` for the

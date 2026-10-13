@@ -5,9 +5,10 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { ForgotPasswordModal } from '@/features/auth/components/ForgotPasswordModal';
 import { SetInitialPasswordModal } from '@/features/auth/components/SetInitialPasswordModal';
-import { homeRouteForRoles } from '@/features/auth/rbac';
+import { homeRouteForUser } from '@/features/auth/rbac';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { AUTH_MESSAGES } from '@/lib/authMessages';
+import { resolveOrganisationKind } from '@/lib/resolveOrganisationKind';
 import { validateEmail, validateLoginPassword } from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors, type FieldErrors } from '@/lib/validation/useFieldErrors';
 import { useAppDispatch } from '@/store/hooks';
@@ -91,7 +92,10 @@ export function LoginForm() {
     if (loginThunk.fulfilled.match(result)) {
       const returnUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('returnUrl') : null;
       const safeReturnUrl = returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : null;
-      router.push(safeReturnUrl || homeRouteForRoles(result.payload.roles ?? []));
+      // An NGO / FPO representative lands on their organisation's screen, everyone else
+      // on their role's home — decided by who signed in, not by which form they used.
+      const user = result.payload;
+      router.push(safeReturnUrl || homeRouteForUser(user.roles ?? [], resolveOrganisationKind(user)));
       return;
     }
 

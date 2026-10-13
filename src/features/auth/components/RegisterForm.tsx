@@ -1,8 +1,10 @@
 'use client';
 
 import { registerUser } from '@/features/auth/api/authApi';
-import { submitsOnBehalfOfOthers } from '@/components/submitter-identity/fields';
+import { onboardsOrganisationAfterSignIn, submitsOnBehalfOfOthers } from '@/components/submitter-identity/fields';
 import { useIdentityErrors } from '@/components/submitter-identity/useIdentityErrors';
+import { organisationKindFor } from '@/lib/organisationKind';
+import { saveOrganisationIntent } from '@/lib/organisationIntent';
 import { saveSubmitterProfile } from '@/lib/submitterProfile';
 import {
   ACCOUNT_FIELDS,
@@ -73,7 +75,7 @@ export function RegisterForm() {
   // so switching submitter type can reset it here alongside identityValues —
   // consent given for one national-ID field (e.g. Fayda ID) must not carry
   // over silently to a different one after a mid-step type change (e.g.
-  // Individual -> Cooperative swaps in representativeFaydaId).
+  // Individual -> Woreda/Kebele Body swaps in officialFaydaId).
   const [consentChecked, setConsentChecked] = useState(false);
 
   const handleSubmitterTypeChange = (value: string) => {
@@ -182,33 +184,38 @@ export function RegisterForm() {
 
     let profileToSave: { submitterType: string; identityValues: Record<string, string> };
 
+    // Submit Grievance's own Step 1 isn't pre-filterable to just the "new"
+    // fields the way this page is — it always shows the full per-type form.
+    // Folding the account-step fields in here too (under the same keys those
+    // forms already use) means that page comes back genuinely pre-filled
+    // rather than just missing a few fields, since name/phone aren't
+    // otherwise available after login (the JWT only carries email + roles).
+    // Only for the fields this type actually treats as "the registrant's
+    // own" — see ALREADY_COLLECTED_FIELDS_BY_TYPE.
+    const accountStepValues: Record<string, string> = {
+      ...(hiddenFields.includes('fullName') ? { fullName: fullName.trim() } : {}),
+      ...(hiddenFields.includes('phoneNumber')
+        ? { phoneCode: countryCode, phoneNumber: stripLeadingZero(phoneNumber) }
+        : {}),
+      ...(hiddenFields.includes('email') ? { email: email.trim() } : {}),
+    };
+
     if (submitsOnBehalfOfOthers(submitterType)) {
       // Nothing to validate and nothing of the agent's own worth remembering
       // beyond their type — Submit Grievance asks for the farmer's/NGO's
       // details per grievance instead.
       identity.clear();
       profileToSave = { submitterType, identityValues: {} };
+    } else if (onboardsOrganisationAfterSignIn(submitterType)) {
+      // An NGO / FPO has no identity form here: its details are collected on
+      // the organisation onboarding screen the user is taken to after signing
+      // in. Only the type (which is what sends them there) and what the
+      // account step already asked are kept.
+      identity.clear();
+      profileToSave = { submitterType, identityValues: accountStepValues };
     } else {
       if (!identity.validateAll([typeCheck])) return;
-      // Submit Grievance's own Step 1 isn't pre-filterable to just the "new"
-      // fields the way this page is — it always shows the full per-type form.
-      // Folding the account-step fields in here too (under the same keys those
-      // forms already use) means that page comes back genuinely pre-filled
-      // rather than just missing a few fields, since name/phone aren't
-      // otherwise available after login (the JWT only carries email + roles).
-      // Only for the fields this type actually treats as "the registrant's
-      // own" — see ALREADY_COLLECTED_FIELDS_BY_TYPE.
-      profileToSave = {
-        submitterType,
-        identityValues: {
-          ...identityValues,
-          ...(hiddenFields.includes('fullName') ? { fullName: fullName.trim() } : {}),
-          ...(hiddenFields.includes('phoneNumber')
-            ? { phoneCode: countryCode, phoneNumber: stripLeadingZero(phoneNumber) }
-            : {}),
-          ...(hiddenFields.includes('email') ? { email: email.trim() } : {}),
-        },
-      };
+      profileToSave = { submitterType, identityValues: { ...identityValues, ...accountStepValues } };
     }
 
     setError(null);
@@ -216,6 +223,11 @@ export function RegisterForm() {
     // leave a profile snapshot behind for an email that never got registered.
     if (!(await createAccount())) return;
     saveSubmitterProfile(email, profileToSave);
+    // The backend can't record an NGO / FPO until its organisation is registered, so
+    // remember the choice here — durably, unlike the prefill above — to send them to
+    // the right onboarding screen at every sign-in until then.
+    const organisationKind = organisationKindFor(submitterType);
+    if (organisationKind) saveOrganisationIntent(email, organisationKind);
     setStep('success');
   };
 
@@ -239,7 +251,7 @@ export function RegisterForm() {
   }
 
   if (step === 'success') {
-    return <SuccessStep />;
+    return <SuccessStep organisation={onboardsOrganisationAfterSignIn(submitterType)} />;
   }
 
   return (

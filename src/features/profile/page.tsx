@@ -5,6 +5,7 @@ import { useAppSelector } from "@/store/hooks";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { getFullProfile, resolveFaydaId, type BackendAuthMeData } from "@/features/auth/api/authApi";
 import { logger } from "@/lib/logger";
+import { organisationKindFor } from "@/lib/organisationKind";
 import { UserCircle, Loader2, AlertTriangle, Info, Eye, EyeOff } from "lucide-react";
 
 function initialsFor(name: string): string {
@@ -104,7 +105,8 @@ export default function ProfilePage() {
   // kept in sync so this page doesn't show "Not provided" for a value the
   // header/rest of the app already displays correctly for the same account.
   const mobileNo = profile?.mobile_no || grievanceProfile?.contact_mobile;
-  const faydaId = resolveFaydaId(grievanceProfile?.identities);
+  // An NGO / FPO has no Fayda ID (its registration number is shown instead), so none is offered for it.
+  const faydaId = organisationKindFor(grievanceProfile?.type) ? undefined : resolveFaydaId(grievanceProfile?.identities);
 
   return (
     <div className="flex flex-col gap-6 font-sans pb-2">

@@ -1,12 +1,28 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { fetchApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
-import type { User } from '@/features/auth/store/authSlice';
+import type { User, UserOrganisation } from '@/features/auth/store/authSlice';
+import { organisationKindFor } from '@/lib/organisationKind';
+import { toOrganisationStatus } from '@/lib/organisationStatus';
 
 interface LoginCredentials {
   usr: string;
   pwd: string;
   rememberMe?: boolean;
+}
+
+/** `profiles.grievance.organization` in `/auth/me`. */
+export interface BackendOrganization {
+  id?: string | null;
+  legal_name?: string | null;
+  brand_name?: string | null;
+  org_type?: string | null;
+  entity_type?: string | null;
+  registration_number?: string | null;
+  representative_name?: string | null;
+  status?: string | null;
+  status_reason?: string | null;
+  can_file?: boolean | null;
 }
 
 export interface BackendAuthMeData {
@@ -41,6 +57,8 @@ export interface BackendAuthMeData {
       role?: string | null;
       role_level?: string | null;
       type?: string | null;
+      /** An NGO / FPO representative's registered organisation — absent until it is registered. */
+      organization?: BackendOrganization | null;
     };
     [key: string]: unknown;
   };
@@ -216,6 +234,25 @@ async function fetchAndValidateMe(): Promise<BackendAuthMeData> {
   return d;
 }
 
+/** The organisation block of `/auth/me`, or undefined when the account has none (or it has no name to show). */
+export function toUserOrganisation(raw: BackendOrganization | null | undefined): UserOrganisation | undefined {
+  if (!raw?.legal_name) return undefined;
+  const status = toOrganisationStatus(raw.status);
+  return {
+    id: raw.id || null,
+    legalName: raw.legal_name,
+    brandName: raw.brand_name || null,
+    orgType: raw.org_type || null,
+    entityType: raw.entity_type || null,
+    registrationNumber: raw.registration_number || null,
+    representativeName: raw.representative_name || null,
+    status,
+    statusReason: raw.status_reason || null,
+    // The backend says so itself; only if it doesn't is it worked out — and then only Active may file.
+    canFile: typeof raw.can_file === 'boolean' ? raw.can_file : status === 'Active',
+  };
+}
+
 /**
  * Restores the user session from the backend /api/v1/auth/me endpoint via proxy.
  * Only extracts needed profile and identity fields; discards unnecessary backend metadata/claims.
@@ -238,10 +275,13 @@ export async function getMe(): Promise<User> {
     phone_number: d.phone_number || grievanceProfile?.phone_number || undefined,
     type,
     profile_id: grievanceProfile?.profile_id || undefined,
-    fayda_id: resolveFaydaId(grievanceProfile?.identities),
+    // An NGO / FPO has no Fayda ID — it is identified by its registration number — so one is
+    // never read for it, whatever the identities list happens to hold.
+    fayda_id: organisationKindFor(type) ? undefined : resolveFaydaId(grievanceProfile?.identities),
     administrative_area: grievanceProfile?.administrative_area || undefined,
     administrative_unit: grievanceProfile?.administrative_unit || undefined,
     preferred_language: grievanceProfile?.preferred_language || undefined,
+    organisation: toUserOrganisation(grievanceProfile?.organization),
   };
 }
 

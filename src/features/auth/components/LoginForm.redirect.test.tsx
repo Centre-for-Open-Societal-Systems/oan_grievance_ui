@@ -1,0 +1,85 @@
+// @vitest-environment jsdom
+import '@testing-library/jest-dom/vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const push = vi.fn();
+const loginUser = vi.fn();
+const getMe = vi.fn();
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+vi.mock('@/features/auth/api/authApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/auth/api/authApi')>()),
+  loginUser: (...args: unknown[]) => loginUser(...args),
+  getMe: (...args: unknown[]) => getMe(...args),
+}));
+
+import { saveOrganisationIntent } from '@/lib/organisationIntent';
+import { clearSubmitterProfile, saveSubmitterProfile } from '@/lib/submitterProfile';
+import { makeStore } from '@/store';
+import { LoginForm } from './LoginForm';
+
+const SUBMITTER = 'Grievance Submitter';
+
+async function signInAs(user: { email: string; roles: string[]; type?: string }) {
+  loginUser.mockResolvedValue(user);
+  getMe.mockResolvedValue(user);
+  render(
+    <Provider store={makeStore()}>
+      <LoginForm />
+    </Provider>
+  );
+  fireEvent.change(screen.getByLabelText(/^Email/), { target: { value: user.email } });
+  fireEvent.change(screen.getByLabelText(/^Password/), { target: { value: 'Whatever1!' } });
+  fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+  await waitFor(() => expect(push).toHaveBeenCalledTimes(1));
+  return push.mock.calls[0]![0] as string;
+}
+
+describe('where signing in lands', () => {
+  beforeEach(() => window.history.replaceState({}, '', '/login'));
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  it('sends an NGO representative to /ngo and an FPO representative to /fpo, by the type the backend reports', async () => {
+    expect(await signInAs({ email: 'rep@ngo.org', roles: [SUBMITTER], type: 'NGO' })).toBe('/ngo');
+    cleanup();
+    push.mockClear();
+    expect(await signInAs({ email: 'rep@fpo.org', roles: [SUBMITTER], type: 'FPO' })).toBe('/fpo');
+  });
+
+  it('uses the type chosen at registration while the backend still reports the default one', async () => {
+    saveSubmitterProfile('new@ngo.org', { submitterType: 'ngo', identityValues: {} });
+    expect(await signInAs({ email: 'new@ngo.org', roles: [], type: 'Individual Farmer' })).toBe('/ngo');
+  });
+
+  it('still lands a new NGO on /ngo after it logged out and in again before registering the organisation', async () => {
+    // Sign-up leaves both notes; every logout wipes the prefill one.
+    saveSubmitterProfile('new@ngo.org', { submitterType: 'ngo', identityValues: {} });
+    saveOrganisationIntent('new@ngo.org', 'ngo');
+    clearSubmitterProfile('new@ngo.org');
+
+    expect(await signInAs({ email: 'new@ngo.org', roles: [SUBMITTER], type: 'Individual Farmer' })).toBe('/ngo');
+  });
+
+  it('keeps farmers on Submit Grievance', async () => {
+    expect(await signInAs({ email: 'farmer@example.com', roles: [SUBMITTER], type: 'Individual Farmer' })).toBe(
+      '/submit-grievance'
+    );
+  });
+
+  it('keeps staff on their own home, whatever their profile type says', async () => {
+    expect(await signInAs({ email: 'admin@example.com', roles: ['Grievance Admin'], type: 'NGO' })).toBe('/dashboard');
+  });
+});

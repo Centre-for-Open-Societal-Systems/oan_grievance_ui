@@ -129,3 +129,50 @@ describe('SubmitGrievancePage URL step filter', () => {
     expect(loadDraft).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('SubmitGrievancePage for a registered NGO', () => {
+  const ngoUser: User = {
+    email: 'test_ngo@gmail.com',
+    roles: ['Grievance Submitter'],
+    full_name: 'Test NGO',
+    mobile_no: '+251987654312',
+    phone_number: '987654312',
+    country_code: '+251',
+    type: 'NGO',
+    organisation: {
+      id: 'ORG-02216',
+      legalName: 'Test NGO Org',
+      brandName: 'NGO Org',
+      orgType: 'NGO',
+      entityType: 'International NGO',
+      registrationNumber: '1234567890',
+      representativeName: 'Test NGO',
+      status: 'In Review',
+      statusReason: null,
+      canFile: false,
+    },
+  };
+
+  it("opens Step 1 as the organisation: its details filled in and the submitter type fixed to NGO", async () => {
+    renderPage(ngoUser);
+
+    expect(await screen.findByLabelText(/^Organisation Name/)).toHaveValue('Test NGO Org');
+    expect(screen.getByLabelText(/^Registration Number/)).toHaveValue('1234567890');
+    expect(screen.getByLabelText(/^Authorised Representative/)).toHaveValue('Test NGO');
+    expect(screen.getByLabelText(/^Contact Email ID/)).toHaveValue('test_ngo@gmail.com');
+    // The type comes from the verified registration, so it cannot be switched to another.
+    expect(screen.getByRole('combobox', { name: /Submitter Type/ })).toBeDisabled();
+  });
+
+  it('tells an organisation that is still In Review it cannot submit yet', async () => {
+    renderPage(ngoUser);
+    expect(await screen.findByText('Your organisation is awaiting verification')).toBeInTheDocument();
+  });
+
+  it('shows no such notice, and leaves the type editable, for a farmer', async () => {
+    renderPage();
+    await screen.findByText('Submitter Identity', { selector: 'h3' });
+    expect(screen.queryByText('Your organisation is awaiting verification')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Submitter Type/ })).toBeEnabled();
+  });
+});

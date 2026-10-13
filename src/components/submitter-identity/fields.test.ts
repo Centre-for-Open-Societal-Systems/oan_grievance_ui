@@ -5,6 +5,7 @@ import {
   getFieldErrors,
   getFieldFormatErrors,
   getMissingRequiredFields,
+  SI_FIELDS_BY_TYPE,
   submitsOnBehalfOfOthers,
 } from './fields';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
@@ -52,9 +53,18 @@ describe('getFieldFormatErrors', () => {
     expect(errors.some((e) => e.includes('Fayda ID'))).toBe(true);
   });
 
-  it('checks representativeFaydaId / officialFaydaId under the same rule as faydaId', () => {
-    expect(getFieldFormatErrors('cooperative', { representativeFaydaId: 'ab' }).length).toBe(1);
+  it('checks officialFaydaId under the same rule as faydaId', () => {
+    expect(getFieldFormatErrors('woreda_kebele', { officialFaydaId: 'ab' }).length).toBe(1);
     expect(getFieldFormatErrors('woreda_kebele', { officialFaydaId: '1234567890123456' }).length).toBe(0);
+  });
+
+  it('has no Fayda ID field for an NGO or a Cooperative / FPO, requires none, and ignores a stray one', () => {
+    for (const type of ['ngo', 'cooperative']) {
+      expect(SI_FIELDS_BY_TYPE[type]!.some((field) => /fayda/i.test(field.key + field.label))).toBe(false);
+      expect(getMissingRequiredFields(type, {})).not.toContain('Representative Fayda ID');
+      // e.g. left in a registration snapshot saved before the field was removed
+      expect(getFieldFormatErrors(type, { representativeFaydaId: 'ab' })).toEqual([]);
+    }
   });
 
   it('validates registrationNumber only for the types that collect it', () => {

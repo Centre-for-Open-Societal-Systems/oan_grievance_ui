@@ -231,3 +231,21 @@ describe('Submitted screen', () => {
     expect(screen.getByRole('link', { name: /View my grievances/ })).toHaveAttribute('href', '/all-grievances');
   });
 });
+
+describe('Review step for an organisation that may not file yet', () => {
+  it('holds the Submit button disabled with the reason, and sends nothing, even with consent given', () => {
+    const fetchMock = mockFetch(200, { data: {}, status: 'success' });
+    const { onSubmitted } = renderCard({
+      submissionBlockedMessage: "You can't submit until your organisation is verified.",
+    });
+
+    fireEvent.click(screen.getByText(/I consent to this grievance being shared/));
+
+    const submit = screen.getByRole('button', { name: /Submit Grievance/ });
+    expect(submit).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent("You can't submit until your organisation is verified.");
+    fireEvent.click(submit);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(onSubmitted).not.toHaveBeenCalled();
+  });
+});

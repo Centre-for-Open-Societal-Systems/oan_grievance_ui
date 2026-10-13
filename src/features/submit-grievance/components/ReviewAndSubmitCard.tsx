@@ -35,6 +35,12 @@ interface ReviewAndSubmitCardProps {
   desiredOutcome?: string;
   serviceProvider?: string;
   attachments: WizardAttachment[];
+  /**
+   * Set when the account may not file right now (an NGO / FPO whose organisation
+   * is not yet verified): shown beside the footer and the Submit button is held
+   * disabled. The backend refuses such a submit anyway; this says why up front.
+   */
+  submissionBlockedMessage?: string;
 }
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
@@ -79,6 +85,7 @@ export function ReviewAndSubmitCard({
   desiredOutcome,
   serviceProvider,
   attachments,
+  submissionBlockedMessage,
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
   // A failed upload never reached the backend and isn't part of what gets
@@ -89,8 +96,8 @@ export function ReviewAndSubmitCard({
   // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
   // action pattern as SIMaskedIdField and the Profile page's MaskedField.
   // Without this, a value that only reaches this screen via the
-  // localStorage-persisted submitter profile (representativeFaydaId/
-  // officialFaydaId have no other source) would show up in cleartext on a
+  // localStorage-persisted submitter profile (officialFaydaId has no other
+  // source) would show up in cleartext on a
   // review screen the user never typed it into this session.
   const [revealedIdFields, setRevealedIdFields] = useState<Set<string>>(new Set());
   const toggleReveal = (key: string) =>
@@ -115,7 +122,7 @@ export function ReviewAndSubmitCard({
   const handleSubmit = async () => {
     // The button is already disabled without consent or mid-request; this
     // covers a second click landing before React has re-rendered it disabled.
-    if (!consentChecked || isSubmitting) return;
+    if (!consentChecked || isSubmitting || submissionBlockedMessage) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -291,6 +298,11 @@ export function ReviewAndSubmitCard({
       {/* Footer Actions */}
       <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] rounded-b-xl mt-auto">
         {submitError && <ErrorAlert id="review-submit-error" className="mb-4">{submitError}</ErrorAlert>}
+        {submissionBlockedMessage && (
+          <p id="review-submit-blocked" role="status" className="mb-4 text-sm font-medium text-amber-800">
+            {submissionBlockedMessage}
+          </p>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center text-sm text-gray-600">
             <button
@@ -319,11 +331,12 @@ export function ReviewAndSubmitCard({
             </button>
             <button
               onClick={handleSubmit}
-              className={`flex items-center gap-2 px-5 py-3 text-white rounded-lg text-sm font-bold transition-colors shadow-sm focus:outline-none focus:ring-2 ${consentChecked
+              className={`flex items-center gap-2 px-5 py-3 text-white rounded-lg text-sm font-bold transition-colors shadow-sm focus:outline-none focus:ring-2 ${consentChecked && !submissionBlockedMessage
                 ? "bg-[#16A34A] hover:bg-[#10883c] focus:ring-[#0b8535]/50"
                 : "bg-gray-300 cursor-not-allowed text-gray-500"
                 }`}
-              disabled={!consentChecked || isSubmitting}
+              disabled={!consentChecked || isSubmitting || Boolean(submissionBlockedMessage)}
+              aria-describedby={submissionBlockedMessage ? "review-submit-blocked" : undefined}
             >
               {isSubmitting ? "Submitting…" : "Submit Grievance"}
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}

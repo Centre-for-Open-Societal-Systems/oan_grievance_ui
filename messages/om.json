@@ -15,15 +15,136 @@
       "consentCheckboxLabel": "Lakkoofsa ID biyyaalessaa koo mirkaneessa eenyummaaf kennuuf nan waliigala.",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
-      "fieldRequired": "Gabateen kun barbaachisaadha."
+      "fieldRequired": "Gabateen kun barbaachisaadha.",
+      "organisationNotice": "Erga seentanii booda, bal'ina galmee dhaabbata keessanii — maqaa seeraa, lakkoofsa gibiraa, teessoo fi qunnamtii — isin gaafanna."
     },
     "success": {
       "title": "Akkaawuntiin Uumameera!",
       "body": "Akkaawuntiin keessan milkaa'inaan uumameera. Amma imeelii fi jecha darbii keessaniin seenuu ni dandeessu.",
+      "organisationBody": "Akkaawuntiin keessan milkaa'inaan uumameera. Dhaabbata keessan galmeessuuf seenaa.",
       "proceedToLogin": "Gara Seensaatti Itti Fufi"
     }
   },
+  "organisation": {
+    "header": {
+      "completeRegistration": "Galmee Xumuraa",
+      "registered": "Dhaabbata"
+    },
+    "loading": "Dhaabbanni keessan fe'amaa jira…",
+    "intro": {
+      "eyebrow": "Galmee Dhaabbataa.",
+      "heading": {
+        "ngo": "NGO keessan galmeessaa",
+        "fpo": "FPO keessan galmeessaa"
+      },
+      "body": "Dhaabbata keessan network komii OAN irratti mirkaneessuuf bal'inni xiqqoo. Waraqaan KYC erga galmeen xumurame booda funaanama."
+    },
+    "sections": {
+      "organisation": "Dhaabbata",
+      "address": "Teessoo Galmaa'e",
+      "contact": "Bal'ina Qunnamtii"
+    },
+    "fields": {
+      "legalName": { "label": "Maqaa dhaabbata seeraa", "placeholder": "Maqaa dhaabbata seeraa galchi" },
+      "brandName": {
+        "label": "Maqaa chaappaa / agarsiisaa",
+        "placeholder": "Maqaa seeraa irraa kan adda ta'e yoo ta'e galchi",
+        "hint": "Maqaa seeraa irraa kan adda ta'e yoo ta'e"
+      },
+      "entityType": { "label": "Gosa dhaabbataa", "placeholder": "Gosa dhaabbataa filadhu" },
+      "taxId": {
+        "label": "Lakkoofsa galmee gibiraa",
+        "placeholder": "Lakkoofsa galmee gibiraa galchi",
+        "hint": "Lakkoofsa eenyummaa gibiraa (arfii 9-10)"
+      },
+      "streetAddress": { "label": "Teessoo daandii", "placeholder": "Teessoo daandii galchi" },
+      "kebele": { "label": "Ganda / Gandaa", "placeholder": "Ganda / Gandaa galchi" },
+      "woreda": { "label": "Aanaa", "placeholder": "Aanaa galchi" },
+      "zone": { "label": "Godina", "placeholder": "Godina galchi" },
+      "region": { "label": "Naannoo", "placeholder": "Naannoo galchi" },
+      "country": { "label": "Biyya", "placeholder": "Biyya galchi" },
+      "postalCode": { "label": "Koodii poostaa", "placeholder": "Koodii poostaa galchi" },
+      "website": {
+        "label": "Marsariitii",
+        "placeholder": "Marsariitii galchi",
+        "hint": "Marsariitiin keessan - teessoo network keessanii ta'ee tajaajila - booda dabalamuu danda'a"
+      },
+      "email": {
+        "label": "Imeelii hojii",
+        "placeholder": "Teessoo imeelii galchi",
+        "hint": "Imeelii hojii keessan fayyadamaa — odeeffannoo haaromsaa as isinii ergina"
+      },
+      "phone": { "label": "Bilbila", "placeholder": "Lakkoofsa bilbilaa galchi" }
+    },
+    "entityTypes": {
+      "localNgo": "NGO Naannoo",
+      "internationalNgo": "NGO Idil-addunyaa",
+      "cbo": "Dhaabbata Hawaasa Irratti Hundaa'e",
+      "cso": "Dhaabbata Hawaasa Siviilii",
+      "fpo": "Dhaabbata Oomishtoota Qonnaan Bultootaa",
+      "primaryCooperative": "Waldaa Hojii Waloo Sadarkaa Jalqabaa",
+      "cooperativeUnion": "Yuuniyeenii Waldaalee Hojii Waloo",
+      "cooperativeFederation": "Federeeshinii Waldaalee Hojii Waloo"
+    },
+    "consent": "Dhaabbata kana galmeessuuf aangoo akka qabu mirkaneessa; akkasumas <policy>Imaammata Dhuunfaa OAN</policy> irratti waliigala. Hirmaannaan network kanaa <agreement>Waliigaltee Hirmaannaa Network OAN</agreement> jala akka jiru nan hubadha; hojii jalqabuu kootii dura ilaaluun nan fudhadha.",
+    "actions": {
+      "back": "Duubatti",
+      "backToSignIn": "Gara Seensaatti Deebi'i",
+      "register": "Dhaabbata Galmeessi",
+      "retry": "Deebi'ii yaali"
+    },
+    "errors": {
+      "required": "Gabateen kun barbaachisaadha.",
+      "tooLong": "Arfii {max} ykn isaa gadi fayyadami.",
+      "entityType": "Gosoota dhaabbataa tarreeffaman keessaa tokko filadhu.",
+      "taxId": "Iddoo duwwaa ykn mallattoo malee arfii ykn lakkoofsa 9 ykn 10 galchi.",
+      "postalCode": "Koodii poostaa sirrii galchi, fkn 1000.",
+      "website": "Teessoo marsariitii sirrii galchi, fkn www.example.org.",
+      "email": "Teessoo imeelii sirrii galchi, fkn name@example.com.",
+      "phoneEthiopia": "Lakkoofsa bilbilaa Itiyoophiyaa sirrii galchi, fkn 0911234567 ykn 911234567 (09, 07, 9 ykn 7 jalqaba).",
+      "phone": "Biyya filatameef lakkoofsa bilbilaa sirrii galchi.",
+      "generic": "Kana xumuruu hin dandeenye. Maaloo irra deebi'ii yaali.",
+      "forbidden": "Akkaawuntiin keessan dhaabbata galmeessuuf hayyamamuu hin qabu.",
+      "connection": "Sarvarii qunnamuu hin dandeenye. Maaloo yeroo muraasa booda irra deebi'ii yaali.",
+      "session": "Yeroon keessan xumurameera. Maaloo irra deebi'ii seenaa."
+    },
+    "status": {
+      "details": {
+        "legalName": "Maqaa dhaabbata seeraa",
+        "brandName": "Maqaa chaappaa / agarsiisaa",
+        "entityType": "Gosa dhaabbataa",
+        "registrationNumber": "Lakkoofsa galmee gibiraa",
+        "reason": "Ergaa bulchaa irraa",
+        "status": "Haala"
+      },
+      "inReview": {
+        "badge": "Ilaalamaa Jira",
+        "title": "Dhaabbanni keessan galmaa'eera; ilaalamaa jira",
+        "body": "Dhaabbanni keessan hojii jalqabuu isaa dura bulchaan pilaatfoormii ni ilaala. Yeroo mirkanaa'u isin beeksifna."
+      },
+      "active": {
+        "badge": "Hojiirra Jira",
+        "title": "Dhaabbanni keessan hojiirra jira",
+        "body": "Dhaabbanni keessan network irratti mirkanaa'eera. Amma komii dhiheessuu fi hordofuu dandeessu.",
+        "submit": "Komii dhiheessi",
+        "track": "Komiiwwan hordofi"
+      },
+      "suspended": {
+        "badge": "Dhaabbateera",
+        "title": "Dhaabbanni keessan dhaabateera",
+        "body": "Seensi dhaabbata keessanii dhaabateera. Maaloo bulchaa pilaatfoormii qunnamaa."
+      }
+    }
+  },
   "submitGrievance": {
+    "organisation": {
+      "inReviewTitle": "Dhaabbanni keessan mirkanaa'uu eegaa jira",
+      "inReviewBody": "{name} ammallee ilaalamaa jira. Komii keessan amma qopheessuu fi olkaa'uu dandeessu; garuu bulchaan dhaabbata keessan erga mirkaneesse booda qofa dhiheessuu dandeessu.",
+      "suspendedTitle": "Dhaabbanni keessan dhaabateera",
+      "suspendedBody": "{name} dhaabateera; kanaaf komiin isaaf dhiyaachuu hin danda'u. Maaloo bulchaa pilaatfoormii qunnamaa.",
+      "reason": "Ergaa bulchaa irraa: {reason}",
+      "submitBlocked": "Hanga dhaabbanni keessan mirkanaa'utti dhiheessuu hin dandeessan. Bal'ina keessan akka tarreetti olkaa'uu dandeessu."
+    },
     "identityStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",

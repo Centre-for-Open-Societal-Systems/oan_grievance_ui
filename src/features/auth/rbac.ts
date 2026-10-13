@@ -1,3 +1,5 @@
+import { ORGANISATION_ROUTE, type OrganisationKind } from '@/lib/organisationKind';
+
 // Exact-or-segment match, not a bare prefix: `/login` matches `/login` and
 // `/login/whatever`, but never a route that merely starts with the same
 // characters, like a future `/login-history`. The one route-matching rule in
@@ -106,6 +108,14 @@ const ROUTE_ROLES: Record<string, Role[]> = {
   '/user-management': [ROLES.ADMIN, ROLES.REVIEW_OFFICER],
   '/administration': [ROLES.ADMIN, ROLES.REVIEW_OFFICER],
   '/settings': [ROLES.OFFICER, ROLES.ADMIN],
+  // Organisation onboarding (NGO / FPO). Both are plain Submitter screens: an
+  // NGO or FPO representative signs up through the ordinary register flow and
+  // holds the same role as a farmer. Which of the two a given user belongs to
+  // is a submitter *type*, not a role, and the JWT this guard reads carries
+  // only roles — so the NGO-vs-FPO split is enforced by the page itself (it
+  // sends a user to their own kind's screen), not here.
+  [ORGANISATION_ROUTE.ngo]: [ROLES.SUBMITTER],
+  [ORGANISATION_ROUTE.fpo]: [ROLES.SUBMITTER],
 };
 
 /** Highest-privilege role first — decides which home route wins for a multi-role user. */
@@ -162,6 +172,23 @@ export function homeRouteForRoles(roles: string[]): string {
   const held = effectiveRoles(roles);
   const primary = ROLE_PRIORITY.find((role) => held.includes(role));
   return primary ? ROLE_HOME_ROUTE[primary] : DEFAULT_HOME_ROUTE;
+}
+
+/**
+ * Where a user lands after signing in. Same as `homeRouteForRoles`, except an
+ * NGO or FPO representative — someone whose highest role is Submitter and whose
+ * submitter type is an organisation (see `resolveOrganisationKind`) — lands on
+ * their organisation's onboarding screen instead of Submit Grievance. Staff
+ * roles never take the organisation route, whatever their profile type says.
+ *
+ * `organisationKind` is a parameter, not looked up here, so this stays a pure
+ * function of its inputs and importable from `proxy.ts`.
+ */
+export function homeRouteForUser(roles: string[], organisationKind: OrganisationKind | null): string {
+  const held = effectiveRoles(roles);
+  const primary = ROLE_PRIORITY.find((role) => held.includes(role));
+  if (primary === ROLES.SUBMITTER && organisationKind) return ORGANISATION_ROUTE[organisationKind];
+  return homeRouteForRoles(roles);
 }
 
 /**
