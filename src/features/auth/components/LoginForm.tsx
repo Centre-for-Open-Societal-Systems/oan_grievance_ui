@@ -61,6 +61,8 @@ export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
       setErrorMessage(AUTH_MESSAGES.staffSignInFailed);
     } else if (reason === 'staff_unavailable') {
       setErrorMessage(AUTH_MESSAGES.staffSignInUnavailable);
+    } else if (reason === 'staff_no_access') {
+      setErrorMessage(AUTH_MESSAGES.staffSignInNoAccess);
     } else if (reason === 'reset') {
       setSuccessMessage(AUTH_MESSAGES.passwordResetSuccess);
     }

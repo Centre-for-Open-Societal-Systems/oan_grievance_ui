@@ -12,6 +12,7 @@ export const AUTH_MESSAGES = {
   signInUnavailable: 'We could not sign you in right now. Please try again shortly.',
   staffSignInFailed: 'Staff sign-in did not complete. Please try again.',
   staffSignInUnavailable: 'Staff sign-in is not available right now. Please try again shortly.',
+  staffSignInNoAccess: 'Your staff account has no access to the grievance portal. Ask an administrator to grant you a role.',
   passwordResetSuccess: 'Your password has been reset. Please sign in with your new password.',
   tooManyAttempts: 'Too many attempts. Please wait a moment and try again.',
   unexpected: 'Something went wrong. Please try again.',

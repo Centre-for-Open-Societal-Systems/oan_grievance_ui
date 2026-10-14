@@ -1,9 +1,8 @@
-import { hasSession, readActiveSession, renewSession } from '@/lib/activeSession';
+import { isSessionIdleExpired, readActiveSession, renewSession } from '@/lib/activeSession';
 import { getClientIp } from '@/lib/clientIp';
-import { isIdleExpired } from '@/lib/idleSession';
 import { isExpired } from '@/lib/jwt';
 import { logger } from '@/lib/logger';
-import { clearSessionCookies } from '@/lib/session';
+import { clearIdleSessionCookies, clearSessionCookies } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -29,7 +28,11 @@ export async function GET(request: NextRequest) {
   // a page that restores its session via this route ever gets checked for
   // idle expiry — a stale-but-technically-valid token pair must not restore
   // a session the user was actually idled out of.
-  if (isIdleExpired(hasSession(session), request)) return noSession();
+  if (isSessionIdleExpired(session, request)) {
+    const response = NextResponse.json({ message: 'No active session' }, { status: 401 });
+    clearIdleSessionCookies(response);
+    return response;
+  }
   if (!session) return NextResponse.json({ message: 'No active session' }, { status: 401 });
 
   if (session.claims && !isExpired(session.claims)) {

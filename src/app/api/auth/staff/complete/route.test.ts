@@ -42,8 +42,16 @@ describe('GET /api/auth/staff/complete', () => {
   });
 
   it('keeps a same-origin return path', async () => {
-    const res = await get('?returnUrl=%2Fgrievances%2FG-1', { 'X-Access-Token': iamToken([]) });
+    const res = await get('?returnUrl=%2Fgrievances%2FG-1', { 'X-Access-Token': iamToken(['Grievance Officer']) });
     expect(await res.text()).toContain('url=/grievances/G-1');
+  });
+
+  it('turns away a staff user with no role on this app, leaving their session for the apps it is for', async () => {
+    const res = await get('', { 'X-Access-Token': iamToken([]), 'X-Session-Id': 'sid' });
+
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toBe('http://localhost:3000/login?reason=staff_no_access');
+    expect(res.headers.getSetCookie()).toEqual([]);
   });
 
   it('ignores an off-site return URL', async () => {

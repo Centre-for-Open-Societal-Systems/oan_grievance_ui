@@ -26,7 +26,8 @@ export const env = {
    * the client whose roles (`resource_access[application].roles`) the backend
    * syncs onto the local user, so routing here reads the same list.
    * `cookieDomain` must equal IAM's `*_AUTH_COOKIE_DOMAIN`, or the cookies
-   * this app expires on an idle kick are different cookies from IAM's.
+   * this app expires when IAM refuses to renew a session are different
+   * cookies from IAM's.
    */
   get IAM(): {
     baseUrl: string;

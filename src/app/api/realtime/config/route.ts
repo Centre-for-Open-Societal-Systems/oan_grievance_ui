@@ -1,12 +1,11 @@
 import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { env } from '@/lib/env';
-import { isIdleExpired } from '@/lib/idleSession';
 import { isExpired } from '@/lib/jwt';
 import { logger } from '@/lib/logger';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
-import { hasSession, readActiveSession, renewSession, sessionRateLimitSecret } from '@/lib/activeSession';
-import { clearSessionCookies } from '@/lib/session';
+import { isSessionIdleExpired, readActiveSession, renewSession, sessionRateLimitSecret } from '@/lib/activeSession';
+import { clearIdleSessionCookies, clearSessionCookies } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -41,7 +40,11 @@ export async function POST(request: NextRequest) {
   const limit = checkRateLimit(limitKey, RATE_LIMITS.realtimeConfig.limit, RATE_LIMITS.realtimeConfig.windowMs);
   if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds);
 
-  if (isIdleExpired(hasSession(session), request)) return noSession();
+  if (isSessionIdleExpired(session, request)) {
+    const response = NextResponse.json({ message: 'No active session' }, { status: 401, headers: NO_STORE });
+    clearIdleSessionCookies(response);
+    return response;
+  }
   if (!session) return noSession();
 
   const connection = { enabled: true, url: realtime.url, site: realtime.site, path: realtime.path };

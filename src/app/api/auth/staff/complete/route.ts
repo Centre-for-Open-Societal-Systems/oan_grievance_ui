@@ -1,4 +1,5 @@
 import { homeRouteForRoles } from '@/features/auth/rbac';
+import { hasAppAccess } from '@/lib/activeSession';
 import { iamConfig, readIamSession } from '@/lib/iamSession';
 import { touchActivityCookie } from '@/lib/idleSession';
 import { safeReturnPath } from '@/lib/returnPath';
@@ -35,6 +36,9 @@ export async function GET(request: NextRequest) {
 
   const session = readIamSession(request);
   if (!session?.claims) return backToLogin(request, 'staff_failed');
+  // Signed in at IAM, but not provisioned for this app — see `hasAppAccess`.
+  // Their session is left alone: it is still valid for the apps it is for.
+  if (!hasAppAccess(session)) return backToLogin(request, 'staff_no_access');
 
   const target =
     safeReturnPath(request.nextUrl.searchParams.get('returnUrl')) ?? homeRouteForRoles(session.claims.roles);

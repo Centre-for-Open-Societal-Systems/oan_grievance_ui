@@ -75,9 +75,23 @@ describe('/api/proxy with a staff (IAM) session', () => {
     expect(res.headers.getSetCookie().join('\n')).toMatch(/X-Session-Id=;.*Max-Age=0/);
   });
 
-  it('applies the idle timeout to a staff session too', async () => {
+  it("does not apply this app's idle clock to a staff session opened at another app (single sign-on)", async () => {
+    // No `last_activity`: the session was opened at the registry, not here.
+    fetchMock.mockResolvedValue(new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }));
+
     const res = await get({ 'X-Access-Token': iamToken(300), 'X-Session-Id': 'sid' });
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('idles out a local session without touching the IAM session the browser also holds', async () => {
+    const res = await get({ auth_token: 'a.b.c', refresh_token: 'r', 'X-Access-Token': iamToken(300) });
+    const cookies = res.headers.getSetCookie().join('\n');
+
     expect(res.status).toBe(401);
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(cookies).toMatch(/refresh_token=;.*Max-Age=0/);
+    expect(cookies).not.toContain('X-Access-Token');
   });
 });

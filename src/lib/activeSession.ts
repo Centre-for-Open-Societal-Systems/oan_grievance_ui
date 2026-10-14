@@ -1,5 +1,5 @@
 import { applyIamCookies, canRefreshIamSession, readIamSession, refreshIamSession, type IamSession } from '@/lib/iamSession';
-import { touchActivityCookie } from '@/lib/idleSession';
+import { isIdleExpired, touchActivityCookie } from '@/lib/idleSession';
 import { decodeAccessToken, type AccessTokenClaims } from '@/lib/jwt';
 import { AUTH_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, setSessionCookies } from '@/lib/session';
 import { performRefresh } from '@/lib/sessionRefresh';
@@ -15,6 +15,15 @@ import type { NextRequest, NextResponse } from 'next/server';
 //           cookies on the shared parent domain (iamSession.ts)
 //
 // Local wins when a browser somehow holds both: it's the one this app issued.
+//
+// The two differ in who owns the session's lifetime. A local session is this
+// app's alone, so this app's idle clock (`idleSession.ts`) governs it. An IAM
+// session is single sign-on: one Keycloak session shared with every other
+// OpenG2P app (the registry, …), opened wherever the user signed in. Its idle
+// and maximum lifetime belong to IAM/Keycloak, and every API call is verified
+// against IAM by the backend — so this app neither idles it out nor requires
+// it to have been opened here. That is what lets a user who signed in at the
+// registry land straight in this app.
 
 interface CookieReader {
   cookies: { get(name: string): { value: string } | undefined };
@@ -32,9 +41,31 @@ export function readActiveSession(request: CookieReader): ActiveSession | null {
   }
 
   const iam = readIamSession(request);
-  if (iam) return { kind: 'iam', token: iam.accessToken, claims: iam.claims, iam };
+  if (iam && hasAppAccess(iam)) return { kind: 'iam', token: iam.accessToken, claims: iam.claims, iam };
 
   return null;
+}
+
+/**
+ * Whether an IAM session is one for this app at all. A single sign-on session
+ * reaches every app on the shared domain, including users provisioned only
+ * for another one (a registry-only operator). Only a user holding at least
+ * one role on this app's own client (`IAM_APPLICATION`) — the roles
+ * oan_auth_service syncs — counts as signed in here; anyone else is a guest
+ * to this app, while their session stays untouched for the apps it is for.
+ */
+export function hasAppAccess(iam: IamSession): boolean {
+  return !!iam.claims && iam.claims.roles.length > 0;
+}
+
+/**
+ * Whether the session has gone idle by this app's own clock. Only a local
+ * session has one; an IAM session's idle timeout is IAM's (see the top of
+ * this file). Every entry point that accepts a session cookie calls this —
+ * see `isIdleExpired`'s doc comment for why.
+ */
+export function isSessionIdleExpired(session: ActiveSession | null, request: CookieReader): boolean {
+  return session?.kind === 'local' && isIdleExpired(hasSession(session), request);
 }
 
 /** Whether an expired access token can still be renewed into a fresh one. */

@@ -4,6 +4,14 @@ import { POST } from './route';
 
 const fetchMock = vi.fn();
 
+// A staff token holding a role on this app's client — see `hasAppAccess`.
+const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
+const STAFF_TOKEN = `${encode({ alg: 'RS256' })}.${encode({
+  sub: 'kc-user-1',
+  exp: Math.floor(Date.now() / 1000) + 300,
+  resource_access: { 'oan-grievance': { roles: ['Grievance Officer'] } },
+})}.sig`;
+
 function logout(cookies: Record<string, string>, body: object = {}) {
   const cookie = Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join('; ');
   return POST(
@@ -38,7 +46,7 @@ describe('POST /api/auth/logout with a staff (IAM) session', () => {
     headers.append('set-cookie', 'X-Access-Token=""; Max-Age=0; Path=/');
     fetchMock.mockResolvedValue(new Response(null, { status: 307, headers }));
 
-    const res = await logout({ 'X-Access-Token': 'a.b.c', 'X-Session-Id': 'sid' }, { returnTo: '/login?reason=idle' });
+    const res = await logout({ 'X-Access-Token': STAFF_TOKEN, 'X-Session-Id': 'sid' }, { returnTo: '/login?reason=idle' });
     const body = await res.json();
 
     expect(fetchMock.mock.calls[0]![0]).toBe('http://iam.internal:8020/auth/logout');
@@ -52,7 +60,7 @@ describe('POST /api/auth/logout with a staff (IAM) session', () => {
     fetchMock.mockResolvedValue(
       new Response(null, { status: 307, headers: { location: 'https://kc.example.org/logout' } })
     );
-    const body = await (await logout({ 'X-Access-Token': 'a.b.c' }, { returnTo: 'https://evil.example' })).json();
+    const body = await (await logout({ 'X-Access-Token': STAFF_TOKEN }, { returnTo: 'https://evil.example' })).json();
     expect(new URL(body.redirectTo).searchParams.get('post_logout_redirect_uri')).toBe('http://localhost:3002/login');
   });
 

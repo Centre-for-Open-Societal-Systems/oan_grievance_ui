@@ -1,8 +1,8 @@
 import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
-import { isIdleExpired, touchActivityCookie } from '@/lib/idleSession';
+import { touchActivityCookie } from '@/lib/idleSession';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
-import { hasSession, readActiveSession, sessionRateLimitSecret } from '@/lib/activeSession';
+import { hasSession, isSessionIdleExpired, readActiveSession, sessionRateLimitSecret } from '@/lib/activeSession';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   // check catches up) would touch the activity cookie and undo server-side
   // idle enforcement, same as every other session-cookie entry point in
   // `isIdleExpired`'s own doc comment.
-  if (isIdleExpired(hasSession(session), request)) {
+  if (isSessionIdleExpired(session, request)) {
     return NextResponse.json({ message: 'No active session' }, { status: 401 });
   }
 

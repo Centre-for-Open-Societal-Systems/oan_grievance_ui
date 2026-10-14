@@ -108,14 +108,17 @@ server.on('upgrade', (req, socket, head) => {
     return;
   }
 
-  // Check idle session
+  // Check idle session — a local session only. A staff (IAM) session is
+  // single sign-on whose idle timeout is IAM's, and may have been opened at
+  // another app that never started this app's clock (see
+  // src/lib/activeSession.ts).
   const cookieReader = {
     cookies: {
       get: (name: string) => (cookies[name] ? { value: cookies[name] } : undefined)
     }
   };
-  
-  if (!hasRecentActivity(cookieReader)) {
+
+  if (cookies['auth_token'] && !hasRecentActivity(cookieReader)) {
     console.error('[gateway] Session is idle');
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();
@@ -123,7 +126,9 @@ server.on('upgrade', (req, socket, head) => {
   }
 
   const claims = cookies['auth_token'] ? decodeAccessToken(token) : decodeIamAccessToken(token, iamApplication!);
-  if (!claims || isExpired(claims, 0)) {
+  // A staff session counts only with a role on this app's client — same
+  // rule as `hasAppAccess` in src/lib/activeSession.ts.
+  if (!claims || isExpired(claims, 0) || (!cookies['auth_token'] && claims.roles.length === 0)) {
     console.error('[gateway] Token invalid or expired');
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();

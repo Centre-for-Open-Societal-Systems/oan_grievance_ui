@@ -104,6 +104,18 @@ export function clearSessionCookies(response: NextResponse): void {
 }
 
 /**
+ * Ends a session this app idled out. Only a local session idles out here (see
+ * `isSessionIdleExpired`), so only its cookies and the idle clock go. IAM's
+ * cookies stay: that single sign-on session is shared with the other apps on
+ * the domain and is not this app's to end on its own idle clock — clearing
+ * them would sign the user out of the registry too.
+ */
+export function clearIdleSessionCookies(response: NextResponse): void {
+  clearLocalSessionCookies(response);
+  clearActivityCookie(response);
+}
+
+/**
  * Expires only the access-token cookie, leaving the refresh token in place.
  *
  * For a cookie that doesn't decode as a usable JWT: that's not proof the

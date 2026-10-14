@@ -2,12 +2,11 @@ import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { checkCsrf } from '@/lib/csrf';
 import { getClientIp } from '@/lib/clientIp';
 import { env } from '@/lib/env';
-import { isIdleExpired } from '@/lib/idleSession';
 import { logger } from '@/lib/logger';
 import { buildClientResponse, buildUpstreamHeaders } from '@/lib/proxyHeaders';
-import { canRenewSession, hasSession, readActiveSession, renewSession } from '@/lib/activeSession';
+import { canRenewSession, isSessionIdleExpired, readActiveSession, renewSession } from '@/lib/activeSession';
 import { isExpired } from '@/lib/jwt';
-import { clearSessionCookies } from '@/lib/session';
+import { clearIdleSessionCookies, clearSessionCookies } from '@/lib/session';
 import { NextRequest, NextResponse } from 'next/server';
 
 type RouteContext = { params: Promise<{ path: string[] }> };
@@ -35,9 +34,9 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
   // check every real data call in the app actually goes through. Skipping it
   // here would mean the idle timeout only ever fired on a full page
   // navigation — never on the fetches this SPA makes while sitting on one.
-  if (isIdleExpired(hasSession(session), request)) {
+  if (isSessionIdleExpired(session, request)) {
     const response = NextResponse.json({ message: AUTH_MESSAGES.sessionExpiredIdle }, { status: 401 });
-    clearSessionCookies(response);
+    clearIdleSessionCookies(response);
     return response;
   }
 

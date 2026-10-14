@@ -1,17 +1,22 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
-import { isIdleExpired } from '@/lib/idleSession';
 import { logger } from '@/lib/logger';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
-import { canRenewSession, hasSession, readActiveSession, renewSession, sessionRateLimitSecret } from '@/lib/activeSession';
-import { clearSessionCookies } from '@/lib/session';
+import {
+  canRenewSession,
+  isSessionIdleExpired,
+  readActiveSession,
+  renewSession,
+  sessionRateLimitSecret,
+} from '@/lib/activeSession';
+import { clearIdleSessionCookies, clearSessionCookies } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-function endSession(message: string, status = 401): NextResponse {
+function endSession(message: string, status = 401, clear = clearSessionCookies): NextResponse {
   const response = NextResponse.json({ message }, { status });
-  clearSessionCookies(response);
+  clear(response);
   return response;
 }
 
@@ -44,9 +49,9 @@ export async function POST(request: NextRequest) {
   // still active — idle timeout must end it too, even though nothing here
   // would otherwise reject the refresh. See `isIdleExpired`'s doc comment for
   // why every session-cookie entry point needs this, not just page loads.
-  if (isIdleExpired(hasSession(session), request)) {
+  if (isSessionIdleExpired(session, request)) {
     logger.security(`Refresh refused for ${clientIp}: session idle-expired`);
-    return endSession(AUTH_MESSAGES.sessionExpiredIdle);
+    return endSession(AUTH_MESSAGES.sessionExpiredIdle, 401, clearIdleSessionCookies);
   }
 
   if (!session || !canRenewSession(session)) return endSession(AUTH_MESSAGES.sessionExpired);
