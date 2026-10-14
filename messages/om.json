@@ -87,7 +87,9 @@
     "selectTemplate": "Unkaa deebii filadhaa",
     "selectActionFirst": "Dursa tarkaanfii filadhaa",
     "loadingTemplates": "Unkaaleen fe'amaa jiru…",
-    "noTemplates": "Unkaaleen jiran hin jiru"
+    "noTemplates": "Unkaaleen jiran hin jiru",
+    "caseTerminalTitle": "Dhimma {status}",
+    "caseTerminalMessage": "Komiin kun {status} ta'eera. Deebii dabalataa galchuun hin danda'amu."
   },
   "admin": {
     "responseTemplates": {

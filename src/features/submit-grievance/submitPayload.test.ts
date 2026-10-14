@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSaveDraftPayload, resolveContactEmail, resolveContactMobile, resolveSubmitterName } from "./draftPayload";
+import { buildSubmitFields, resolveContactEmail, resolveContactMobile, resolveSubmitterName } from "./submitPayload";
 
 describe("resolveSubmitterName", () => {
   it("prefers the type-specific identity field over the account's own profile", () => {
@@ -30,7 +30,7 @@ describe("resolveSubmitterName", () => {
     expect(
       resolveSubmitterName({
         submitterType: "development_agent",
-        identityValues: {}, // farmerName not yet typed — Step 1's Save Draft is deliberately unvalidated
+        identityValues: {}, // farmerName not yet typed — not yet typed
         userFullName: "The Signed-In Agent",
       })
     ).toBe("");
@@ -57,9 +57,9 @@ describe("resolveContactMobile / resolveContactEmail", () => {
   });
 });
 
-describe("buildSaveDraftPayload", () => {
+describe("buildSubmitFields", () => {
   it("sends every optional field as an empty string, not omitted, so a cleared value can't resurface from an earlier save", () => {
-    const payload = buildSaveDraftPayload({ clientSubmissionUuid: "uuid-1", identityValues: {} });
+    const payload = buildSubmitFields({ clientSubmissionUuid: "uuid-1", identityValues: {} });
     expect(payload).toEqual({
       client_submission_uuid: "uuid-1",
       submission_channel: "",
@@ -80,7 +80,7 @@ describe("buildSaveDraftPayload", () => {
   });
 
   it("omits administrative_area (rather than sending it empty) when it hasn't resolved yet", () => {
-    const payload = buildSaveDraftPayload({ clientSubmissionUuid: "uuid-1", identityValues: {} });
+    const payload = buildSubmitFields({ clientSubmissionUuid: "uuid-1", identityValues: {} });
     expect(payload.administrative_area).toBeUndefined();
     expect("administrative_area" in payload).toBe(true); // present as a key, just undefined — JSON.stringify drops it
   });

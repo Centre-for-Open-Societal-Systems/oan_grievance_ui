@@ -38,23 +38,17 @@ export async function callBackendAuth<T>(path: string, body: object, clientIp: s
     body: JSON.stringify(body),
   });
 
-  const data = await response.json().catch(() => ({}));
-  // REST responses are flat (`{status, data, message}`, `message` a string) —
-  // unlike the classic RPC shape, which nested the same fields as an object
-  // under `.message`. Only treat `.message` as the envelope when it's an
-  // object, so a flat REST response's string `message` isn't mistaken for one
-  // (see `authProfile.ts`'s `getMe` for the same distinction on `/auth/me`).
-  const envelope = (
-    data?.message && typeof data.message === 'object' ? data.message : data
-  ) as { status?: string; message?: string; code?: string; data?: T } | undefined;
+  const data = (await response.json().catch(() => ({}))) as
+    | { status?: string; message?: string; code?: string; data?: T }
+    | undefined;
 
-  if (!response.ok || envelope?.status === 'error') {
+  if (!response.ok || data?.status === 'error') {
     throw new BackendAuthError(
-      envelope?.message || `Request failed with status ${response.status}`,
+      data?.message || `Request failed with status ${response.status}`,
       response.status,
-      envelope?.code
+      data?.code
     );
   }
 
-  return (envelope?.data ?? (envelope as unknown as T));
+  return (data?.data ?? (data as unknown as T));
 }

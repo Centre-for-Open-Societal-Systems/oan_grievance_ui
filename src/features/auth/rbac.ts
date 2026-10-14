@@ -55,12 +55,18 @@ export function isProtectedRoute(pathname: string): boolean {
  * actual login, though — no account holding this role exists on the dev
  * bench yet (it's brand new), so re-verify the string once one does, the
  * same way the other three were confirmed above.
+ *
+ * `DEVELOPMENT_AGENT` files grievances on a farmer's behalf and has exactly
+ * a submitter's authority, so it is granted everything `SUBMITTER` is below.
+ * Its string follows the other roles' naming and is likewise not yet
+ * confirmed via an actual login.
  */
 export const ROLES = {
   SUBMITTER: 'Grievance Submitter',
   OFFICER: 'Grievance Officer',
   ADMIN: 'Grievance Admin',
   REVIEW_OFFICER: 'Grievance Review Officer',
+  DEVELOPMENT_AGENT: 'Grievance Assisted Submitter',
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -92,9 +98,9 @@ function isUnrestrictedRoute(pathname: string): boolean {
  */
 const ROUTE_ROLES: Record<string, Role[]> = {
   '/dashboard': [ROLES.OFFICER, ROLES.ADMIN],
-  '/submit-grievance': [ROLES.SUBMITTER],
-  '/all-grievances': [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
-  '/grievances': [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
+  '/submit-grievance': [ROLES.SUBMITTER, ROLES.DEVELOPMENT_AGENT],
+  '/all-grievances': [ROLES.SUBMITTER, ROLES.DEVELOPMENT_AGENT, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
+  '/grievances': [ROLES.SUBMITTER, ROLES.DEVELOPMENT_AGENT, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
   '/analytics-reporting': [ROLES.OFFICER, ROLES.ADMIN],
   // Read-only per PR #47: officer list/stats and L1/L2 officers, and category
   // assignments — but NOT response templates or dashboard charts. That split
@@ -109,7 +115,13 @@ const ROUTE_ROLES: Record<string, Role[]> = {
 };
 
 /** Highest-privilege role first — decides which home route wins for a multi-role user. */
-const ROLE_PRIORITY: Role[] = [ROLES.ADMIN, ROLES.OFFICER, ROLES.REVIEW_OFFICER, ROLES.SUBMITTER];
+const ROLE_PRIORITY: Role[] = [
+  ROLES.ADMIN,
+  ROLES.OFFICER,
+  ROLES.REVIEW_OFFICER,
+  ROLES.SUBMITTER,
+  ROLES.DEVELOPMENT_AGENT,
+];
 
 /** Where each role lands right after login, and where it's sent back to if it's bounced off a route it can't access. */
 const ROLE_HOME_ROUTE: Record<Role, string> = {
@@ -117,6 +129,7 @@ const ROLE_HOME_ROUTE: Record<Role, string> = {
   [ROLES.OFFICER]: '/all-grievances',
   [ROLES.REVIEW_OFFICER]: '/all-grievances',
   [ROLES.SUBMITTER]: '/submit-grievance',
+  [ROLES.DEVELOPMENT_AGENT]: '/submit-grievance',
 };
 
 // Must be a route absent from ROUTE_ROLES — this is the fallback for a role

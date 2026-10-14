@@ -284,3 +284,23 @@ export function normalizeTimelineEntry(
     attachments: entry.attachments,
   };
 }
+
+/**
+ * Checks whether a given grievance status string is considered terminal.
+ * Looks up against metadata statuses (where is_terminal === 1) if provided,
+ * otherwise falls back to standard terminal status names ('Closed', 'Rejected').
+ */
+export function isTerminalStatus(
+  status?: string | null,
+  statusOptions?: Array<{ status: string; is_terminal?: number }> | null
+): boolean {
+  if (!status) return false;
+  const normalized = status.trim().toLowerCase();
+  if (statusOptions && statusOptions.length > 0) {
+    const match = statusOptions.find((opt) => opt.status.trim().toLowerCase() === normalized);
+    if (match && typeof match.is_terminal === 'number') {
+      return match.is_terminal === 1;
+    }
+  }
+  return normalized === 'closed' || normalized === 'rejected';
+}

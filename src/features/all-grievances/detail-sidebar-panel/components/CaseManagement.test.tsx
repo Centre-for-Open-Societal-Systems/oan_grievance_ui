@@ -148,4 +148,25 @@ describe('CaseManagement', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('renders read-only department and officer without edit controls when status is terminal', () => {
+    const closedTimeline: GrievanceTimelineData = {
+      ...mockTimelineData,
+      status: 'Closed',
+    };
+
+    renderWithStore(
+      <CaseManagement
+        canManageCase={true}
+        timelineData={closedTimeline}
+      />
+    );
+
+    expect(screen.getByText('Case Management')).toBeInTheDocument();
+    expect(screen.getByText('Inputs Supply & Distribution Agency')).toBeInTheDocument();
+    expect(screen.getByText('Tigist Alemu')).toBeInTheDocument();
+    expect(screen.getByText(/cannot be reassigned/i)).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Department' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
+  });
 });

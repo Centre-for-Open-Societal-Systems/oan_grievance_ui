@@ -34,11 +34,6 @@ describe('fetchApi error messages', () => {
     expect(await messageOf()).toBe('Description: Description must be at least 20 characters.');
   });
 
-  it('still reads details nested under message, where the RPC envelope puts them', async () => {
-    respond(400, { message: { details: { grievance_type: 'Not valid for that category' } } });
-    expect(await messageOf()).toBe('Grievance Type: Not valid for that category');
-  });
-
   it('leads with the value alone for a cross-field rule that has no field name', async () => {
     respond(400, { message: 'Validation failed', details: { '': 'Provide either a key or an OTP' } });
     expect(await messageOf()).toBe('Provide either a key or an OTP');
@@ -49,8 +44,8 @@ describe('fetchApi error messages', () => {
     expect(await messageOf()).toBe('Invalid login credentials');
   });
 
-  it('uses the nested message when there are no details, and generic copy when there is nothing at all', async () => {
-    respond(404, { message: { message: 'Draft not found' } });
+  it('uses the response message when there are no details, and generic copy when there is nothing at all', async () => {
+    respond(404, { message: 'Draft not found' });
     expect(await messageOf()).toBe('Draft not found');
 
     respond(404, {});
@@ -120,14 +115,12 @@ describe('fetchApi utilities', () => {
   });
 
   describe('extractFieldErrors', () => {
-    it('extracts string field errors from responseData message details', () => {
+    it('extracts string field errors from responseData details', () => {
       const err = new ApiError('Validation Error', {
-        message: {
-          details: {
-            title: 'Title is required',
-            category: 'Invalid category',
-            count: 42,
-          },
+        details: {
+          title: 'Title is required',
+          category: 'Invalid category',
+          count: 42,
         },
       });
 

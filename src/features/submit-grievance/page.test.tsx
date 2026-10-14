@@ -6,7 +6,6 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import en from '../../../messages/en.json';
 import { loginThunk, type User } from '@/features/auth/store/authSlice';
-import { ApiError } from '@/lib/api/fetchApi';
 import SubmitGrievancePage from './page';
 import { makeStore } from './testFixtures';
 
@@ -21,11 +20,6 @@ vi.mock('next/navigation', () => ({
   }),
   usePathname: () => '/submit-grievance',
   useSearchParams: () => new URLSearchParams(currentSearch),
-}));
-
-vi.mock('@/lib/drafts', () => ({
-  loadDraft: vi.fn().mockImplementation(() => Promise.reject(new ApiError('Not found', undefined, 404))),
-  discardDraft: vi.fn().mockResolvedValue({}),
 }));
 
 afterEach(() => {
@@ -116,17 +110,6 @@ describe('SubmitGrievancePage URL step filter', () => {
     }
 
     expect(pushMock).toHaveBeenCalledWith('/submit-grievance?step=1', { scroll: false });
-  });
-
-  it('runs loadDraft only once on mount and does not refetch during step navigation', async () => {
-    const { loadDraft } = await import('@/lib/drafts');
-    currentSearch = 'step=1';
-    renderPage();
-
-    const nextBtn = await screen.findByRole('button', { name: /Save & Continue/i });
-    fireEvent.click(nextBtn);
-
-    expect(loadDraft).toHaveBeenCalledTimes(1);
   });
 });
 

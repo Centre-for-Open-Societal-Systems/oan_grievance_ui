@@ -120,6 +120,8 @@ interface ResponseFormProps {
   /** Uploads supporting documents to the case before the response is sent. */
   onUploadFiles?: (files: File[]) => Promise<unknown>;
   isSubmitting?: boolean;
+  isTerminal?: boolean;
+  caseStatus?: string;
 }
 
 export function ResponseForm({
@@ -131,6 +133,8 @@ export function ResponseForm({
   onAddNote,
   onUploadFiles,
   isSubmitting: isExecuting = false,
+  isTerminal = false,
+  caseStatus,
 }: ResponseFormProps) {
   const t = useTranslations('responseForm');
   const tDocs = useTranslations('supportingDocuments');
@@ -223,6 +227,20 @@ export function ResponseForm({
   const isInternalValid = internalNoteTab.trim() !== '';
 
   if (!canManageCase) return null;
+
+  if (isTerminal) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-base font-bold text-gray-900">
+          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" aria-hidden="true" />
+          <span>{t('caseTerminalTitle', { status: caseStatus || 'Closed' })}</span>
+        </div>
+        <p className="text-sm text-gray-600">
+          {t('caseTerminalMessage', { status: caseStatus ? caseStatus.toLowerCase() : 'closed' })}
+        </p>
+      </div>
+    );
+  }
 
   const handleSubmitResponse = async () => {
     if (!isResponseValid || !selectedAction || !onExecuteAction) return;

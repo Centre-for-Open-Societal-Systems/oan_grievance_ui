@@ -5,7 +5,7 @@ import { AlertCircle, CalendarClock, CheckCircle2, Clock, Timer } from 'lucide-r
 import { DeferSLAPopup } from './DeferSLAPopup';
 import { ReviewDeferralPopup } from './ReviewDeferralPopup';
 import type { DeferSLAPayload, Grievance, GrievanceChangeResponseData, GrievanceTimelineData } from '../../types';
-import { formatDate } from '../../utils/mapGrievance';
+import { formatDate, isTerminalStatus } from '../../utils/mapGrievance';
 
 import { useAppSelector } from '@/store/hooks';
 
@@ -15,22 +15,38 @@ interface SLATrackerProps {
   timelineData?: GrievanceTimelineData | null;
   onDefer: (payload: DeferSLAPayload) => Promise<GrievanceChangeResponseData | undefined>;
   onDecideDeferral?: (name: string, decision: string, comments: string) => Promise<void>;
+  isTerminal?: boolean;
 }
 
-export function SLATracker({ canManageCase, grievance, timelineData, onDefer, onDecideDeferral }: SLATrackerProps) {
+export function SLATracker({
+  canManageCase,
+  grievance,
+  timelineData,
+  onDefer,
+  onDecideDeferral,
+  isTerminal: propIsTerminal,
+}: SLATrackerProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [showViewPopup, setShowViewPopup] = useState(false);
   const user = useAppSelector((state) => state.auth.user);
+  const statusOptions = useAppSelector((state) => state.metadata?.grievanceOptions?.statuses);
   const slaData = timelineData?.sla;
   const activeDeferral = slaData?.active_deferral_request;
   const isApprover = !!activeDeferral && activeDeferral.pending_with === user?.email;
   const canDefer = canManageCase || isApprover;
+
+  const currentStatus = timelineData?.status || timelineData?.current_status || grievance.status || '';
+  const resolvedIsTerminal = propIsTerminal ?? isTerminalStatus(currentStatus, statusOptions);
+  const isResolved =
+    currentStatus.toLowerCase() === 'resolved' ||
+    currentStatus.toLowerCase() === 'closed' ||
+    resolvedIsTerminal;
+
   const consumedPercent = Math.min(
     100,
-    Math.max(0, slaData?.sla_consumed_percent ?? (grievance.status === 'Resolved' ? 100 : 50))
+    Math.max(0, slaData?.sla_consumed_percent ?? (isResolved ? 100 : 50))
   );
 
-  const isResolved = grievance.status === 'Resolved' || grievance.status === 'Closed';
   const isOverdue = !isResolved && (consumedPercent >= 100 || grievance.status === 'Overdue');
   const isAtRisk = !isResolved && !isOverdue && consumedPercent >= 80;
 
@@ -40,6 +56,13 @@ export function SLATracker({ canManageCase, grievance, timelineData, onDefer, on
 
   const getStatusBadge = () => {
     if (isResolved) {
+      if (currentStatus.trim().toLowerCase() === 'rejected') {
+        return (
+          <span className="px-3 py-1 bg-gray-100 text-gray-700 border border-gray-200 text-xs font-bold rounded-full flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5" /> Rejected
+          </span>
+        );
+      }
       return (
         <span className="px-3 py-1 bg-green-50 text-green-700 border border-green-200 text-xs font-bold rounded-full flex items-center gap-1.5">
           <CheckCircle2 className="h-3.5 w-3.5" /> Met SLA
@@ -68,7 +91,9 @@ export function SLATracker({ canManageCase, grievance, timelineData, onDefer, on
   };
 
   const getProgressBarColor = () => {
-    if (isResolved) return 'bg-emerald-600';
+    if (isResolved) {
+      return currentStatus.trim().toLowerCase() === 'rejected' ? 'bg-gray-400' : 'bg-emerald-600';
+    }
     if (isOverdue) return 'bg-red-500';
     if (isAtRisk) return 'bg-amber-500';
     return 'bg-[#1E9E49]';

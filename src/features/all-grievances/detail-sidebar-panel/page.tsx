@@ -12,6 +12,7 @@ import { AttachmentsList } from './components/AttachmentsList';
 import { CaseActionsPanel } from './components/CaseActionsPanel';
 import { useGrievanceTimeline } from '../hooks/useGrievanceTimeline';
 import type { Grievance } from '../types';
+import { isTerminalStatus } from '../utils/mapGrievance';
 import { useAppSelector } from '@/store/hooks';
 import { uploadAttachments } from '@/lib/attachments';
 import { isOfficerOrAdmin } from '@/features/auth/rbac';
@@ -61,6 +62,11 @@ export function GrievanceDetailSidebar({
   const isEscalated = timelineData?.escalated;
   const assignedToMe = timelineData?.assignment?.assigned_to === user?.email;
   const canManageCase = baseCanManageCase && (!isEscalated || assignedToMe);
+
+  const statusOptions = useAppSelector((state) => state.metadata?.grievanceOptions?.statuses);
+  const currentStatus =
+    timelineData?.status || timelineData?.current_status || grievance?.status || '';
+  const isTerminal = isTerminalStatus(currentStatus, statusOptions);
 
   if (!activeTicket) return null;
 
@@ -115,6 +121,8 @@ export function GrievanceDetailSidebar({
                 onAddNote={addNote}
                 onUploadFiles={uploadFiles}
                 isSubmitting={isSubmitting}
+                isTerminal={isTerminal}
+                caseStatus={currentStatus}
               />
               {timelineData && !canManageCase ? (
                 <CaseActionsPanel
@@ -137,6 +145,7 @@ export function GrievanceDetailSidebar({
                   timelineData={timelineData}
                   onDefer={deferSLA}
                   onDecideDeferral={handleDecideDeferral}
+                  isTerminal={isTerminal}
                 />
               ) : null}
               <CaseManagement
@@ -145,6 +154,7 @@ export function GrievanceDetailSidebar({
                 timelineData={timelineData}
                 onReassign={reassign}
                 onDecideReassignment={handleDecideReassignment}
+                isTerminal={isTerminal}
               />
 
               {grievance ? (

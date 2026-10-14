@@ -2,8 +2,7 @@ import { fetchApi } from '@/lib/api/fetchApi';
 import { ApiError } from '@/lib/api/fetchApi';
 
 // Client for oan_grievance_service's attachment REST routes — supporting-
-// document upload, listing, download, and deletion for a grievance or an
-// open draft. See the backend module's own docstring for the security model
+// document upload, listing, download, and deletion for a grievance. See the backend module's own docstring for the security model
 // (type sniffed from bytes, EXIF stripped, withheld until scanned clean);
 // this module only carries requests to it, it doesn't re-implement any of
 // that.
@@ -40,7 +39,7 @@ export const SCAN_STATUS = {
 
 export type ScanStatus = (typeof SCAN_STATUS)[keyof typeof SCAN_STATUS];
 
-/** Mirrors the backend's `MAX_ATTACHMENTS_PER_CASE` (attachment.py) — a case may carry at most this many files, resumed draft attachments included. */
+/** Mirrors the backend's `MAX_ATTACHMENTS_PER_CASE` (attachment.py) — a case may carry at most this many files. */
 export const MAX_ATTACHMENTS_PER_CASE = 10;
 
 /** Mirrors the backend's 10MB per-file upload limit (attachment.py). */
@@ -54,54 +53,17 @@ export const ACCEPTED_ATTACHMENT_MIME_TYPES = [
 
 export const ACCEPTED_ATTACHMENT_EXTENSIONS = '.pdf,.jpg,.jpeg,.png';
 
-export type AttachmentUploadState = 'idle' | 'uploading' | 'persisting' | 'error';
-
 /**
- * One row in the submission wizard's attachment list — either a file just
- * picked in this session or one resumed from a saved draft. `key` is a
- * stable client-side id for React lists and for matching a still-uploading
- * item to its eventual response; it is independent of `attachmentId`, which
- * doesn't exist yet while `uploadState` is "uploading".
+ * One row in the submission wizard's attachment list — a file picked in this
+ * session and held in memory. Nothing reaches the backend until the
+ * grievance is filed; `ReviewAndSubmitCard` uploads the staged files to the
+ * new ticket right after `POST /api/v1/grievances` succeeds. `key` is a
+ * stable client-side id for React lists.
  */
 export interface WizardAttachment {
   key: string;
-  /** The backend Grievance Attachment id, once known. Null while the upload is still in flight. */
-  attachmentId: string | null;
-  /** The local blob for newly picked files. Null for an attachment resumed from a saved draft, which streams its preview from the backend. */
-  file: File | null;
+  file: File;
   fileName: string;
-  scanStatus: ScanStatus | null;
-  /**
-   * How many completed scan-poll checks this attachment has been through
-   * while "Pending" — drives GrievanceDetailsCard's give-up timeout. Reset
-   * to 0 whenever `scanStatus` (re-)becomes "Pending"; meaningless
-   * otherwise. Lives here, not in a ref local to that component, because
-   * page.tsx conditionally unmounts/remounts GrievanceDetailsCard on every
-   * Step 1<->2 navigation; a component-local counter would reset on every
-   * Back/Next, defeating the timeout. Counting actual completed checks
-   * (not elapsed wall-clock time) matters too: on a slow connection where a
-   * single check can outlast the poll interval, fewer checks complete per
-   * minute, so the real time before giving up self-extends — the same
-   * "this app targets slow/unreliable connections" reasoning the poll
-   * effect's own comments describe elsewhere.
-   */
-  scanPollAttempts: number;
-  uploadState: AttachmentUploadState;
-  /** Set only on uploadState "error" — why this particular file failed. */
-  error: string | null;
-}
-
-/**
- * The attachments that actually count as evidence on the case — everything
- * except a row stuck at uploadState "error". A failed upload never made it
- * to the backend (no `attachmentId`), so it must not count toward
- * `MAX_ATTACHMENTS_PER_CASE`, block the dropzone from reopening, or be
- * listed as a real attachment on the Review step; it stays visible in the
- * picker's own list (via the full, unfiltered array) only so the user can
- * see it failed and remove it.
- */
-export function activeWizardAttachments(attachments: WizardAttachment[]): WizardAttachment[] {
-  return attachments.filter((a) => a.uploadState !== 'error');
 }
 
 /**
@@ -146,12 +108,9 @@ export interface AttachmentDownloadInfo {
 }
 
 /**
- * Either `grievance` or `clientUuid` is required. `grievance` uploads
- * directly to a filed case; `clientUuid` uploads to an open draft before the
- * case exists — both hit the same
- * `POST /api/v1/grievances/<grievance>/attachments` route (see
- * `submit_documents` on the backend, `oan_grievance_service/api/v1/attachment.py`),
- * which resolves `<grievance>` against `client_submission_uuid` too.
+ * Uploads to a filed case — `POST /api/v1/grievances/<grievance>/attachments`
+ * (see `submit_documents` on the backend,
+ * `oan_grievance_service/api/v1/attachment.py`).
  *
  * `files` may hold more than one file — the backend accepts several under
  * repeated `file` fields in one multipart request (`get_uploaded_files`),
@@ -161,8 +120,7 @@ export interface AttachmentDownloadInfo {
  */
 export async function uploadAttachments(params: {
   files: File[];
-  grievance?: string;
-  clientUuid?: string;
+  grievance: string;
   documentType?: string;
   response?: string;
 }): Promise<UploadAttachmentResult[]> {
@@ -172,17 +130,10 @@ export async function uploadAttachments(params: {
   }
   if (params.documentType) form.append('document_type', params.documentType);
   if (params.response) form.append('response', params.response);
-
-  const targetId = params.grievance || params.clientUuid;
-  if (!targetId) {
-    throw new Error('uploadAttachments requires either a grievance or a clientUuid.');
-  }
-
-  form.append('grievance', targetId);
-  if (params.clientUuid) form.append('client_uuid', params.clientUuid);
+  form.append('grievance', params.grievance);
 
   const rawResult = await fetchApi<UploadAttachmentResult | UploadAttachmentResult[]>(
-    `api/v1/grievances/${encodeURIComponent(targetId)}/attachments`,
+    `api/v1/grievances/${encodeURIComponent(params.grievance)}/attachments`,
     { method: 'POST', body: form },
     UPLOAD_TIMEOUT_MS
   );

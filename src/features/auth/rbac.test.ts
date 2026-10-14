@@ -9,7 +9,7 @@ import {
   ROLES,
 } from './rbac';
 
-const ALL_ROLES = [ROLES.SUBMITTER, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER];
+const ALL_ROLES = Object.values(ROLES);
 
 describe('isPublicRoute / isProtectedRoute', () => {
   it('treats /login, /register and /reset-password (and their sub-paths) as public', () => {
@@ -45,8 +45,9 @@ describe('canAccessRoute — deny-by-default', () => {
 });
 
 describe('canAccessRoute — per-role gates', () => {
-  it('/submit-grievance is Submitter-only', () => {
+  it('/submit-grievance is Submitter/Development Agent only', () => {
     expect(canAccessRoute('/submit-grievance', [ROLES.SUBMITTER])).toBe(true);
+    expect(canAccessRoute('/submit-grievance', [ROLES.DEVELOPMENT_AGENT])).toBe(true);
     expect(canAccessRoute('/submit-grievance', [ROLES.OFFICER])).toBe(false);
     expect(canAccessRoute('/submit-grievance', [ROLES.ADMIN])).toBe(false);
   });
@@ -67,7 +68,7 @@ describe('canAccessRoute — per-role gates', () => {
     }
   });
 
-  it('/all-grievances and /grievances are open to all four roles', () => {
+  it('/all-grievances and /grievances are open to every role', () => {
     for (const path of ['/all-grievances', '/grievances']) {
       for (const role of ALL_ROLES) expect(canAccessRoute(path, [role])).toBe(true);
     }
@@ -93,6 +94,7 @@ describe('canAccessRoute — per-role gates', () => {
 describe('homeRouteForRoles', () => {
   it('routes each known role to its documented home', () => {
     expect(homeRouteForRoles([ROLES.SUBMITTER])).toBe('/submit-grievance');
+    expect(homeRouteForRoles([ROLES.DEVELOPMENT_AGENT])).toBe('/submit-grievance');
     expect(homeRouteForRoles([ROLES.OFFICER])).toBe('/all-grievances');
     expect(homeRouteForRoles([ROLES.ADMIN])).toBe('/dashboard');
     expect(homeRouteForRoles([ROLES.REVIEW_OFFICER])).toBe('/all-grievances');

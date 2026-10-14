@@ -8,10 +8,11 @@ import { SetInitialPasswordModal } from '@/features/auth/components/SetInitialPa
 import { homeRouteForRoles } from '@/features/auth/rbac';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { AUTH_MESSAGES } from '@/lib/authMessages';
+import { safeReturnPath } from '@/lib/returnPath';
 import { validateEmail, validateLoginPassword } from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors, type FieldErrors } from '@/lib/validation/useFieldErrors';
 import { useAppDispatch } from '@/store/hooks';
-import { ArrowRight, Eye, EyeOff, Lock, User } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, ShieldCheck, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -23,7 +24,12 @@ const LOGIN_FIELD_ORDER: ReadonlyArray<{ key: LoginField; id: string }> = [
   { key: 'password', id: 'login-password' },
 ];
 
-export function LoginForm() {
+interface LoginFormProps {
+  /** Whether "Sign in as staff" (delegated to the OpenG2P IAM service) is configured on the server. */
+  staffSignInEnabled: boolean;
+}
+
+export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
@@ -36,6 +42,7 @@ export function LoginForm() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showSetPasswordModal, setShowSetPasswordModal] = useState(false);
+  const [isStaffRedirecting, setIsStaffRedirecting] = useState(false);
 
   // Read via `window.location` rather than `useSearchParams()` — this page is
   // otherwise fully static, and `useSearchParams()` would force it (and
@@ -50,6 +57,14 @@ export function LoginForm() {
     if (reason === 'idle') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrorMessage(AUTH_MESSAGES.sessionExpiredIdle);
+    } else if (reason === 'expired') {
+      setErrorMessage(AUTH_MESSAGES.sessionExpired);
+    } else if (reason === 'staff_failed') {
+      setErrorMessage(AUTH_MESSAGES.staffSignInFailed);
+    } else if (reason === 'staff_unavailable') {
+      setErrorMessage(AUTH_MESSAGES.staffSignInUnavailable);
+    } else if (reason === 'staff_no_access') {
+      setErrorMessage(AUTH_MESSAGES.staffSignInNoAccess);
     } else if (reason === 'reset') {
       setSuccessMessage(AUTH_MESSAGES.passwordResetSuccess);
     }
@@ -90,8 +105,7 @@ export function LoginForm() {
 
     if (loginThunk.fulfilled.match(result)) {
       const returnUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('returnUrl') : null;
-      const safeReturnUrl = returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : null;
-      router.push(safeReturnUrl || homeRouteForRoles(result.payload.roles ?? []));
+      router.push(safeReturnPath(returnUrl) || homeRouteForRoles(result.payload.roles ?? []));
       return;
     }
 
@@ -105,6 +119,17 @@ export function LoginForm() {
       setErrorMessage(result.payload ?? 'Something went wrong. Please try again.');
     }
     setIsLoading(false);
+  };
+
+  // A full page navigation, not a fetch: the browser has to follow the
+  // identity provider's login redirects. The returnUrl is passed through and
+  // sanitised server-side too.
+  const startStaffSignIn = () => {
+    setIsStaffRedirecting(true);
+    const returnUrl = safeReturnPath(new URLSearchParams(window.location.search).get('returnUrl'));
+    // A route handler that answers with a redirect, not a page — router.push can't follow it.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = `/api/auth/staff/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`;
   };
 
   return (
@@ -226,6 +251,28 @@ export function LoginForm() {
           <span className="font-semibold">{isLoading ? 'Signing in…' : 'Sign In'}</span>
           {!isLoading && <ArrowRight size={18} strokeWidth={2.5} />}
         </Button>
+
+        {staffSignInEnabled && (
+          <>
+            <div className="flex items-center gap-3 text-[13px] font-medium text-[#9CA3AF]" aria-hidden="true">
+              <span className="h-px flex-1 bg-[#E5E7EB]" />
+              or
+              <span className="h-px flex-1 bg-[#E5E7EB]" />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="none"
+              isLoading={isStaffRedirecting}
+              disabled={isLoading}
+              onClick={startStaffSignIn}
+              className="w-full py-4 text-[14px] space-x-2 active:scale-[0.98]"
+            >
+              {!isStaffRedirecting && <ShieldCheck size={18} strokeWidth={2.25} />}
+              <span className="font-semibold">{isStaffRedirecting ? 'Redirecting…' : 'Sign in as staff'}</span>
+            </Button>
+          </>
+        )}
 
         <div className="text-center text-[14px] font-medium text-[#6B7280]">
           New to the portal?{' '}
