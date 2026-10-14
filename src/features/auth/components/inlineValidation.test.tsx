@@ -60,7 +60,7 @@ describe('LoginForm inline validation', () => {
   const renderLogin = () =>
     render(
       <Provider store={makeStore()}>
-        <LoginForm />
+        <LoginForm staffSignInEnabled={false} />
       </Provider>
     );
 

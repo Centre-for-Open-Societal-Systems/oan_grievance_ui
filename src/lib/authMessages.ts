@@ -10,6 +10,8 @@ export const AUTH_MESSAGES = {
   sessionExpired: 'Your session has expired. Please sign in again.',
   sessionExpiredIdle: 'You were signed out due to inactivity. Please sign in again.',
   signInUnavailable: 'We could not sign you in right now. Please try again shortly.',
+  staffSignInFailed: 'Staff sign-in did not complete. Please try again.',
+  staffSignInUnavailable: 'Staff sign-in is not available right now. Please try again shortly.',
   passwordResetSuccess: 'Your password has been reset. Please sign in with your new password.',
   tooManyAttempts: 'Too many attempts. Please wait a moment and try again.',
   unexpected: 'Something went wrong. Please try again.',

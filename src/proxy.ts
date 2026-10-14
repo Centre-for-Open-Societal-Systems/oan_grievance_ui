@@ -1,13 +1,9 @@
 import { canAccessRoute, homeRouteForRoles, isProtectedRoute, isPublicRouteAllowedWhenAuthenticated } from '@/features/auth/rbac';
 import { env } from '@/lib/env';
 import { hasRecentActivity } from '@/lib/idleSession';
-import { decodeAccessToken, isExpired } from '@/lib/jwt';
-import {
-  AUTH_TOKEN_COOKIE,
-  clearAuthTokenCookie,
-  clearSessionCookies,
-  REFRESH_TOKEN_COOKIE,
-} from '@/lib/session';
+import { canRenewSession, readActiveSession } from '@/lib/activeSession';
+import { isExpired } from '@/lib/jwt';
+import { clearAuthTokenCookie, clearSessionCookies } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -86,9 +82,12 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  const token = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
-  const hasRefreshToken = !!request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
-  const claims = token ? decodeAccessToken(token) : null;
+  // Either a local session or a staff (IAM) one — see `activeSession.ts`.
+  // Both decode to the same claims shape, so nothing below tells them apart.
+  const session = readActiveSession(request);
+  const token = session?.token;
+  const claims = session?.claims ?? null;
+  const canRenew = !!session && canRenewSession(session);
   // Classified once — `isProtectedRoute` is just `!isPublicRoute`, so
   // computing both separately below would run the same PUBLIC_ROUTES scan
   // twice per request on this route guard that runs on nearly every page load.
@@ -98,7 +97,7 @@ export function proxy(request: NextRequest) {
   // the access token is meant to expire every 15 minutes and be rotated by
   // `/api/auth/me` / `/api/auth/refresh`, so bouncing on expiry alone would
   // sign everyone out constantly.
-  const hasValidSession = !!claims && (!isExpired(claims) || hasRefreshToken);
+  const hasValidSession = !!claims && (!isExpired(claims) || canRenew);
 
   // A valid token pair only proves a session was *opened*, not that it's
   // still active. `hasRecentActivity` is the idle clock: refreshed by
@@ -123,7 +122,7 @@ export function proxy(request: NextRequest) {
       // unlike the malformed-token case below, there's a genuine live session
       // being closed out, so every session cookie goes with it.
       clearSessionCookies(response);
-    } else if (token && !claims) {
+    } else if (session?.kind === 'local' && token && !claims) {
       // A cookie present but unusable (malformed, wrong shape) is misleading,
       // not just useless — drop it. A merely-expired one is left alone: it's
       // still the shape `/api/auth/me` can refresh from.

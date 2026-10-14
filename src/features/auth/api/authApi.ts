@@ -179,20 +179,29 @@ export async function setInitialPassword(usr: string, currentPassword: string, n
 }
 
 /**
- * Clears the server-side session cookies. Returns whether the server
- * confirmed it — callers should still reset client auth state either way.
+ * Ends the session server-side. `returnTo` is the page to land on afterwards.
+ * Returns the identity provider's logout URL when the session was a staff
+ * (IAM) one — the caller navigates there so the provider's SSO session ends
+ * too, and the provider sends the browser on to `returnTo` — otherwise null.
+ * Callers should reset client auth state either way.
  */
-export async function logoutUser(): Promise<boolean> {
+export async function logoutUser(returnTo: string): Promise<string | null> {
   try {
-    const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    const res = await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ returnTo }),
+    });
     if (!res.ok) {
       logger.security(`Logout refused by the server with status ${res.status}`);
-      return false;
+      return null;
     }
-    return true;
+    const data = (await res.json().catch(() => ({}))) as { redirectTo?: unknown };
+    return typeof data.redirectTo === 'string' ? data.redirectTo : null;
   } catch (error) {
     logger.error('Logout request failed:', error);
-    return false;
+    return null;
   }
 }
 

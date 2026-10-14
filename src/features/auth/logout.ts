@@ -13,9 +13,22 @@ import type { AppDispatch } from '@/store';
  * localStorage, so it's what's needed to wipe that PII when the session ends.
  * Callers pass it because it must be read before `dispatch(logout())` clears
  * the very state it lives in.
+ *
+ * `returnTo` is where the user lands afterwards. Callers navigate there
+ * themselves — except for a staff (IAM) session, where this navigates the
+ * whole page to the identity provider's logout instead, so its SSO session
+ * ends too, and the provider sends the browser on to `returnTo`. Returns
+ * whether it did, so the caller skips its own navigation.
  */
-export async function performLogout(dispatch: AppDispatch, email: string | null): Promise<void> {
-  await logoutUser();
+export async function performLogout(
+  dispatch: AppDispatch,
+  email: string | null,
+  returnTo = '/login'
+): Promise<boolean> {
+  const providerLogoutUrl = await logoutUser(returnTo);
   dispatch(logout());
   if (email) clearSubmitterProfile(email);
+  if (!providerLogoutUrl) return false;
+  window.location.assign(providerLogoutUrl);
+  return true;
 }
