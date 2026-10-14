@@ -1,4 +1,4 @@
-import { isSessionIdleExpired, readActiveSession, renewSession } from '@/lib/activeSession';
+import { isIdleManaged, isSessionIdleExpired, readActiveSession, renewSession } from '@/lib/activeSession';
 import { getClientIp } from '@/lib/clientIp';
 import { isExpired } from '@/lib/jwt';
 import { logger } from '@/lib/logger';
@@ -19,7 +19,9 @@ function noSession(): NextResponse {
  * expired (the cookie carries the *session* lifetime, not the 15-minute
  * access-token lifetime, so an expired access token with a live refresh token
  * is the common case, not an edge case). Works the same for a local session
- * and a staff (IAM) one — see `activeSession.ts`.
+ * and a staff (IAM) one — see `activeSession.ts`. `idleManaged` tells the
+ * client idle timer (`useIdleTimer`) whether this app's idle clock applies:
+ * it does not for an IAM session, whose idle timeout is Keycloak's.
  */
 export async function GET(request: NextRequest) {
   const session = readActiveSession(request);
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
   if (!session) return NextResponse.json({ message: 'No active session' }, { status: 401 });
 
   if (session.claims && !isExpired(session.claims)) {
-    return NextResponse.json({ email: session.claims.sub, roles: session.claims.roles });
+    return NextResponse.json({ email: session.claims.sub, roles: session.claims.roles, idleManaged: isIdleManaged(session) });
   }
 
   try {
@@ -48,7 +50,11 @@ export async function GET(request: NextRequest) {
       return noSession();
     }
 
-    const response = NextResponse.json({ email: renewed.claims.sub, roles: renewed.claims.roles });
+    const response = NextResponse.json({
+      email: renewed.claims.sub,
+      roles: renewed.claims.roles,
+      idleManaged: isIdleManaged(session),
+    });
     renewed.apply(response);
     return response;
   } catch (error) {

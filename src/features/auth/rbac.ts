@@ -66,7 +66,7 @@ export const ROLES = {
   OFFICER: 'Grievance Officer',
   ADMIN: 'Grievance Admin',
   REVIEW_OFFICER: 'Grievance Review Officer',
-  DEVELOPMENT_AGENT: 'Grievance Development Agent',
+  DEVELOPMENT_AGENT: 'Grievance Assisted Submitter',
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];

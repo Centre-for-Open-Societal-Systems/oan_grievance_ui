@@ -59,6 +59,16 @@ export function hasAppAccess(iam: IamSession): boolean {
 }
 
 /**
+ * Whether this app's own idle clock applies to the session — a local one
+ * only. The client idle timer (`useIdleTimer`) reads it through
+ * `/api/auth/me`, so it never idles out an IAM session either: that would
+ * end the user's whole Keycloak SSO session, the registry's included.
+ */
+export function isIdleManaged(session: ActiveSession): boolean {
+  return session.kind === 'local';
+}
+
+/**
  * Whether the session has gone idle by this app's own clock. Only a local
  * session has one; an IAM session's idle timeout is IAM's (see the top of
  * this file). Every entry point that accepts a session cookie calls this —

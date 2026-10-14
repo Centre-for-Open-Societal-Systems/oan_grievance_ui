@@ -1,3 +1,4 @@
+import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { ApiErrorCode, httpStatusToErrorCode } from './apiErrors';
 
 // In the browser, requests are same-origin. On the server (SSR), there is no
@@ -77,18 +78,45 @@ function genericMessageForStatus(status: number): string {
   return 'Something went wrong. Please try again.';
 }
 
-let activeRefresh: Promise<boolean> | null = null;
+/** Why a session ended: idled out by this app's clock, or simply no longer renewable. */
+export type SessionEndReason = 'idle' | 'expired';
 
-async function refreshSession(): Promise<boolean> {
+/**
+ * `renewed` — retry the request. `ended` — the refresh route refused with a
+ * 401, so there is no session left to retry with. `failed` — a network error,
+ * a 5xx or a rate limit: the session may well still be fine.
+ */
+type RefreshOutcome = { kind: 'renewed' } | { kind: 'ended'; reason: SessionEndReason } | { kind: 'failed' };
+
+let activeRefresh: Promise<RefreshOutcome> | null = null;
+let sessionEndedHandler: ((reason: SessionEndReason) => void) | null = null;
+
+/**
+ * Registers what happens when a request finds the session over — refresh
+ * refused, not merely failed. `shared`-level code can't know about routing
+ * or Redux, so the auth feature supplies this (`AuthBootstrapGate`).
+ * Returns an unregister function.
+ */
+export function onSessionEnded(handler: (reason: SessionEndReason) => void): () => void {
+  sessionEndedHandler = handler;
+  return () => {
+    if (sessionEndedHandler === handler) sessionEndedHandler = null;
+  };
+}
+
+async function refreshSession(): Promise<RefreshOutcome> {
   try {
     const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
-    return res.ok;
+    if (res.ok) return { kind: 'renewed' };
+    if (res.status !== 401) return { kind: 'failed' };
+    const data = (await res.json().catch(() => ({}))) as { message?: unknown };
+    return { kind: 'ended', reason: data.message === AUTH_MESSAGES.sessionExpiredIdle ? 'idle' : 'expired' };
   } catch {
-    return false;
+    return { kind: 'failed' };
   }
 }
 
@@ -157,18 +185,27 @@ export async function fetchApi<T = unknown>(
   if (response.status === 401 && typeof window !== 'undefined') {
     if (!activeRefresh) {
       activeRefresh = refreshSession().then(
-        (success) => {
+        (outcome) => {
           activeRefresh = null;
-          return success;
+          return outcome;
         },
         () => {
           activeRefresh = null;
-          return false;
+          return { kind: 'failed' } as const;
         }
       );
     }
-    const success = await activeRefresh;
-    if (success) {
+    // The proxy's own 401 is the one that knows it was an idle kick: it
+    // clears the idle cookie, so the refresh after it only sees "no session".
+    const refresh = activeRefresh;
+    const proxyMessage = ((await response.clone().json().catch(() => ({}))) as { message?: unknown }).message;
+    const outcome = await refresh;
+    if (outcome.kind === 'ended') {
+      // Every request that 401'd alongside this one gets here too — the
+      // handler is expected to act once.
+      sessionEndedHandler?.(proxyMessage === AUTH_MESSAGES.sessionExpiredIdle ? 'idle' : outcome.reason);
+    }
+    if (outcome.kind === 'renewed') {
       response = await fetchWithTimeout(
         url.toString(),
         {

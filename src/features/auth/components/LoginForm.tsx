@@ -57,6 +57,8 @@ export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
     if (reason === 'idle') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrorMessage(AUTH_MESSAGES.sessionExpiredIdle);
+    } else if (reason === 'expired') {
+      setErrorMessage(AUTH_MESSAGES.sessionExpired);
     } else if (reason === 'staff_failed') {
       setErrorMessage(AUTH_MESSAGES.staffSignInFailed);
     } else if (reason === 'staff_unavailable') {

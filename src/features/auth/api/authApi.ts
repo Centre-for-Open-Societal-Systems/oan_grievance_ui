@@ -222,6 +222,23 @@ export async function sendHeartbeat(): Promise<void> {
 }
 
 /**
+ * Whether this app's idle timeout applies to the current session — true for
+ * an email/password session, false for a staff (IAM) one, whose idle timeout
+ * is Keycloak's. Null when it can't be told (no session, network failure).
+ */
+export async function getIdleManaged(): Promise<boolean | null> {
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'include', headers: { Accept: 'application/json' } });
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => ({}))) as { idleManaged?: unknown };
+    return typeof data.idleManaged === 'boolean' ? data.idleManaged : null;
+  } catch (error) {
+    logger.error('Session kind lookup failed:', error);
+    return null;
+  }
+}
+
+/**
  * Fetches and validates /api/v1/auth/me. `fetchApi` already flattens the
  * response envelope (`.data`) before returning, so what
  * comes back here is already the flat shape — no further unwrapping needed.
