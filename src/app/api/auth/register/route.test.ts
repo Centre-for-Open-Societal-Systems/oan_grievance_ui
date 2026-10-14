@@ -58,19 +58,11 @@ describe('POST /api/auth/register — submitter fields', () => {
     expect(forwardedBody()).not.toHaveProperty('submitter_type');
   });
 
-  it('forwards the submitter type, Fayda ID and channel together', async () => {
-    const res = await post({
-      submitter_type: 'Individual Farmer',
-      fayda_id: FAYDA_ID,
-      submission_channel: 'Web Portal',
-    });
+  it('forwards the submitter type and Fayda ID together', async () => {
+    const res = await post({ submitter_type: 'Individual Farmer', fayda_id: FAYDA_ID });
 
     expect(res.status).toBe(200);
-    expect(forwardedBody()).toMatchObject({
-      submitter_type: 'Individual Farmer',
-      fayda_id: FAYDA_ID,
-      submission_channel: 'Web Portal',
-    });
+    expect(forwardedBody()).toMatchObject({ submitter_type: 'Individual Farmer', fayda_id: FAYDA_ID });
   });
 
   it('refuses a type it does not support, without calling the backend', async () => {
@@ -92,12 +84,11 @@ describe('POST /api/auth/register — submitter fields', () => {
     expect(callBackendAuth).not.toHaveBeenCalled();
   });
 
-  it('refuses an empty submission channel, but leaves an unknown one to the backend to judge', async () => {
-    expect((await post({ submission_channel: '  ' })).status).toBe(400);
-    expect(callBackendAuth).not.toHaveBeenCalled();
+  it('never forwards a submission channel, so the backend registers the account under its default', async () => {
+    const res = await post({ submitter_type: 'Individual Farmer', fayda_id: FAYDA_ID, submission_channel: 'Carrier Pigeon' });
 
-    expect((await post({ submission_channel: 'Carrier Pigeon' })).status).toBe(200);
-    expect(forwardedBody()).toMatchObject({ submission_channel: 'Carrier Pigeon' });
+    expect(res.status).toBe(200);
+    expect(forwardedBody()).not.toHaveProperty('submission_channel');
   });
 
   it('does not pass unknown fields through', async () => {
@@ -127,14 +118,12 @@ describe('POST /api/auth/register — backend rejections', () => {
 
   it("passes the backend's validation message through so the form can show it", async () => {
     callBackendAuth.mockRejectedValue(
-      new BackendAuthError("Submission Channel 'Carrier Pigeon' does not exist or is not active.", 400, 'VALIDATION_ERROR')
+      new BackendAuthError("Submitter Type 'Space Farmer' does not exist.", 400, 'VALIDATION_ERROR')
     );
-    const res = await post({ submission_channel: 'Carrier Pigeon' });
+    const res = await post({ submitter_type: 'Development Agent' });
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({
-      message: "Submission Channel 'Carrier Pigeon' does not exist or is not active.",
-    });
+    expect(await res.json()).toEqual({ message: "Submitter Type 'Space Farmer' does not exist." });
   });
 
   it('keeps a duplicate Fayda ID as a 409 with its message', async () => {

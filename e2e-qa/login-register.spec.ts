@@ -83,7 +83,7 @@ test('RG-16/RG-24: Development Agent shows no identity fields and no consent box
   await expect(page.getByText(/I consent to providing my national ID/i)).toHaveCount(0);
 });
 
-test('RG-27: register sends the type, Fayda ID and Web Portal channel, and a rejection keeps what was typed', async ({ page }) => {
+test('RG-27: register sends the type and Fayda ID (no channel), and a rejection keeps what was typed', async ({ page }) => {
   let sent: Record<string, unknown> | null = null;
   await page.route('**/api/auth/register', async (route) => {
     sent = route.request().postDataJSON();
@@ -113,8 +113,8 @@ test('RG-27: register sends the type, Fayda ID and Web Portal channel, and a rej
   expect(sent).toMatchObject({
     submitter_type: 'Individual Farmer',
     fayda_id: '6557092147530500',
-    submission_channel: 'Web Portal',
   });
+  expect(sent).not.toHaveProperty('submission_channel');
   // Still on the profile step, with the typed ID kept.
   await expect(page.getByText('Almost done!')).toBeVisible();
   await expect(page.locator('#si-faydaId')).toHaveValue('6557092147530500');

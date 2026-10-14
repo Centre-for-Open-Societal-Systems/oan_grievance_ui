@@ -46,10 +46,10 @@ const FAYDA_FIELD_BY_TYPE: Record<string, string> = {
   woreda_kebele: 'officialFaydaId',
 };
 
-// A rejection the profile step caused (a duplicate or unknown Fayda ID, type or
-// channel) is shown there, where it can be fixed; anything else is about the
-// account step's fields.
-const PROFILE_REJECTION_PATTERN = /fayda|submitter type|submission channel/i;
+// A rejection the profile step caused (a duplicate or malformed Fayda ID, an
+// unknown type) is shown there, where it can be fixed; anything else is about
+// the account step's fields.
+const PROFILE_REJECTION_PATTERN = /fayda|submitter type/i;
 
 type RegisterStep = 'account' | 'profile' | 'success';
 
@@ -76,7 +76,7 @@ export function RegisterForm() {
   // A problem with the account as a whole (e.g. the email is already
   // registered). Problems with one field go under that field instead.
   const [error, setError] = useState<string | null>(null);
-  // The same for the profile step: a rejected Fayda ID, type or channel.
+  // The same for the profile step: a rejected Fayda ID or type.
   const [profileError, setProfileError] = useState<string | null>(null);
   const accountErrors = useFieldErrors<AccountField>();
 
@@ -165,7 +165,7 @@ export function RegisterForm() {
 
   // Registers the account with the type and Fayda ID chosen on the profile
   // step. A failure the backend reports about those (duplicate Fayda ID, an
-  // unknown type or channel) stays on this step; any other (email already
+  // unknown type) stays on this step; any other (email already
   // taken, a rule only the backend knows) is about what was entered on the
   // account step, so it returns there. Either way the message is shown and
   // everything typed is still in place.

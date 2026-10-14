@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SUBMISSION_CHANNEL, registerSubmitterFieldsSchema } from './registerSubmitter';
+import { registerSubmitterFieldsSchema } from './registerSubmitter';
 
 describe('registerSubmitterFieldsSchema', () => {
-  it('accepts a type, a 16-digit Fayda ID and a channel', () => {
-    const input = {
-      submitter_type: 'Individual Farmer',
-      fayda_id: '6557092147530500',
-      submission_channel: DEFAULT_SUBMISSION_CHANNEL,
-    };
+  it('accepts a type and a 16-digit Fayda ID', () => {
+    const input = { submitter_type: 'Individual Farmer', fayda_id: '6557092147530500' };
     expect(registerSubmitterFieldsSchema.parse(input)).toEqual(input);
   });
 
-  it('treats all three as optional', () => {
+  it('treats both as optional', () => {
     expect(registerSubmitterFieldsSchema.parse({})).toEqual({});
   });
 
@@ -20,6 +16,7 @@ describe('registerSubmitterFieldsSchema', () => {
       fayda_id: '6557092147530500',
       dedupe_key: 'x',
       role: 'Grievance Admin',
+      submission_channel: 'Web Portal',
     });
     expect(parsed).toEqual({ fayda_id: '6557092147530500' });
   });
@@ -39,10 +36,7 @@ describe('registerSubmitterFieldsSchema', () => {
     }
   });
 
-  it('rejects an unsupported type, and an empty or non-text channel', () => {
+  it('rejects an unsupported type', () => {
     expect(registerSubmitterFieldsSchema.safeParse({ submitter_type: 'Cooperative' }).success).toBe(false);
-    for (const submission_channel of ['', '   ', 5, null]) {
-      expect(registerSubmitterFieldsSchema.safeParse({ submission_channel }).success).toBe(false);
-    }
   });
 });

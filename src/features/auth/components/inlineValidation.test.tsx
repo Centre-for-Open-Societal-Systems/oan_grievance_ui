@@ -288,14 +288,14 @@ describe('Register — profile step', () => {
   });
 
   it('clears that message once the next attempt goes through', async () => {
-    registerUser.mockRejectedValueOnce(new Error("Submission Channel 'Web Portal' does not exist or is not active."));
+    registerUser.mockRejectedValueOnce(new Error("Submitter Type 'Development Agent' does not exist."));
     registerUser.mockResolvedValueOnce(undefined);
     renderRegister();
     await completeAccountStep();
 
     fireEvent.click(screen.getByRole('option', { name: 'Development Agent (on behalf)' }));
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Submission Channel/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Submitter Type/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText('Account Created!')).toBeInTheDocument();

@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { email, password, full_name, phone_number, submitter_type, fayda_id, submission_channel } = body ?? {};
+  const { email, password, full_name, phone_number, submitter_type, fayda_id } = body ?? {};
 
   if (!email || !password || !full_name || !phone_number) {
     return NextResponse.json({ message: 'Missing required fields in request' }, { status: 400 });
@@ -90,10 +90,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'Phone number must be a valid international number.' }, { status: 400 });
   }
 
-  // Parsed rather than passed through: only the three submitter fields, each
+  // Parsed rather than passed through: only the two submitter fields, each
   // checked, reach the backend. An unsupported type or a malformed Fayda ID is
   // refused here, and any other key the caller sent is dropped.
-  const submitter = registerSubmitterFieldsSchema.safeParse({ submitter_type, fayda_id, submission_channel });
+  const submitter = registerSubmitterFieldsSchema.safeParse({ submitter_type, fayda_id });
   if (!submitter.success) {
     return NextResponse.json({ message: submitter.error.issues[0]?.message ?? 'Invalid request.' }, { status: 400 });
   }

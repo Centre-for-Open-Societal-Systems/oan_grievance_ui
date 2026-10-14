@@ -1,7 +1,6 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { fetchApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
-import { DEFAULT_SUBMISSION_CHANNEL } from '@/lib/validation/registerSubmitter';
 import type { User } from '@/features/auth/store/authSlice';
 
 interface LoginCredentials {
@@ -99,8 +98,6 @@ export interface RegisterFields {
   submitter_type?: string;
   /** 16-digit Fayda ID. The backend requires one for an Individual Farmer. */
   fayda_id?: string;
-  /** Channel name the account registers through. Defaults to `Web Portal`: the form has no channel selector. */
-  submission_channel?: string;
 }
 
 /** Does not sign the caller in — see the route: registration is "account created, now log in". */
@@ -109,7 +106,7 @@ export async function registerUser(fields: RegisterFields): Promise<void> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ ...fields, submission_channel: fields.submission_channel ?? DEFAULT_SUBMISSION_CHANNEL }),
+    body: JSON.stringify(fields),
   });
 
   const data = (await res.json().catch(() => ({}))) as { message?: string };

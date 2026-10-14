@@ -10,7 +10,7 @@ describe('authApi - registerUser', () => {
 
   const base = { email: 'a@example.com', password: 'Str0ng!Passw0rd', full_name: 'A B', phone_number: '+251911000000' };
 
-  it('sends the submitter type, Fayda ID and the Web Portal channel to /api/auth/register', async () => {
+  it('sends the submitter type and Fayda ID to /api/auth/register', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true }) } as Response);
 
     await registerUser({ ...base, submitter_type: 'Individual Farmer', fayda_id: '6557092147530500' });
@@ -21,17 +21,16 @@ describe('authApi - registerUser', () => {
       ...base,
       submitter_type: 'Individual Farmer',
       fayda_id: '6557092147530500',
-      submission_channel: 'Web Portal',
     });
   });
 
-  it('sends the Web Portal channel with just the account fields, and no type or ID that was not given', async () => {
+  it('sends no submission channel — the backend registers every account under Web Portal', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true }) } as Response);
 
     await registerUser(base);
 
     const body = JSON.parse((global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]![1].body);
-    expect(body).toEqual({ ...base, submission_channel: 'Web Portal' });
+    expect(body).toEqual(base);
   });
 
   it("rejects with the backend's message, so the form can show it", async () => {
