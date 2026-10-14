@@ -5,9 +5,12 @@ import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { performLogout } from '@/features/auth/logout';
 import { refreshMeThunk, selectUser } from '@/features/auth/store/authSlice';
-import { organisationKindFor, ORGANISATION_ROUTE, type OrganisationKind } from '@/lib/organisationKind';
-import { resolveOrganisationKind } from '@/lib/resolveOrganisationKind';
-import { clearOrganisationIntent } from '@/lib/organisationIntent';
+import {
+  organisationKindFor,
+  organisationKindOf,
+  ORGANISATION_ROUTE,
+  type OrganisationKind,
+} from '@/lib/organisationKind';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -44,7 +47,7 @@ export function OrganisationPage({ kind }: { kind: OrganisationKind }) {
   // A user with no organisation type at all (a farmer who typed the URL) stays:
   // choosing to register an organisation is theirs to do.
   useEffect(() => {
-    const own = resolveOrganisationKind(user);
+    const own = organisationKindOf(user);
     if (own && own !== kind) router.replace(ORGANISATION_ROUTE[own]);
   }, [user, kind, router]);
 
@@ -86,19 +89,12 @@ export function OrganisationPage({ kind }: { kind: OrganisationKind }) {
     router.push('/submit-grievance');
   };
 
+  // The account is already an NGO / FPO on the backend (set at sign-up), so signing out loses
+  // nothing: an unfinished registration is waiting here again at the next sign-in.
   const handleBackToSignIn = async () => {
-    // Signing out leaves the sign-up intent note alone (see organisationIntent.ts), so an
-    // unfinished registration is still waiting here at the next sign-in.
     await performLogout(dispatch, user?.email ?? null);
     router.push('/login');
   };
-
-  // Once the organisation exists the backend reports the account as an NGO / FPO itself,
-  // so the browser's note of the sign-up choice has done its job.
-  const registeredEmail = state.phase === 'registered' ? user?.email : undefined;
-  useEffect(() => {
-    if (registeredEmail) clearOrganisationIntent(registeredEmail);
-  }, [registeredEmail]);
 
   const title = state.phase === 'registered' ? t('header.registered') : t('header.completeRegistration');
 

@@ -177,7 +177,7 @@ export function homeRouteForRoles(roles: string[]): string {
 /**
  * Where a user lands after signing in. Same as `homeRouteForRoles`, except an
  * NGO or FPO representative — someone whose highest role is Submitter and whose
- * submitter type is an organisation (see `resolveOrganisationKind`) — lands on
+ * submitter type is an organisation (see `organisationKindOf`) — lands on
  * their organisation's onboarding screen instead of Submit Grievance. Staff
  * roles never take the organisation route, whatever their profile type says.
  *

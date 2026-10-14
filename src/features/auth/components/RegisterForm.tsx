@@ -1,10 +1,12 @@
 'use client';
 
 import { registerUser } from '@/features/auth/api/authApi';
-import { onboardsOrganisationAfterSignIn, submitsOnBehalfOfOthers } from '@/components/submitter-identity/fields';
+import {
+  ID_FIELD_KEYS,
+  onboardsOrganisationAfterSignIn,
+  submitsOnBehalfOfOthers,
+} from '@/components/submitter-identity/fields';
 import { useIdentityErrors } from '@/components/submitter-identity/useIdentityErrors';
-import { organisationKindFor } from '@/lib/organisationKind';
-import { saveOrganisationIntent } from '@/lib/organisationIntent';
 import { saveSubmitterProfile } from '@/lib/submitterProfile';
 import {
   ACCOUNT_FIELDS,
@@ -29,12 +31,35 @@ import { SuccessStep } from './register/SuccessStep';
 // Development Agent has no entry: it collects no profile fields here at all
 // (see `submitsOnBehalfOfOthers`) — an agent files for other people, so the
 // name/ID/phone/email fields on its form describe the farmer, not the agent.
+//
+// An NGO / FPO asks for only its registration number here (see
+// OrganisationSignupForm): its legal name and representative are not part of
+// sign-up (the representative is the account holder, the legal name is given on
+// the onboarding screen after the first sign-in), so those two are listed too, to
+// be skipped by the required-field check rather than demanded.
 const ALREADY_COLLECTED_FIELDS_BY_TYPE: Record<string, string[]> = {
   individual: ['fullName', 'phoneNumber', 'email'],
-  cooperative: ['fullName', 'phoneNumber', 'email'],
-  ngo: ['fullName', 'phoneNumber', 'email'],
+  cooperative: ['fullName', 'phoneNumber', 'email', 'orgName', 'representativeName', 'memberCount'],
+  ngo: ['fullName', 'phoneNumber', 'email', 'orgName', 'representativeName'],
   woreda_kebele: ['fullName', 'phoneNumber', 'email'],
 };
+
+// The identity field holding each type's national ID, which registration sends
+// as `fayda_id`. An Individual Farmer registers with their own; a Woreda/Kebele
+// Body, which still registers under the default type, with its official's. An NGO
+// or FPO has none — it is identified by its registration number (below).
+const FAYDA_FIELD_BY_TYPE: Record<string, string> = {
+  individual: 'faydaId',
+  woreda_kebele: 'officialFaydaId',
+};
+
+// Sent as `registration_number` — what the backend identifies an NGO / FPO by.
+const REGISTRATION_NUMBER_FIELD = 'registrationNumber';
+
+// A rejection the profile step caused (a duplicate or malformed Fayda ID or
+// registration number, an unknown type) is shown there, where it can be fixed;
+// anything else is about the account step's fields.
+const PROFILE_REJECTION_PATTERN = /fayda|submitter type|dedupe key|registration (number|\/ certificate)|organi[sz]ation/i;
 
 type RegisterStep = 'account' | 'profile' | 'success';
 
@@ -61,6 +86,8 @@ export function RegisterForm() {
   // A problem with the account as a whole (e.g. the email is already
   // registered). Problems with one field go under that field instead.
   const [error, setError] = useState<string | null>(null);
+  // The same for the profile step: a rejected Fayda ID or type.
+  const [profileError, setProfileError] = useState<string | null>(null);
   const accountErrors = useFieldErrors<AccountField>();
 
   const [submitterType, setSubmitterType] = useState('');
@@ -83,6 +110,7 @@ export function RegisterForm() {
     setIdentityValues({});
     identity.clear();
     setConsentChecked(false);
+    setProfileError(null);
   };
 
   const setIdentityValue = (key: string, value: string) => {
@@ -145,25 +173,38 @@ export function RegisterForm() {
     setStep('profile');
   };
 
-  // Registers the account with the type chosen on the profile step. Any
-  // failure (email already taken, a rule only the backend knows) is a problem
-  // with what was entered on the account step, so it returns there with the
-  // message and everything typed still in place.
+  // Registers the account with the type and Fayda ID chosen on the profile
+  // step. A failure the backend reports about those (duplicate Fayda ID, an
+  // unknown type) stays on this step; any other (email already
+  // taken, a rule only the backend knows) is about what was entered on the
+  // account step, so it returns there. Either way the message is shown and
+  // everything typed is still in place.
   const createAccount = async (): Promise<boolean> => {
     setIsLoading(true);
     try {
       const backendType = backendSubmitterTypeFor(submitterType);
+      const faydaId = identityValues[FAYDA_FIELD_BY_TYPE[submitterType] ?? '']?.trim();
+      const registrationNumber = onboardsOrganisationAfterSignIn(submitterType)
+        ? identityValues[REGISTRATION_NUMBER_FIELD]?.trim().toUpperCase()
+        : undefined;
       await registerUser({
         email: email.trim(),
         password,
         full_name: fullName.trim(),
         phone_number: `${countryCode}${stripLeadingZero(phoneNumber)}`,
         ...(backendType ? { submitter_type: backendType } : {}),
+        ...(faydaId ? { fayda_id: faydaId } : {}),
+        ...(registrationNumber ? { registration_number: registrationNumber } : {}),
       });
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
-      setStep('account');
+      const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      if (PROFILE_REJECTION_PATTERN.test(message)) {
+        setProfileError(message);
+      } else {
+        setError(message);
+        setStep('account');
+      }
       return false;
     } finally {
       setIsLoading(false);
@@ -206,28 +247,26 @@ export function RegisterForm() {
       // details per grievance instead.
       identity.clear();
       profileToSave = { submitterType, identityValues: {} };
-    } else if (onboardsOrganisationAfterSignIn(submitterType)) {
-      // An NGO / FPO has no identity form here: its details are collected on
-      // the organisation onboarding screen the user is taken to after signing
-      // in. Only the type (which is what sends them there) and what the
-      // account step already asked are kept.
-      identity.clear();
-      profileToSave = { submitterType, identityValues: accountStepValues };
     } else {
+      // Includes an NGO / FPO, whose one required field here is its registration number;
+      // the rest of its details are collected on the onboarding screen after first sign-in.
       if (!identity.validateAll([typeCheck])) return;
       profileToSave = { submitterType, identityValues: { ...identityValues, ...accountStepValues } };
     }
 
     setError(null);
+    setProfileError(null);
     // Saved only once the account really exists, so a rejected sign-up doesn't
     // leave a profile snapshot behind for an email that never got registered.
+    // The national ID is left out: it now lives on the account's profile and
+    // comes back from /auth/me, so it needn't also sit in localStorage.
     if (!(await createAccount())) return;
-    saveSubmitterProfile(email, profileToSave);
-    // The backend can't record an NGO / FPO until its organisation is registered, so
-    // remember the choice here — durably, unlike the prefill above — to send them to
-    // the right onboarding screen at every sign-in until then.
-    const organisationKind = organisationKindFor(submitterType);
-    if (organisationKind) saveOrganisationIntent(email, organisationKind);
+    saveSubmitterProfile(email, {
+      ...profileToSave,
+      identityValues: Object.fromEntries(
+        Object.entries(profileToSave.identityValues).filter(([key]) => !ID_FIELD_KEYS.includes(key))
+      ),
+    });
     setStep('success');
   };
 
@@ -244,6 +283,7 @@ export function RegisterForm() {
         consentChecked={consentChecked}
         onConsentChange={setConsentChecked}
         isSubmitting={isLoading}
+        submitError={profileError}
         onBack={() => setStep('account')}
         onSubmit={handleProfileSubmit}
       />

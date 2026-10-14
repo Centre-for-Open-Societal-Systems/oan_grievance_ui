@@ -59,6 +59,12 @@ export interface BackendAuthMeData {
       type?: string | null;
       /** An NGO / FPO representative's registered organisation — absent until it is registered. */
       organization?: BackendOrganization | null;
+      /** The backend submitter type name, e.g. `Individual Farmer` — same value as `type` for a submitter. */
+      submitter_type?: string | null;
+      /** The channel the account was registered through, by name, e.g. `Web Portal`. */
+      submission_channel?: string | null;
+      /** The Fayda ID itself. `null` unless the profile is Fayda-anchored. */
+      fayda_id?: string | null;
     };
     [key: string]: unknown;
   };
@@ -66,17 +72,29 @@ export interface BackendAuthMeData {
 }
 
 /**
- * The backend never sends a flat `fayda_id` — a submitter's national ID
- * comes back as one entry in `profiles.grievance.identities` (the same
- * scheme/value pairs `dedupe_key` is built from; see
- * `grievance_submitter_profile.py`'s `split_dedupe_key`). Not every
- * submitter has one: a Development Agent or a phone-only registrant's
- * `identities` array simply won't contain a `"fayda"` entry.
+ * A submitter's national ID as one entry in `profiles.grievance.identities`
+ * (the same scheme/value pairs `dedupe_key` is built from; see
+ * `grievance_submitter_profile.py`'s `split_dedupe_key`). `getMe` prefers the
+ * flat `fayda_id` the backend now sends and uses this only when that is
+ * missing — a backend that hasn't rolled out yet. Not every submitter has
+ * one: a Development Agent or a phone-only registrant's `identities` array
+ * simply won't contain a `"fayda"` entry.
  */
 export function resolveFaydaId(
   identities: Array<{ scheme?: string | null; value?: string | null }> | null | undefined
 ): string | undefined {
   return identities?.find((i) => i.scheme === 'fayda')?.value ?? undefined;
+}
+
+/**
+ * An NGO's / FPO's registration number as the `org` entry of `identities` — where the backend
+ * has it from sign-up, before the organisation is registered (the flat `registration_number`
+ * on the profile is still empty then).
+ */
+export function resolveOrganisationNumber(
+  identities: Array<{ scheme?: string | null; value?: string | null }> | null | undefined
+): string | undefined {
+  return identities?.find((i) => i.scheme === 'org')?.value ?? undefined;
 }
 
 export async function loginUser({ usr, pwd, rememberMe = false }: LoginCredentials): Promise<User> {
@@ -107,6 +125,10 @@ export interface RegisterFields {
   phone_number: string;
   /** Backend submitter type to register as (see `backendSubmitterTypeFor`). Omit for the default, Individual Farmer. */
   submitter_type?: string;
+  /** 16-digit Fayda ID. The backend requires one for an Individual Farmer. */
+  fayda_id?: string;
+  /** An NGO's / FPO's registration number — what the backend identifies one by instead of a Fayda ID. */
+  registration_number?: string;
 }
 
 /** Does not sign the caller in — see the route: registration is "account created, now log in". */
@@ -274,10 +296,17 @@ export async function getMe(): Promise<User> {
     country_code: d.country_code || grievanceProfile?.country_code || undefined,
     phone_number: d.phone_number || grievanceProfile?.phone_number || undefined,
     type,
+    submitter_type: grievanceProfile?.submitter_type || undefined,
+    submission_channel: grievanceProfile?.submission_channel || undefined,
     profile_id: grievanceProfile?.profile_id || undefined,
     // An NGO / FPO has no Fayda ID — it is identified by its registration number — so one is
-    // never read for it, whatever the identities list happens to hold.
-    fayda_id: organisationKindFor(type) ? undefined : resolveFaydaId(grievanceProfile?.identities),
+    // never read for it, whatever the profile or its identities list happens to hold.
+    fayda_id: organisationKindFor(type)
+      ? undefined
+      : grievanceProfile?.fayda_id || resolveFaydaId(grievanceProfile?.identities),
+    // What an NGO / FPO signed up with (`registration_number` in the register payload); the
+    // onboarding form starts from it so the same number is not typed twice.
+    registration_number: grievanceProfile?.registration_number || resolveOrganisationNumber(grievanceProfile?.identities),
     administrative_area: grievanceProfile?.administrative_area || undefined,
     administrative_unit: grievanceProfile?.administrative_unit || undefined,
     preferred_language: grievanceProfile?.preferred_language || undefined,

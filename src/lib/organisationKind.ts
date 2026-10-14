@@ -1,7 +1,7 @@
 // Which organisation onboarding screen (NGO or FPO) a user belongs to. Plain
 // module (no React, no Redux, no browser APIs) so `features/auth/rbac.ts` —
 // which `proxy.ts` imports — can use the route table without pulling client
-// code into it. The browser-only half is `resolveOrganisationKind.ts`.
+// code into it.
 
 export type OrganisationKind = 'ngo' | 'fpo';
 
@@ -30,4 +30,14 @@ export function organisationKindFor(type: string | null | undefined): Organisati
   if (/\bngo\b/.test(lower)) return 'ngo';
   if (/\bfpo\b/.test(lower) || lower.includes('coop')) return 'fpo';
   return null;
+}
+
+/**
+ * The organisation kind of a signed-in user, from the type the backend reports
+ * for the account (`/auth/me`'s profile type). NGO and FPO accounts are
+ * registered under their type from sign-up, so this is known from the very first
+ * sign-in — before the organisation itself is registered — and on any browser.
+ */
+export function organisationKindOf(user: { type?: string | null } | null | undefined): OrganisationKind | null {
+  return organisationKindFor(user?.type);
 }

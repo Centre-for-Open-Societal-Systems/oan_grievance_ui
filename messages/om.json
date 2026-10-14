@@ -11,12 +11,12 @@
       "submitterTypeLabel": "Gosa Dhiheessituu",
       "submitterTypePlaceholder": "Gosa Dhiheessituu Filadhu",
       "continue": "Itti fufi",
-      "consentNotice": "Lakkoofsi ID Fayda armaan olii yeroo komiin ilaalamu eenyummaa keessan mirkaneessa. Bifa dhoksaan skiriinii irratti argama, yeroo itti aanu Komii Galchuu (Submit Grievance) dursanii guutuuf meeshaa kana irratti ni kuufama.",
+      "consentNotice": "Lakkoofsi ID Fayda armaan olii yeroo komiin ilaalamu eenyummaa keessan mirkaneessa. Bifa dhoksaan skiriinii irratti argama, yeroo itti aanu Komii Galchuu (Submit Grievance) dursanii guutuuf akkaawuntii keessan irratti ni kuufama.",
       "consentCheckboxLabel": "Lakkoofsa ID biyyaalessaa koo mirkaneessa eenyummaaf kennuuf nan waliigala.",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
-      "organisationNotice": "Erga seentanii booda, bal'ina galmee dhaabbata keessanii — maqaa seeraa, lakkoofsa gibiraa, teessoo fi qunnamtii — isin gaafanna."
+      "organisationNotice": "Erga seentanii booda, bal'ina galmee dhaabbata keessanii kan hafe — maqaa seeraa, teessoo fi qunnamtii — isin gaafanna."
     },
     "success": {
       "title": "Akkaawuntiin Uumameera!",
@@ -53,9 +53,9 @@
       },
       "entityType": { "label": "Gosa dhaabbataa", "placeholder": "Gosa dhaabbataa filadhu" },
       "taxId": {
-        "label": "Lakkoofsa galmee gibiraa",
-        "placeholder": "Lakkoofsa galmee gibiraa galchi",
-        "hint": "Lakkoofsa eenyummaa gibiraa (arfii 9-10)"
+        "label": "Lakkoofsa galmee",
+        "placeholder": "Lakkoofsa galmee galchi",
+        "hint": "Lakkoofsa galmee ykn hayyama dhaabbata keessaniif kenname"
       },
       "streetAddress": { "label": "Teessoo daandii", "placeholder": "Teessoo daandii galchi" },
       "kebele": { "label": "Ganda / Gandaa", "placeholder": "Ganda / Gandaa galchi" },
@@ -97,7 +97,7 @@
       "required": "Gabateen kun barbaachisaadha.",
       "tooLong": "Arfii {max} ykn isaa gadi fayyadami.",
       "entityType": "Gosoota dhaabbataa tarreeffaman keessaa tokko filadhu.",
-      "taxId": "Iddoo duwwaa ykn mallattoo malee arfii ykn lakkoofsa 9 ykn 10 galchi.",
+      "taxId": "Arfii ykn lakkoofsa 3 hanga 60 fayyadami; gidduu isaanii sarara gabaabaa ykn sarara muraasuu ni danda'ama.",
       "postalCode": "Koodii poostaa sirrii galchi, fkn 1000.",
       "website": "Teessoo marsariitii sirrii galchi, fkn www.example.org.",
       "email": "Teessoo imeelii sirrii galchi, fkn name@example.com.",
@@ -113,7 +113,7 @@
         "legalName": "Maqaa dhaabbata seeraa",
         "brandName": "Maqaa chaappaa / agarsiisaa",
         "entityType": "Gosa dhaabbataa",
-        "registrationNumber": "Lakkoofsa galmee gibiraa",
+        "registrationNumber": "Lakkoofsa galmee",
         "reason": "Ergaa bulchaa irraa",
         "status": "Haala"
       },
@@ -148,7 +148,10 @@
     "identityStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
-      "fieldRequired": "Gabateen kun barbaachisaadha."
+      "fieldRequired": "Gabateen kun barbaachisaadha.",
+      "channelsLoadFailed": "Karaawwan galchuu fe'uun hin danda'amne.",
+      "channelsEmpty": "Yeroo ammaa karaan galchuu tokko iyyuu hin jiru.",
+      "retry": "Irra deebi'ii yaali"
     },
     "detailsStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",

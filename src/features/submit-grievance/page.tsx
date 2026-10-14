@@ -17,6 +17,7 @@ import {
   buildInitialIdentityValues,
   identityAfterReset,
   isSubmitterTypeLocked,
+  resolveInitialSubmissionChannel,
   resolveInitialSubmitterType,
 } from "./initialIdentity";
 import { buildSaveDraftPayload } from "./draftPayload";
@@ -105,7 +106,7 @@ export default function SubmitGrievancePage() {
 
   // Step 1 — Submitter Identity
   const [submitterType, setSubmitterType] = useState(() => resolveInitialSubmitterType(user, savedProfile));
-  const [submissionChannel, setSubmissionChannel] = useState(() => (user ? "web" : ""));
+  const [submissionChannel, setSubmissionChannel] = useState(() => resolveInitialSubmissionChannel(user));
   const [identityValues, setIdentityValues] = useState<Record<string, string>>(() =>
     buildInitialIdentityValues(user, savedProfile, resolveInitialSubmitterType(user, savedProfile))
   );
@@ -445,6 +446,8 @@ export default function SubmitGrievancePage() {
             identityValues={identityValues}
             setIdentityValue={setIdentityValue}
             submitterTypeLocked={isSubmitterTypeLocked(user)}
+            profileSubmitterType={user?.submitter_type || user?.type}
+            profileSubmissionChannel={user?.submission_channel}
           />
         )}
         {currentStep === 2 && (

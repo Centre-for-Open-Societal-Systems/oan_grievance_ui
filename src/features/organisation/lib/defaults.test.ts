@@ -10,6 +10,13 @@ describe('buildInitialOrganisationValues', () => {
     expect(values.email).toBe('');
   });
 
+  it('starts with the registration number the account signed up with, so it is not typed twice', () => {
+    expect(buildInitialOrganisationValues({ email: 'rep@ngo.org', registration_number: 'REG-2024-0042' }).taxId).toBe(
+      'REG-2024-0042'
+    );
+    expect(buildInitialOrganisationValues({ email: 'rep@ngo.org' }).taxId).toBe('');
+  });
+
   it("pre-fills the contact from the account's email and a combined mobile number", () => {
     const values = buildInitialOrganisationValues({ email: 'rep@ngo.org', mobile_no: '+251911234567' });
     expect(values.email).toBe('rep@ngo.org');

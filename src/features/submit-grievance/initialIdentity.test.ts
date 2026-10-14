@@ -4,6 +4,7 @@ import {
   buildInitialIdentityValues,
   identityAfterReset,
   isSubmitterTypeLocked,
+  resolveInitialSubmissionChannel,
   resolveInitialSubmitterType,
 } from './initialIdentity';
 
@@ -14,6 +15,8 @@ const FULL_USER: User = {
   mobile_no: '+251911000000',
   fayda_id: 'ET-FAYDA-111',
   type: 'Individual Farmer',
+  submitter_type: 'Individual Farmer',
+  submission_channel: 'Web Portal',
 };
 
 describe('buildInitialIdentityValues', () => {
@@ -45,6 +48,15 @@ describe('buildInitialIdentityValues', () => {
   it('prefills nothing for a Development Agent even if a registration snapshot exists', () => {
     const saved = { submitterType: 'development_agent', identityValues: { farmerName: 'Someone', faydaId: 'X-1' } };
     expect(buildInitialIdentityValues(FULL_USER, saved, 'development_agent')).toEqual({});
+  });
+
+  it('takes the Fayda ID from the account, not the snapshot, and leaves the field empty when the account has none', () => {
+    const saved = { submitterType: 'individual', identityValues: { faydaId: '0000000000000000' } };
+    const withId = buildInitialIdentityValues({ ...FULL_USER, fayda_id: '6557092147530500' }, saved, 'individual');
+    expect(withId.faydaId).toBe('6557092147530500');
+
+    const withoutId = buildInitialIdentityValues({ ...FULL_USER, fayda_id: undefined }, null, 'individual');
+    expect(withoutId).not.toHaveProperty('faydaId');
   });
 
   it('returns an empty object when there is no account and no snapshot', () => {
@@ -84,6 +96,15 @@ describe('a registered NGO / FPO', () => {
       phoneNumber: '987654312',
       email: 'test_ngo@gmail.com',
     });
+  });
+
+  it('shows the sign-up registration number even before the organisation is registered', () => {
+    const signedUp: User = { ...ORG_USER, organisation: undefined, registration_number: 'REG-2024-0042' };
+    const values = buildInitialIdentityValues(signedUp, null, 'ngo');
+    expect(values.registrationNumber).toBe('REG-2024-0042');
+    expect(values).not.toHaveProperty('orgName');
+    // Not for anyone filing as something else.
+    expect(buildInitialIdentityValues(signedUp, null, 'individual')).not.toHaveProperty('registrationNumber');
   });
 
   it("falls back to the account's name when the organisation has no representative name", () => {
@@ -136,14 +157,48 @@ describe('a registered NGO / FPO', () => {
 
 describe('resolveInitialSubmitterType', () => {
   it("uses the account's own type when it maps to a known one", () => {
-    expect(resolveInitialSubmitterType({ ...FULL_USER, type: 'Development Agent' }, null)).toBe('development_agent');
-    expect(resolveInitialSubmitterType({ ...FULL_USER, type: 'Individual Farmer' }, null)).toBe('individual');
+    const withType = (type: string) => ({ ...FULL_USER, type, submitter_type: type });
+    expect(resolveInitialSubmitterType(withType('Development Agent'), null)).toBe('development_agent');
+    expect(resolveInitialSubmitterType(withType('Individual Farmer'), null)).toBe('individual');
+  });
+
+  it('still reads type when the backend sends no submitter_type yet', () => {
+    expect(resolveInitialSubmitterType({ ...FULL_USER, type: 'Development Agent', submitter_type: undefined }, null)).toBe(
+      'development_agent'
+    );
+  });
+
+  it("uses the account's submitter_type from /auth/me, in preference to its type", () => {
+    const agent = { ...FULL_USER, type: 'Grievance Submitter', submitter_type: 'Development Agent' };
+    expect(resolveInitialSubmitterType(agent, null)).toBe('development_agent');
+
+    const typeOnly = { ...FULL_USER, type: undefined, submitter_type: 'Individual Farmer' };
+    expect(resolveInitialSubmitterType(typeOnly, null)).toBe('individual');
   });
 
   it('falls back to the registration snapshot, then to empty', () => {
     const saved = { submitterType: 'ngo', identityValues: {} };
-    expect(resolveInitialSubmitterType({ ...FULL_USER, type: 'Grievance Submitter' }, saved)).toBe('ngo');
+    const unknownType = { ...FULL_USER, type: 'Grievance Submitter', submitter_type: undefined };
+    expect(resolveInitialSubmitterType(unknownType, saved)).toBe('ngo');
     expect(resolveInitialSubmitterType(null, null)).toBe('');
+  });
+});
+
+describe('resolveInitialSubmissionChannel', () => {
+  it("maps the account's channel name onto the option value the channel dropdown uses", () => {
+    const channelFor = (submission_channel: string) => resolveInitialSubmissionChannel({ ...FULL_USER, submission_channel });
+    expect(channelFor('Web Portal')).toBe('web');
+    expect(channelFor('Mobile App')).toBe('mobile');
+    expect(channelFor('IVR Helpline')).toBe('ivr');
+    expect(channelFor('Development Agent Assisted')).toBe('field_officer');
+  });
+
+  it('falls back to Web Portal only when the account has no channel', () => {
+    expect(resolveInitialSubmissionChannel({ ...FULL_USER, submission_channel: undefined })).toBe('web');
+  });
+
+  it('is empty without a signed-in account', () => {
+    expect(resolveInitialSubmissionChannel(null)).toBe('');
   });
 });
 

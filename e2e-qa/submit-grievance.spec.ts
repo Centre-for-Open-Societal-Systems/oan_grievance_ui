@@ -8,12 +8,15 @@ import { test, expect, type Page } from '@playwright/test';
 /**
  * Registers a fresh Individual Farmer and logs them in, landing on
  * /submit-grievance. Shared by every test below so each one only has to
- * describe what it does differently from there.
+ * describe what it does differently from there. Returns the Fayda ID the
+ * account was registered with.
  */
-async function registerAndLogin(page: Page, label: string) {
+async function registerAndLogin(page: Page, label: string): Promise<string> {
   const stamp = Date.now();
   const email = `qa-pw-${label}-${stamp}@example.com`;
   const phoneLocal = `0911${String(stamp).slice(-6)}`;
+  // A Fayda ID can be registered only once, so each run needs its own: 16 digits.
+  const faydaId = String(stamp * 1000 + Math.floor(Math.random() * 1000));
 
   // --- Register -----------------------------------------------------------
   await page.goto('/register');
@@ -25,10 +28,10 @@ async function registerAndLogin(page: Page, label: string) {
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByText('Almost done!')).toBeVisible({ timeout: 15_000 });
 
-  // Individual Farmer, with the required Fayda ID (not collected at registration itself).
+  // Individual Farmer, with the required Fayda ID.
   await page.locator('#register-submitter-type').click();
   await page.getByRole('option', { name: 'Individual Farmer' }).click();
-  await page.locator('#si-faydaId').fill('1234567890123456');
+  await page.locator('#si-faydaId').fill(faydaId);
   // The checkbox input is visually `sr-only`; its decorative sibling sits at
   // the same spot and intercepts a direct .check(). Click the wrapping
   // <label> text instead, same as a real user would.
@@ -42,16 +45,28 @@ async function registerAndLogin(page: Page, label: string) {
   await page.locator('#login-password').fill('Str0ng!Passw0rd');
   await page.getByRole('button', { name: /sign in/i }).click();
   await expect(page).toHaveURL(/\/submit-grievance/, { timeout: 15_000 });
+  return faydaId;
+}
+
+/** What Step 1 holds once the account's own details (from /auth/me) are in it. */
+async function expectStep1PrefilledFromAccount(page: Page, faydaId: string) {
+  await expect(page.getByRole('heading', { name: 'Submitter Identity' })).toBeVisible();
+  await expect(page.locator('#submitter-type')).toHaveValue('Individual Farmer');
+  await expect(page.locator('#submission-channel')).toHaveValue('Web Portal');
+  await expect(page.locator('#si-faydaId')).toHaveValue(faydaId);
 }
 
 test('SG full flow: register, log in, submit a grievance, get a real ticket', async ({ page }) => {
-  await registerAndLogin(page, 'submit');
+  const faydaId = await registerAndLogin(page, 'submit');
 
-  // --- Step 1: Submitter Identity (mostly prefilled from the account) -----
-  // The wizard's progress nav also says "Submitter Identity", so target the heading specifically.
-  await expect(page.getByRole('heading', { name: 'Submitter Identity' })).toBeVisible();
-  await page.locator('#submission-channel').click();
-  await page.getByRole('option', { name: 'Web Portal' }).click();
+  // --- Step 1: Submitter Identity (prefilled from the account) ------------
+  // The type, Fayda ID and channel come from /auth/me, not from the browser's
+  // own copy: with that copy gone they are still there after a reload.
+  // The wizard's progress nav also says "Submitter Identity", so the helper targets the heading specifically.
+  await expectStep1PrefilledFromAccount(page, faydaId);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expectStep1PrefilledFromAccount(page, faydaId);
   await page.getByRole('button', { name: /save & continue/i }).click();
 
   // --- Step 2: Grievance Details -------------------------------------------
@@ -94,8 +109,6 @@ test('SG-Step2 empty form: every required field is flagged and the wizard does n
   await registerAndLogin(page, 'step2-empty');
 
   await expect(page.getByRole('heading', { name: 'Submitter Identity' })).toBeVisible();
-  await page.locator('#submission-channel').click();
-  await page.getByRole('option', { name: 'Web Portal' }).click();
   await page.getByRole('button', { name: /save & continue/i }).click();
 
   await expect(page.getByRole('heading', { name: 'Grievance Details' })).toBeVisible({ timeout: 10_000 });
@@ -105,4 +118,18 @@ test('SG-Step2 empty form: every required field is flagged and the wizard does n
   await expect(page.getByText('This field is required.')).toHaveCount(6);
   // Still on Step 2 — nothing advanced past the failed validation.
   await expect(page.getByRole('heading', { name: 'Grievance Details' })).toBeVisible();
+});
+
+test('SG-Step1 channel: is the account’s own, can be changed per grievance, and has no clear button', async ({ page }) => {
+  await registerAndLogin(page, 'channel');
+
+  const channel = page.locator('#submission-channel');
+  await expect(channel).toHaveValue('Web Portal');
+  // Only the submitter type's clear (×) is left on this step.
+  await expect(page.getByLabel('Clear selection')).toHaveCount(1);
+
+  await channel.click();
+  await expect(page.getByRole('option', { name: 'Web Portal' })).toBeVisible();
+  await page.getByRole('option', { name: 'Mobile App' }).click();
+  await expect(channel).toHaveValue('Mobile App');
 });

@@ -176,3 +176,66 @@ describe('SubmitGrievancePage for a registered NGO', () => {
     expect(screen.getByRole('combobox', { name: /Submitter Type/ })).toBeEnabled();
   });
 });
+
+describe('SubmitGrievancePage Step 1 prefill from /auth/me', () => {
+  const channels = {
+    submitterOptions: {
+      submitter_types: [{ type_name: 'Individual Farmer', code: 'IND', description: 'Farmer' }],
+      submission_types: [
+        { type_name: 'IVR Helpline', code: 'IVR', description: '' },
+        { type_name: 'Web Portal', code: 'WEB', description: '' },
+      ],
+      preferred_languages: [],
+      service_categories: [],
+      grievance_types: [],
+    },
+  };
+
+  function renderWithUser(user: User) {
+    const store = makeStore(channels);
+    store.dispatch({ type: loginThunk.fulfilled.type, payload: user });
+    return render(
+      <Provider store={store}>
+        <NextIntlClientProvider locale="en" messages={en}>
+          <SubmitGrievancePage />
+        </NextIntlClientProvider>
+      </Provider>
+    );
+  }
+
+  const field = (id: string) => document.getElementById(id) as HTMLInputElement;
+
+  it('shows the type, Fayda ID and channel the account was registered with, with nothing in localStorage', async () => {
+    localStorage.clear();
+    renderWithUser({
+      ...mockUser,
+      fayda_id: '6557092147530500',
+      submitter_type: 'Individual Farmer',
+      submission_channel: 'IVR Helpline',
+    });
+
+    await waitFor(() => expect(field('submitter-type')).toHaveValue('Individual Farmer'));
+    expect(field('submission-channel')).toHaveValue('IVR Helpline');
+    expect(field('si-faydaId')).toHaveValue('6557092147530500');
+  });
+
+  it('falls back to Web Portal when the account has no channel, and leaves a missing Fayda ID editable', async () => {
+    renderWithUser({ ...mockUser, fayda_id: undefined, submitter_type: 'Individual Farmer', submission_channel: undefined });
+
+    await waitFor(() => expect(field('submission-channel')).toHaveValue('Web Portal'));
+    expect(field('si-faydaId')).toHaveValue('');
+    expect(field('si-faydaId')).toBeEnabled();
+
+    fireEvent.change(field('si-faydaId'), { target: { value: '1234567890123456' } });
+    expect(field('si-faydaId')).toHaveValue('1234567890123456');
+  });
+
+  it('keeps the channel editable per grievance', async () => {
+    renderWithUser({ ...mockUser, submission_channel: 'Web Portal' });
+    await waitFor(() => expect(field('submission-channel')).toHaveValue('Web Portal'));
+
+    fireEvent.click(screen.getByRole('option', { name: 'IVR Helpline' }));
+
+    expect(field('submission-channel')).toHaveValue('IVR Helpline');
+  });
+});

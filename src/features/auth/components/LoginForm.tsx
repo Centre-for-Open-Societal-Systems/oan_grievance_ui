@@ -8,7 +8,7 @@ import { SetInitialPasswordModal } from '@/features/auth/components/SetInitialPa
 import { homeRouteForUser } from '@/features/auth/rbac';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { AUTH_MESSAGES } from '@/lib/authMessages';
-import { resolveOrganisationKind } from '@/lib/resolveOrganisationKind';
+import { organisationKindOf } from '@/lib/organisationKind';
 import { validateEmail, validateLoginPassword } from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors, type FieldErrors } from '@/lib/validation/useFieldErrors';
 import { useAppDispatch } from '@/store/hooks';
@@ -95,7 +95,7 @@ export function LoginForm() {
       // An NGO / FPO representative lands on their organisation's screen, everyone else
       // on their role's home — decided by who signed in, not by which form they used.
       const user = result.payload;
-      router.push(safeReturnUrl || homeRouteForUser(user.roles ?? [], resolveOrganisationKind(user)));
+      router.push(safeReturnUrl || homeRouteForUser(user.roles ?? [], organisationKindOf(user)));
       return;
     }
 

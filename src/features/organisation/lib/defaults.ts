@@ -8,11 +8,14 @@ export interface ContactSource {
   mobile_no?: string;
   country_code?: string;
   phone_number?: string;
+  /** What the account signed up with — becomes the form's registration number, so it is not typed twice. */
+  registration_number?: string;
 }
 
 /**
- * The form's starting values: Ethiopia as the country, and the representative's
- * own sign-in email and mobile as the organisation's first contact — editable,
+ * The form's starting values: Ethiopia as the country, the registration number
+ * the account signed up with, and the representative's own sign-in email and
+ * mobile as the organisation's first contact — editable,
  * since a work email or office line may differ. Same phone sources, in the same
  * order, as Submit Grievance's pre-fill (`buildInitialIdentityValues`).
  */
@@ -23,6 +26,7 @@ export function buildInitialOrganisationValues(user: ContactSource | null): Orga
   if (!user) return values;
 
   values.email = user.email;
+  if (user.registration_number) values.taxId = user.registration_number;
   if (user.phone_number) {
     values.phoneNumber = user.phone_number;
     values.phoneCode = user.country_code || '+251';

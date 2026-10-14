@@ -11,12 +11,12 @@
       "submitterTypeLabel": "Submitter Type",
       "submitterTypePlaceholder": "Select Submitter Type",
       "continue": "Continue",
-      "consentNotice": "The Fayda ID above confirms your identity when a grievance is reviewed. It's masked on screen by default, and it's kept on this device to prefill Submit Grievance next time.",
+      "consentNotice": "The Fayda ID above confirms your identity when a grievance is reviewed. It's masked on screen by default, and it's saved to your account to prefill Submit Grievance next time.",
       "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
       "fieldRequired": "This field is required.",
-      "organisationNotice": "After you sign in, we'll ask for your organisation's registration details — legal name, tax number, address and contacts."
+      "organisationNotice": "After you sign in, we'll ask for the rest of your organisation's registration details — legal name, address and contacts."
     },
     "success": {
       "title": "Account Created!",
@@ -53,9 +53,9 @@
       },
       "entityType": { "label": "Entity type", "placeholder": "Select Entity type" },
       "taxId": {
-        "label": "Tax registration number",
-        "placeholder": "Enter Tax registration number",
-        "hint": "Tax Identification number (9-10 characters)"
+        "label": "Registration number",
+        "placeholder": "Enter Registration number",
+        "hint": "The registration or licence number issued to your organisation"
       },
       "streetAddress": { "label": "Street address", "placeholder": "Enter Street address" },
       "kebele": { "label": "Kebele / Village", "placeholder": "Enter Kebele / Village" },
@@ -97,7 +97,7 @@
       "required": "This field is required.",
       "tooLong": "Use {max} characters or fewer.",
       "entityType": "Choose one of the listed entity types.",
-      "taxId": "Enter 9 or 10 letters or numbers, with no spaces or symbols.",
+      "taxId": "Use 3-60 letters or numbers; hyphens or slashes are allowed between them.",
       "postalCode": "Enter a valid postal code, e.g. 1000.",
       "website": "Enter a valid website address, e.g. www.example.org.",
       "email": "Enter a valid email address, e.g. name@example.com.",
@@ -113,7 +113,7 @@
         "legalName": "Legal entity name",
         "brandName": "Brand / display name",
         "entityType": "Entity type",
-        "registrationNumber": "Tax registration number",
+        "registrationNumber": "Registration number",
         "reason": "Note from the administrator",
         "status": "Status"
       },
@@ -148,7 +148,10 @@
     "identityStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
-      "fieldRequired": "This field is required."
+      "fieldRequired": "This field is required.",
+      "channelsLoadFailed": "Couldn't load the submission channels.",
+      "channelsEmpty": "No submission channels are available right now.",
+      "retry": "Try again"
     },
     "detailsStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",

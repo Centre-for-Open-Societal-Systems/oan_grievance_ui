@@ -98,6 +98,7 @@ describe('toRegistrationPayload', () => {
       website: 'https://acme.org',
       contact_email: 'rep@acme.org',
       contact_phone: '+251911234567',
+      consent_given: true,
     });
   });
 

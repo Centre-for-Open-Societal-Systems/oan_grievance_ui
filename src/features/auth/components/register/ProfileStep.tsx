@@ -7,6 +7,7 @@ import { errorIdFor, FieldError } from '@/components/ui/FieldError';
 import { Spinner } from '@/components/ui/Spinner';
 import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
 import { IndividualFarmerForm } from '@/components/submitter-identity/SI-IndividualFarmerForm';
+import { OrganisationSignupForm } from '@/components/submitter-identity/SI-OrganisationSignupForm';
 import { WoredaKebeleForm } from '@/components/submitter-identity/SI-WoredaKebeleForm';
 import type { SIFormProps } from '@/components/submitter-identity/SI-types';
 import { onboardsOrganisationAfterSignIn, submitterTypeOptions } from '@/components/submitter-identity/fields';
@@ -17,12 +18,15 @@ import { onboardsOrganisationAfterSignIn, submitterTypeOptions } from '@/compone
 // form here the ID-consent box below isn't shown either — there is no national
 // ID being collected to consent to.
 //
-// Nor for `ngo` / `cooperative`: an organisation's details are collected once,
-// on the onboarding screen its representative is taken to after signing in
-// (see `onboardsOrganisationAfterSignIn`), so asking here too would mean typing
-// the same organisation twice. Same consequence — no ID, so no consent box.
+// `ngo` / `cooperative` are asked only for their registration number: the rest
+// of an organisation's details are collected once, on the onboarding screen its
+// representative is taken to after signing in (see `onboardsOrganisationAfterSignIn`),
+// so asking here too would mean typing the same organisation twice. A registration
+// number is not a national ID, so the ID-consent box below isn't shown for them.
 const SUBMITTER_TYPE_FORMS: Record<string, ComponentType<SIFormProps>> = {
   individual: IndividualFarmerForm,
+  cooperative: OrganisationSignupForm,
+  ngo: OrganisationSignupForm,
   woreda_kebele: WoredaKebeleForm,
 };
 
@@ -40,6 +44,8 @@ export interface ProfileStepProps {
   onConsentChange: (checked: boolean) => void;
   /** True while the account is being created — this step's Continue is what creates it. */
   isSubmitting: boolean;
+  /** The backend's reason for refusing the sign-up, when it is about this step's fields (e.g. a duplicate Fayda ID). */
+  submitError?: string | null;
   onBack: () => void;
   onSubmit: () => void;
 }
@@ -66,11 +72,13 @@ export function ProfileStep({
   consentChecked,
   onConsentChange,
   isSubmitting,
+  submitError,
   onBack,
   onSubmit,
 }: ProfileStepProps) {
   const IdentityForm = SUBMITTER_TYPE_FORMS[submitterType];
-  const collectsNationalId = Boolean(IdentityForm);
+  // An organisation's form asks for a registration number, not a national ID.
+  const collectsNationalId = Boolean(IdentityForm) && !onboardsOrganisationAfterSignIn(submitterType);
   const t = useTranslations('register.profile');
 
   return (
@@ -144,6 +152,12 @@ export function ProfileStep({
             </label>
           </div>
         </div>
+      )}
+
+      {submitError && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {submitError}
+        </p>
       )}
 
       <div className="flex items-center justify-between pt-2">

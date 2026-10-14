@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
@@ -45,7 +45,7 @@ const registerButton = () => screen.getByRole('button', { name: /Register Organi
 function fillValidForm(entityType: string) {
   type(/^Legal entity name/, 'Green Highlands Development Association');
   fireEvent.click(screen.getByRole('option', { name: entityType }));
-  type(/^Tax registration number/, '0012345678');
+  type(/^Registration number/, '0012345678');
   type(/^Street address/, 'Bole Road, Block 4');
   type(/^Zone/, 'Addis Ababa');
   type(/^Region/, 'Addis Ababa');
@@ -68,9 +68,8 @@ describe('OrganisationRegistrationForm', () => {
     }
     for (const label of [
       /^Legal entity name/,
-      /^Brand \/ display name/,
-      /^Entity type/,
-      /^Tax registration number/,
+      /^Brand \/ display name/,      /^Entity type/,
+      /^Registration number/,
       /^Street address/,
       /^Kebele \/ Village/,
       /^Woreda \/ District/,
@@ -113,14 +112,14 @@ describe('OrganisationRegistrationForm', () => {
 
   it('checks a field when it loses focus and clears the message once it is fixed', () => {
     renderForm();
-    const tax = screen.getByLabelText(/^Tax registration number/);
+    const tax = screen.getByLabelText(/^Registration number/);
 
-    fireEvent.change(tax, { target: { value: '123' } });
+    fireEvent.change(tax, { target: { value: '!!' } });
     fireEvent.blur(tax);
-    expect(screen.getByText(/Enter 9 or 10 letters or numbers/)).toBeInTheDocument();
+    expect(screen.getByText(/Use 3-60 letters or numbers/)).toBeInTheDocument();
 
     fireEvent.change(tax, { target: { value: '0012345678' } });
-    expect(screen.queryByText(/Enter 9 or 10 letters or numbers/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Use 3-60 letters or numbers/)).not.toBeInTheDocument();
   });
 
   it('offers NGO entity types on the NGO screen and FPO ones on the FPO screen', () => {
@@ -162,6 +161,8 @@ describe('OrganisationRegistrationForm', () => {
       postal_code: '1000',
       contact_email: 'rep@greenhighlands.org',
       contact_phone: '+251911234567',
+      // The ticked consent box — the backend refuses the registration without it.
+      consent_given: true,
     });
     expect(getMyOrganisation).not.toHaveBeenCalled();
     expect(onRegistered.mock.calls[0]![0]).toMatchObject({ id: 'ORG-0001', status: 'In Review' });
@@ -252,7 +253,7 @@ describe('OrganisationRegistrationForm', () => {
     fireEvent.click(registerButton());
 
     expect(await screen.findByText(/already registered/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Tax registration number/)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Registration number/)).toHaveAttribute('aria-invalid', 'true');
     expect(onRegistered).not.toHaveBeenCalled();
   });
 

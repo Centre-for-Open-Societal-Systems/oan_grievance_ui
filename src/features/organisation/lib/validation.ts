@@ -1,5 +1,6 @@
 import { EMAIL_MAX_LENGTH, EMAIL_PATTERN } from '@/lib/validation/fieldRules';
 import { isEthiopianDialCode, isValidLocalPhoneForCountry } from '@/lib/validation/phone';
+import { REGISTRATION_NUMBER_PATTERN } from '@/lib/validation/registerSubmitter';
 
 // Rules for the organisation onboarding form. Pure functions returning *what is
 // wrong* (a code the form turns into translated copy), not the sentence itself —
@@ -63,8 +64,14 @@ const TEXT_FIELDS: readonly OrganisationField[] = [
   'country',
 ];
 
-/** "Tax Identification number (9-10 characters)" — letters and digits, nothing else. */
-export const TAX_ID_PATTERN = /^[A-Za-z0-9]{9,10}$/;
+/**
+ * The organisation's registration number — the form's `taxId` field. The same
+ * identifier the account signed up with (`registration_number`), so it follows
+ * the backend's rule: 3-60 letters and digits, with single `-` or `/` between
+ * groups. (The reference design's "9-10 characters" tax-number hint is narrower
+ * than that, and would reject a number the backend accepted at sign-up.)
+ */
+export const TAX_ID_PATTERN = REGISTRATION_NUMBER_PATTERN;
 
 /** 3-10 letters/digits, with single spaces or hyphens between — Ethiopia's own codes are 4 digits, other countries' vary. */
 export const POSTAL_CODE_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9]|[ -](?=[A-Za-z0-9])){1,8}[A-Za-z0-9]$/;

@@ -73,15 +73,17 @@ describe('entity type', () => {
   });
 });
 
-describe('tax registration number', () => {
-  it('takes 9 or 10 letters or digits', () => {
-    expect(check({ taxId: '123456789' }).taxId).toBeUndefined();
-    expect(check({ taxId: '0012345678' }).taxId).toBeUndefined();
-    expect(check({ taxId: 'ET12345678' }).taxId).toBeUndefined();
+describe('registration number', () => {
+  // The same rule the backend applies at sign-up and on POST /orgs, so a number the account was
+  // registered with is never refused on this form.
+  it('takes 3-60 letters or digits, with single hyphens or slashes between groups', () => {
+    for (const taxId of ['123', '0012345678', 'ET12345678', 'REG-2024-0042', 'COOP/XX/2024/0001', 'a'.repeat(60)]) {
+      expect(check({ taxId }).taxId).toBeUndefined();
+    }
   });
 
-  it('rejects the wrong length or other characters', () => {
-    for (const taxId of ['12345678', '12345678901', '123-456-789', '1234 56789', '12345678!']) {
+  it('rejects the wrong length, spaces, other symbols and doubled or dangling separators', () => {
+    for (const taxId of ['12', 'a'.repeat(61), '1234 56789', '12345678!', '-123', '123-', 'AB--123', 'AB-/123']) {
       expect(check({ taxId }).taxId).toEqual({ code: 'taxId' });
     }
   });

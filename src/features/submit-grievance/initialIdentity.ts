@@ -1,20 +1,38 @@
-import { normalizeSubmitterType } from "@/features/metadata";
+import { normalizeSubmissionChannel, normalizeSubmitterType } from "@/features/metadata";
 import type { User } from "@/features/auth/store/authSlice";
 import { submitsOnBehalfOfOthers } from "@/components/submitter-identity/fields";
 import { organisationKindFor } from "@/lib/organisationKind";
 import { splitPhoneNumber } from "@/lib/validation/phone";
+import { DEFAULT_SUBMISSION_CHANNEL } from "@/lib/validation/registerSubmitter";
 import type { SubmitterProfile } from "@/lib/submitterProfile";
 
 const KNOWN_TYPES = ["individual", "cooperative", "ngo", "woreda_kebele", "development_agent"];
 
 /**
- * Step 1's starting submitter type: the signed-in account's own type if it maps
- * to one the wizard knows, otherwise whatever was saved at registration.
+ * Step 1's starting submitter type: the signed-in account's own type
+ * (`submitter_type` from `/auth/me`, or `type` while a backend without it is
+ * still in use) if it maps to one the wizard knows, otherwise whatever was
+ * saved at registration.
  */
 export function resolveInitialSubmitterType(user: User | null, savedProfile: SubmitterProfile | null): string {
-  const normalized = user?.type ? normalizeSubmitterType(user.type) : "";
+  const backendType = user?.submitter_type || user?.type;
+  const normalized = backendType ? normalizeSubmitterType(backendType) : "";
   if (KNOWN_TYPES.includes(normalized)) return normalized;
   return savedProfile?.submitterType ?? "";
+}
+
+/**
+ * Step 1's starting submission channel: the account's own, or Web Portal when
+ * the profile has none. Empty with no signed-in account.
+ *
+ * Goes through `normalizeSubmissionChannel`, the same normalisation the
+ * channel options' values come from (`code || name`), so the profile's
+ * channel name ("Web Portal") lands on the matching option ("web"). The
+ * field stays editable per grievance either way.
+ */
+export function resolveInitialSubmissionChannel(user: User | null): string {
+  if (!user) return "";
+  return normalizeSubmissionChannel(user.submission_channel || DEFAULT_SUBMISSION_CHANNEL);
 }
 
 /**
@@ -83,18 +101,23 @@ export function buildInitialIdentityValues(
  * screen, so the same facts are not asked a second time. Overrides the
  * registration snapshot, since the backend's record is the verified one.
  *
- * Empty unless the user has a registered organisation *and* Step 1 is on an
- * organisation type: an NGO representative who switches the form to another
- * type is not filing as the organisation. There is no Fayda ID to fill: an
- * organisation has none.
+ * Empty unless Step 1 is on an organisation type: an NGO representative who
+ * switches the form to another type is not filing as the organisation. Without a
+ * registered organisation yet, only the sign-up registration number is known.
+ * There is no Fayda ID to fill: an organisation has none.
  */
 function organisationIdentityValues(user: User | null, submitterType: string): Record<string, string> {
-  const organisation = user?.organisation;
-  if (!organisation || organisationKindFor(submitterType) === null) return {};
-  const representative = organisation.representativeName ?? user?.full_name;
+  if (!user || organisationKindFor(submitterType) === null) return {};
+  const organisation = user.organisation;
+  // Before the organisation is registered the registration number is still known: it is what
+  // the account signed up with.
+  const registrationNumber = organisation?.registrationNumber ?? user.registration_number;
+  if (!organisation) return registrationNumber ? { registrationNumber } : {};
+
+  const representative = organisation.representativeName ?? user.full_name;
   return {
     orgName: organisation.legalName,
-    ...(organisation.registrationNumber ? { registrationNumber: organisation.registrationNumber } : {}),
+    ...(registrationNumber ? { registrationNumber } : {}),
     ...(representative ? { representativeName: representative } : {}),
   };
 }

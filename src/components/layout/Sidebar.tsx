@@ -7,8 +7,7 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { canAccessRoute, canViewAllGrievances } from "@/features/auth/rbac";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { useAppSelector } from "@/store/hooks";
-import { ORGANISATION_ROUTE } from "@/lib/organisationKind";
-import { resolveOrganisationKind } from "@/lib/resolveOrganisationKind";
+import { ORGANISATION_ROUTE, organisationKindOf } from "@/lib/organisationKind";
 import {
   Building2,
   LayoutDashboard,
@@ -48,7 +47,7 @@ export function Sidebar() {
     const seesAll = canViewAllGrievances(userRoles);
     // An NGO / FPO representative's way back to their organisation's status
     // (or to finishing its registration) from the rest of the portal.
-    const organisationKind = resolveOrganisationKind(user);
+    const organisationKind = organisationKindOf(user);
     const items = organisationKind
       ? [...navItems, { name: "My Organisation", href: ORGANISATION_ROUTE[organisationKind], icon: Building2 }]
       : navItems;

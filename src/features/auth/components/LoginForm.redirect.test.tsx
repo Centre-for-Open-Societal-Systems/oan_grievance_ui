@@ -22,8 +22,6 @@ vi.mock('@/features/auth/api/authApi', async (importOriginal) => ({
   getMe: (...args: unknown[]) => getMe(...args),
 }));
 
-import { saveOrganisationIntent } from '@/lib/organisationIntent';
-import { clearSubmitterProfile, saveSubmitterProfile } from '@/lib/submitterProfile';
 import { makeStore } from '@/store';
 import { LoginForm } from './LoginForm';
 
@@ -59,18 +57,10 @@ describe('where signing in lands', () => {
     expect(await signInAs({ email: 'rep@fpo.org', roles: [SUBMITTER], type: 'FPO' })).toBe('/fpo');
   });
 
-  it('uses the type chosen at registration while the backend still reports the default one', async () => {
-    saveSubmitterProfile('new@ngo.org', { submitterType: 'ngo', identityValues: {} });
-    expect(await signInAs({ email: 'new@ngo.org', roles: [], type: 'Individual Farmer' })).toBe('/ngo');
-  });
-
-  it('still lands a new NGO on /ngo after it logged out and in again before registering the organisation', async () => {
-    // Sign-up leaves both notes; every logout wipes the prefill one.
-    saveSubmitterProfile('new@ngo.org', { submitterType: 'ngo', identityValues: {} });
-    saveOrganisationIntent('new@ngo.org', 'ngo');
-    clearSubmitterProfile('new@ngo.org');
-
-    expect(await signInAs({ email: 'new@ngo.org', roles: [SUBMITTER], type: 'Individual Farmer' })).toBe('/ngo');
+  it('lands a newly signed-up NGO on /ngo at its first sign-in, before any organisation is registered, on any browser', async () => {
+    // Nothing in localStorage: the type comes from the account (registered as NGO at sign-up).
+    expect(localStorage.length).toBe(0);
+    expect(await signInAs({ email: 'new@ngo.org', roles: [SUBMITTER], type: 'NGO' })).toBe('/ngo');
   });
 
   it('keeps farmers on Submit Grievance', async () => {

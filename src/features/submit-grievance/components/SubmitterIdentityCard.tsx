@@ -15,6 +15,7 @@ import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-Develop
 import { useIdentityErrors } from "@/components/submitter-identity/useIdentityErrors";
 import { saveDraft, type SaveDraftPayload } from "@/lib/drafts";
 import { logger } from "@/lib/logger";
+import { DEFAULT_SUBMISSION_CHANNEL } from "@/lib/validation/registerSubmitter";
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
@@ -28,6 +29,25 @@ interface SubmitterIdentityCardProps {
   setIdentityValue: (key: string, value: string) => void;
   /** The account's type is fixed (a registered NGO / FPO files as itself), so the dropdown is shown but not editable. */
   submitterTypeLocked?: boolean;
+  /** The account's own submitter type and channel names (from /auth/me), shown while the options list is unavailable. */
+  profileSubmitterType?: string;
+  profileSubmissionChannel?: string;
+}
+
+/**
+ * `options`, or a single option for the current `value` named `label` when the
+ * list is empty (not loaded yet, or the request failed). Without it a value the
+ * account already has — its submitter type and channel from /auth/me — shows as
+ * a blank dropdown, because the dropdown can only display a value by finding its
+ * option. Once the real list arrives it replaces this.
+ */
+function withProfileFallback(
+  options: Array<{ value: string; label: string }>,
+  value: string,
+  label: string | undefined
+): Array<{ value: string; label: string }> {
+  if (options.length > 0 || !value || !label) return options;
+  return [{ value, label }];
 }
 
 export function SubmitterIdentityCard({
@@ -40,6 +60,8 @@ export function SubmitterIdentityCard({
   identityValues,
   setIdentityValue,
   submitterTypeLocked = false,
+  profileSubmitterType,
+  profileSubmissionChannel,
 }: SubmitterIdentityCardProps) {
   const dispatch = useAppDispatch();
   const dynamicSubmitterTypes = useAppSelector(selectSubmitterTypeOptions);
@@ -52,7 +74,30 @@ export function SubmitterIdentityCard({
     }
   }, [dispatch, submitterStatus]);
 
+  // A request that failed earlier (a cold dev server, a dropped connection) is
+  // not retried by the effect above, which only starts a first load — so opening
+  // this step tries again once, rather than leaving the failure in place.
+  useEffect(() => {
+    if (submitterStatus === "failed") {
+      void dispatch(fetchSubmitterOptionsThunk());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch]);
+
+  const submitterTypeOptions = withProfileFallback(dynamicSubmitterTypes, submitterType, profileSubmitterType);
+  const submissionChannelOptions = withProfileFallback(
+    dynamicSubmissionChannels,
+    submissionChannel,
+    profileSubmissionChannel || DEFAULT_SUBMISSION_CHANNEL
+  );
+
   const t = useTranslations("submitGrievance.identityStep");
+
+  // The channel list is empty either because the request failed or because it
+  // succeeded with nothing in it — both leave a required field with nothing to
+  // pick, so both say so (and offer a retry) instead of showing an empty menu.
+  const channelOptionsUnavailable =
+    dynamicSubmissionChannels.length === 0 && (submitterStatus === "failed" || submitterStatus === "succeeded");
 
   // Inline errors: the two dropdowns ("submitterType", "submissionChannel")
   // and the identity form's own fields share one set of messages, so the same
@@ -164,7 +209,7 @@ export function SubmitterIdentityCard({
             </label>
             <AnimatedSelect
               id="submitter-type"
-              options={dynamicSubmitterTypes}
+              options={submitterTypeOptions}
               placeholder="Select Submitter Type"
               value={submitterType}
               onChange={handleSubmitterTypeChange}
@@ -184,15 +229,28 @@ export function SubmitterIdentityCard({
             </label>
             <AnimatedSelect
               id="submission-channel"
-              options={dynamicSubmissionChannels}
+              options={submissionChannelOptions}
               placeholder="Select Submission Channel"
               value={submissionChannel}
               onChange={handleChannelChange}
+              clearable={false}
               invalid={!!identity.errors.submissionChannel}
               describedBy={identity.errors.submissionChannel ? errorIdFor("submission-channel") : undefined}
             />
             {identity.errors.submissionChannel && (
               <FieldError id={errorIdFor("submission-channel")}>{identity.errors.submissionChannel}</FieldError>
+            )}
+            {channelOptionsUnavailable && (
+              <p role="alert" className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs font-medium text-red-600">
+                <span>{submitterStatus === "failed" ? t("channelsLoadFailed") : t("channelsEmpty")}</span>
+                <button
+                  type="button"
+                  onClick={() => void dispatch(fetchSubmitterOptionsThunk())}
+                  className="font-semibold underline underline-offset-2 hover:text-red-800"
+                >
+                  {t("retry")}
+                </button>
+              </p>
             )}
           </div>
         </div>

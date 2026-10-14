@@ -74,6 +74,8 @@ export interface OrganisationRegistrationPayload {
   contact_email: string;
   /** E.164, e.g. +251911234567. */
   contact_phone: string;
+  /** The representative's confirmation that they may register the organisation and accept the Privacy Policy. The backend requires `true`. */
+  consent_given: true;
 }
 
 /** Drops an empty optional value so it is omitted, not sent as "". */
@@ -82,6 +84,10 @@ function optional<K extends string>(key: K, value: string): { [P in K]?: string 
   return trimmed ? ({ [key]: trimmed } as { [P in K]: string }) : {};
 }
 
+/**
+ * The body for `POST /orgs`. Only called once the consent box is ticked (the form
+ * does not submit without it), which is why `consent_given` is always `true` here.
+ */
 export function toRegistrationPayload(kind: OrganisationKind, values: OrganisationValues): OrganisationRegistrationPayload {
   const website = values.website.trim() ? normaliseWebsite(values.website) : null;
   return {
@@ -100,6 +106,7 @@ export function toRegistrationPayload(kind: OrganisationKind, values: Organisati
     ...(website ? { website } : {}),
     contact_email: values.email.trim(),
     contact_phone: `${values.phoneCode}${stripLeadingZero(values.phoneNumber)}`,
+    consent_given: true,
   };
 }
 

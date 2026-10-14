@@ -223,7 +223,7 @@ export function OrganisationRegistrationForm({
           label={t('fields.taxId.label')}
           placeholder={t('fields.taxId.placeholder')}
           hint={t('fields.taxId.hint')}
-          maxLength={10}
+          maxLength={60}
           required
         />
       </Section>
