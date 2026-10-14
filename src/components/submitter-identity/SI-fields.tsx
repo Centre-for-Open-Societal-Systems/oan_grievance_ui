@@ -33,7 +33,7 @@ interface FieldShellProps {
 function FieldShell({ name, label, required, error, className, children }: FieldShellProps) {
   const id = siFieldId(name);
   return (
-    <div className={className}>
+    <div className={`min-w-0 ${className ?? ""}`}>
       <label htmlFor={id} className="block text-sm font-semibold text-gray-800 mb-2">
         {label}
         {required && (

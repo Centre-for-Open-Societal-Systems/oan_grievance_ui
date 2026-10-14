@@ -82,3 +82,40 @@ test('RG-16/RG-24: Development Agent shows no identity fields and no consent box
   await expect(page.locator('#si-faydaId')).toHaveCount(0);
   await expect(page.getByText(/I consent to providing my national ID/i)).toHaveCount(0);
 });
+
+test('RG-27: register sends the type and Fayda ID (no channel), and a rejection keeps what was typed', async ({ page }) => {
+  let sent: Record<string, unknown> | null = null;
+  await page.route('**/api/auth/register', async (route) => {
+    sent = route.request().postDataJSON();
+    await route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: "A Submitter Profile with dedupe key 'fayda:6557…' is already registered under another account.",
+      }),
+    });
+  });
+
+  await page.goto('/register');
+  await page.locator('#register-full-name').fill('Playwright QA');
+  await page.locator('#register-email').fill(`qa-pw-fayda-${Date.now()}@example.com`);
+  await page.locator('#register-phone').fill('0911000444');
+  await page.locator('#register-password').fill('Str0ng!Passw0rd');
+  await page.locator('#register-confirm-password').fill('Str0ng!Passw0rd');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.locator('#register-submitter-type').click();
+  await page.getByRole('option', { name: 'Individual Farmer' }).click();
+  await page.locator('#si-faydaId').fill('6557092147530500');
+  await page.getByText(/I consent to providing my national ID/i).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('already registered under another account');
+  expect(sent).toMatchObject({
+    submitter_type: 'Individual Farmer',
+    fayda_id: '6557092147530500',
+  });
+  expect(sent).not.toHaveProperty('submission_channel');
+  // Still on the profile step, with the typed ID kept.
+  await expect(page.getByText('Almost done!')).toBeVisible();
+  await expect(page.locator('#si-faydaId')).toHaveValue('6557092147530500');
+});

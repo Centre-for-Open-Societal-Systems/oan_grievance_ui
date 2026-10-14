@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 import { BackendAuthError, callBackendAuth, type TokenPair } from '@/lib/oanAuthBackend';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { validatePassword } from '@/lib/validation/password';
-import { isRegistrableSubmitterType } from '@/lib/validation/submitterType';
+import { registerSubmitterFieldsSchema } from '@/lib/validation/registerSubmitter';
 import { PHONE_NUMBER_E164_REGEX } from '@/lib/validation/phone';
 import { NextResponse } from 'next/server';
 
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { email, password, full_name, phone_number, submitter_type } = body ?? {};
+  const { email, password, full_name, phone_number, submitter_type, fayda_id } = body ?? {};
 
   if (!email || !password || !full_name || !phone_number) {
     return NextResponse.json({ message: 'Missing required fields in request' }, { status: 400 });
@@ -90,6 +90,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'Phone number must be a valid international number.' }, { status: 400 });
   }
 
+  // Parsed rather than passed through: only the two submitter fields, each
+  // checked, reach the backend. An unsupported type or a malformed Fayda ID is
+  // refused here, and any other key the caller sent is dropped.
+  const submitter = registerSubmitterFieldsSchema.safeParse({ submitter_type, fayda_id });
+  if (!submitter.success) {
+    return NextResponse.json({ message: submitter.error.issues[0]?.message ?? 'Invalid request.' }, { status: 400 });
+  }
+
   try {
     await callBackendAuth<TokenPair>(
       '/api/v1/auth/register',
@@ -98,10 +106,8 @@ export async function POST(request: Request) {
         password,
         full_name,
         phone_number,
-        // Allowlisted rather than passed through: an unrecognised value is
-        // dropped (the backend then registers the default type) instead of
-        // being forwarded for the backend to reject or, worse, accept.
-        ...(isRegistrableSubmitterType(submitter_type) ? { submitter_type } : {}),
+        // Only the fields that were actually sent (the parse leaves the others as undefined keys).
+        ...Object.fromEntries(Object.entries(submitter.data).filter(([, value]) => value !== undefined)),
       },
       clientIp
     );
@@ -109,10 +115,11 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof BackendAuthError) {
       // Unlike login, the backend's validation message here IS useful to the
-      // caller ("email already exists", password complexity) — it does not
-      // reveal anything about someone else's account.
+      // caller ("email already exists", password complexity, a duplicate Fayda
+      // ID, an unknown type or channel) — it does not reveal anything about
+      // someone else's account. A duplicate keeps its 409.
       logger.security(`Registration rejected for ${clientIp} with status ${error.status}: ${error.message}`);
-      const status = error.status >= 500 ? 502 : 400;
+      const status = error.status >= 500 ? 502 : error.status === 409 ? 409 : 400;
       return NextResponse.json(
         { message: error.status >= 500 ? AUTH_MESSAGES.unexpected : error.message },
         { status }

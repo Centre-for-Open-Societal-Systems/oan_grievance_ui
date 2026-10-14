@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { selectGrievanceTypeOptions, type MetadataRootState, type MetadataState } from './metadataSlice';
+import {
+  selectGrievanceTypeOptions,
+  selectSubmissionChannelOptions,
+  type MetadataRootState,
+  type MetadataState,
+} from './metadataSlice';
 
 function createMockRootState(metadataOverrides: Partial<MetadataState> = {}): MetadataRootState {
   return {
@@ -39,5 +44,59 @@ describe('selectGrievanceTypeOptions', () => {
     expect(selectGrievanceTypeOptions(state)).toEqual([
       { value: 'GTYPE-00001', label: 'Fertilizer Shortage' },
     ]);
+  });
+});
+
+describe('selectSubmissionChannelOptions', () => {
+  const submitterOptions = (submission_types: NonNullable<MetadataState['submitterOptions']>['submission_types']) => ({
+    submitter_types: [],
+    submission_types,
+    preferred_languages: [],
+    service_categories: [],
+    grievance_types: [],
+  });
+
+  it('lists every channel the API returns, with its code-based value and its name as the label', () => {
+    const state = createMockRootState({
+      submitterOptions: submitterOptions([
+        { type_name: 'Development Agent Assisted', code: 'DA', description: '' },
+        { type_name: 'IVR Helpline', code: 'IVR', description: '' },
+        { type_name: 'Mobile App', code: 'APP', description: '' },
+        { type_name: 'Mobile Call', code: 'CALL', description: '' },
+        { type_name: 'Web Portal', code: 'WEB', description: '' },
+      ]),
+    });
+
+    expect(selectSubmissionChannelOptions(state)).toEqual([
+      { value: 'field_officer', label: 'Development Agent Assisted' },
+      { value: 'ivr', label: 'IVR Helpline' },
+      { value: 'mobile', label: 'Mobile App' },
+      { value: 'call', label: 'Mobile Call' },
+      { value: 'web', label: 'Web Portal' },
+    ]);
+  });
+
+  it('falls back to the grievance options’ channels when submission_types is empty, not just when it is missing', () => {
+    const grievanceOptions = {
+      statuses: [],
+      departments: [],
+      service_categories: [],
+      grievance_types: [],
+      submission_channels: ['Web Portal', 'IVR Helpline'],
+    } as unknown as NonNullable<MetadataState['grievanceOptions']>;
+
+    const empty = createMockRootState({ submitterOptions: submitterOptions([]), grievanceOptions });
+    expect(selectSubmissionChannelOptions(empty)).toEqual([
+      { value: 'web', label: 'Web Portal' },
+      { value: 'ivr', label: 'IVR Helpline' },
+    ]);
+
+    const missing = createMockRootState({ submitterOptions: null, grievanceOptions });
+    expect(selectSubmissionChannelOptions(missing)).toEqual(selectSubmissionChannelOptions(empty));
+  });
+
+  it('is empty when neither source has a channel', () => {
+    expect(selectSubmissionChannelOptions(createMockRootState({ submitterOptions: submitterOptions([]) }))).toEqual([]);
+    expect(selectSubmissionChannelOptions(createMockRootState())).toEqual([]);
   });
 });

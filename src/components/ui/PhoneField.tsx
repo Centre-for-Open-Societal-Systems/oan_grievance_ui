@@ -185,7 +185,7 @@ export function PhoneField({
           setPhoneNumber(digits.slice(0, effectiveMaxLength));
         }}
         placeholder={placeholder}
-        className="flex-1 bg-white text-gray-800 py-2.5 px-3.5 rounded-r-lg focus:outline-none text-sm placeholder:text-gray-400 font-medium"
+        className="min-w-0 flex-1 bg-white text-gray-800 py-2.5 px-3.5 rounded-r-lg focus:outline-none text-sm placeholder:text-gray-400 font-medium"
       />
     </div>
   );

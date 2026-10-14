@@ -11,7 +11,7 @@
       "submitterTypeLabel": "Submitter Type",
       "submitterTypePlaceholder": "Select Submitter Type",
       "continue": "Continue",
-      "consentNotice": "The Fayda ID above confirms your identity when a grievance is reviewed. It's masked on screen by default, and it's kept on this device to prefill Submit Grievance next time.",
+      "consentNotice": "The Fayda ID above confirms your identity when a grievance is reviewed. It's masked on screen by default, and it's saved to your account to prefill Submit Grievance next time.",
       "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
@@ -27,7 +27,10 @@
     "identityStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
-      "fieldRequired": "This field is required."
+      "fieldRequired": "This field is required.",
+      "channelsLoadFailed": "Couldn't load the submission channels.",
+      "channelsEmpty": "No submission channels are available right now.",
+      "retry": "Try again"
     },
     "detailsStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",

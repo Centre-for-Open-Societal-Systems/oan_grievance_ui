@@ -39,6 +39,8 @@ export interface ProfileStepProps {
   onConsentChange: (checked: boolean) => void;
   /** True while the account is being created — this step's Continue is what creates it. */
   isSubmitting: boolean;
+  /** The backend's reason for refusing the sign-up, when it is about this step's fields (e.g. a duplicate Fayda ID). */
+  submitError?: string | null;
   onBack: () => void;
   onSubmit: () => void;
 }
@@ -65,6 +67,7 @@ export function ProfileStep({
   consentChecked,
   onConsentChange,
   isSubmitting,
+  submitError,
   onBack,
   onSubmit,
 }: ProfileStepProps) {
@@ -137,6 +140,12 @@ export function ProfileStep({
             </label>
           </div>
         </div>
+      )}
+
+      {submitError && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {submitError}
+        </p>
       )}
 
       <div className="flex items-center justify-between pt-2">

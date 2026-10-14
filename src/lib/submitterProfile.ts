@@ -1,26 +1,26 @@
-// Bridges the submitter-identity info collected at registration into Submit
-// Grievance's own "Submitter Identity" step, so a returning user isn't asked
-// to retype it — including the national-ID field (Fayda ID or its per-type
-// variant), by explicit product decision: the whole point of asking for it
-// at registration is that it carries over. This is a frontend-only stand-in:
-// `oan_grievance_service` has no endpoint yet to persist this server-side
-// (see the register route, which only ever forwards
-// email/password/full_name/phone_number to the auth backend) — swap this for
-// a real API call once one exists, at which point this becomes a much
-// smaller cache in front of that instead of the only copy. Expires on its
-// own (`PROFILE_TTL_MS`) so it doesn't outlive every exit path that isn't an
-// explicit logout (closing the tab, a cookie expiring, registering and never
-// signing in) — `clearSubmitterProfile` on logout is defence in depth, not
-// the only thing standing between this and indefinite retention.
+// A short-lived, same-browser fallback for Submit Grievance's "Submitter
+// Identity" step. The account itself is the source of truth now: registration
+// sends the submitter type, Fayda ID and submission channel to the backend,
+// and `/auth/me` returns them (see `getMe`), so Step 1's type, Fayda ID and
+// channel come from there on any browser, at any time. What this still carries
+// is what the backend has no field for — the other per-type details typed on
+// the register profile step (organisation name, representative, and so on) —
+// and it never holds a national ID (RegisterForm drops those before saving).
+// Expires on its own (`PROFILE_TTL_MS`) so it doesn't outlive every exit path
+// that isn't an explicit logout (closing the tab, a cookie expiring,
+// registering and never signing in) — `clearSubmitterProfile` on logout is
+// defence in depth, not the only thing standing between this and indefinite
+// retention.
 
 import { z } from 'zod';
 
 const STORAGE_KEY_PREFIX = 'oan_submitter_profile:';
 
-// One working day. Long enough that a user who registers and returns the
-// same afternoon still gets the prefill; short enough that a shared/kiosk
-// device isn't carrying someone's data around for weeks.
-const PROFILE_TTL_MS = 24 * 60 * 60 * 1000;
+// One hour. Enough for someone who registers and signs straight in to still
+// get the extra details prefilled; short enough that a shared/kiosk device
+// isn't carrying someone's data around, now that the account is what remembers
+// them.
+const PROFILE_TTL_MS = 60 * 60 * 1000;
 
 const storedProfileSchema = z.object({
   submitterType: z.string(),

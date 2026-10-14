@@ -22,6 +22,8 @@ export interface AnimatedSelectProps {
   describedBy?: string;
   /** Set when this field has a validation error — surfaces as aria-invalid so assistive tech announces it. */
   invalid?: boolean;
+  /** Whether the selection can be cleared (the × button and the placeholder row). Turn off for a required field. Defaults to on. */
+  clearable?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ export function AnimatedSelect({
   id,
   describedBy,
   invalid,
+  clearable = true,
 }: AnimatedSelectProps) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
@@ -280,7 +283,7 @@ export function AnimatedSelect({
 
         {/* Action buttons (Clear & Chevron) */}
         <div className="absolute right-3 flex items-center gap-1.5">
-          {!disabled && Boolean(value) && (
+          {!disabled && clearable && Boolean(value) && (
             <button
               type="button"
               tabIndex={-1}
@@ -319,7 +322,7 @@ export function AnimatedSelect({
         >
           <ul id={listboxId} role="listbox" aria-label={placeholder} ref={listRef} className="max-h-60 overflow-y-auto py-1">
             {/* Show reset to placeholder option when not typing */}
-            {!isTyping && (
+            {!isTyping && clearable && (
               <li
                 role="option"
                 aria-selected={!value}

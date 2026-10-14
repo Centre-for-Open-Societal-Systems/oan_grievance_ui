@@ -11,7 +11,7 @@
       "submitterTypeLabel": "Gosa Dhiheessituu",
       "submitterTypePlaceholder": "Gosa Dhiheessituu Filadhu",
       "continue": "Itti fufi",
-      "consentNotice": "Lakkoofsi ID Fayda armaan olii yeroo komiin ilaalamu eenyummaa keessan mirkaneessa. Bifa dhoksaan skiriinii irratti argama, yeroo itti aanu Komii Galchuu (Submit Grievance) dursanii guutuuf meeshaa kana irratti ni kuufama.",
+      "consentNotice": "Lakkoofsi ID Fayda armaan olii yeroo komiin ilaalamu eenyummaa keessan mirkaneessa. Bifa dhoksaan skiriinii irratti argama, yeroo itti aanu Komii Galchuu (Submit Grievance) dursanii guutuuf akkaawuntii keessan irratti ni kuufama.",
       "consentCheckboxLabel": "Lakkoofsa ID biyyaalessaa koo mirkaneessa eenyummaaf kennuuf nan waliigala.",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
@@ -27,7 +27,10 @@
     "identityStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
-      "fieldRequired": "Gabateen kun barbaachisaadha."
+      "fieldRequired": "Gabateen kun barbaachisaadha.",
+      "channelsLoadFailed": "Karaawwan galchuu fe'uun hin danda'amne.",
+      "channelsEmpty": "Yeroo ammaa karaan galchuu tokko iyyuu hin jiru.",
+      "retry": "Irra deebi'ii yaali"
     },
     "detailsStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",

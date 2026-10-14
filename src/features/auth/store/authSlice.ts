@@ -13,6 +13,10 @@ export interface User {
   country_code?: string;
   phone_number?: string;
   type?: string;
+  /** The backend submitter type name (e.g. `Individual Farmer`) from `/auth/me`. */
+  submitter_type?: string;
+  /** The channel name the account registered through (e.g. `Web Portal`) from `/auth/me`. */
+  submission_channel?: string;
   profile_id?: string;
   fayda_id?: string;
   administrative_area?: string;

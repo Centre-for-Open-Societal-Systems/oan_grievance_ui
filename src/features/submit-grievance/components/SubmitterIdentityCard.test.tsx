@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
@@ -14,6 +14,12 @@ vi.mock('@/lib/drafts', async (importOriginal) => ({
   saveDraft: (...args: unknown[]) => saveDraft(...args),
 }));
 
+const fetchSubmitterOptions = vi.fn();
+vi.mock('@/features/metadata/api/metadataApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/metadata/api/metadataApi')>()),
+  fetchSubmitterOptions: (...args: unknown[]) => fetchSubmitterOptions(...args),
+}));
+
 import { SubmitterIdentityCard } from './SubmitterIdentityCard';
 import { buildSaveDraftPayload } from '../draftPayload';
 
@@ -25,10 +31,12 @@ const CLIENT_UUID = '11111111-2222-3333-4444-555555555555';
 function Harness({
   initialType = '',
   initialChannel = '',
+  profile,
   onNext,
 }: {
   initialType?: string;
   initialChannel?: string;
+  profile?: { submitterType: string; submissionChannel: string };
   onNext: () => void;
 }) {
   const [submitterType, setSubmitterType] = useState(initialType);
@@ -61,6 +69,8 @@ function Harness({
       setSubmissionChannel={setSubmissionChannel}
       identityValues={identityValues}
       setIdentityValue={setIdentityValue}
+      profileSubmitterType={profile?.submitterType}
+      profileSubmissionChannel={profile?.submissionChannel}
     />
   );
 }
@@ -81,7 +91,10 @@ function storeWithTypes() {
   });
 }
 
-function renderCard(props: { initialType?: string; initialChannel?: string } = {}, store = storeWithTypes()) {
+function renderCard(
+  props: { initialType?: string; initialChannel?: string; profile?: { submitterType: string; submissionChannel: string } } = {},
+  store = storeWithTypes()
+) {
   const onNext = vi.fn();
   render(
     <Provider store={store}>
@@ -230,5 +243,82 @@ describe('Step 1 — switching submitter type', () => {
     fireEvent.click(screen.getByRole('option', { name: 'Development Agent' }));
 
     expect(screen.queryByText('This field is required.')).not.toBeInTheDocument();
+  });
+});
+
+describe('Step 1 — submission channel', () => {
+  const noChannels = {
+    submitterOptions: {
+      submitter_types: [{ type_name: 'Individual Farmer', code: 'IND', description: 'Farmer' }],
+      submission_types: [],
+      preferred_languages: [],
+      service_categories: [],
+      grievance_types: [],
+    },
+  };
+
+  it('has no clear (×) button on the required channel field, though the type field keeps its own', () => {
+    renderCard({ initialType: 'individual', initialChannel: 'web' });
+
+    const channel = byId('submission-channel').closest('div')!.parentElement!;
+    expect(within(channel).queryByRole('button', { name: 'Clear selection' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Clear selection' })).toHaveLength(1);
+  });
+
+  it('says so, and offers a retry, when the options request failed', async () => {
+    fetchSubmitterOptions.mockRejectedValue(new Error('boom'));
+    const store = makeStore({ ...noChannels, submitterOptionsStatus: 'failed', submitterOptionsError: 'boom' });
+    renderCard({ initialType: 'individual' }, store);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load the submission channels.");
+    fetchSubmitterOptions.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(fetchSubmitterOptions).toHaveBeenCalledTimes(1);
+  });
+
+  it('tries again once on its own when it opens after an earlier failure, and fills the list in', async () => {
+    fetchSubmitterOptions.mockResolvedValue({
+      ...noChannels.submitterOptions,
+      submission_types: [{ type_name: 'Web Portal', code: 'WEB', description: '' }],
+    });
+    const store = makeStore({ ...noChannels, submitterOptionsStatus: 'failed', submitterOptionsError: 'boom' });
+    renderCard({ initialType: 'individual', initialChannel: 'web' }, store);
+
+    await waitFor(() => expect(store.getState().metadata.submitterOptionsStatus).toBe('succeeded'));
+    expect(fetchSubmitterOptions).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+  });
+
+  it('still shows the account’s own submitter type and channel while the options are unavailable', async () => {
+    fetchSubmitterOptions.mockRejectedValue(new Error('boom'));
+    const store = makeStore({ submitterOptions: null, submitterOptionsStatus: 'failed', submitterOptionsError: 'boom' });
+    renderCard(
+      {
+        initialType: 'individual',
+        initialChannel: 'web',
+        profile: { submitterType: 'Individual Farmer', submissionChannel: 'Web Portal' },
+      },
+      store
+    );
+
+    expect(byId('submitter-type')).toHaveValue('Individual Farmer');
+    expect(byId('submission-channel')).toHaveValue('Web Portal');
+    await screen.findByRole('alert');
+  });
+
+  it('says so when the request succeeded with no channels at all', () => {
+    renderCard({ initialType: 'individual' }, makeStore(noChannels));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('No submission channels are available right now.');
+  });
+
+  it('shows no message while the channels are there, or still loading', () => {
+    renderCard({ initialType: 'individual' });
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+
+    cleanup();
+    renderCard({ initialType: 'individual' }, makeStore({ ...noChannels, submitterOptionsStatus: 'loading' }));
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
   });
 });
