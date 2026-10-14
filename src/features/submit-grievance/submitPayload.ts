@@ -1,6 +1,31 @@
 import { submitsOnBehalfOfOthers } from "@/components/submitter-identity/fields";
 import { formatToE164 } from "@/lib/validation/phone";
-import type { SaveDraftPayload } from "@/lib/drafts";
+
+/**
+ * The grievance fields of `POST /api/v1/grievances` — everything except
+ * `consent_given`, which only the review step adds. `client_submission_uuid`
+ * is the wizard session's idempotency key, so a retried submit is recognised
+ * rather than filed twice.
+ */
+export interface SubmitFields {
+  client_submission_uuid: string;
+  submission_channel?: string;
+  submitter_type?: string;
+  submitter_name?: string;
+  contact_mobile?: string;
+  country_code?: string;
+  phone_number?: string;
+  contact_email?: string;
+  /** `area_id` or `path_code` of the woreda or kebele filed against — never a display name (the wizard holds areas as `AreaRef`s). */
+  administrative_area?: string;
+  administrative_unit?: string;
+  service_category?: string;
+  grievance_type?: string;
+  associated_service_provider?: string;
+  description?: string;
+  desired_outcome?: string;
+  is_anonymous?: number;
+}
 
 /**
  * `submitter_name`/`contact_mobile`/`contact_email` never reach the backend
@@ -29,8 +54,8 @@ export interface WizardIdentitySource {
  * The account-profile fallback (`userFullName`/`userMobile`/`userEmail`) is
  * skipped for a Development Agent specifically: that type's own identity is
  * never collected (see `submitsOnBehalfOfOthers`), so if the farmer's own
- * fields are still empty — Step 1's "Save Draft" is deliberately unvalidated,
- * unlike "Save & Continue" — falling back to the *agent's* signed-in profile
+ * fields are still empty — Step 1's fields can be empty on a direct
+ * jump to a later step — falling back to the *agent's* signed-in profile
  * would misattribute the grievance to the agent instead of leaving it blank.
  */
 export function resolveSubmitterName({ identityValues, userFullName, submitterType }: WizardIdentitySource): string {
@@ -56,7 +81,7 @@ export function resolveContactEmail({ identityValues, userEmail, submitterType }
   return identityValues.email || ownProfileFallback;
 }
 
-export interface BuildSaveDraftPayloadInput extends WizardIdentitySource {
+export interface BuildSubmitFieldsInput extends WizardIdentitySource {
   clientSubmissionUuid: string;
   /** Display label, e.g. "Web Portal" — not the wizard's internal slug. */
   submissionChannelLabel?: string;
@@ -81,19 +106,12 @@ export interface BuildSaveDraftPayloadInput extends WizardIdentitySource {
 }
 
 /**
- * Shapes the wizard's state into `POST /api/v1/drafts`'s body — a flat
- * Grievance-document field set (`SaveDraftRequest`, `extra: "forbid"` on the
- * backend, so an unrecognized key 400s rather than being silently ignored).
- *
- * Every field below `client_submission_uuid` is sent as its current value —
- * blank or not — rather than omitted when empty: the backend only updates a
- * field it actually receives (`if field is not None: doc.field = field`), so
- * omitting a field a user just cleared (kebele removed, desired outcome
- * deleted, ...) would leave the stale value from an earlier save in place
- * instead of clearing it. `administrative_area` is the one exception — see
- * its own doc comment above.
+ * Shapes the wizard's state into the flat field set of
+ * `POST /api/v1/grievances` (extra keys 400 on the backend rather than being
+ * silently ignored). Text fields are sent as their current trimmed value,
+ * blank or not; `administrative_area` is omitted until an area is selected.
  */
-export function buildSaveDraftPayload(input: BuildSaveDraftPayloadInput): SaveDraftPayload {
+export function buildSubmitFields(input: BuildSubmitFieldsInput): SubmitFields {
   return {
     client_submission_uuid: input.clientSubmissionUuid,
     submission_channel: input.submissionChannelLabel ?? "",

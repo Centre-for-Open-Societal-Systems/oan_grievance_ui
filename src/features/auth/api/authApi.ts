@@ -214,7 +214,7 @@ export async function sendHeartbeat(): Promise<void> {
 
 /**
  * Fetches and validates /api/v1/auth/me. `fetchApi` already flattens the
- * response envelope (`.data`/`.message.data`) before returning, so what
+ * response envelope (`.data`) before returning, so what
  * comes back here is already the flat shape — no further unwrapping needed.
  */
 async function fetchAndValidateMe(): Promise<BackendAuthMeData> {

@@ -87,7 +87,9 @@
     "selectTemplate": "የምላሽ አብነት ይምረጡ",
     "selectActionFirst": "መጀመሪያ እርምጃ ይምረጡ",
     "loadingTemplates": "አብነቶች በመጫን ላይ ናቸው…",
-    "noTemplates": "ምንም የሚገኙ አብነቶች የሉም"
+    "noTemplates": "ምንም የሚገኙ አብነቶች የሉም",
+    "caseTerminalTitle": "ጉዳይ {status}",
+    "caseTerminalMessage": "ይህ ቅሬታ {status} ነው። ተጨማሪ ምላሾችን ማስገባት አይቻልም።"
   },
   "admin": {
     "responseTemplates": {

@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { FileText, Info, Save, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { FileText, Info, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
-import { saveDraft, type SaveDraftPayload } from "@/lib/drafts";
-import { activeWizardAttachments, type WizardAttachment } from "@/lib/attachments";
+import { uploadAttachments, type WizardAttachment } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
 import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
@@ -15,13 +14,14 @@ import {
   type AreaRef,
 } from "@/features/metadata";
 import { submitErrorMessage, submitGrievance, type SubmitGrievanceResult } from "../api/submitGrievanceApi";
+import type { SubmitFields } from "../submitPayload";
 
 interface ReviewAndSubmitCardProps {
   onBack: () => void;
   /** Called once the backend has accepted the grievance (or recognised a retry of one it already has). */
   onSubmitted: (result: SubmitGrievanceResult) => void;
-  /** Already shaped for `POST /api/v1/drafts` (and, with `consent_given` added, `/api/v1/grievances`) — see page.tsx's `draftPayload`. */
-  draftPayload: SaveDraftPayload;
+  /** Already shaped for `POST /api/v1/grievances` (this card adds `consent_given`) — see page.tsx's `submitFields`. */
+  submitFields: SubmitFields;
   submitterType: string;
   submissionChannel: string;
   identityValues: Record<string, string>;
@@ -65,7 +65,7 @@ function formatPhoneForDisplay(phoneNumber: string | undefined, phoneCode: strin
 export function ReviewAndSubmitCard({
   onBack,
   onSubmitted,
-  draftPayload,
+  submitFields,
   submitterType,
   submissionChannel,
   identityValues,
@@ -81,10 +81,6 @@ export function ReviewAndSubmitCard({
   attachments,
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
-  // A failed upload never reached the backend and isn't part of what gets
-  // submitted — see activeWizardAttachments. Computed once and reused below
-  // rather than re-filtering the same array at each call site.
-  const activeAttachments = activeWizardAttachments(attachments);
   // Same national-ID field set fields.ts validates as a Fayda ID (imported
   // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
   // action pattern as SIMaskedIdField and the Profile page's MaskedField.
@@ -110,7 +106,6 @@ export function ReviewAndSubmitCard({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const handleSubmit = async () => {
     // The button is already disabled without consent or mid-request; this
@@ -120,23 +115,24 @@ export function ReviewAndSubmitCard({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await submitGrievance({ ...draftPayload, consent_given: 1 });
-      onSubmitted(result);
+      const result = await submitGrievance({ ...submitFields, consent_given: 1 });
+      // The case exists now, so the staged files can attach to its ticket.
+      // A failed upload doesn't undo the filing — the submitter is told on
+      // the confirmation screen and can add the files from the case instead.
+      let attachmentUploadFailed = false;
+      if (attachments.length > 0) {
+        try {
+          await uploadAttachments({ files: attachments.map((a) => a.file), grievance: result.ticket_number });
+        } catch (uploadError) {
+          logger.error("Failed to upload attachments after submit:", uploadError);
+          attachmentUploadFailed = true;
+        }
+      }
+      onSubmitted(attachmentUploadFailed ? { ...result, attachment_upload_failed: true } : result);
     } catch (error) {
       logger.error("Failed to submit grievance:", error);
       setSubmitError(submitErrorMessage(error));
       setIsSubmitting(false);
-    }
-  };
-
-  const handleSaveDraft = async () => {
-    setDraftSaveState("saving");
-    try {
-      await saveDraft(draftPayload);
-      setDraftSaveState("saved");
-    } catch (error) {
-      setDraftSaveState("error");
-      logger.error("Failed to save draft:", error);
     }
   };
 
@@ -249,11 +245,11 @@ export function ReviewAndSubmitCard({
               </div>
               <div className="md:col-span-2">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Attachments ({activeAttachments.length})
+                  Attachments ({attachments.length})
                 </p>
-                {activeAttachments.length > 0 ? (
+                {attachments.length > 0 ? (
                   <ul className="space-y-0.5">
-                    {activeAttachments.map((a) => (
+                    {attachments.map((a) => (
                       <li key={a.key} className="text-[15px] font-semibold text-gray-900">
                         {a.fileName}
                       </li>
@@ -305,18 +301,6 @@ export function ReviewAndSubmitCard({
             <span>All fields marked <span className="text-red-500">*</span> are required</span>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleSaveDraft}
-              disabled={draftSaveState === "saving" || isSubmitting}
-              className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {draftSaveState === "saving" ? (
-                <Loader2 className="w-4 h-4 text-[#0b8535] animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 text-[#0b8535]" />
-              )}
-              {draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Retry Save" : "Save Draft"}
-            </button>
             <button
               onClick={handleSubmit}
               className={`flex items-center gap-2 px-5 py-3 text-white rounded-lg text-sm font-bold transition-colors shadow-sm focus:outline-none focus:ring-2 ${consentChecked

@@ -4,28 +4,18 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { NextIntlClientProvider } from 'next-intl';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import en from '../../../../messages/en.json';
 import { makeStore } from '../testFixtures';
-
-const saveDraft = vi.fn();
-vi.mock('@/lib/drafts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/lib/drafts')>()),
-  saveDraft: (...args: unknown[]) => saveDraft(...args),
-}));
 
 const fetchSubmitterOptions = vi.fn();
 vi.mock('@/features/metadata/api/metadataApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/metadata/api/metadataApi')>()),
   fetchSubmitterOptions: (...args: unknown[]) => fetchSubmitterOptions(...args),
 }));
-
 import { SubmitterIdentityCard } from './SubmitterIdentityCard';
-import { buildSaveDraftPayload } from '../draftPayload';
 
 afterEach(cleanup);
-
-const CLIENT_UUID = '11111111-2222-3333-4444-555555555555';
 
 /** Owns the wizard state the card is controlled by, the way page.tsx does. */
 function Harness({
@@ -57,12 +47,6 @@ function Harness({
   return (
     <SubmitterIdentityCard
       onNext={onNext}
-      draftPayload={buildSaveDraftPayload({
-        clientSubmissionUuid: CLIENT_UUID,
-        submitterTypeLabel: submitterType,
-        submissionChannelLabel: submissionChannel,
-        identityValues,
-      })}
       submitterType={submitterType}
       setSubmitterType={handleSubmitterTypeChange}
       submissionChannel={submissionChannel}
@@ -108,56 +92,6 @@ function renderCard(
 
 const saveAndContinue = () => fireEvent.click(screen.getByRole('button', { name: /Save & Continue/ }));
 const byId = (id: string) => document.getElementById(id)!;
-
-describe('Step 1 — Save Draft', () => {
-  beforeEach(() => {
-    saveDraft.mockReset();
-    saveDraft.mockResolvedValue({});
-  });
-
-  it('saves whatever has been typed so far without requiring the step to be valid first', async () => {
-    renderCard({ initialType: 'development_agent' });
-
-    fireEvent.change(byId('si-farmerName'), { target: { value: 'Tigist Bekele' } });
-    fireEvent.click(screen.getByRole('button', { name: /Save Draft/ }));
-
-    // No submitterType/submissionChannel error appears — unlike Save & Continue, this isn't gated on validation.
-    expect(screen.queryByText('This field is required.')).not.toBeInTheDocument();
-
-    await waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1));
-    const [payload] = saveDraft.mock.calls[0]!;
-    expect(payload).toMatchObject({
-      client_submission_uuid: CLIENT_UUID,
-      submitter_type: 'development_agent',
-      submitter_name: 'Tigist Bekele',
-    });
-  });
-
-  it('drops back to Save Draft once a saved field is edited again', async () => {
-    renderCard({ initialType: 'development_agent' });
-    const button = () => screen.getByRole('button', { name: /Save Draft|Saved|Retry Save/ });
-
-    fireEvent.change(byId('si-farmerName'), { target: { value: 'Tigist Bekele' } });
-    fireEvent.click(button());
-    await waitFor(() => expect(button()).toHaveTextContent('Saved'));
-
-    fireEvent.change(byId('si-farmerName'), { target: { value: 'Tigist Bekele Updated' } });
-    expect(button()).toHaveTextContent('Save Draft');
-  });
-
-  it('shows Retry Save on failure and Saved on success', async () => {
-    renderCard();
-    const button = () => screen.getByRole('button', { name: /Save Draft|Saved|Retry Save/ });
-
-    saveDraft.mockResolvedValueOnce({});
-    fireEvent.click(button());
-    await waitFor(() => expect(button()).toHaveTextContent('Saved'));
-
-    saveDraft.mockRejectedValueOnce(new Error('network down'));
-    fireEvent.click(button());
-    await waitFor(() => expect(button()).toHaveTextContent('Retry Save'));
-  });
-});
 
 describe('Step 1 — inline validation', () => {
   it('flags the submitter type and submission channel when neither is chosen, and does not advance', () => {

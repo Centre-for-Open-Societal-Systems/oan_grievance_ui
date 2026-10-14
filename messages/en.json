@@ -87,7 +87,9 @@
     "selectTemplate": "Select Response Template",
     "selectActionFirst": "Select an action first",
     "loadingTemplates": "Loading templates…",
-    "noTemplates": "No templates available"
+    "noTemplates": "No templates available",
+    "caseTerminalTitle": "Case {status}",
+    "caseTerminalMessage": "This grievance is {status}. No further responses can be submitted."
   },
   "admin": {
     "responseTemplates": {

@@ -105,4 +105,23 @@ describe('ResponseForm', () => {
     expect(await screen.findByText('Upload rejected')).toBeInTheDocument();
     expect(onExecuteAction).not.toHaveBeenCalled();
   });
+
+  it('renders a terminal notice instead of the form when isTerminal is true', () => {
+    render(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <ResponseForm
+          ticketNumber="3001002A0"
+          canManageCase
+          actions={ACTIONS}
+          isLoadingActions={false}
+          isTerminal={true}
+          caseStatus="Closed"
+        />
+      </NextIntlClientProvider>
+    );
+
+    expect(screen.getByText('Case Closed')).toBeInTheDocument();
+    expect(screen.getByText(/This grievance is closed\. No further responses can be submitted\./i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Select Action/i })).not.toBeInTheDocument();
+  });
 });

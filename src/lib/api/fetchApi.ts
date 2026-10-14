@@ -23,17 +23,12 @@ export class ApiError extends Error {
 }
 
 /**
- * The per-field error map from a failed response, wherever the backend put it:
- * the classic RPC envelope nests it under `message`, the REST routes
- * (`/api/v1/...`) put it at the top level next to `code: VALIDATION_ERROR`.
+ * The per-field error map from a failed REST response (`/api/v1/...`),
+ * located at the top level next to `code: VALIDATION_ERROR`.
  */
 function fieldDetailsOf(responseData: unknown): Record<string, unknown> | null {
-  const data = responseData as
-    | { message?: { details?: unknown } | string; details?: unknown }
-    | null
-    | undefined;
-  const nested = typeof data?.message === 'object' ? data.message?.details : undefined;
-  const details = nested ?? data?.details;
+  const data = responseData as { details?: unknown } | null | undefined;
+  const details = data?.details;
   return details && typeof details === 'object' ? (details as Record<string, unknown>) : null;
 }
 
@@ -207,8 +202,6 @@ export async function fetchApi<T = unknown>(
     const detailsMessage = messageFromDetails(responseData);
     if (detailsMessage) {
       errorMsg = detailsMessage;
-    } else if (responseData?.message?.message) {
-      errorMsg = responseData.message.message;
     } else if (typeof responseData?.message === 'string') {
       errorMsg = responseData.message;
     }
@@ -216,12 +209,12 @@ export async function fetchApi<T = unknown>(
   }
 
   // Handle application-level errors returned with status 200
-  if (responseData?.message?.status === 'error' || responseData?.status === 'error') {
-    const errorMsg = messageFromDetails(responseData) ?? (responseData.message?.message || responseData?.message || 'Application Error');
-    throw new ApiError(typeof errorMsg === 'string' ? errorMsg : 'Application Error', responseData);
+  if (responseData?.status === 'error') {
+    const errorMsg = messageFromDetails(responseData) ?? (typeof responseData?.message === 'string' ? responseData.message : 'Application Error');
+    throw new ApiError(errorMsg, responseData);
   }
 
-  const unwrapped = responseData?.data ?? responseData?.message?.data ?? responseData?.message ?? responseData;
+  const unwrapped = responseData?.data ?? responseData;
 
   // `page_meta`'s pagination, and the envelope's own human-readable `message` (e.g. officer
   // creation's "... already had a login, so their existing password is unchanged" — a caller

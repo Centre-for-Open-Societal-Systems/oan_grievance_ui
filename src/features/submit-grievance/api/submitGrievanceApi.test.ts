@@ -68,7 +68,7 @@ describe('buildSubmitGrievancePayload', () => {
     expect(payload.contact_email).toBe('abebe@example.com');
   });
 
-  it('uses the draft id as the idempotency key', () => {
+  it('uses the wizard session id as the idempotency key', () => {
     const payload = buildSubmitGrievancePayload(BASE_INPUT);
     expect(payload.client_submission_uuid).toBe(BASE_INPUT.clientSubmissionUuid);
   });
