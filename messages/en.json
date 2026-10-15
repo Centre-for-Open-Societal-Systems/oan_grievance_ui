@@ -339,5 +339,11 @@
       "retry": "Retry",
       "empty": "No grievances yet."
     }
+  },
+  "login": {
+    "switchAccount": "Sign out and use a different account",
+    "switchingAccount": "Signing out…",
+    "switchAccountHint": "You are signed in with a staff account that has no access here. Signing out also signs you out of the registry and other OpenG2P apps.",
+    "switchAccountFailed": "Could not sign you out of the staff account. Sign out from the registry, then try again."
   }
 }

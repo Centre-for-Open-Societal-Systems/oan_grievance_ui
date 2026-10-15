@@ -45,9 +45,9 @@ describe('canAccessRoute — deny-by-default', () => {
 });
 
 describe('canAccessRoute — per-role gates', () => {
-  it('/submit-grievance is Submitter/Development Agent only', () => {
+  it('/submit-grievance is Submitter/Assisted Submitter only', () => {
     expect(canAccessRoute('/submit-grievance', [ROLES.SUBMITTER])).toBe(true);
-    expect(canAccessRoute('/submit-grievance', [ROLES.DEVELOPMENT_AGENT])).toBe(true);
+    expect(canAccessRoute('/submit-grievance', [ROLES.ASSISTED_SUBMITTER])).toBe(true);
     expect(canAccessRoute('/submit-grievance', [ROLES.OFFICER])).toBe(false);
     expect(canAccessRoute('/submit-grievance', [ROLES.ADMIN])).toBe(false);
   });
@@ -94,7 +94,7 @@ describe('canAccessRoute — per-role gates', () => {
 describe('homeRouteForRoles', () => {
   it('routes each known role to its documented home', () => {
     expect(homeRouteForRoles([ROLES.SUBMITTER])).toBe('/submit-grievance');
-    expect(homeRouteForRoles([ROLES.DEVELOPMENT_AGENT])).toBe('/submit-grievance');
+    expect(homeRouteForRoles([ROLES.ASSISTED_SUBMITTER])).toBe('/submit-grievance');
     expect(homeRouteForRoles([ROLES.OFFICER])).toBe('/all-grievances');
     expect(homeRouteForRoles([ROLES.ADMIN])).toBe('/dashboard');
     expect(homeRouteForRoles([ROLES.REVIEW_OFFICER])).toBe('/all-grievances');

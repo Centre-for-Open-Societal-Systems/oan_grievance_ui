@@ -161,7 +161,7 @@ export function SlaCategoryCard({
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 flex-1 w-full">
-                    <div className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${categoryData.categoryColor} w-24 text-center shrink-0`}>
+                    <div className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider leading-snug text-balance ${categoryData.categoryColor} w-fit sm:w-44 min-h-8 flex items-center justify-center text-center shrink-0`}>
                         {categoryData.category}
                     </div>
 

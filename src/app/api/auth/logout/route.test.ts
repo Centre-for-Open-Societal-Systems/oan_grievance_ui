@@ -11,6 +11,12 @@ const STAFF_TOKEN = `${encode({ alg: 'RS256' })}.${encode({
   exp: Math.floor(Date.now() / 1000) + 300,
   resource_access: { 'oan-grievance': { roles: ['Grievance Officer'] } },
 })}.sig`;
+// Signed in at the registry only: no role on this app's client, so a guest here.
+const REGISTRY_ONLY_TOKEN = `${encode({ alg: 'RS256' })}.${encode({
+  sub: 'kc-user-2',
+  exp: Math.floor(Date.now() / 1000) + 300,
+  resource_access: { 'openg2p-registry': { roles: ['Registry Operator'] } },
+})}.sig`;
 
 function logout(cookies: Record<string, string>, body: object = {}) {
   const cookie = Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join('; ');
@@ -70,6 +76,15 @@ describe('POST /api/auth/logout with a staff (IAM) session', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).redirectTo).toBeNull();
     expect(res.headers.getSetCookie().join('\n')).toMatch(/X-Access-Token=;.*Max-Age=0/);
+  });
+
+  it('ends a single sign-on session this app does not accept, so another account can sign in', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(null, { status: 307, headers: { location: 'https://kc.example.org/logout' } })
+    );
+    const body = await (await logout({ 'X-Access-Token': REGISTRY_ONLY_TOKEN, 'X-Session-Id': 'sid' })).json();
+    expect(fetchMock.mock.calls[0]![0]).toBe('http://iam.internal:8020/auth/logout');
+    expect(new URL(body.redirectTo).searchParams.get('post_logout_redirect_uri')).toBe('http://localhost:3002/login');
   });
 
   it('has no provider logout for a local session', async () => {

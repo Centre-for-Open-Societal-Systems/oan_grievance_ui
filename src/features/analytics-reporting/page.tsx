@@ -27,7 +27,7 @@ export function AnalyticsReportingPage() {
                 />
                 <KPICard
                     title="Resolution Rate"
-                    value="65.6%"
+                    value="37.5%"
                     subtitle="+4.2% vs last month"
                     subtitleColor="#16a34a"
                     iconBgColor="#f0fdf4"
@@ -36,7 +36,7 @@ export function AnalyticsReportingPage() {
                 />
                 <KPICard
                     title="Escalation Rate"
-                    value="9.4%"
+                    value="12.5%"
                     subtitle="+1.1% vs last month"
                     subtitleColor="#16a34a"
                     iconBgColor="#fff7ed"
@@ -45,8 +45,8 @@ export function AnalyticsReportingPage() {
                 />
                 <KPICard
                     title="Farmer Satisfaction"
-                    value="72%"
-                    subtitle="Based on 84 responses"
+                    value="50%"
+                    subtitle="Based on 2 responses"
                     subtitleColor="#16a34a"
                     iconBgColor="#fefce8"
                     Icon={StarIcon}
