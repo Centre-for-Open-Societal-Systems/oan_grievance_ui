@@ -7,9 +7,11 @@ import {
   ResponsiveContainer,
   Tooltip
 } from 'recharts';
-import type { StatusDistributionSlice } from "@/features/dashboard/types";
+import { useFormatter } from "next-intl";
+import type { StatusDistributionSlice } from "../types";
 
 export function StatusDistributionChart({ data }: { data: StatusDistributionSlice[] }) {
+  const format = useFormatter();
   const totalStatus = data.reduce((acc, curr) => acc + curr.value, 0);
 
   return (
@@ -49,7 +51,7 @@ export function StatusDistributionChart({ data }: { data: StatusDistributionSlic
 
           {/* Perfectly Centered Text overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[36px] font-bold text-gray-900 tracking-tight leading-none mb-1">{totalStatus}</span>
+            <span className="text-[36px] font-bold text-gray-900 tracking-tight leading-none mb-1">{format.number(totalStatus)}</span>
             <span className="text-[16px] text-gray-500 font-medium">Total</span>
           </div>
         </div>

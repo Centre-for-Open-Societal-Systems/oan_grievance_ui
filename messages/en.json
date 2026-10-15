@@ -345,7 +345,14 @@
       "forbidden": "You do not have access to the dashboard statistics.",
       "retry": "Retry",
       "viewAll": "View all",
-      "escalatedBanner": "{count, plural, one {<strong># escalated grievance</strong> requires immediate senior officer attention.} other {<strong># escalated grievances</strong> require immediate senior officer attention.}}"
+      "escalatedBanner": "{count, plural, one {<strong># escalated grievance</strong> requires immediate senior officer attention.} other {<strong># escalated grievances</strong> require immediate senior officer attention.}}",
+      "retrying": "Retrying…",
+      "sectionUnavailable": "This section could not be loaded.",
+      "escalatedUnavailable": "The number of escalated grievances could not be loaded.",
+      "unavailableValue": "Not available",
+      "uncategorised": "Uncategorised",
+      "otherCategories": "{count, plural, one {# other category} other {# other categories}}",
+      "noCategories": "No grievances to group by category yet."
     }
   },
   "login": {

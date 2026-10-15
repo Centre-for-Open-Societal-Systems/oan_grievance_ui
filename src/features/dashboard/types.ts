@@ -1,40 +1,4 @@
-/**
- * Rows of the dashboard charts `GET /api/v1/charts` returns, as the service
- * builds them (`oan_grievance_service/services/dashboard.py`). A chart that
- * failed to build comes back as `null` and the others still render.
- */
-export interface KpiRow {
-  metric: string;
-  value: number;
-  /** Percent change against last month — `total` only; null when there was nothing last month. */
-  delta_pct?: number | null;
-  /** Absolute change this week — `awaiting_action` and `resolved`. */
-  delta?: number;
-}
-
-export interface StatusRow {
-  status: string;
-  count: number;
-}
-
-export interface CategoryRow {
-  category: string | null;
-  count: number;
-}
-
-export interface MonthlyTrendRow {
-  /** `YYYY-MM`. */
-  month: string;
-  submitted: number;
-  resolved: number;
-}
-
-export interface DashboardChartsData {
-  grvKpis?: KpiRow[] | null;
-  grvStatusDistribution?: StatusRow[] | null;
-  grvByCategory?: CategoryRow[] | null;
-  grvMonthlyTrend?: MonthlyTrendRow[] | null;
-}
+export type { DashboardCharts, KpiRow, StatusRow, CategoryRow, MonthlyTrendRow } from './schemas';
 
 export type KpiMetric = 'total' | 'awaiting_action' | 'resolved' | 'escalated';
 
@@ -44,8 +8,9 @@ export type KpiKind = 'percentage' | 'number' | 'alert';
 export interface KpiCard {
   metric: KpiMetric;
   title: string;
-  value: number;
-  /** Null when the service sent no delta, so the card shows only its caption. */
+  /** Null when the service did not report this metric — shown as unavailable, never as 0. */
+  value: number | null;
+  /** Null when there is nothing meaningful to show, so the card shows only its value. */
   trend: number | null;
   type: KpiKind;
 }
@@ -62,19 +27,32 @@ export interface StatusDistributionSlice {
   color: string;
 }
 
+/**
+ * One bar of the category card. `uncategorised` and `remainder` have no name of
+ * their own — the card words them — and `remainder` stands for `categories` more.
+ */
 export interface ServiceCategoryStat {
+  key: string;
+  kind: 'category' | 'uncategorised' | 'remainder';
   name: string;
   value: number;
   /** The largest count in the list — the full width of a bar. */
   max: number;
   color: string;
+  /** How many categories a `remainder` row adds up. */
+  categories?: number;
 }
 
+/**
+ * What the dashboard draws. A section is `null` when its chart is unavailable,
+ * which is different from an empty list (nothing to show) — a failed chart must
+ * never read as zero cases.
+ */
 export interface DashboardStatistics {
-  kpis: KpiCard[];
-  monthlyTrend: MonthlyTrendPoint[];
-  statusDistribution: StatusDistributionSlice[];
-  serviceCategories: ServiceCategoryStat[];
-  /** Open escalated cases — drives the banner. */
-  escalated: number;
+  kpis: KpiCard[] | null;
+  monthlyTrend: MonthlyTrendPoint[] | null;
+  statusDistribution: StatusDistributionSlice[] | null;
+  serviceCategories: ServiceCategoryStat[] | null;
+  /** Open escalated cases — drives the banner. Null when unknown. */
+  escalated: number | null;
 }

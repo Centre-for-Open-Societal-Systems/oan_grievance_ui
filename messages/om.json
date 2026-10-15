@@ -345,7 +345,14 @@
       "forbidden": "Istaatistiksii daashboordii ilaaluuf hayyama hin qabdan.",
       "retry": "Irra deebi’ii yaali",
       "viewAll": "Hunda ilaali",
-      "escalatedBanner": "{count, plural, one {<strong>Komiin ol-guddifame #</strong> xiyyeeffannoo ogeessa ol’aanaa saffisaa barbaada.} other {<strong>Komiiwwan ol-guddifaman #</strong> xiyyeeffannoo ogeessa ol’aanaa saffisaa barbaadu.}}"
+      "escalatedBanner": "{count, plural, one {<strong>Komiin ol-guddifame #</strong> xiyyeeffannoo ogeessa ol’aanaa saffisaa barbaada.} other {<strong>Komiiwwan ol-guddifaman #</strong> xiyyeeffannoo ogeessa ol’aanaa saffisaa barbaadu.}}",
+      "retrying": "Irra deebi’ee yaalaa jira…",
+      "sectionUnavailable": "Kutaa kana fe’uun hin danda’amne.",
+      "escalatedUnavailable": "Lakkoofsi komiiwwan ol-guddifaman fe’uun hin danda’amne.",
+      "unavailableValue": "Hin argamu",
+      "uncategorised": "Ramaddii hin qabne",
+      "otherCategories": "{count, plural, one {Ramaddii biraa #} other {Ramaddiiwwan biroo #}}",
+      "noCategories": "Komiin ramaddiidhaan gurmaa’u ammaaf hin jiru."
     }
   },
   "login": {

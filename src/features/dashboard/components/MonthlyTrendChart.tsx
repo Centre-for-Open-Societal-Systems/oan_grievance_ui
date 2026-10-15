@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import type { MonthlyTrendPoint } from "@/features/dashboard/types";
+import type { MonthlyTrendPoint } from "../types";
 
 export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
   return (

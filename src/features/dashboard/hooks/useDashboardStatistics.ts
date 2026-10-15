@@ -3,28 +3,36 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiErrorCode, classifyError } from '@/lib/api';
 import { fetchDashboardCharts } from '../api/dashboardApi';
-import type { DashboardChartsData, DashboardStatistics } from '../types';
+import type { DashboardCharts, DashboardStatistics } from '../types';
 import { mapDashboardCharts } from '../utils/mapDashboardCharts';
 
 export type DashboardErrorKind = 'forbidden' | 'failed';
 
-export interface UseDashboardStatisticsResult {
-  statistics: DashboardStatistics | null;
-  isLoading: boolean;
-  error: DashboardErrorKind | null;
-  retry: () => void;
-}
+/**
+ * Exactly one of three states, so "loading with an error" or "ready without
+ * statistics" cannot be represented. `isRefreshing` is a retry in flight over
+ * statistics that are already on screen, which stay there meanwhile.
+ */
+export type DashboardState =
+  | { status: 'loading' }
+  | { status: 'ready'; statistics: DashboardStatistics; isRefreshing: boolean }
+  | { status: 'error'; error: DashboardErrorKind };
+
+export type UseDashboardStatisticsResult = DashboardState & { retry: () => void };
+
+type Outcome =
+  | { kind: 'charts'; charts: DashboardCharts }
+  | { kind: 'error'; error: DashboardErrorKind };
 
 /** The outcome of one request, tagged with the reload token that produced it. */
-interface ChartsResult {
+interface Settled {
   key: number;
-  data: DashboardChartsData | null;
-  error: DashboardErrorKind | null;
+  outcome: Outcome;
 }
 
 /** The service answers 200 with every chart `null` when each of them failed to build. */
-function hasNoChart(data: DashboardChartsData | null): boolean {
-  return !data || Object.values(data).every((rows) => rows == null);
+function hasNoChart(charts: DashboardCharts): boolean {
+  return Object.values(charts).every((rows) => rows === null);
 }
 
 /**
@@ -35,7 +43,7 @@ function hasNoChart(data: DashboardChartsData | null): boolean {
  * token, rather than being set synchronously inside the effect.
  */
 export function useDashboardStatistics(locale = 'en'): UseDashboardStatisticsResult {
-  const [result, setResult] = useState<ChartsResult | null>(null);
+  const [settled, setSettled] = useState<Settled | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -43,19 +51,18 @@ export function useDashboardStatistics(locale = 'en'): UseDashboardStatisticsRes
     const requestKey = reloadToken;
 
     fetchDashboardCharts({ signal: controller.signal })
-      .then((data) => {
+      .then((charts) => {
         if (controller.signal.aborted) return;
-        // Nothing built means nothing to draw: report the failure rather than a page of zeros.
-        setResult(
-          hasNoChart(data)
-            ? { key: requestKey, data: null, error: 'failed' }
-            : { key: requestKey, data, error: null }
-        );
+        // Nothing built means nothing to draw: report the failure rather than a page of gaps.
+        setSettled({
+          key: requestKey,
+          outcome: hasNoChart(charts) ? { kind: 'error', error: 'failed' } : { kind: 'charts', charts },
+        });
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
         const forbidden = classifyError(err) === ApiErrorCode.Forbidden;
-        setResult({ key: requestKey, data: null, error: forbidden ? 'forbidden' : 'failed' });
+        setSettled({ key: requestKey, outcome: { kind: 'error', error: forbidden ? 'forbidden' : 'failed' } });
       });
 
     return () => controller.abort();
@@ -63,14 +70,22 @@ export function useDashboardStatistics(locale = 'en'): UseDashboardStatisticsRes
 
   const retry = useCallback(() => setReloadToken((token) => token + 1), []);
 
-  const isSettled = result?.key === reloadToken;
-  const data = result?.data ?? null;
-  const statistics = useMemo(() => (data ? mapDashboardCharts(data, locale) : null), [data, locale]);
+  // Mapping is memoized so the charts keep stable props between renders (a new
+  // array would restart their animation). The React Compiler is not enabled here.
+  const charts = settled?.outcome.kind === 'charts' ? settled.outcome.charts : null;
+  const statistics = useMemo(() => (charts ? mapDashboardCharts(charts, locale) : null), [charts, locale]);
 
-  return {
-    statistics,
-    isLoading: !isSettled,
-    error: isSettled && result ? result.error : null,
-    retry,
-  };
+  const isSettled = settled?.key === reloadToken;
+  let state: DashboardState;
+  if (!isSettled) {
+    state = statistics ? { status: 'ready', statistics, isRefreshing: true } : { status: 'loading' };
+  } else if (settled?.outcome.kind === 'error') {
+    state = { status: 'error', error: settled.outcome.error };
+  } else if (statistics) {
+    state = { status: 'ready', statistics, isRefreshing: false };
+  } else {
+    state = { status: 'loading' };
+  }
+
+  return { ...state, retry };
 }
