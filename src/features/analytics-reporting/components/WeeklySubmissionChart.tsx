@@ -11,13 +11,13 @@ import {
 import type { TooltipContentProps } from "recharts";
 
 const lineChartData = [
-  { name: "W1\nMar 26", received: 18, resolved: 14 },
-  { name: "W2\nMar 26", received: 22, resolved: 19 },
-  { name: "W3\nMar 26", received: 26, resolved: 22 },
-  { name: "W4\nMar 26", received: 19, resolved: 17 },
-  { name: "W1\nApr 26", received: 28, resolved: 25 },
-  { name: "W2\nApr 26", received: 24, resolved: 21 },
-  { name: "W3\nApr 26", received: 30, resolved: 27 },
+  { name: "W1\nMar 26", received: 1, resolved: 0 },
+  { name: "W2\nMar 26", received: 1, resolved: 0 },
+  { name: "W3\nMar 26", received: 2, resolved: 1 },
+  { name: "W4\nMar 26", received: 0, resolved: 0 },
+  { name: "W1\nApr 26", received: 1, resolved: 1 },
+  { name: "W2\nApr 26", received: 1, resolved: 0 },
+  { name: "W3\nApr 26", received: 2, resolved: 1 },
 ];
 
 const CustomTooltip = ({ active, payload, label }: TooltipContentProps) => {
@@ -63,8 +63,8 @@ export function WeeklySubmissionChart() {
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
-              domain={[0, 30]}
-              ticks={[0, 10, 20, 30]}
+              domain={[0, 3]}
+              ticks={[0, 1, 2, 3]}
               dx={-10}
             />
             <Tooltip content={CustomTooltip} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />

@@ -11,11 +11,11 @@ import {
 import type { TooltipContentProps } from "recharts";
 
 const serviceData = [
-  { category: "Inputs", filed: 33, resolved: 22 },
-  { category: "Schemes", filed: 28, resolved: 18 },
-  { category: "Payments", filed: 33, resolved: 24 },
-  { category: "Credit", filed: 19, resolved: 12 },
-  { category: "Markets", filed: 15, resolved: 11 },
+  { category: "Inputs", filed: 3, resolved: 1 },
+  { category: "Schemes", filed: 2, resolved: 1 },
+  { category: "Payments", filed: 1, resolved: 0 },
+  { category: "Credit", filed: 1, resolved: 0 },
+  { category: "Markets", filed: 1, resolved: 1 },
 ];
 
 const CustomTooltip = ({ active, payload, label }: TooltipContentProps) => {
@@ -61,8 +61,8 @@ export function VolumeServiceChart() {
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }}
-              domain={[0, 100]}
-              ticks={[0, 25, 50, 75, 100]}
+              domain={[0, 4]}
+              ticks={[0, 1, 2, 3, 4]}
               dx={-10}
             />
             <Tooltip content={CustomTooltip} cursor={{ fill: '#f8fafc' }} />

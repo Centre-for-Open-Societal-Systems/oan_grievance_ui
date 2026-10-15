@@ -347,5 +347,11 @@
       "viewAll": "ሁሉንም ይመልከቱ",
       "escalatedBanner": "{count, plural, one {<strong># ወደ ከፍተኛ ደረጃ የተሸጋገረ ቅሬታ</strong> አስቸኳይ የከፍተኛ ባለሙያ ትኩረት ይፈልጋል።} other {<strong># ወደ ከፍተኛ ደረጃ የተሸጋገሩ ቅሬታዎች</strong> አስቸኳይ የከፍተኛ ባለሙያ ትኩረት ይፈልጋሉ።}}"
     }
+  },
+  "login": {
+    "switchAccount": "ይውጡና ሌላ መለያ ይጠቀሙ",
+    "switchingAccount": "በመውጣት ላይ…",
+    "switchAccountHint": "እዚህ መዳረሻ በሌለው የሠራተኛ መለያ ገብተዋል። መውጣት ከመዝገቡ እና ከሌሎች OpenG2P መተግበሪያዎችም ያስወጣዎታል።",
+    "switchAccountFailed": "ከሠራተኛ መለያው ማስወጣት አልተቻለም። ከመዝገቡ ይውጡና እንደገና ይሞክሩ።"
   }
 }

@@ -56,17 +56,19 @@ export function isProtectedRoute(pathname: string): boolean {
  * bench yet (it's brand new), so re-verify the string once one does, the
  * same way the other three were confirmed above.
  *
- * `DEVELOPMENT_AGENT` files grievances on a farmer's behalf and has exactly
- * a submitter's authority, so it is granted everything `SUBMITTER` is below.
- * Its string follows the other roles' naming and is likewise not yet
- * confirmed via an actual login.
+ * `ASSISTED_SUBMITTER` files grievances on someone else's behalf (a
+ * Development Agent, call-centre or front-desk staff) and has exactly a
+ * submitter's authority, so it is granted everything `SUBMITTER` is below.
+ * The string matches `oan_grievance_service`'s `ROLE_ASSISTED_SUBMITTER`
+ * (formerly `Grievance Development Agent`). It is granted through Keycloak,
+ * whose client role must carry this exact name.
  */
 export const ROLES = {
   SUBMITTER: 'Grievance Submitter',
   OFFICER: 'Grievance Officer',
   ADMIN: 'Grievance Admin',
   REVIEW_OFFICER: 'Grievance Review Officer',
-  DEVELOPMENT_AGENT: 'Grievance Assisted Submitter',
+  ASSISTED_SUBMITTER: 'Grievance Assisted Submitter',
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -98,9 +100,9 @@ function isUnrestrictedRoute(pathname: string): boolean {
  */
 const ROUTE_ROLES: Record<string, Role[]> = {
   '/dashboard': [ROLES.OFFICER, ROLES.ADMIN],
-  '/submit-grievance': [ROLES.SUBMITTER, ROLES.DEVELOPMENT_AGENT],
-  '/all-grievances': [ROLES.SUBMITTER, ROLES.DEVELOPMENT_AGENT, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
-  '/grievances': [ROLES.SUBMITTER, ROLES.DEVELOPMENT_AGENT, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
+  '/submit-grievance': [ROLES.SUBMITTER, ROLES.ASSISTED_SUBMITTER],
+  '/all-grievances': [ROLES.SUBMITTER, ROLES.ASSISTED_SUBMITTER, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
+  '/grievances': [ROLES.SUBMITTER, ROLES.ASSISTED_SUBMITTER, ROLES.OFFICER, ROLES.ADMIN, ROLES.REVIEW_OFFICER],
   '/analytics-reporting': [ROLES.OFFICER, ROLES.ADMIN],
   // Read-only per PR #47: officer list/stats and L1/L2 officers, and category
   // assignments — but NOT response templates or dashboard charts. That split
@@ -119,7 +121,7 @@ const ROLE_PRIORITY: Role[] = [
   ROLES.OFFICER,
   ROLES.REVIEW_OFFICER,
   ROLES.SUBMITTER,
-  ROLES.DEVELOPMENT_AGENT,
+  ROLES.ASSISTED_SUBMITTER,
 ];
 
 /** Where each role lands right after login, and where it's sent back to if it's bounced off a route it can't access. */
@@ -128,7 +130,7 @@ const ROLE_HOME_ROUTE: Record<Role, string> = {
   [ROLES.OFFICER]: '/all-grievances',
   [ROLES.REVIEW_OFFICER]: '/all-grievances',
   [ROLES.SUBMITTER]: '/submit-grievance',
-  [ROLES.DEVELOPMENT_AGENT]: '/submit-grievance',
+  [ROLES.ASSISTED_SUBMITTER]: '/submit-grievance',
 };
 
 // Must be a route absent from ROUTE_ROLES — this is the fallback for a role
