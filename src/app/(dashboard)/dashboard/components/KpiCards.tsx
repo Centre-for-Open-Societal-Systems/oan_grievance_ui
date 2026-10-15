@@ -1,5 +1,5 @@
 import { FileText, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
-import type { KpiCard } from "../data";
+import type { KpiCard } from "@/features/dashboard/types";
 
 export function KpiCards({ data: kpis }: { data: KpiCard[] }) {
 
@@ -19,8 +19,8 @@ export function KpiCards({ data: kpis }: { data: KpiCard[] }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ">
-      {kpis.map((card, index) => (
-        <div key={index} className="group bg-white p-6 rounded-2xl flex flex-col justify-between h-[140px] transition-all duration-300 hover:shadow-md hover:border-slate-200 cursor-pointer border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl">
+      {kpis.map((card) => (
+        <div key={card.metric} className="group bg-white p-6 rounded-2xl flex flex-col justify-between h-[140px] transition-all duration-300 hover:shadow-md hover:border-slate-200 cursor-pointer border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-[16px] font-semibold text-slate-500 mb-2">{card.title}</p>
@@ -31,12 +31,21 @@ export function KpiCards({ data: kpis }: { data: KpiCard[] }) {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[14px] font-bold text-emerald-600 tracking-tight">
-              {card.type === 'alert' ? '↗ SLA breach' : `↗ +${card.trend}${card.type === 'percentage' ? '%' : ''}`}
-            </span>
-            <span className="text-[13px] text-gray-600">
-              {card.type === 'alert' ? 'triggers' : (card.type === 'percentage' ? 'from last month' : (card.title === 'Resolved' ? 'resolved this week' : 'new this week'))}
-            </span>
+            {card.type === 'alert' ? (
+              <>
+                <span className="text-[14px] font-bold text-emerald-600 tracking-tight">↗ SLA breach</span>
+                <span className="text-[13px] text-gray-600">triggers</span>
+              </>
+            ) : card.trend !== null ? (
+              <>
+                <span className={`text-[14px] font-bold tracking-tight ${card.trend < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                  {card.trend < 0 ? '↘' : '↗'} {card.trend < 0 ? '-' : '+'}{Math.abs(card.trend)}{card.type === 'percentage' ? '%' : ''}
+                </span>
+                <span className="text-[13px] text-gray-600">
+                  {card.type === 'percentage' ? 'from last month' : (card.metric === 'resolved' ? 'resolved this week' : 'new this week')}
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
       ))}
