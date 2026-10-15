@@ -338,6 +338,14 @@
       "loadFailed": "Could not load recent grievances.",
       "retry": "Retry",
       "empty": "No grievances yet."
+    },
+    "overview": {
+      "loading": "Loading dashboard statistics…",
+      "loadFailed": "Could not load the dashboard statistics.",
+      "forbidden": "You do not have access to the dashboard statistics.",
+      "retry": "Retry",
+      "viewAll": "View all",
+      "escalatedBanner": "{count, plural, one {<strong># escalated grievance</strong> requires immediate senior officer attention.} other {<strong># escalated grievances</strong> require immediate senior officer attention.}}"
     }
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ServiceCategoryStat } from "../data";
+import type { ServiceCategoryStat } from "@/features/dashboard/types";
 
 export function ServiceCategoryChart({ data }: { data: ServiceCategoryStat[] }) {
   const [mounted, setMounted] = useState(false);

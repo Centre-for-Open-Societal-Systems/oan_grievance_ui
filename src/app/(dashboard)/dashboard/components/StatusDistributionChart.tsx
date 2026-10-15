@@ -7,7 +7,7 @@ import {
   ResponsiveContainer,
   Tooltip
 } from 'recharts';
-import type { StatusDistributionSlice } from "../data";
+import type { StatusDistributionSlice } from "@/features/dashboard/types";
 
 export function StatusDistributionChart({ data }: { data: StatusDistributionSlice[] }) {
   const totalStatus = data.reduce((acc, curr) => acc + curr.value, 0);
