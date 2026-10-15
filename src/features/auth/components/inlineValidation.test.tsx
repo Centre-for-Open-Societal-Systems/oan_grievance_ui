@@ -52,6 +52,45 @@ async function completeAccountStep() {
   await screen.findByText('Almost done!');
 }
 
+describe('LoginForm after a staff sign-in with no access here', () => {
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/login?reason=staff_no_access');
+  });
+
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
+  const renderLogin = () =>
+    render(
+      <Provider store={makeStore()}>
+        <NextIntlClientProvider locale="en" messages={en}>
+          <LoginForm staffSignInEnabled />
+        </NextIntlClientProvider>
+      </Provider>
+    );
+
+  it('offers to end the single sign-on session, and says so when it cannot', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true, redirectTo: null })));
+    global.fetch = fetchMock;
+    renderLogin();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out and use a different account' }));
+
+    expect(
+      await screen.findByText('Could not sign you out of the staff account. Sign out from the registry, then try again.')
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST', body: JSON.stringify({ returnTo: '/login' }) }));
+    expect(screen.queryByRole('button', { name: 'Sign out and use a different account' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer it for other sign-in failures', () => {
+    window.history.replaceState(null, '', '/login?reason=staff_failed');
+    renderLogin();
+    expect(screen.queryByRole('button', { name: 'Sign out and use a different account' })).not.toBeInTheDocument();
+  });
+});
+
 describe('LoginForm inline validation', () => {
   beforeEach(() => {
     global.fetch = vi.fn();
@@ -60,7 +99,9 @@ describe('LoginForm inline validation', () => {
   const renderLogin = () =>
     render(
       <Provider store={makeStore()}>
-        <LoginForm staffSignInEnabled={false} />
+        <NextIntlClientProvider locale="en" messages={en}>
+          <LoginForm staffSignInEnabled={false} />
+        </NextIntlClientProvider>
       </Provider>
     );
 

@@ -2,7 +2,7 @@ import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { readActiveSession, sessionRateLimitSecret } from '@/lib/activeSession';
-import { applyIamCookies, revokeIamSession } from '@/lib/iamSession';
+import { applyIamCookies, readIamSession, revokeIamSession } from '@/lib/iamSession';
 import { callBackendAuth } from '@/lib/oanAuthBackend';
 import { safeReturnPath } from '@/lib/returnPath';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
@@ -55,12 +55,18 @@ export async function POST(request: NextRequest) {
   // not to IAM's one fixed portal. Best-effort like the local branch:
   // `revokeIamSession` never throws, and without a URL the client just lands
   // locally.
+  //
+  // With no session of this app's, a single sign-on session it doesn't
+  // accept (one with no role here, e.g. registry-only) is ended too: it is
+  // what "Sign out and use a different account" on the login page asks to
+  // leave, and without this Keycloak would sign the same account straight
+  // back in on every "Sign in as staff".
+  const iamSession = session ? (session.kind === 'iam' ? session.iam : null) : readIamSession(request);
   const body = (await request.json().catch(() => ({}))) as { returnTo?: unknown };
   const returnTo = safeReturnPath(typeof body.returnTo === 'string' ? body.returnTo : null) ?? '/login';
-  const iamLogout =
-    session?.kind === 'iam'
-      ? await revokeIamSession(session.iam, new URL(returnTo, request.url).toString(), clientIp)
-      : null;
+  const iamLogout = iamSession
+    ? await revokeIamSession(iamSession, new URL(returnTo, request.url).toString(), clientIp)
+    : null;
 
   const response = NextResponse.json({ success: true, redirectTo: iamLogout?.providerLogoutUrl ?? null });
   clearSessionCookies(response);

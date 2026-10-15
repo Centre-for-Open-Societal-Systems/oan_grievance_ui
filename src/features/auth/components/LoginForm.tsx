@@ -5,6 +5,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { ForgotPasswordModal } from '@/features/auth/components/ForgotPasswordModal';
 import { SetInitialPasswordModal } from '@/features/auth/components/SetInitialPasswordModal';
+import { performLogout } from '@/features/auth/logout';
 import { homeRouteForRoles } from '@/features/auth/rbac';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { AUTH_MESSAGES } from '@/lib/authMessages';
@@ -12,7 +13,8 @@ import { safeReturnPath } from '@/lib/returnPath';
 import { validateEmail, validateLoginPassword } from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors, type FieldErrors } from '@/lib/validation/useFieldErrors';
 import { useAppDispatch } from '@/store/hooks';
-import { ArrowRight, Eye, EyeOff, Lock, ShieldCheck, User } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, LogOut, ShieldCheck, User } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -32,6 +34,7 @@ interface LoginFormProps {
 export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const t = useTranslations('login');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,6 +46,11 @@ export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showSetPasswordModal, setShowSetPasswordModal] = useState(false);
   const [isStaffRedirecting, setIsStaffRedirecting] = useState(false);
+  // Signed in at another OpenG2P app (the registry) with no role here: the
+  // shared Keycloak session would sign the same account straight back in on
+  // every "Sign in as staff", so the only way forward is to end it.
+  const [staffNoAccess, setStaffNoAccess] = useState(false);
+  const [isSwitchingAccount, setIsSwitchingAccount] = useState(false);
 
   // Read via `window.location` rather than `useSearchParams()` — this page is
   // otherwise fully static, and `useSearchParams()` would force it (and
@@ -65,6 +73,7 @@ export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
       setErrorMessage(AUTH_MESSAGES.staffSignInUnavailable);
     } else if (reason === 'staff_no_access') {
       setErrorMessage(AUTH_MESSAGES.staffSignInNoAccess);
+      setStaffNoAccess(true);
     } else if (reason === 'reset') {
       setSuccessMessage(AUTH_MESSAGES.passwordResetSuccess);
     }
@@ -121,6 +130,18 @@ export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
     setIsLoading(false);
   };
 
+  // Ends the single sign-on session at IAM and Keycloak, which then send the
+  // browser back to a clean login page. Without a provider logout URL (IAM
+  // unreachable) the Keycloak session lives on, so say so instead of
+  // pretending it worked.
+  const switchStaffAccount = async () => {
+    setIsSwitchingAccount(true);
+    if (await performLogout(dispatch, null, '/login')) return;
+    setIsSwitchingAccount(false);
+    setStaffNoAccess(false);
+    setErrorMessage(t('switchAccountFailed'));
+  };
+
   // A full page navigation, not a fetch: the browser has to follow the
   // identity provider's login redirects. The returnUrl is passed through and
   // sanitised server-side too.
@@ -140,6 +161,22 @@ export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
       </div>
 
       {errorMessage && <ErrorAlert className="mb-6">{errorMessage}</ErrorAlert>}
+      {staffNoAccess && (
+        <div className="w-full mb-6 flex flex-col gap-3">
+          <p className="text-[13px] text-[#6B7280]">{t('switchAccountHint')}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="none"
+            isLoading={isSwitchingAccount}
+            onClick={() => void switchStaffAccount()}
+            className="w-full py-3 text-[14px] space-x-2"
+          >
+            {!isSwitchingAccount && <LogOut size={18} strokeWidth={2.25} aria-hidden="true" />}
+            <span className="font-semibold">{isSwitchingAccount ? t('switchingAccount') : t('switchAccount')}</span>
+          </Button>
+        </div>
+      )}
       {successMessage && (
         <p role="status" className="w-full mb-6 text-[14px] font-medium text-[#166534] bg-[#F4FDF7] border border-[#16A34A]/20 rounded-xl px-4 py-3">
           {successMessage}

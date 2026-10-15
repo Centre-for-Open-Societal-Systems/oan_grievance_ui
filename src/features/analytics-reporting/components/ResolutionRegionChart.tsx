@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
 
 const regionData = [
-  { region: "Addis Ababa", value: 78 },
-  { region: "Oromia", value: 64 },
-  { region: "Amhara", value: 71 },
-  { region: "SNNPR", value: 55 },
-  { region: "Tigray", value: 48 },
-  { region: "Somali", value: 42 },
-  { region: "Sidama", value: 60 },
-  { region: "Afar", value: 38 },
+  { region: "Addis Ababa", value: 50 },
+  { region: "Oromia", value: 33 },
+  { region: "Amhara", value: 0 },
+  { region: "Sidama", value: 100 },
 ];
 
 export function ResolutionRegionChart() {

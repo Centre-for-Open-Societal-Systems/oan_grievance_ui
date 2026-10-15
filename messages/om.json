@@ -339,5 +339,11 @@
       "retry": "Irra deebi’ii yaali",
       "empty": "Ammaaf komiin hin jiru."
     }
+  },
+  "login": {
+    "switchAccount": "Ba'iitii herrega biraa fayyadami",
+    "switchingAccount": "Ba'aa jira…",
+    "switchAccountHint": "Herrega hojjetaa asitti hayyama hin qabneen seenteetta. Ba'uun galmee fi appiliikeeshinii OpenG2P biroo irraas si baasa.",
+    "switchAccountFailed": "Herrega hojjetaa irraa si baasuun hin danda'amne. Galmee irraa ba'iitii irra deebi'ii yaali."
   }
 }
