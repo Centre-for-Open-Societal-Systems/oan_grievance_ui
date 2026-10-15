@@ -46,7 +46,7 @@ function renderModal(props: Partial<Parameters<typeof AddNodalOfficerModal>[0]> 
         onClose={onClose}
         role="Officer"
         level="L3"
-        tabLabel="Department Admin"
+        tabLabel="Category Admin"
         onCreated={onCreated}
         {...props}
       />
@@ -56,20 +56,12 @@ function renderModal(props: Partial<Parameters<typeof AddNodalOfficerModal>[0]> 
   return { store, onCreated, onClose };
 }
 
-describe('AddNodalOfficerModal for Department Admins', () => {
+describe('AddNodalOfficerModal for Category Admins', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders a text input with datalist for department when level is L3', async () => {
-    renderModal({ level: 'L3' });
-
-    const deptInput = screen.getByPlaceholderText('Enter or select department');
-    expect(deptInput).toBeTruthy();
-    expect(deptInput.getAttribute('list')).toBe('existing-departments');
-  });
-
-  it('allows typing a new department name and selecting available system categories', async () => {
+  it('picks an existing department and its wired categories for a department head', async () => {
     const { onCreated, onClose } = renderModal({ level: 'L3' });
 
     fireEvent.change(screen.getByPlaceholderText('Enter Full Name'), {
@@ -81,9 +73,8 @@ describe('AddNodalOfficerModal for Department Admins', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. Inputs Quality Grievance Officer'), {
       target: { value: 'Head of Inputs' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Enter or select department'), {
-      target: { value: 'Department of Irrigation' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: /^Department/ }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Ministry of Agriculture' }));
 
     // Wait for categories to populate once department is entered
     const inputsCategoryBtn = await screen.findByRole('button', { name: 'Inputs' });
@@ -100,7 +91,7 @@ describe('AddNodalOfficerModal for Department Admins', () => {
           full_name: 'Abebe Bikila',
           email: 'abebe@example.et',
           designation: 'Head of Inputs',
-          department: 'Department of Irrigation',
+          department: 'Ministry of Agriculture',
           service_categories: ['Inputs'],
         })
       );
@@ -110,7 +101,7 @@ describe('AddNodalOfficerModal for Department Admins', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('displays available service categories immediately for Department Admin without entering department first', async () => {
+  it('displays available service categories immediately for Category Admin without entering department first', async () => {
     renderModal({ level: 'L3' });
 
     expect(screen.queryByText(/select a department first/i)).toBeNull();

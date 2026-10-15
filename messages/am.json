@@ -47,7 +47,7 @@
     "unreadLabel": "ማሳወቂያዎች፣ {count} አዲስ"
   },
   "caseActions": {
-    "submitterTitle": "የእርስዎ ምላሽ",
+    "submitterTitle": "የእኔ ምላሽ",
     "chooseAction": "እርምጃ ይምረጡ",
     "nothingToDo": "አሁን ከእርስዎ የሚጠበቅ እርምጃ የለም። ቅሬታዎ ሲለወጥ እናሳውቅዎታለን።",
     "reasonLabel": "ምክንያት",
@@ -217,7 +217,22 @@
       "milestoneSubmit": "አስገባ",
       "milestoneReminder": "50% አስታዋሽ",
       "milestoneUrgent": "80% አስቸኳይ",
-      "milestoneDeadline": "የመጨረሻ ቀን"
+      "milestoneDeadline": "የመጨረሻ ቀን",
+      "grievanceTypesHeading": "የቅሬታ ዓይነቶች",
+      "noGrievanceTypes": "በዚህ ምድብ ውስጥ እስካሁን ንቁ የቅሬታ ዓይነት የለም።",
+      "addGrievanceTypeLabel": "የቅሬታ ዓይነት ያክሉ",
+      "addType": "ያክሉ",
+      "deactivate": "አቦዝን",
+      "deactivateTypeLabel": "{name}ን አቦዝን",
+      "deactivateTypeConfirm": "ይህ ዓይነት መቅረቡ ይቁም? ያሉት ቅሬታዎች ይይዙታል።",
+      "deactivateCategory": "ምድቡን አቦዝን",
+      "deactivateCategoryConfirm": "ይህ ምድብ መቅረቡ ይቁም? ያሉት ቅሬታዎች ይይዙታል።",
+      "categoryDeactivatedNotice": "\"{name}\" ተቦዝኗል።",
+      "categoryRenameQueued": "SLA ተቀምጧል። ምድቡ ወደ \"{name}\" እየተቀየረ ነው — አዲሱ ስም ለውጡ ሲጠናቀቅ ይታያል።",
+      "categoryRenamePending": "ወደ \"{name}\" እየተቀየረ ነው…",
+      "department": "ክፍል",
+      "departmentHint": "አማራጭ። የዚህን ምድብ ዴስክ ባለ ክፍል ውስጥ ይከፍታል፤ ኃላፊዎች በኋላ ይጨመራሉ።",
+      "departmentNone": "ገና ክፍል የለም"
     },
     "slaPolicy": {
       "loading": "ፖሊሲ በመጫን ላይ…",
@@ -314,5 +329,15 @@
     "approve": "Approve",
     "failedSubmit": "Failed to submit decision",
     "officerRole": "Grievance Officer"
+  },
+  "dashboard": {
+    "recentGrievances": {
+      "title": "የቅርብ ጊዜ ቅሬታዎች",
+      "viewAll": "ሁሉንም ይመልከቱ",
+      "loading": "የቅርብ ጊዜ ቅሬታዎች በመጫን ላይ…",
+      "loadFailed": "የቅርብ ጊዜ ቅሬታዎችን መጫን አልተቻለም።",
+      "retry": "እንደገና ይሞክሩ",
+      "empty": "እስካሁን ምንም ቅሬታ የለም።"
+    }
   }
 }

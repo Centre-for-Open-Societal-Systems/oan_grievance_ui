@@ -6,7 +6,6 @@ import { TopHeader } from "./components/TopHeader";
 import { WeeklySubmissionChart } from "./components/WeeklySubmissionChart";
 import { ResolutionRegionChart } from "./components/ResolutionRegionChart";
 import { VolumeServiceChart } from "./components/VolumeServiceChart";
-import { PriorityBreakdownChart } from "./components/PriorityBreakdownChart";
 
 export function AnalyticsReportingPage() {
     return (
@@ -60,7 +59,6 @@ export function AnalyticsReportingPage() {
                 <WeeklySubmissionChart />
                 <ResolutionRegionChart />
                 <VolumeServiceChart />
-                <PriorityBreakdownChart />
             </div>
         </div>
     );

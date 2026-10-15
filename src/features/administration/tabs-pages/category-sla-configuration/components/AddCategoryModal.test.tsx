@@ -67,6 +67,28 @@ describe('AddCategoryModal', () => {
     });
   });
 
+  it('opens the desk in an existing department, picked by id', async () => {
+    const { onCreate, onClose } = renderModal({
+      departments: [{ department_id: 'DEPT-0001', department_name: 'Agriculture Bureau' }],
+    });
+
+    change(/^Category name/i, 'Seeds');
+    change(/^SLA Days/i, '5');
+    fireEvent.change(screen.getByRole('combobox', { name: /^Department/i }), { target: { value: 'DEPT-0001' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save/ }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ department: 'DEPT-0001' }));
+  });
+
+  it('offers only existing departments, never a free-text one', () => {
+    renderModal({ departments: [{ department_id: 'DEPT-0001', department_name: 'Agriculture Bureau' }] });
+
+    const select = screen.getByRole('combobox', { name: /^Department/i });
+    expect(select.tagName).toBe('SELECT');
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['No department yet', 'Agriculture Bureau']);
+  });
+
   it('rejects an SLA that is not a whole number of days', async () => {
     const { onCreate } = renderModal();
 

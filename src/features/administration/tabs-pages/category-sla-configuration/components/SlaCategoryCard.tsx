@@ -6,6 +6,8 @@ import { Zap, Bell, BellOff, Edit2, Save, AlertTriangle } from 'lucide-react';
 import { z } from 'zod';
 import { SlaCategory } from './types';
 import { describeSaveError } from './apiErrorMessage';
+import { GrievanceTypesSection } from './GrievanceTypesSection';
+import type { GrievanceTypeRecord } from './taxonomyTypes';
 
 interface SlaCategoryCardProps {
     categoryData: SlaCategory;
@@ -15,9 +17,32 @@ interface SlaCategoryCardProps {
         configId: string,
         values: { sla_days: number; auto_escalate: boolean; notify_on_breach: boolean }
     ) => Promise<void>;
+    /** The category's active grievance types. */
+    grievanceTypes?: GrievanceTypeRecord[];
+    /** The default category takes unclassified cases, so the service won't deactivate it. */
+    isDefaultCategory?: boolean;
+    /** Each absent when the viewer can't change the taxonomy. */
+    onAddType?: (typeName: string) => Promise<void>;
+    onDeactivateType?: (grievanceTypeId: string) => Promise<void>;
+    onDeactivateCategory?: () => Promise<void>;
+    /** Renames the category. The service queues a rename, so the old name shows until it runs. */
+    onRenameCategory?: (newName: string) => Promise<void>;
+    /** Set while a queued rename is running; the name can't change again until it finishes. */
+    renamingTo?: string | null;
 }
 
-export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: SlaCategoryCardProps) {
+export function SlaCategoryCard({
+    categoryData,
+    isLast = false,
+    onSaveSla,
+    grievanceTypes = [],
+    isDefaultCategory = false,
+    onAddType,
+    onDeactivateType,
+    onDeactivateCategory,
+    onRenameCategory,
+    renamingTo = null,
+}: SlaCategoryCardProps) {
     const t = useTranslations('admin.taxonomy');
     const [isExpanded, setIsExpanded] = useState(false);
     const [autoEscalate, setAutoEscalate] = useState(categoryData.autoEscalate);
@@ -28,9 +53,13 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
     const [slaDaysText, setSlaDaysText] = useState(String(categoryData.slaDays));
     const [isSavingSla, setIsSavingSla] = useState(false);
     const [slaMessage, setSlaMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+    const [categoryNameText, setCategoryNameText] = useState(categoryData.category);
+    const [isConfirmingDeactivate, setIsConfirmingDeactivate] = useState(false);
+    const [isDeactivating, setIsDeactivating] = useState(false);
     const configId = categoryData.configId;
     // Without a save handler the viewer can't change the SLA (a Review Officer), so the form is read-only.
     const canEdit = !!onSaveSla;
+    const canRename = !!onRenameCategory && !renamingTo;
 
     const categoryLabelId = useId();
     const slaDaysInputId = useId();
@@ -49,7 +78,9 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
         setAutoEscalate(categoryData.autoEscalate);
         setNotifyOnEscalation(categoryData.notifyOnBreach);
         setSlaDaysText(String(categoryData.slaDays));
+        setCategoryNameText(categoryData.category);
         setSlaMessage(null);
+        setIsConfirmingDeactivate(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately re-seeds only on open, not on every categoryData change while mid-edit
     }, [isExpanded]);
 
@@ -58,12 +89,13 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
     const handleSaveSla = async () => {
         if (!configId || !onSaveSla) return;
         const schema = z.object({
+            categoryName: z.string().trim().min(1, t('nameRequired')).max(140, t('nameTooLong')),
             slaDaysText: z
                 .string()
                 .trim()
                 .refine((v) => /^[1-9]\d*$/.test(v), t('slaDaysInvalid')),
         });
-        const parsed = schema.safeParse({ slaDaysText });
+        const parsed = schema.safeParse({ categoryName: categoryNameText, slaDaysText });
         if (!parsed.success) {
             setSlaMessage({ kind: 'error', text: parsed.error.issues[0]?.message ?? t('slaDaysInvalid') });
             return;
@@ -72,7 +104,14 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
         setSlaMessage(null);
         try {
             await onSaveSla(configId, { sla_days: slaDays, auto_escalate: autoEscalate, notify_on_breach: notifyOnEscalation });
-            setSlaMessage({ kind: 'success', text: t('slaSaved') });
+            // After the SLA, so a refused rename never leaves the SLA unsaved.
+            const newName = parsed.data.categoryName;
+            if (canRename && newName !== categoryData.category) {
+                await onRenameCategory(newName);
+                setSlaMessage({ kind: 'success', text: t('categoryRenameQueued', { name: newName }) });
+            } else {
+                setSlaMessage({ kind: 'success', text: t('slaSaved') });
+            }
         } catch (err) {
             setSlaMessage({
                 kind: 'error',
@@ -85,6 +124,28 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
             });
         } finally {
             setIsSavingSla(false);
+        }
+    };
+
+    const handleDeactivateCategory = async () => {
+        if (!onDeactivateCategory) return;
+        setIsDeactivating(true);
+        setSlaMessage(null);
+        try {
+            await onDeactivateCategory();
+        } catch (err) {
+            setSlaMessage({
+                kind: 'error',
+                text: describeSaveError(err, {
+                    auth: t('authError'),
+                    forbidden: t('forbiddenError'),
+                    connection: t('connectionError'),
+                    fallback: t('saveFailed'),
+                }),
+            });
+            setIsConfirmingDeactivate(false);
+        } finally {
+            setIsDeactivating(false);
         }
     };
 
@@ -174,10 +235,19 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     <input
                                         id={categoryLabelId}
                                         type="text"
-                                        value={categoryData.category}
-                                        readOnly
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-500 cursor-not-allowed focus:outline-none"
+                                        value={categoryNameText}
+                                        maxLength={140}
+                                        readOnly={!canRename}
+                                        onChange={(e) => setCategoryNameText(e.target.value)}
+                                        className={
+                                            canRename
+                                                ? 'w-full bg-white border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent'
+                                                : 'w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-500 cursor-not-allowed focus:outline-none'
+                                        }
                                     />
+                                    {renamingTo && (
+                                        <span className="text-[11px] text-gray-500">{t('categoryRenamePending', { name: renamingTo })}</span>
+                                    )}
                                 </div>
 
                                 <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
@@ -238,6 +308,12 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     </div>
                                 </div>
                             </div>
+
+                            <GrievanceTypesSection
+                                types={grievanceTypes}
+                                onAddType={onAddType}
+                                onDeactivateType={onDeactivateType}
+                            />
 
                             {/* Milestone Preview */}
                             <div className="bg-white border border-gray-200 rounded-xl p-6 mb-2">
@@ -342,7 +418,37 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-end gap-3 py-6 px-6 border-t border-[#ECECF0]">
+                        <div className="flex flex-wrap items-center justify-end gap-3 py-6 px-6 border-t border-[#ECECF0]">
+                            {onDeactivateCategory && !isDefaultCategory && (
+                                isConfirmingDeactivate ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-600">{t('deactivateCategoryConfirm')}</span>
+                                        <button
+                                            type="button"
+                                            disabled={isDeactivating}
+                                            onClick={() => void handleDeactivateCategory()}
+                                            className="px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                                        >
+                                            {t('deactivate')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsConfirmingDeactivate(false)}
+                                            className="px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50"
+                                        >
+                                            {t('cancel')}
+                                        </button>
+                                    </span>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsConfirmingDeactivate(true)}
+                                        className="px-4 py-2.5 text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
+                                    >
+                                        {t('deactivateCategory')}
+                                    </button>
+                                )
+                            )}
                             {slaMessage && (
                                 <span
                                     role={slaMessage.kind === 'error' ? 'alert' : 'status'}
@@ -361,6 +467,7 @@ export function SlaCategoryCard({ categoryData, isLast = false, onSaveSla }: Sla
                                     setAutoEscalate(categoryData.autoEscalate);
                                     setNotifyOnEscalation(categoryData.notifyOnBreach);
                                     setSlaDaysText(String(categoryData.slaDays));
+                                    setCategoryNameText(categoryData.category);
                                     setSlaMessage(null);
                                     setIsExpanded(false);
                                 }}

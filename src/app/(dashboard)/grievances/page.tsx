@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "All Grievances | Grievance Management Dashboard",
+  title: "All Grievances | Grievance Management Portal",
 };
 
 export default function Grievances() {

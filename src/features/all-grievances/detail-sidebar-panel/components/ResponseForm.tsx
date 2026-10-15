@@ -308,7 +308,7 @@ export function ResponseForm({
               : 'text-gray-500 hover:bg-gray-50'
           }`}
         >
-          <FileText className="h-4 w-4" /> Dept Response (Appendix D)
+          <FileText className="h-4 w-4" /> Department Response
         </button>
         <button
           type="button"

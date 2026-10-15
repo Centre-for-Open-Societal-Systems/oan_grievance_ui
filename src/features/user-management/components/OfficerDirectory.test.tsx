@@ -89,12 +89,12 @@ function renderDirectory(role?: string) {
 }
 
 describe('OfficerDirectory', () => {
-  it('defaults to the Department Admin tab (role Officer, level L3) and shows its officers', async () => {
+  it('defaults to the Category Admin tab (role Officer, level L3) and shows its officers', async () => {
     fetchOfficers.mockResolvedValue(listData([officerRecord()]));
 
     renderDirectory();
 
-    expect(screen.getByRole('heading', { name: 'Department Admin' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Category Admin' })).toBeTruthy();
     expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
     expect(fetchOfficers).toHaveBeenCalledWith(expect.objectContaining({ role: 'Officer', level: 'L3' }), expect.anything());
   });
@@ -129,9 +129,9 @@ describe('OfficerDirectory', () => {
   it('opens the add-officer modal with a tab-specific title', () => {
     renderDirectory();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Department Admin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Category Admin' }));
 
-    expect(screen.getByRole('heading', { name: 'Add Department Admin' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Add Category Admin' })).toBeTruthy();
   });
 
   it('opens the advanced filters drawer with Category, Regions, and Status fields', () => {
@@ -171,7 +171,7 @@ describe('OfficerDirectory', () => {
 
     renderDirectory('Grievance Review Officer');
 
-    expect(screen.queryByRole('button', { name: 'Add Department Admin' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add Category Admin' })).toBeNull();
     expect(screen.queryByRole('tab', { name: /Reviewer/ })).toBeNull();
     // Still fully readable — only the write controls (and the admin-only Reviewer tab) are gone.
     expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
@@ -183,7 +183,7 @@ describe('OfficerDirectory', () => {
 
     renderDirectory('Grievance Admin');
 
-    expect(screen.getByRole('button', { name: 'Add Department Admin' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add Category Admin' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /Reviewer/ })).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Edit Tigist Alemu' })).toBeTruthy();
   });
@@ -206,7 +206,7 @@ describe('OfficerDirectory', () => {
 
     const { container } = renderDirectory();
     await screen.findByText('Tigist Alemu');
-    expect(container.textContent).toContain('Showing 1 of 30 Department Admins lists');
+    expect(container.textContent).toContain('Showing 1 of 30 Category Admins lists');
 
     fetchOfficers.mockResolvedValue(listData([officerRecord({ full_name: 'Abel Dereje' })], 30, 2));
     fireEvent.click(screen.getByRole('button', { name: '2' }));
@@ -253,13 +253,13 @@ describe('OfficerDirectory', () => {
     );
   });
 
-  it('safely falls back to Department Admin when ?tab is a prototype property or invalid', async () => {
+  it('safely falls back to Category Admin when ?tab is a prototype property or invalid', async () => {
     fetchOfficers.mockResolvedValue(listData([officerRecord()]));
     currentSearchParams.set('tab', 'constructor');
 
     renderDirectory();
 
-    expect(screen.getByRole('heading', { name: 'Department Admin' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Category Admin' })).toBeTruthy();
     expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
     expect(fetchOfficers).toHaveBeenCalledWith(
       expect.objectContaining({ role: 'Officer', level: 'L3' }),
@@ -273,8 +273,8 @@ describe('OfficerDirectory', () => {
 
     renderDirectory('Grievance Review Officer');
 
-    // UI guard enforces visibleTabs restriction; falls back to default visible tab (Department Admin)
-    expect(screen.getByRole('heading', { name: 'Department Admin' })).toBeTruthy();
+    // UI guard enforces visibleTabs restriction; falls back to default visible tab (Category Admin)
+    expect(screen.getByRole('heading', { name: 'Category Admin' })).toBeTruthy();
     expect(screen.queryByRole('tab', { name: /Reviewer/ })).toBeNull();
     expect(await screen.findByText('Tigist Alemu')).toBeTruthy();
     expect(fetchOfficers).toHaveBeenCalledWith(

@@ -47,7 +47,7 @@
     "unreadLabel": "Notifications, {count} new"
   },
   "caseActions": {
-    "submitterTitle": "Your response",
+    "submitterTitle": "My response",
     "chooseAction": "Choose an action",
     "nothingToDo": "No action is needed from you right now. We'll let you know when your grievance changes.",
     "reasonLabel": "Reason",
@@ -217,7 +217,22 @@
       "milestoneSubmit": "Submit",
       "milestoneReminder": "50% reminder",
       "milestoneUrgent": "80% urgent",
-      "milestoneDeadline": "Deadline"
+      "milestoneDeadline": "Deadline",
+      "grievanceTypesHeading": "Grievance types",
+      "noGrievanceTypes": "No active grievance types in this category yet.",
+      "addGrievanceTypeLabel": "Add a grievance type",
+      "addType": "Add",
+      "deactivate": "Deactivate",
+      "deactivateTypeLabel": "Deactivate {name}",
+      "deactivateTypeConfirm": "Stop offering this type? Existing grievances keep it.",
+      "deactivateCategory": "Deactivate category",
+      "deactivateCategoryConfirm": "Stop offering this category? Existing grievances keep it.",
+      "categoryDeactivatedNotice": "\"{name}\" was deactivated.",
+      "categoryRenameQueued": "SLA saved. Renaming the category to \"{name}\" — the new name appears once the rename finishes.",
+      "categoryRenamePending": "Being renamed to \"{name}\"…",
+      "department": "Department",
+      "departmentHint": "Optional. Opens this category's desk in an existing department; officers are added later.",
+      "departmentNone": "No department yet"
     },
     "slaPolicy": {
       "loading": "Loading policy…",
@@ -314,5 +329,15 @@
     "approve": "Approve",
     "failedSubmit": "Failed to submit decision",
     "officerRole": "Grievance Officer"
+  },
+  "dashboard": {
+    "recentGrievances": {
+      "title": "Recent Grievances",
+      "viewAll": "View all",
+      "loading": "Loading recent grievances…",
+      "loadFailed": "Could not load recent grievances.",
+      "retry": "Retry",
+      "empty": "No grievances yet."
+    }
   }
 }

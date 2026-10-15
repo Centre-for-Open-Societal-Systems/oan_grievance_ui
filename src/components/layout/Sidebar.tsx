@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
+import { BrandLockup } from "@/components/layout/BrandLockup";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { canAccessRoute, canViewAllGrievances } from "@/features/auth/rbac";
 import { selectUser } from "@/features/auth/store/authSlice";
@@ -14,7 +15,6 @@ import {
   BarChart3,
   Users,
   ShieldCheck,
-  Settings,
 } from "lucide-react";
 
 const navItems = [
@@ -24,7 +24,6 @@ const navItems = [
   { name: "Analytics & Reporting", href: "/analytics-reporting", icon: BarChart3 },
   { name: "User Management", href: "/user-management", icon: Users },
   { name: "Administration", href: "/administration", icon: ShieldCheck },
-  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -58,19 +57,7 @@ export function Sidebar() {
 
       {/* Logo Section */}
       <div className={`pt-6 pb-6 flex items-center border-b border-[#184d31] transition-all duration-300 ${isSidebarCollapsed ? 'px-4 justify-center' : 'px-6 gap-3.5'}`}>
-        <div className="w-[54px] h-[36px] bg-white rounded-lg flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-          {/* Logo placeholder mimicking the image */}
-          <div className="flex items-center justify-center px-1">
-            <span className="text-[9px] font-bold text-green-700 leading-none">Ethiopia<br />ATI</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 ml-1"></span>
-          </div>
-        </div>
-        {!isSidebarCollapsed && (
-          <div className="flex flex-col justify-center overflow-hidden whitespace-nowrap transition-all duration-300">
-            <h1 className="font-semibold text-[16px] text-white tracking-wide leading-tight">Grievance Management</h1>
-            <p className="text-[12px] text-[#91bf8a] mt-1 tracking-wide">Ethiopia OpenAgriNet</p>
-          </div>
-        )}
+        <BrandLockup compact={isSidebarCollapsed} />
       </div>
 
       {/* Navigation Section */}

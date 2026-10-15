@@ -180,8 +180,8 @@ export interface TimelineContext {
 const ENTRY_TYPE_LABELS: Record<string, string> = {
   note: 'Internal Note',
   message: 'Public Message',
-  response: 'Dept Response',
-  dept_response: 'Dept Response',
+  response: 'Department Response',
+  dept_response: 'Department Response',
   info_request: 'Info Request',
   info_response: 'Info Response',
   status_change: 'Status Change',
@@ -259,7 +259,7 @@ export function normalizeTimelineEntry(
   const respNum = (entry as TimelineEntry).response_number;
   const typeLabel =
     (rawType === 'dept_response' || rawType === 'response') && respNum
-      ? `Dept Response #${respNum}`
+      ? `Department Response #${respNum}`
       : (ENTRY_TYPE_LABELS[rawType] || rawType);
   const entryId = (entry as TimelineEntry).id || (entry as TimelineEntry).name || `evt-${index}-${rawCreated}`;
 
