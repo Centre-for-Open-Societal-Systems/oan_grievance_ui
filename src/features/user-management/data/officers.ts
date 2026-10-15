@@ -49,10 +49,10 @@ export interface OfficerTabConfig {
 export const OFFICER_TABS: OfficerTabConfig[] = [
   {
     id: 'admin',
-    label: 'Department Admin',
-    description: 'Manage department administrators, roles, and access permissions in one place.',
-    addButtonLabel: 'Add Department Admin',
-    listLabel: 'Department Admins',
+    label: 'Category Admin',
+    description: 'Manage category administrators, roles, and access permissions in one place.',
+    addButtonLabel: 'Add Category Admin',
+    listLabel: 'Category Admins',
   },
   {
     id: 'nodal-l1',

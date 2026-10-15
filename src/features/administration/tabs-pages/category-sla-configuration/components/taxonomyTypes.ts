@@ -77,6 +77,8 @@ export interface CreateServiceCategoryPayload {
   sla_days?: number;
   auto_escalate?: boolean;
   notify_on_breach?: boolean;
+  /** Also opens the category's desk (RBAC category assignment) in this existing department: its id, name or short name. */
+  department?: string;
 }
 
 /** Partial; `is_default: false` is refused by the service — promote another category instead. */

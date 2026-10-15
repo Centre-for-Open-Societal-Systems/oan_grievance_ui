@@ -113,7 +113,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
       case 'designation':
         return isReviewer ? null : validateRequired(designation, 'Enter a designation.');
       case 'department':
-        return validateRequired(department, level === 'L3' ? 'Enter or select a department.' : 'Select a department.');
+        return validateRequired(department, 'Select a department.');
       case 'serviceCategories':
         return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
@@ -352,41 +352,23 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                 <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
                   Department <span className="text-red-500">*</span>
                 </label>
-                {level === 'L3' ? (
-                  <>
-                    <input
-                      {...a11y('department')}
-                      type="text"
-                      list="existing-departments"
-                      value={department}
-                      onChange={(e) => {
-                        setDepartment(e.target.value);
-                        setError('department', null);
-                      }}
-                      placeholder="Enter or select department"
-                      className={`border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
-                    />
-                    <datalist id="existing-departments">
-                      {departmentOptions.map((o) => (
-                        <option key={o.value} value={o.label} />
-                      ))}
-                    </datalist>
-                  </>
-                ) : (
-                  <AnimatedSelect
-                    options={departmentOptions.map((o) => o.label)}
-                    value={department}
-                    onChange={(value) => {
-                      setDepartment(value);
-                      setError('department', null);
-                      // The wired category list is department-specific — a category picked
-                      // for the old department may not even have a desk under the new one.
+                <AnimatedSelect
+                  id={FIELD_IDS.department}
+                  options={departmentOptions.map((o) => o.label)}
+                  value={department}
+                  onChange={(value) => {
+                    setDepartment(value);
+                    setError('department', null);
+                    // Below L3 the wired category list is department-specific — a category
+                    // picked for the old department may not even have a desk under the new
+                    // one. An L3 picks from every category, so the picks stay valid.
+                    if (level !== 'L3') {
                       setServiceCategories([]);
                       setError('serviceCategories', null);
-                    }}
-                    placeholder="Select Department"
-                  />
-                )}
+                    }
+                  }}
+                  placeholder="Select Department"
+                />
                 {fieldError('department')}
               </div>
 

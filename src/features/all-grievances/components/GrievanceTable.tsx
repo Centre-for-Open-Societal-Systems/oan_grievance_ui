@@ -6,7 +6,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Eye,
+  Pencil,
   ArrowUpCircle,
   SlidersHorizontal,
   FileQuestion,
@@ -16,23 +16,8 @@ import {
 } from 'lucide-react';
 import type { Grievance } from '../types';
 import type { FilterOption } from './FilterDropdown';
+import { statusBadgeClass } from '../utils/statusStyles';
 
-/**
- * Lifecycle statuses are configured backend-side, so this map is keyed by the labels we
- * expect and falls back to neutral styling for anything new.
- */
-const statusColors: Record<string, string> = {
-  'Assigned': 'bg-blue-50 text-blue-600 border border-blue-200/60',
-  'Submitted': 'bg-slate-50 text-slate-600 border border-slate-200/60',
-  'Pending Submit': 'bg-amber-50 text-amber-700 border border-amber-200/60',
-  'In Progress': 'bg-indigo-50 text-indigo-600 border border-indigo-200/60',
-  'Under Investigation': 'bg-indigo-50 text-indigo-600 border border-indigo-200/60',
-  'More Info Needed': 'bg-orange-50 text-orange-700 border border-orange-200/60',
-  'Resolved': 'bg-emerald-50 text-emerald-600 border border-emerald-200/60',
-  'Closed': 'bg-emerald-50 text-emerald-600 border border-emerald-200/60',
-  'Rejected': 'bg-red-50 text-red-600 border border-red-200/60',
-  'Under Review': 'bg-purple-50 text-purple-600 border border-purple-200/60',
-};
 
 function renderSubmittedAt(submittedAt?: string | null) {
   if (!submittedAt) {
@@ -256,7 +241,7 @@ export function GrievanceTable({
                     </span>
                   </td>
                   <td className="px-3.5 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold leading-tight ${statusColors[grievance.status] || 'bg-gray-100 text-gray-700'}`}>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold leading-tight ${statusBadgeClass(grievance.status)}`}>
                       {grievance.status}
                     </span>
                   </td>
@@ -268,8 +253,8 @@ export function GrievanceTable({
                       onClick={() => onViewGrievance(grievance)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#E6F3EA] border border-[#C9E5D2] text-green-700 hover:bg-[#C8E6C9] rounded-full text-xs font-semibold transition-colors opacity-90 group-hover:opacity-100"
                     >
-                      <Eye className="h-3.5 w-3.5 shrink-0" />
-                      View
+                      <Pencil className="h-3.5 w-3.5 shrink-0" />
+                      Edit
                     </button>
                   </td>
                 </tr>

@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Grievance Management Dashboard",
+  title: "Grievance Management Portal",
   description: "Ethiopia OpenAgriNet",
 };
 

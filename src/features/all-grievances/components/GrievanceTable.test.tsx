@@ -70,7 +70,7 @@ describe('GrievanceTable', () => {
     onViewGrievance: vi.fn(),
   };
 
-  it('renders grievances rows and calls onViewGrievance on View click', () => {
+  it('renders grievances rows and calls onViewGrievance on Edit click', () => {
     const onViewGrievance = vi.fn();
     const { container } = render(
       <GrievanceTable {...defaultProps} onViewGrievance={onViewGrievance} />
@@ -84,11 +84,11 @@ describe('GrievanceTable', () => {
     expect(view.getByText('In Progress')).toBeTruthy();
     expect(view.getByText('Escalated')).toBeTruthy();
 
-    const viewButtons = view.getAllByRole('button', { name: /view/i });
-    expect(viewButtons.length).toBe(2);
+    const editButtons = view.getAllByRole('button', { name: /edit/i });
+    expect(editButtons.length).toBe(2);
 
-    expect(viewButtons[0]).toBeDefined();
-    fireEvent.click(viewButtons[0]!);
+    expect(editButtons[0]).toBeDefined();
+    fireEvent.click(editButtons[0]!);
     expect(onViewGrievance).toHaveBeenCalledTimes(1);
     expect(onViewGrievance).toHaveBeenCalledWith(mockGrievances[0]);
   });

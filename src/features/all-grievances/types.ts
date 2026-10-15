@@ -286,7 +286,6 @@ export interface GrievanceTimelineData {
   sla?: GrievanceTimelineSla;
   assignment?: GrievanceTimelineAssignment;
   available_actions?: GrievanceAvailableAction[];
-  can_request_more_info?: boolean;
   attachments?: GrievanceTimelineAttachment[];
   timeline?: TimelineEntry[];
   events?: TimelineEventItem[];

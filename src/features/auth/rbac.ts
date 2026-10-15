@@ -111,7 +111,6 @@ const ROUTE_ROLES: Record<string, Role[]> = {
   // remaining STG-436 work — see this file's ROLES comment.
   '/user-management': [ROLES.ADMIN, ROLES.REVIEW_OFFICER],
   '/administration': [ROLES.ADMIN, ROLES.REVIEW_OFFICER],
-  '/settings': [ROLES.OFFICER, ROLES.ADMIN],
 };
 
 /** Highest-privilege role first — decides which home route wins for a multi-role user. */

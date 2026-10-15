@@ -58,10 +58,11 @@ export function GrievanceDetailSidebar({
     await refetch();
   };
 
-  const baseCanManageCase = isOfficerOrAdmin(userRoles);
-  const isEscalated = timelineData?.escalated;
-  const assignedToMe = timelineData?.assignment?.assigned_to === user?.email;
-  const canManageCase = baseCanManageCase && (!isEscalated || assignedToMe);
+  // Staff get the staff view (response form, internal notes); everyone else
+  // the submitter's. Which actions a staff member may take on this case —
+  // escalated or not, assigned to them or not — is the backend's call, made
+  // through `available_actions`; none offered means none shown.
+  const canManageCase = isOfficerOrAdmin(userRoles);
 
   const statusOptions = useAppSelector((state) => state.metadata?.grievanceOptions?.statuses);
   const currentStatus =

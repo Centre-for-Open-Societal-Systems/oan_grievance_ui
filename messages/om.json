@@ -47,7 +47,7 @@
     "unreadLabel": "Beeksisoota, {count} haaraa"
   },
   "caseActions": {
-    "submitterTitle": "Deebii keessan",
+    "submitterTitle": "Deebii koo",
     "chooseAction": "Tarkaanfii filadhaa",
     "nothingToDo": "Amma tarkaanfiin isin irraa eegamu hin jiru. Yeroo komiin keessan jijjiiramu isin beeksifna.",
     "reasonLabel": "Sababa",
@@ -217,7 +217,22 @@
       "milestoneSubmit": "Galchi",
       "milestoneReminder": "Yaadachiisa 50%",
       "milestoneUrgent": "Ariifachiisaa 80%",
-      "milestoneDeadline": "Guyyaa Dhumaa"
+      "milestoneDeadline": "Guyyaa Dhumaa",
+      "grievanceTypesHeading": "Gosoota komii",
+      "noGrievanceTypes": "Ramaddii kana keessatti gosti komii hojii irra jiru hin jiru.",
+      "addGrievanceTypeLabel": "Gosa komii dabali",
+      "addType": "Dabali",
+      "deactivate": "Dhaabi",
+      "deactivateTypeLabel": "{name} dhaabi",
+      "deactivateTypeConfirm": "Gosni kun akka hin dhiyaanne? Komiiwwan jiran ni qabatu.",
+      "deactivateCategory": "Ramaddii dhaabi",
+      "deactivateCategoryConfirm": "Ramaddiin kun akka hin dhiyaanne? Komiiwwan jiran ni qabatu.",
+      "categoryDeactivatedNotice": "\"{name}\" dhaabameera.",
+      "categoryRenameQueued": "SLA olkaa’ameera. Maqaan ramaddii gara \"{name}\"tti jijjiiramaa jira — maqaan haaraan erga jijjiiramni xumuramee mul’ata.",
+      "categoryRenamePending": "Gara \"{name}\"tti jijjiiramaa jira…",
+      "department": "Kutaa",
+      "departmentHint": "Filannoo. Deeskii ramaddii kanaa kutaa jiru keessatti bana; qondaaltonni booda ni dabalamu.",
+      "departmentNone": "Ammaaf kutaa hin qabu"
     },
     "slaPolicy": {
       "loading": "Imaammanni fe’amaa jira…",
@@ -314,5 +329,15 @@
     "approve": "Approve",
     "failedSubmit": "Failed to submit decision",
     "officerRole": "Grievance Officer"
+  },
+  "dashboard": {
+    "recentGrievances": {
+      "title": "Komiiwwan Dhiyoo",
+      "viewAll": "Hunda ilaali",
+      "loading": "Komiiwwan dhiyoo fe’amaa jiru…",
+      "loadFailed": "Komiiwwan dhiyoo fe’uun hin danda’amne.",
+      "retry": "Irra deebi’ii yaali",
+      "empty": "Ammaaf komiin hin jiru."
+    }
   }
 }
