@@ -252,18 +252,18 @@ describe('authApi - getMe()', () => {
     });
   });
 
-  it('reads no Fayda ID for an NGO or FPO, even if the backend sent one among its identities', async () => {
-    const body = ngoMe(REGISTERED_ORG);
-    body.data.profiles.grievance.identities = [
-      { scheme: 'org', value: '1234567890' },
-      { scheme: 'fayda', value: '1234567890123456' },
-    ];
+  it("reads an NGO's / FPO's representative Fayda ID, flat or from its identities", async () => {
+    // As the backend returns it for an NGO registered with a Fayda ID and no registration number.
+    const body = ngoMe(undefined);
+    body.data.profiles.grievance.identities = [{ scheme: 'fayda', value: '6519730120000001' }];
+    (body.data.profiles.grievance as Record<string, unknown>).fayda_id = '6519730120000001';
     mockMe(body);
-    expect((await getMe()).fayda_id).toBeUndefined();
+    expect((await getMe()).fayda_id).toBe('6519730120000001');
 
+    delete (body.data.profiles.grievance as Record<string, unknown>).fayda_id;
     body.data.profiles.grievance.type = 'FPO';
     mockMe(body);
-    expect((await getMe()).fayda_id).toBeUndefined();
+    expect((await getMe()).fayda_id).toBe('6519730120000001');
   });
 
   it("reads an NGO's sign-up registration number from its identities until the profile carries it flat", async () => {

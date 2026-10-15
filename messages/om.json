@@ -16,7 +16,7 @@
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
-      "organisationNotice": "Erga seentanii booda, bal'ina galmee dhaabbata keessanii kan hafe — maqaa seeraa, teessoo fi qunnamtii — isin gaafanna."
+      "organisationNotice": "Erga seentanii booda, bal'ina dhaabbata keessanii — maqaa, lakkoofsa galmee, bakka bu'aa aangoo qabu, teessoo fi qunnamtii — isin gaafanna."
     },
     "success": {
       "title": "Akkaawuntiin Uumameera!",
@@ -45,7 +45,7 @@
       "contact": "Bal'ina Qunnamtii"
     },
     "fields": {
-      "legalName": { "label": "Maqaa dhaabbata seeraa", "placeholder": "Maqaa dhaabbata seeraa galchi" },
+      "legalName": { "label": "Maqaa Dhaabbataa", "placeholder": "Maqaa dhaabbataa galchi" },
       "brandName": {
         "label": "Maqaa chaappaa / agarsiisaa",
         "placeholder": "Maqaa seeraa irraa kan adda ta'e yoo ta'e galchi",
@@ -57,6 +57,8 @@
         "placeholder": "Lakkoofsa galmee galchi",
         "hint": "Lakkoofsa galmee ykn hayyama dhaabbata keessaniif kenname"
       },
+      "representativeName": { "label": "Bakka Bu'aa Aangoo Qabu", "placeholder": "Maqaa guutuu bakka bu'aa galchi" },
+      "memberCount": { "label": "Baay'ina Miseensota Miidhaman", "placeholder": "Baay'ina miseensota miidhaman galchi" },
       "streetAddress": { "label": "Teessoo daandii", "placeholder": "Teessoo daandii galchi" },
       "kebele": { "label": "Ganda / Gandaa", "placeholder": "Ganda / Gandaa galchi" },
       "woreda": { "label": "Aanaa", "placeholder": "Aanaa galchi" },
@@ -98,6 +100,7 @@
       "tooLong": "Arfii {max} ykn isaa gadi fayyadami.",
       "entityType": "Gosoota dhaabbataa tarreeffaman keessaa tokko filadhu.",
       "taxId": "Arfii ykn lakkoofsa 3 hanga 60 fayyadami; gidduu isaanii sarara gabaabaa ykn sarara muraasuu ni danda'ama.",
+      "memberCount": "Lakkoofsa guutuu galchi, fkn 120.",
       "postalCode": "Koodii poostaa sirrii galchi, fkn 1000.",
       "website": "Teessoo marsariitii sirrii galchi, fkn www.example.org.",
       "email": "Teessoo imeelii sirrii galchi, fkn name@example.com.",
@@ -110,7 +113,7 @@
     },
     "status": {
       "details": {
-        "legalName": "Maqaa dhaabbata seeraa",
+        "legalName": "Maqaa Dhaabbataa",
         "brandName": "Maqaa chaappaa / agarsiisaa",
         "entityType": "Gosa dhaabbataa",
         "registrationNumber": "Lakkoofsa galmee",

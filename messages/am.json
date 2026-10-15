@@ -16,7 +16,7 @@
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",
-      "organisationNotice": "ከገቡ በኋላ የቀሩትን የድርጅትዎን የምዝገባ ዝርዝሮች — ሕጋዊ ስም፣ አድራሻ እና የመገናኛ መረጃ — እንጠይቅዎታለን።"
+      "organisationNotice": "ከገቡ በኋላ የድርጅትዎን ዝርዝሮች — ስም፣ የምዝገባ ቁጥር፣ ስልጣን የተሰጠው ተወካይ፣ አድራሻ እና የመገናኛ መረጃ — እንጠይቅዎታለን።"
     },
     "success": {
       "title": "መለያ ተፈጥሯል!",
@@ -45,7 +45,7 @@
       "contact": "የመገናኛ ዝርዝሮች"
     },
     "fields": {
-      "legalName": { "label": "ሕጋዊ ተቋም ስም", "placeholder": "ሕጋዊ ተቋም ስም ያስገቡ" },
+      "legalName": { "label": "የድርጅት ስም", "placeholder": "የድርጅት ስም ያስገቡ" },
       "brandName": {
         "label": "የንግድ ምልክት / የማሳያ ስም",
         "placeholder": "ከሕጋዊ ስሙ የተለየ ከሆነ ያስገቡ",
@@ -57,6 +57,8 @@
         "placeholder": "የምዝገባ ቁጥር ያስገቡ",
         "hint": "ለድርጅትዎ የተሰጠ የምዝገባ ወይም የፈቃድ ቁጥር"
       },
+      "representativeName": { "label": "ስልጣን የተሰጠው ተወካይ", "placeholder": "የተወካዩን ሙሉ ስም ያስገቡ" },
+      "memberCount": { "label": "የተጎዱ አባላት ብዛት", "placeholder": "የተጎዱ አባላትን ብዛት ያስገቡ" },
       "streetAddress": { "label": "የመንገድ አድራሻ", "placeholder": "የመንገድ አድራሻ ያስገቡ" },
       "kebele": { "label": "ቀበሌ / መንደር", "placeholder": "ቀበሌ / መንደር ያስገቡ" },
       "woreda": { "label": "ወረዳ", "placeholder": "ወረዳ ያስገቡ" },
@@ -98,6 +100,7 @@
       "tooLong": "ከ{max} ቁምፊዎች ያልበለጠ ይጠቀሙ።",
       "entityType": "ከተዘረዘሩት የተቋም ዓይነቶች አንዱን ይምረጡ።",
       "taxId": "ከ3 እስከ 60 ፊደላት ወይም ቁጥሮች ይጠቀሙ፤ በመካከላቸው ሰረዝ ወይም ሰያፍ መስመር ሊኖር ይችላል።",
+      "memberCount": "ሙሉ ቁጥር ያስገቡ፣ ለምሳሌ 120።",
       "postalCode": "ትክክለኛ የፖስታ ኮድ ያስገቡ፣ ለምሳሌ 1000።",
       "website": "ትክክለኛ የድር ጣቢያ አድራሻ ያስገቡ፣ ለምሳሌ www.example.org።",
       "email": "ትክክለኛ ኢሜይል አድራሻ ያስገቡ፣ ለምሳሌ name@example.com።",
@@ -110,7 +113,7 @@
     },
     "status": {
       "details": {
-        "legalName": "ሕጋዊ ተቋም ስም",
+        "legalName": "የድርጅት ስም",
         "brandName": "የንግድ ምልክት / የማሳያ ስም",
         "entityType": "የተቋም ዓይነት",
         "registrationNumber": "የምዝገባ ቁጥር",

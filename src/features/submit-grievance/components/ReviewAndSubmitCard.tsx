@@ -96,8 +96,8 @@ export function ReviewAndSubmitCard({
   // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
   // action pattern as SIMaskedIdField and the Profile page's MaskedField.
   // Without this, a value that only reaches this screen via the
-  // localStorage-persisted submitter profile (officialFaydaId has no other
-  // source) would show up in cleartext on a
+  // localStorage-persisted submitter profile (representativeFaydaId/
+  // officialFaydaId have no other source) would show up in cleartext on a
   // review screen the user never typed it into this session.
   const [revealedIdFields, setRevealedIdFields] = useState<Set<string>>(new Set());
   const toggleReveal = (key: string) =>

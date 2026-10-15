@@ -43,9 +43,10 @@ const type = (label: RegExp | string, value: string) =>
 const registerButton = () => screen.getByRole('button', { name: /Register Organization/ });
 
 function fillValidForm(entityType: string) {
-  type(/^Legal entity name/, 'Green Highlands Development Association');
+  type(/^Organisation Name/, 'Green Highlands Development Association');
   fireEvent.click(screen.getByRole('option', { name: entityType }));
-  type(/^Registration number/, '0012345678');
+  type(/^Registration Number/, '0012345678');
+  type(/^Authorised Representative/, 'Almaz Tesfaye');
   type(/^Street address/, 'Bole Road, Block 4');
   type(/^Zone/, 'Addis Ababa');
   type(/^Region/, 'Addis Ababa');
@@ -67,9 +68,11 @@ describe('OrganisationRegistrationForm', () => {
       expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
     }
     for (const label of [
-      /^Legal entity name/,
-      /^Brand \/ display name/,      /^Entity type/,
-      /^Registration number/,
+      /^Organisation Name/,
+      /^Brand \/ display name/,
+      /^Entity type/,
+      /^Registration Number/,
+      /^Authorised Representative/,
       /^Street address/,
       /^Kebele \/ Village/,
       /^Woreda \/ District/,
@@ -83,6 +86,33 @@ describe('OrganisationRegistrationForm', () => {
     ]) {
       expect(screen.getByLabelText(label)).toBeInTheDocument();
     }
+  });
+
+  it('shows Member Count Affected on the FPO screen only', () => {
+    renderForm('fpo');
+    expect(screen.getByLabelText(/^Member Count Affected/)).toBeInTheDocument();
+    cleanup();
+
+    renderForm('ngo');
+    expect(screen.queryByLabelText(/^Member Count Affected/)).not.toBeInTheDocument();
+  });
+
+  it('starts the authorised representative as the account holder, editable', () => {
+    const onRegistered = vi.fn();
+    render(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <OrganisationRegistrationForm
+          kind="ngo"
+          initialValues={buildInitialOrganisationValues({ email: 'rep@ngo.org', full_name: 'Almaz Tesfaye' })}
+          onRegistered={onRegistered}
+          onBackToSignIn={vi.fn()}
+        />
+      </NextIntlClientProvider>
+    );
+    const rep = screen.getByLabelText(/^Authorised Representative/);
+    expect(rep).toHaveValue('Almaz Tesfaye');
+    fireEvent.change(rep, { target: { value: 'Someone Else' } });
+    expect(rep).toHaveValue('Someone Else');
   });
 
   it('starts with Ethiopia, the +251 dial code and the signed-in email', () => {
@@ -104,15 +134,15 @@ describe('OrganisationRegistrationForm', () => {
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(registerButton());
 
-    expect(screen.getAllByText('This field is required.')).toHaveLength(8);
-    expect(screen.getByLabelText(/^Legal entity name/)).toHaveFocus();
-    expect(screen.getByLabelText(/^Legal entity name/)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getAllByText('This field is required.')).toHaveLength(9);
+    expect(screen.getByLabelText(/^Organisation Name/)).toHaveFocus();
+    expect(screen.getByLabelText(/^Organisation Name/)).toHaveAttribute('aria-invalid', 'true');
     expect(registerOrganisation).not.toHaveBeenCalled();
   });
 
   it('checks a field when it loses focus and clears the message once it is fixed', () => {
     renderForm();
-    const tax = screen.getByLabelText(/^Registration number/);
+    const tax = screen.getByLabelText(/^Registration Number/);
 
     fireEvent.change(tax, { target: { value: '!!' } });
     fireEvent.blur(tax);
@@ -154,6 +184,7 @@ describe('OrganisationRegistrationForm', () => {
       org_type: 'NGO',
       entity_type: 'Local NGO',
       tax_registration_number: '0012345678',
+      representative_name: 'Almaz Tesfaye',
       street_address: 'Bole Road, Block 4',
       zone: 'Addis Ababa',
       region: 'Addis Ababa',
@@ -168,16 +199,42 @@ describe('OrganisationRegistrationForm', () => {
     expect(onRegistered.mock.calls[0]![0]).toMatchObject({ id: 'ORG-0001', status: 'In Review' });
   });
 
-  it('registers an FPO as org_type FPO', async () => {
+  it('registers an FPO as org_type FPO, with its member count as a number', async () => {
     renderForm('fpo');
     fillValidForm('Primary Cooperative');
+    type(/^Member Count Affected/, '120');
     fireEvent.click(registerButton());
 
     await waitFor(() => expect(registerOrganisation).toHaveBeenCalledTimes(1));
     expect(registerOrganisation.mock.calls[0]![0]).toMatchObject({
       org_type: 'FPO',
       entity_type: 'Primary Cooperative',
+      representative_name: 'Almaz Tesfaye',
+      members_affected: 120,
     });
+  });
+
+  it('leaves the member count out when an FPO gives none, and rejects one that is not a whole number', async () => {
+    renderForm('fpo');
+    fillValidForm('Primary Cooperative');
+    type(/^Member Count Affected/, '12.5');
+    fireEvent.click(registerButton());
+    expect(screen.getByText('Enter a whole number of members, e.g. 120.')).toBeInTheDocument();
+    expect(registerOrganisation).not.toHaveBeenCalled();
+
+    type(/^Member Count Affected/, '');
+    fireEvent.click(registerButton());
+    await waitFor(() => expect(registerOrganisation).toHaveBeenCalledTimes(1));
+    expect(registerOrganisation.mock.calls[0]![0]).not.toHaveProperty('members_affected');
+  });
+
+  it('never sends a member count for an NGO', async () => {
+    renderForm('ngo');
+    fillValidForm('Local NGO');
+    fireEvent.click(registerButton());
+
+    await waitFor(() => expect(registerOrganisation).toHaveBeenCalledTimes(1));
+    expect(registerOrganisation.mock.calls[0]![0]).not.toHaveProperty('members_affected');
   });
 
   it('still shows the organisation as In Review if the backend answers with nothing readable', async () => {
@@ -206,7 +263,7 @@ describe('OrganisationRegistrationForm', () => {
     expect(screen.getByLabelText(/^Postal code/)).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByLabelText(/^Postal code/)).toHaveFocus();
     expect(onRegistered).not.toHaveBeenCalled();
-    expect(screen.getByLabelText(/^Legal entity name/)).toHaveValue('Green Highlands Development Association');
+    expect(screen.getByLabelText(/^Organisation Name/)).toHaveValue('Green Highlands Development Association');
     expect(registerButton()).toBeEnabled();
   });
 
@@ -253,7 +310,7 @@ describe('OrganisationRegistrationForm', () => {
     fireEvent.click(registerButton());
 
     expect(await screen.findByText(/already registered/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Registration number/)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Registration Number/)).toHaveAttribute('aria-invalid', 'true');
     expect(onRegistered).not.toHaveBeenCalled();
   });
 

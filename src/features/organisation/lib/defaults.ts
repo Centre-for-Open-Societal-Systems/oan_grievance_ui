@@ -5,19 +5,20 @@ import { ORGANISATION_FIELDS, type OrganisationValues } from './validation';
 /** The slice of the signed-in account the form pre-fills from. */
 export interface ContactSource {
   email: string;
+  full_name?: string;
   mobile_no?: string;
   country_code?: string;
   phone_number?: string;
-  /** What the account signed up with — becomes the form's registration number, so it is not typed twice. */
-  registration_number?: string;
 }
 
 /**
- * The form's starting values: Ethiopia as the country, the registration number
- * the account signed up with, and the representative's own sign-in email and
- * mobile as the organisation's first contact — editable,
- * since a work email or office line may differ. Same phone sources, in the same
- * order, as Submit Grievance's pre-fill (`buildInitialIdentityValues`).
+ * The form's starting values: Ethiopia as the country, and — from the signed-in
+ * account — its holder as the authorised representative (what the backend itself
+ * defaults it to) and their email and mobile as the organisation's first
+ * contact. All editable, since the representative may differ from the account
+ * holder and a work email or office line may differ from the personal ones.
+ * Same phone sources, in the same order, as Submit Grievance's pre-fill
+ * (`buildInitialIdentityValues`).
  */
 export function buildInitialOrganisationValues(user: ContactSource | null): OrganisationValues {
   const values = Object.fromEntries(ORGANISATION_FIELDS.map((field) => [field, ''])) as OrganisationValues;
@@ -26,7 +27,7 @@ export function buildInitialOrganisationValues(user: ContactSource | null): Orga
   if (!user) return values;
 
   values.email = user.email;
-  if (user.registration_number) values.taxId = user.registration_number;
+  if (user.full_name) values.representativeName = user.full_name;
   if (user.phone_number) {
     values.phoneNumber = user.phone_number;
     values.phoneCode = user.country_code || '+251';

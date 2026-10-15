@@ -2,7 +2,6 @@ import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { fetchApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import type { User, UserOrganisation } from '@/features/auth/store/authSlice';
-import { organisationKindFor } from '@/lib/organisationKind';
 import { toOrganisationStatus } from '@/lib/organisationStatus';
 
 interface LoginCredentials {
@@ -125,10 +124,8 @@ export interface RegisterFields {
   phone_number: string;
   /** Backend submitter type to register as (see `backendSubmitterTypeFor`). Omit for the default, Individual Farmer. */
   submitter_type?: string;
-  /** 16-digit Fayda ID. The backend requires one for an Individual Farmer. */
+  /** 16-digit Fayda ID. The backend requires one for an Individual Farmer; for an NGO / FPO it is the representative's. */
   fayda_id?: string;
-  /** An NGO's / FPO's registration number — what the backend identifies one by instead of a Fayda ID. */
-  registration_number?: string;
 }
 
 /** Does not sign the caller in — see the route: registration is "account created, now log in". */
@@ -299,13 +296,10 @@ export async function getMe(): Promise<User> {
     submitter_type: grievanceProfile?.submitter_type || undefined,
     submission_channel: grievanceProfile?.submission_channel || undefined,
     profile_id: grievanceProfile?.profile_id || undefined,
-    // An NGO / FPO has no Fayda ID — it is identified by its registration number — so one is
-    // never read for it, whatever the profile or its identities list happens to hold.
-    fayda_id: organisationKindFor(type)
-      ? undefined
-      : grievanceProfile?.fayda_id || resolveFaydaId(grievanceProfile?.identities),
-    // What an NGO / FPO signed up with (`registration_number` in the register payload); the
-    // onboarding form starts from it so the same number is not typed twice.
+    // For an NGO / FPO this is its representative's Fayda ID, given at sign-up.
+    fayda_id: grievanceProfile?.fayda_id || resolveFaydaId(grievanceProfile?.identities),
+    // An NGO's / FPO's registration number once the backend holds it (it is not part of sign-up,
+    // so before the organisation is registered it is normally absent).
     registration_number: grievanceProfile?.registration_number || resolveOrganisationNumber(grievanceProfile?.identities),
     administrative_area: grievanceProfile?.administrative_area || undefined,
     administrative_unit: grievanceProfile?.administrative_unit || undefined,

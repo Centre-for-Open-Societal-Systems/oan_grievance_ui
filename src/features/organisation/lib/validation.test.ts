@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import {
   normaliseWebsite,
   ORGANISATION_FIELDS,
@@ -14,6 +14,8 @@ const VALID: OrganisationValues = {
   brandName: '',
   entityType: 'Local NGO',
   taxId: '0012345678',
+  representativeName: 'Almaz Tesfaye',
+  memberCount: '',
   streetAddress: 'Bole Road, Block 4',
   kebele: '',
   woreda: '',
@@ -43,6 +45,7 @@ describe('validateOrganisation', () => {
         'legalName',
         'entityType',
         'taxId',
+        'representativeName',
         'streetAddress',
         'zone',
         'region',
@@ -66,6 +69,33 @@ describe('validateOrganisation', () => {
   });
 });
 
+describe('authorised representative', () => {
+  it('is required, and limited to the length of a name', () => {
+    expect(check({ representativeName: '  ' }).representativeName).toEqual({ code: 'required' });
+    expect(check({ representativeName: 'x'.repeat(141) }).representativeName).toEqual({ code: 'tooLong', max: 140 });
+    expect(check({ representativeName: 'Almaz Tesfaye' }).representativeName).toBeUndefined();
+  });
+});
+
+describe('member count affected', () => {
+  it('is optional', () => {
+    expect(check({ memberCount: '' }).memberCount).toBeUndefined();
+    expect(check({ memberCount: '   ' }).memberCount).toBeUndefined();
+  });
+
+  it('takes a whole number from 0 up to the backend limit', () => {
+    for (const memberCount of ['0', '120', '100000000']) {
+      expect(check({ memberCount }).memberCount).toBeUndefined();
+    }
+  });
+
+  it('rejects anything else', () => {
+    for (const memberCount of ['-1', '1.5', '12a', '1,200', '100000001', 'many']) {
+      expect(check({ memberCount }).memberCount).toEqual({ code: 'memberCount' });
+    }
+  });
+});
+
 describe('entity type', () => {
   it('must be one of the options offered for this kind', () => {
     expect(check({ entityType: 'Cooperative Union' }).entityType).toEqual({ code: 'entityType' });
@@ -74,8 +104,7 @@ describe('entity type', () => {
 });
 
 describe('registration number', () => {
-  // The same rule the backend applies at sign-up and on POST /orgs, so a number the account was
-  // registered with is never refused on this form.
+  // The backend's own rule for POST /orgs.
   it('takes 3-60 letters or digits, with single hyphens or slashes between groups', () => {
     for (const taxId of ['123', '0012345678', 'ET12345678', 'REG-2024-0042', 'COOP/XX/2024/0001', 'a'.repeat(60)]) {
       expect(check({ taxId }).taxId).toBeUndefined();

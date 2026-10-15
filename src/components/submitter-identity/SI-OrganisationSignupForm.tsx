@@ -1,28 +1,26 @@
 "use client";
 
-import { SITextField } from "./SI-fields";
+import { SIIdField } from "./SI-fields";
 import type { SIFormProps } from "./SI-types";
 
 /**
- * What an NGO or FPO is asked at sign-up: its registration number, which is
- * what the backend identifies it by (no Fayda ID). Everything else about the
- * organisation — legal name, address, contacts — is collected once, on the
- * onboarding screen shown at first sign-in, so is not asked here.
+ * What an NGO or FPO is asked at sign-up: just its representative's Fayda ID,
+ * like an Individual Farmer is asked for their own. The organisation itself —
+ * name, registration number, authorised representative, address, contacts — is
+ * collected once, on the "Complete Registration" screen shown at first sign-in.
  */
 export function OrganisationSignupForm({ values, setValue, errors, onFieldBlur }: SIFormProps) {
   return (
-    <div className="grid grid-cols-1 gap-6 mt-6">
-      <SITextField
+    <div className="mt-6">
+      <SIIdField
         values={values}
         setValue={setValue}
         errors={errors}
         onFieldBlur={onFieldBlur}
-        name="registrationNumber"
-        label="Registration Number"
+        name="representativeFaydaId"
+        label="Representative Fayda ID"
         required
-        placeholder="Enter your organisation's registration number"
-        hint="The registration or licence number issued to your organisation"
-        maxLength={60}
+        placeholder="Enter 16-digit Fayda ID"
       />
     </div>
   );

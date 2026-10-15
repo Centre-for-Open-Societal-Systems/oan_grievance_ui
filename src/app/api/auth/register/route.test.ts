@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackendAuthError } from '@/lib/oanAuthBackend';
 
 const callBackendAuth = vi.fn();
@@ -65,38 +65,26 @@ describe('POST /api/auth/register — submitter fields', () => {
     expect(forwardedBody()).toMatchObject({ submitter_type: 'Individual Farmer', fayda_id: FAYDA_ID });
   });
 
-  it('registers an NGO or FPO under its type with its registration number', async () => {
+  it('registers an NGO or FPO under its type with the representative’s Fayda ID and no registration number', async () => {
     for (const submitter_type of ['NGO', 'FPO']) {
       callBackendAuth.mockClear();
-      const res = await post({ submitter_type, registration_number: 'REG-2024/0042' });
+      // Even if a caller sends one, no registration number reaches the backend.
+      const res = await post({ submitter_type, fayda_id: FAYDA_ID, registration_number: 'REG-2024/0042' });
 
       expect(res.status).toBe(200);
-      expect(forwardedBody()).toMatchObject({ submitter_type, registration_number: 'REG-2024/0042' });
-      expect(forwardedBody()).not.toHaveProperty('fayda_id');
+      expect(forwardedBody()).toMatchObject({ submitter_type, fayda_id: FAYDA_ID });
+      expect(forwardedBody()).not.toHaveProperty('registration_number');
     }
   });
 
-  it('refuses an NGO / FPO without a valid registration number, or with a Fayda ID, without calling the backend', async () => {
-    const cases: Array<[Record<string, unknown>, string]> = [
-      [{ submitter_type: 'NGO' }, 'Registration number is required.'],
-      [{ submitter_type: 'FPO', registration_number: '!!' }, 'Registration number must be 3-60 letters or numbers; hyphens or slashes are allowed between them.'],
-      [{ submitter_type: 'NGO', registration_number: 'REG-1', fayda_id: FAYDA_ID }, 'An organisation has no Fayda ID.'],
-    ];
-    for (const [extra, message] of cases) {
-      const res = await post(extra);
+  it('refuses an NGO / FPO whose Fayda ID is not 16 digits, without calling the backend', async () => {
+    for (const submitter_type of ['NGO', 'FPO']) {
+      const res = await post({ submitter_type, fayda_id: '12345' });
       expect(res.status).toBe(400);
-      expect(await res.json()).toEqual({ message });
+      expect(await res.json()).toEqual({ message: 'Fayda ID must be a 16-digit number.' });
     }
     expect(callBackendAuth).not.toHaveBeenCalled();
   });
-
-  it('refuses a registration number from anyone who is not an NGO / FPO', async () => {
-    const res = await post({ submitter_type: 'Individual Farmer', fayda_id: FAYDA_ID, registration_number: 'REG-1' });
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ message: 'Only an NGO or FPO registers with a registration number.' });
-    expect(callBackendAuth).not.toHaveBeenCalled();
-  });
-
   it('refuses a type it does not support, without calling the backend', async () => {
     // Includes a staff-style value: registration must not be a way to pick one.
     for (const submitter_type of ['Grievance Admin', 'Cooperative', '', 42, null, { name: 'Development Agent' }]) {

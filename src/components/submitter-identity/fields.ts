@@ -55,9 +55,9 @@ export function submitsOnBehalfOfOthers(submitterType: string): boolean {
 /**
  * True for a submitter type that is an organisation the portal onboards in its
  * own step after the representative first signs in (NGO, and Cooperative /
- * FPO — see features/organisation). Registration collects nothing about such
- * an organisation: its legal name, tax number, address and contacts are asked
- * once, on that onboarding screen, rather than here and again there.
+ * FPO — see features/organisation). Registration sends only the account, the
+ * type and the representative's Fayda ID; the organisation's address, contacts
+ * and the rest are asked once, on that onboarding screen.
  */
 export function onboardsOrganisationAfterSignIn(submitterType: string): boolean {
   return organisationKindFor(submitterType) !== null;
@@ -110,7 +110,7 @@ const REGISTRATION_PATTERN = /^(?=.{3,60}$)[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*$/;
  * field set this module validates as a Fayda ID, rather than keeping its own
  * copy that could drift from this one.
  */
-export const ID_FIELD_KEYS = ["faydaId", "officialFaydaId"];
+export const ID_FIELD_KEYS = ["faydaId", "representativeFaydaId", "officialFaydaId"];
 
 /**
  * Why a non-empty value is wrong, in two phrasings: `hint` for the

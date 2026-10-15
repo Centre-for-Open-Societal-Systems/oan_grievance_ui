@@ -164,6 +164,16 @@ describe('SubmitGrievancePage for a registered NGO', () => {
     expect(screen.getByRole('combobox', { name: /Submitter Type/ })).toBeDisabled();
   });
 
+  it("also fills the representative's Fayda ID, which the account got at sign-up", async () => {
+    renderPage({ ...ngoUser, fayda_id: '6557092147530500' });
+
+    await screen.findByLabelText(/^Organisation Name/);
+    expect(document.getElementById('si-representativeFaydaId')).toBeInTheDocument();
+    // masked on screen by default, like every national-ID field
+    expect(document.getElementById('si-representativeFaydaId')).toHaveAttribute('type', 'password');
+    expect(document.getElementById('si-representativeFaydaId')).toHaveValue('6557092147530500');
+  });
+
   it('tells an organisation that is still In Review it cannot submit yet', async () => {
     renderPage(ngoUser);
     expect(await screen.findByText('Your organisation is awaiting verification')).toBeInTheDocument();

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
@@ -269,22 +269,22 @@ describe('Register — profile step', () => {
     expect(fields.fayda_id).toBe('6557092147530500');
   });
 
-  it('registers an NGO under its own type with its registration number — no Fayda ID', async () => {
+  it('registers an NGO under its own type with its representative’s Fayda ID alone', async () => {
     registerUser.mockResolvedValue(undefined);
     renderRegister();
     await completeAccountStep();
 
     fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
-    fireEvent.change(document.getElementById('si-registrationNumber')!, { target: { value: 'NGO-123' } });
+    fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
+    fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: '6557092147530500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
     const fields = registerUser.mock.calls[0]![0] as Record<string, unknown>;
     expect(fields.submitter_type).toBe('NGO');
-    expect(fields.registration_number).toBe('NGO-123');
-    expect(fields).not.toHaveProperty('fayda_id');
+    expect(fields.fayda_id).toBe('6557092147530500');
+    expect(fields).not.toHaveProperty('registration_number');
   });
-
   it('stays on the profile step with the backend’s message when the Fayda ID is already registered, keeping what was typed', async () => {
     const message = "A Submitter Profile with dedupe key 'fayda:6557…' is already registered under another account.";
     registerUser.mockImplementation(async () => {

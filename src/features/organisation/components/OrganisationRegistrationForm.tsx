@@ -226,6 +226,22 @@ export function OrganisationRegistrationForm({
           maxLength={60}
           required
         />
+        <SITextField
+          {...field}
+          name="representativeName"
+          label={t('fields.representativeName.label')}
+          placeholder={t('fields.representativeName.placeholder')}
+          required
+        />
+        {kind === 'fpo' && (
+          <SITextField
+            {...field}
+            name="memberCount"
+            label={t('fields.memberCount.label')}
+            placeholder={t('fields.memberCount.placeholder')}
+            maxLength={9}
+          />
+        )}
       </Section>
 
       <Section title={t('sections.address')}>

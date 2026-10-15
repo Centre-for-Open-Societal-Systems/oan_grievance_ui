@@ -20,6 +20,7 @@ vi.mock('@/features/auth/api/authApi', async (importOriginal) => ({
   registerUser: (...args: unknown[]) => registerUser(...args),
 }));
 
+import { loadSubmitterProfile } from '@/lib/submitterProfile';
 import { RegisterForm } from './RegisterForm';
 
 const VALID_PASSWORD = 'Str0ng!Passw0rd';
@@ -41,7 +42,17 @@ async function reachProfileStep() {
   await screen.findByText('Almost done!');
 }
 
-const REGISTRATION_NUMBER = /^Registration Number/;
+const REPRESENTATIVE_FAYDA = /^Representative Fayda ID/;
+const CONSENT = /I consent to providing my national ID/;
+const FAYDA_ID = '6557092147530500';
+
+// Everything the onboarding screen asks later — none of it belongs on the sign-up step.
+const ORGANISATION_LABELS = [
+  /^Organisation Name/,
+  /^Registration Number/,
+  /^Authorised Representative/,
+  /^Member Count Affected/,
+];
 
 describe('registering an NGO or FPO representative', () => {
   // Braces matter: a function returned from beforeEach is run by vitest as cleanup.
@@ -54,29 +65,41 @@ describe('registering an NGO or FPO representative', () => {
     vi.clearAllMocks();
   });
 
-  it.each([
-    ['NGO', 'NGO'],
-    ['Cooperative / FPO', 'FPO'],
-  ])('asks a %s for its registration number — and nothing about a national ID', async (optionName) => {
+  it.each([['NGO'], ['Cooperative / FPO']])(
+    'asks a %s for just its representative’s Fayda ID after the Submitter Type, with the ID consent',
+    async (optionName) => {
+      await reachProfileStep();
+      fireEvent.click(screen.getByRole('option', { name: optionName }));
+
+      expect(screen.getByLabelText(REPRESENTATIVE_FAYDA)).toBeInTheDocument();
+      expect(screen.getByLabelText(CONSENT)).toBeInTheDocument();
+      // Exactly one field besides the type: the organisation's own fields come after first sign-in.
+      for (const label of ORGANISATION_LABELS) expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+      expect(screen.getByText(/we'll ask for your organisation's details/i)).toBeInTheDocument();
+    }
+  );
+
+  it('changes the fields with the type chosen, and does not carry the ID across', async () => {
     await reachProfileStep();
+    fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
+    fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: FAYDA_ID } });
 
-    fireEvent.click(screen.getByRole('option', { name: optionName }));
+    fireEvent.click(screen.getByRole('option', { name: 'Individual Farmer' }));
+    expect(screen.queryByLabelText(REPRESENTATIVE_FAYDA)).not.toBeInTheDocument();
+    expect(document.getElementById('si-faydaId')).toHaveValue('');
 
-    expect(screen.getByLabelText(REGISTRATION_NUMBER)).toBeInTheDocument();
-    // Not the old organisation-name / representative / Fayda ID form, and no ID-consent box.
-    expect(screen.queryByLabelText(/Organisation Name/)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Fayda/)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/I consent to providing my national ID/)).not.toBeInTheDocument();
-    expect(screen.getByText(/we'll ask for the rest of your organisation's registration details/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('option', { name: 'Cooperative / FPO' }));
+    expect(document.getElementById('si-representativeFaydaId')).toHaveValue('');
   });
 
   it.each([
     ['NGO', 'NGO'],
     ['Cooperative / FPO', 'FPO'],
-  ])('registers a %s under its type with its registration number, and no Fayda ID', async (optionName, backendType) => {
+  ])('registers a %s with its type and the representative’s Fayda ID — and nothing else about the organisation', async (optionName, backendType) => {
     await reachProfileStep();
     fireEvent.click(screen.getByRole('option', { name: optionName }));
-    type(REGISTRATION_NUMBER, 'reg-2024/0042');
+    fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: FAYDA_ID } });
+    fireEvent.click(screen.getByLabelText(CONSENT));
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
@@ -87,63 +110,64 @@ describe('registering an NGO or FPO representative', () => {
       full_name: 'Almaz Tesfaye',
       phone_number: '+251911000000',
       submitter_type: backendType,
-      registration_number: 'REG-2024/0042',
+      fayda_id: FAYDA_ID,
     });
     expect(await screen.findByText(/Log in to register your organisation/)).toBeInTheDocument();
   });
 
-  it('will not register without a registration number, or with a malformed one', async () => {
+  it('remembers the type for the screens that follow, but never the Fayda ID', async () => {
+    await reachProfileStep();
+    fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
+    fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: FAYDA_ID } });
+    fireEvent.click(screen.getByLabelText(CONSENT));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
+
+    const saved = loadSubmitterProfile('almaz@greenhighlands.org');
+    expect(saved?.submitterType).toBe('ngo');
+    expect(saved?.identityValues).not.toHaveProperty('representativeFaydaId');
+  });
+
+  it('will not register without the Fayda ID or the consent, or with a malformed ID', async () => {
     await reachProfileStep();
     fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
 
+    // Continue stays off until the national-ID consent is given.
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    fireEvent.click(screen.getByLabelText(CONSENT));
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(screen.getByText('This field is required.')).toBeInTheDocument();
-    expect(document.getElementById('si-registrationNumber')).toHaveFocus();
+    expect(screen.getAllByText('This field is required.')).toHaveLength(1);
+    expect(document.getElementById('si-representativeFaydaId')).toHaveFocus();
 
-    type(REGISTRATION_NUMBER, '!!');
+    fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: '12345' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(screen.getByText(/Use 3-60 letters or numbers/)).toBeInTheDocument();
+    expect(screen.getByText(/exactly 16 digits/)).toBeInTheDocument();
     expect(registerUser).not.toHaveBeenCalled();
   });
 
-  it("shows the backend's refusal of the registration number on this step, where it can be fixed", async () => {
+  it("shows the backend's refusal of the Fayda ID on this step, where it can be fixed", async () => {
     registerUser.mockImplementation(async () => {
-      throw new Error("An organization with registration number 'REG-1' is already registered.");
+      throw new Error("A Submitter Profile with dedupe key 'fayda:6557…' is already registered.");
     });
     await reachProfileStep();
     fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
-    type(REGISTRATION_NUMBER, 'REG-1');
+    fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: FAYDA_ID } });
+    fireEvent.click(screen.getByLabelText(CONSENT));
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/already registered/);
     // Still on the profile step, with what was typed.
-    expect(screen.getByLabelText(REGISTRATION_NUMBER)).toHaveValue('REG-1');
+    expect(document.getElementById('si-representativeFaydaId')).toHaveValue(FAYDA_ID);
   });
 
-  it('shows the duplicate-number refusal the backend really sends (a dedupe-key message) on this step too', async () => {
-    registerUser.mockImplementation(async () => {
-      throw new Error("A Submitter Profile with dedupe key 'org:REG-1' is already registered under another account.");
-    });
-    await reachProfileStep();
-    fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
-    type(REGISTRATION_NUMBER, 'REG-1');
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(/already registered under another account/);
-    expect(screen.getByLabelText(REGISTRATION_NUMBER)).toHaveValue('REG-1');
-  });
-
-  it('still registers an individual farmer with their Fayda ID and no registration number', async () => {
+  it('still registers an individual farmer with their Fayda ID', async () => {
     await reachProfileStep();
     fireEvent.click(screen.getByRole('option', { name: 'Individual Farmer' }));
-    expect(screen.queryByLabelText(REGISTRATION_NUMBER)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
+    fireEvent.click(screen.getByLabelText(CONSENT));
     fireEvent.change(document.getElementById('si-faydaId')!, { target: { value: '1234567890123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
-    const sent = registerUser.mock.calls[0]![0];
-    expect(sent).toMatchObject({ submitter_type: 'Individual Farmer', fayda_id: '1234567890123456' });
-    expect(sent).not.toHaveProperty('registration_number');
+    expect(registerUser.mock.calls[0]![0]).toMatchObject({ submitter_type: 'Individual Farmer', fayda_id: '1234567890123456' });
   });
 });

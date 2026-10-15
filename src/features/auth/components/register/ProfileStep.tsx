@@ -18,11 +18,10 @@ import { onboardsOrganisationAfterSignIn, submitterTypeOptions } from '@/compone
 // form here the ID-consent box below isn't shown either — there is no national
 // ID being collected to consent to.
 //
-// `ngo` / `cooperative` are asked only for their registration number: the rest
-// of an organisation's details are collected once, on the onboarding screen its
-// representative is taken to after signing in (see `onboardsOrganisationAfterSignIn`),
-// so asking here too would mean typing the same organisation twice. A registration
-// number is not a national ID, so the ID-consent box below isn't shown for them.
+// `ngo` / `cooperative` are asked only for their representative's Fayda ID, which
+// registration sends with the type. The organisation's own details (name,
+// registration number, authorised representative, address, contacts) come on the
+// onboarding screen shown at first sign-in (see `onboardsOrganisationAfterSignIn`).
 const SUBMITTER_TYPE_FORMS: Record<string, ComponentType<SIFormProps>> = {
   individual: IndividualFarmerForm,
   cooperative: OrganisationSignupForm,
@@ -77,8 +76,7 @@ export function ProfileStep({
   onSubmit,
 }: ProfileStepProps) {
   const IdentityForm = SUBMITTER_TYPE_FORMS[submitterType];
-  // An organisation's form asks for a registration number, not a national ID.
-  const collectsNationalId = Boolean(IdentityForm) && !onboardsOrganisationAfterSignIn(submitterType);
+  const collectsNationalId = Boolean(IdentityForm);
   const t = useTranslations('register.profile');
 
   return (

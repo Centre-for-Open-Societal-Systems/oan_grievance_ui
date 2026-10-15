@@ -63,6 +63,10 @@ export interface OrganisationRegistrationPayload {
   brand_name?: string;
   /** Sent under the name the registration screen uses; the backend stores it as `registration_number`. */
   tax_registration_number: string;
+  /** The authorised representative; the backend defaults it to the account's name when omitted. */
+  representative_name?: string;
+  /** Members affected — Cooperative / FPO only, a whole number from 0. */
+  members_affected?: number;
   street_address: string;
   kebele?: string;
   woreda?: string;
@@ -96,6 +100,9 @@ export function toRegistrationPayload(kind: OrganisationKind, values: Organisati
     entity_type: values.entityType.trim(),
     ...optional('brand_name', values.brandName),
     tax_registration_number: values.taxId.trim().toUpperCase(),
+    ...optional('representative_name', values.representativeName),
+    // Only an FPO has a member count; an NGO's form doesn't show it, so it is never sent for one.
+    ...(kind === 'fpo' && values.memberCount.trim() ? { members_affected: Number(values.memberCount.trim()) } : {}),
     street_address: values.streetAddress.trim(),
     ...optional('kebele', values.kebele),
     ...optional('woreda', values.woreda),
@@ -140,6 +147,8 @@ export const BACKEND_FIELD_TO_FORM_FIELD: Record<string, OrganisationField> = {
   entity_type: 'entityType',
   tax_registration_number: 'taxId',
   registration_number: 'taxId',
+  representative_name: 'representativeName',
+  members_affected: 'memberCount',
   street_address: 'streetAddress',
   kebele: 'kebele',
   woreda: 'woreda',

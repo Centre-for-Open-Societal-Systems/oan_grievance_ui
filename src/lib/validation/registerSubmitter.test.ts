@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import { registerSubmitterFieldsSchema } from './registerSubmitter';
 
 describe('registerSubmitterFieldsSchema', () => {
@@ -36,43 +36,21 @@ describe('registerSubmitterFieldsSchema', () => {
     }
   });
 
-  it('accepts an NGO / FPO with its registration number, trimmed', () => {
+  it('accepts an NGO or FPO with its representative’s Fayda ID', () => {
     for (const submitter_type of ['NGO', 'FPO']) {
-      expect(registerSubmitterFieldsSchema.parse({ submitter_type, registration_number: '  REG-2024/0042 ' })).toEqual({
-        submitter_type,
-        registration_number: 'REG-2024/0042',
-      });
+      const input = { submitter_type, fayda_id: '6557092147530500' };
+      expect(registerSubmitterFieldsSchema.parse(input)).toEqual(input);
     }
   });
 
-  it('requires an NGO / FPO to have a registration number and forbids it a Fayda ID', () => {
-    const missing = registerSubmitterFieldsSchema.safeParse({ submitter_type: 'NGO' });
-    expect(missing.error?.issues[0]?.message).toBe('Registration number is required.');
-
-    const withFayda = registerSubmitterFieldsSchema.safeParse({
-      submitter_type: 'FPO',
-      registration_number: 'REG-1',
+  it('never forwards a registration number: an NGO / FPO registers without one', () => {
+    const parsed = registerSubmitterFieldsSchema.parse({
+      submitter_type: 'NGO',
       fayda_id: '6557092147530500',
+      registration_number: 'REG-2024/0042',
     });
-    expect(withFayda.error?.issues[0]?.message).toBe('An organisation has no Fayda ID.');
+    expect(parsed).toEqual({ submitter_type: 'NGO', fayda_id: '6557092147530500' });
   });
-
-  it('forbids a registration number for every other type', () => {
-    for (const submitter_type of ['Individual Farmer', 'Development Agent', undefined]) {
-      const result = registerSubmitterFieldsSchema.safeParse({ submitter_type, registration_number: 'REG-1' });
-      expect(result.error?.issues[0]?.message).toBe('Only an NGO or FPO registers with a registration number.');
-    }
-  });
-
-  it('applies the backend’s registration-number rule: 3-60 letters/digits, single - or / between groups', () => {
-    for (const registration_number of ['123', 'REG-2024-0042', 'COOP/XX/1', 'a'.repeat(60)]) {
-      expect(registerSubmitterFieldsSchema.safeParse({ submitter_type: 'NGO', registration_number }).success).toBe(true);
-    }
-    for (const registration_number of ['12', 'a'.repeat(61), 'AB 12', 'AB--12', '-AB12', 'AB12-', '', 1234567]) {
-      expect(registerSubmitterFieldsSchema.safeParse({ submitter_type: 'NGO', registration_number }).success).toBe(false);
-    }
-  });
-
   it('rejects an unsupported type', () => {
     expect(registerSubmitterFieldsSchema.safeParse({ submitter_type: 'Cooperative' }).success).toBe(false);
   });

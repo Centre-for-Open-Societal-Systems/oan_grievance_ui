@@ -7,11 +7,10 @@
 // registered; there is no endpoint to change it afterwards.
 //
 // Only types the backend can register from the fields this form collects are
-// listed. Individual Farmer needs a Fayda ID, which the profile step collects.
-// An NGO or FPO needs its registration number instead (and has no Fayda ID).
-// Woreda/Kebele Body and Cooperative-as-its-own-type have no entry: a Woreda/Kebele
-// Body registers with the backend's default type, and the UI's single
-// "Cooperative / FPO" option is registered as FPO.
+// listed. Individual Farmer, NGO and FPO each register with a Fayda ID (an
+// organisation's is its representative's), which the profile step collects.
+// Woreda/Kebele Body has no entry: it registers with the backend's default type,
+// and the UI's single "Cooperative / FPO" option is registered as FPO.
 import { z } from 'zod';
 
 /** The backend type names registration may request — the register route refuses anything else. */
@@ -27,9 +26,6 @@ const BACKEND_TYPE_BY_SUBMITTER_TYPE: Record<string, (typeof REGISTRABLE_SUBMITT
   ngo: 'NGO',
   cooperative: 'FPO',
 };
-
-/** Types the backend identifies by an organisation registration number rather than a Fayda ID. */
-export const ORGANISATION_SUBMITTER_TYPES = ['NGO', 'FPO'] as const;
 
 /** The backend type name to register `submitterType` as, or undefined to leave it to the backend's default. */
 export function backendSubmitterTypeFor(submitterType: string): string | undefined {

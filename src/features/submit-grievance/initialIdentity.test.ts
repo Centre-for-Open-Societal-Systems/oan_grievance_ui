@@ -117,16 +117,16 @@ describe('a registered NGO / FPO', () => {
     expect(buildInitialIdentityValues(ORG_USER, saved, 'ngo').orgName).toBe('Test NGO Org');
   });
 
-  it('never carries a Fayda ID into an organisation — not from an old snapshot, not from the account', () => {
-    const saved = {
-      submitterType: 'ngo',
-      identityValues: { representativeFaydaId: '1234567890123456', faydaId: '1234567890123456' },
-    };
+  it("fills the representative's Fayda ID from the account — as representativeFaydaId, never as the farmer's faydaId", () => {
     for (const submitterType of ['ngo', 'cooperative']) {
-      const values = buildInitialIdentityValues({ ...ORG_USER, fayda_id: 'ET-FAYDA-111' }, saved, submitterType);
-      expect(values).not.toHaveProperty('representativeFaydaId');
+      const values = buildInitialIdentityValues({ ...ORG_USER, fayda_id: '6557092147530500' }, null, submitterType);
+      expect(values.representativeFaydaId).toBe('6557092147530500');
       expect(values).not.toHaveProperty('faydaId');
     }
+  });
+
+  it('leaves the representative Fayda ID empty when the account holds none', () => {
+    expect(buildInitialIdentityValues(ORG_USER, null, 'ngo')).not.toHaveProperty('representativeFaydaId');
   });
 
   it('still carries the Fayda ID for an individual farmer', () => {

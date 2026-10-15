@@ -85,10 +85,9 @@ export function buildInitialIdentityValues(
   }
   Object.assign(initial, organisationIdentityValues(user, submitterType));
   if (organisationKindFor(submitterType) !== null) {
-    // An NGO / FPO has no Fayda ID. A registration snapshot saved before that field was
-    // removed may still hold one, and the account's own would belong to a person, not to
-    // the organisation — neither goes into the organisation's Step 1.
-    delete initial.representativeFaydaId;
+    // The Fayda ID an NGO / FPO's account holds is its representative's, given at sign-up,
+    // and the organisation form calls that field `representativeFaydaId` (not `faydaId`).
+    if (user?.fayda_id) initial.representativeFaydaId = user.fayda_id;
     delete initial.faydaId;
   }
   return initial;
@@ -103,8 +102,8 @@ export function buildInitialIdentityValues(
  *
  * Empty unless Step 1 is on an organisation type: an NGO representative who
  * switches the form to another type is not filing as the organisation. Without a
- * registered organisation yet, only the sign-up registration number is known.
- * There is no Fayda ID to fill: an organisation has none.
+ * registered organisation yet, only a registration number the backend already
+ * holds is known. (The representative's Fayda ID is filled in above.)
  */
 function organisationIdentityValues(user: User | null, submitterType: string): Record<string, string> {
   if (!user || organisationKindFor(submitterType) === null) return {};

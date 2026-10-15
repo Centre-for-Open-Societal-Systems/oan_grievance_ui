@@ -32,34 +32,33 @@ import { SuccessStep } from './register/SuccessStep';
 // (see `submitsOnBehalfOfOthers`) — an agent files for other people, so the
 // name/ID/phone/email fields on its form describe the farmer, not the agent.
 //
-// An NGO / FPO asks for only its registration number here (see
-// OrganisationSignupForm): its legal name and representative are not part of
-// sign-up (the representative is the account holder, the legal name is given on
-// the onboarding screen after the first sign-in), so those two are listed too, to
-// be skipped by the required-field check rather than demanded.
+// An NGO / FPO is asked only for its representative's Fayda ID here (see
+// OrganisationSignupForm); the organisation's own fields are collected on the
+// onboarding screen at first sign-in, so they are listed too — skipped by the
+// required-field check rather than demanded.
+const ORGANISATION_FIELDS_ASKED_LATER = ['orgName', 'registrationNumber', 'representativeName', 'memberCount'];
 const ALREADY_COLLECTED_FIELDS_BY_TYPE: Record<string, string[]> = {
   individual: ['fullName', 'phoneNumber', 'email'],
-  cooperative: ['fullName', 'phoneNumber', 'email', 'orgName', 'representativeName', 'memberCount'],
-  ngo: ['fullName', 'phoneNumber', 'email', 'orgName', 'representativeName'],
+  cooperative: ['fullName', 'phoneNumber', 'email', ...ORGANISATION_FIELDS_ASKED_LATER],
+  ngo: ['fullName', 'phoneNumber', 'email', ...ORGANISATION_FIELDS_ASKED_LATER],
   woreda_kebele: ['fullName', 'phoneNumber', 'email'],
 };
 
 // The identity field holding each type's national ID, which registration sends
-// as `fayda_id`. An Individual Farmer registers with their own; a Woreda/Kebele
-// Body, which still registers under the default type, with its official's. An NGO
-// or FPO has none — it is identified by its registration number (below).
+// as `fayda_id`. An Individual Farmer registers with their own; an NGO or FPO
+// with its representative's; a Woreda/Kebele Body, which still registers under
+// the default type, with its official's.
 const FAYDA_FIELD_BY_TYPE: Record<string, string> = {
   individual: 'faydaId',
+  cooperative: 'representativeFaydaId',
+  ngo: 'representativeFaydaId',
   woreda_kebele: 'officialFaydaId',
 };
 
-// Sent as `registration_number` — what the backend identifies an NGO / FPO by.
-const REGISTRATION_NUMBER_FIELD = 'registrationNumber';
-
-// A rejection the profile step caused (a duplicate or malformed Fayda ID or
-// registration number, an unknown type) is shown there, where it can be fixed;
-// anything else is about the account step's fields.
-const PROFILE_REJECTION_PATTERN = /fayda|submitter type|dedupe key|registration (number|\/ certificate)|organi[sz]ation/i;
+// A rejection the profile step caused (a duplicate or malformed Fayda ID, an
+// unknown type) is shown there, where it can be fixed; anything else is about
+// the account step's fields.
+const PROFILE_REJECTION_PATTERN = /fayda|submitter type|dedupe key/i;
 
 type RegisterStep = 'account' | 'profile' | 'success';
 
@@ -184,9 +183,6 @@ export function RegisterForm() {
     try {
       const backendType = backendSubmitterTypeFor(submitterType);
       const faydaId = identityValues[FAYDA_FIELD_BY_TYPE[submitterType] ?? '']?.trim();
-      const registrationNumber = onboardsOrganisationAfterSignIn(submitterType)
-        ? identityValues[REGISTRATION_NUMBER_FIELD]?.trim().toUpperCase()
-        : undefined;
       await registerUser({
         email: email.trim(),
         password,
@@ -194,7 +190,6 @@ export function RegisterForm() {
         phone_number: `${countryCode}${stripLeadingZero(phoneNumber)}`,
         ...(backendType ? { submitter_type: backendType } : {}),
         ...(faydaId ? { fayda_id: faydaId } : {}),
-        ...(registrationNumber ? { registration_number: registrationNumber } : {}),
       });
       return true;
     } catch (err) {
@@ -248,8 +243,8 @@ export function RegisterForm() {
       identity.clear();
       profileToSave = { submitterType, identityValues: {} };
     } else {
-      // Includes an NGO / FPO, whose one required field here is its registration number;
-      // the rest of its details are collected on the onboarding screen after first sign-in.
+      // Includes an NGO / FPO; the rest of its details are collected on the onboarding
+      // screen after first sign-in.
       if (!identity.validateAll([typeCheck])) return;
       profileToSave = { submitterType, identityValues: { ...identityValues, ...accountStepValues } };
     }

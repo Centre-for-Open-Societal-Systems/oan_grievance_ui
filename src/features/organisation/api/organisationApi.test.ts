@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildInitialOrganisationValues } from '../lib/defaults';
 import { extractFieldErrors } from '@/lib/api/fetchApi';
 import {
@@ -75,6 +75,8 @@ describe('toRegistrationPayload', () => {
     brandName: ' Acme ',
     entityType: 'Primary Cooperative',
     taxId: 'et12345678',
+    representativeName: ' Almaz Tesfaye ',
+    memberCount: ' 120 ',
     streetAddress: 'Main St',
     zone: 'Z',
     region: 'R',
@@ -83,13 +85,15 @@ describe('toRegistrationPayload', () => {
     phoneNumber: '0911234567',
   };
 
-  it('trims, upper-cases the tax number, adds a scheme to the website and builds an E.164 phone', () => {
+  it('trims, upper-cases the registration number, adds a scheme to the website, builds an E.164 phone and a numeric member count', () => {
     expect(toRegistrationPayload('fpo', values)).toEqual({
       legal_name: 'Acme Farmers',
       org_type: 'FPO',
       entity_type: 'Primary Cooperative',
       brand_name: 'Acme',
       tax_registration_number: 'ET12345678',
+      representative_name: 'Almaz Tesfaye',
+      members_affected: 120,
       street_address: 'Main St',
       zone: 'Z',
       region: 'R',
@@ -108,6 +112,8 @@ describe('toRegistrationPayload', () => {
     expect(payload).not.toHaveProperty('website');
     expect(payload).not.toHaveProperty('kebele');
     expect(payload.org_type).toBe('NGO');
+    // An NGO has no member count, even if the value is still in the form state.
+    expect(payload).not.toHaveProperty('members_affected');
   });
 });
 

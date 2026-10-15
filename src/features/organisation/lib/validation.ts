@@ -1,6 +1,5 @@
 import { EMAIL_MAX_LENGTH, EMAIL_PATTERN } from '@/lib/validation/fieldRules';
 import { isEthiopianDialCode, isValidLocalPhoneForCountry } from '@/lib/validation/phone';
-import { REGISTRATION_NUMBER_PATTERN } from '@/lib/validation/registerSubmitter';
 
 // Rules for the organisation onboarding form. Pure functions returning *what is
 // wrong* (a code the form turns into translated copy), not the sentence itself —
@@ -11,6 +10,8 @@ export const ORGANISATION_FIELDS = [
   'brandName',
   'entityType',
   'taxId',
+  'representativeName',
+  'memberCount',
   'streetAddress',
   'kebele',
   'woreda',
@@ -29,7 +30,18 @@ export type OrganisationField = (typeof ORGANISATION_FIELDS)[number];
 export type OrganisationValues = Record<OrganisationField | 'phoneCode', string>;
 
 export type OrganisationProblem =
-  | { code: 'required' | 'taxId' | 'email' | 'phone' | 'phoneEthiopia' | 'postalCode' | 'website' | 'entityType' }
+  | {
+      code:
+        | 'required'
+        | 'taxId'
+        | 'email'
+        | 'phone'
+        | 'phoneEthiopia'
+        | 'postalCode'
+        | 'website'
+        | 'entityType'
+        | 'memberCount';
+    }
   | { code: 'tooLong'; max: number };
 
 export type OrganisationProblems = Partial<Record<OrganisationField, OrganisationProblem>>;
@@ -37,12 +49,15 @@ export type OrganisationProblems = Partial<Record<OrganisationField, Organisatio
 /** Frappe's Data fieldtype default — what a name or address line can hold. */
 export const TEXT_MAX_LENGTH = 140;
 export const WEBSITE_MAX_LENGTH = 255;
+/** The backend's ceiling for a Cooperative / FPO's member count (`MEMBERS_MAX` in oan_grievance_service). */
+export const MEMBER_COUNT_MAX = 100_000_000;
 
-/** Fields the reference design marks required. */
+/** Fields the reference design marks required, plus the authorised representative. */
 const REQUIRED_FIELDS: readonly OrganisationField[] = [
   'legalName',
   'entityType',
   'taxId',
+  'representativeName',
   'streetAddress',
   'zone',
   'region',
@@ -56,6 +71,7 @@ const REQUIRED_FIELDS: readonly OrganisationField[] = [
 const TEXT_FIELDS: readonly OrganisationField[] = [
   'legalName',
   'brandName',
+  'representativeName',
   'streetAddress',
   'kebele',
   'woreda',
@@ -65,13 +81,14 @@ const TEXT_FIELDS: readonly OrganisationField[] = [
 ];
 
 /**
- * The organisation's registration number — the form's `taxId` field. The same
- * identifier the account signed up with (`registration_number`), so it follows
- * the backend's rule: 3-60 letters and digits, with single `-` or `/` between
- * groups. (The reference design's "9-10 characters" tax-number hint is narrower
- * than that, and would reject a number the backend accepted at sign-up.)
+ * The organisation's registration number — the form's `taxId` field. It follows
+ * the backend's rule (`REGISTRATION_PATTERN` in oan_grievance_service's
+ * services/identity.py, applied by `POST /orgs`): 3-60 letters and digits, with
+ * single `-` or `/` between groups. The same number is asked at sign-up, so the
+ * reference design's narrower "9-10 characters" tax-number hint would reject
+ * one typed there.
  */
-export const TAX_ID_PATTERN = REGISTRATION_NUMBER_PATTERN;
+export const TAX_ID_PATTERN = /^(?=.{3,60}$)[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*$/;
 
 /** 3-10 letters/digits, with single spaces or hyphens between — Ethiopia's own codes are 4 digits, other countries' vary. */
 export const POSTAL_CODE_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9]|[ -](?=[A-Za-z0-9])){1,8}[A-Za-z0-9]$/;
@@ -123,6 +140,9 @@ export function validateOrganisationField(
       return TAX_ID_PATTERN.test(value) ? null : { code: 'taxId' };
     case 'postalCode':
       return POSTAL_CODE_PATTERN.test(value) ? null : { code: 'postalCode' };
+    case 'memberCount':
+      // A whole number from 0 — what `members_affected` takes.
+      return /^\d+$/.test(value) && Number(value) <= MEMBER_COUNT_MAX ? null : { code: 'memberCount' };
     case 'website':
       if (value.length > WEBSITE_MAX_LENGTH) return { code: 'tooLong', max: WEBSITE_MAX_LENGTH };
       return normaliseWebsite(value) ? null : { code: 'website' };

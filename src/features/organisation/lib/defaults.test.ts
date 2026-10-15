@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import { buildInitialOrganisationValues } from './defaults';
 
 describe('buildInitialOrganisationValues', () => {
@@ -8,13 +8,16 @@ describe('buildInitialOrganisationValues', () => {
     expect(values.phoneCode).toBe('+251');
     expect(values.legalName).toBe('');
     expect(values.email).toBe('');
+    expect(values.representativeName).toBe('');
+    expect(values.memberCount).toBe('');
   });
 
-  it('starts with the registration number the account signed up with, so it is not typed twice', () => {
-    expect(buildInitialOrganisationValues({ email: 'rep@ngo.org', registration_number: 'REG-2024-0042' }).taxId).toBe(
-      'REG-2024-0042'
-    );
-    expect(buildInitialOrganisationValues({ email: 'rep@ngo.org' }).taxId).toBe('');
+  it('starts the authorised representative as the account holder, and leaves the organisation fields to be typed', () => {
+    const values = buildInitialOrganisationValues({ email: 'rep@ngo.org', full_name: 'Almaz Tesfaye' });
+    expect(values.representativeName).toBe('Almaz Tesfaye');
+    expect(values.legalName).toBe('');
+    expect(values.taxId).toBe('');
+    expect(values.memberCount).toBe('');
   });
 
   it("pre-fills the contact from the account's email and a combined mobile number", () => {

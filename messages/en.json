@@ -16,7 +16,7 @@
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
       "fieldRequired": "This field is required.",
-      "organisationNotice": "After you sign in, we'll ask for the rest of your organisation's registration details — legal name, address and contacts."
+      "organisationNotice": "After you sign in, we'll ask for your organisation's details — name, registration number, authorised representative, address and contacts."
     },
     "success": {
       "title": "Account Created!",
@@ -45,7 +45,7 @@
       "contact": "Contact Details"
     },
     "fields": {
-      "legalName": { "label": "Legal entity name", "placeholder": "Enter Legal entity name" },
+      "legalName": { "label": "Organisation Name", "placeholder": "Enter Organisation Name" },
       "brandName": {
         "label": "Brand / display name",
         "placeholder": "Enter if different from legal name",
@@ -53,10 +53,12 @@
       },
       "entityType": { "label": "Entity type", "placeholder": "Select Entity type" },
       "taxId": {
-        "label": "Registration number",
-        "placeholder": "Enter Registration number",
+        "label": "Registration Number",
+        "placeholder": "Enter Registration Number",
         "hint": "The registration or licence number issued to your organisation"
       },
+      "representativeName": { "label": "Authorised Representative", "placeholder": "Enter Rep's full name" },
+      "memberCount": { "label": "Member Count Affected", "placeholder": "Enter Number of members affected" },
       "streetAddress": { "label": "Street address", "placeholder": "Enter Street address" },
       "kebele": { "label": "Kebele / Village", "placeholder": "Enter Kebele / Village" },
       "woreda": { "label": "Woreda / District", "placeholder": "Enter Woreda / District" },
@@ -98,6 +100,7 @@
       "tooLong": "Use {max} characters or fewer.",
       "entityType": "Choose one of the listed entity types.",
       "taxId": "Use 3-60 letters or numbers; hyphens or slashes are allowed between them.",
+      "memberCount": "Enter a whole number of members, e.g. 120.",
       "postalCode": "Enter a valid postal code, e.g. 1000.",
       "website": "Enter a valid website address, e.g. www.example.org.",
       "email": "Enter a valid email address, e.g. name@example.com.",
@@ -110,10 +113,10 @@
     },
     "status": {
       "details": {
-        "legalName": "Legal entity name",
+        "legalName": "Organisation Name",
         "brandName": "Brand / display name",
         "entityType": "Entity type",
-        "registrationNumber": "Registration number",
+        "registrationNumber": "Registration Number",
         "reason": "Note from the administrator",
         "status": "Status"
       },

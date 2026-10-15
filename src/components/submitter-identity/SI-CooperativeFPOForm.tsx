@@ -1,15 +1,14 @@
 "use client";
 
-import { SIPhoneFormField, SITextField } from "./SI-fields";
+import { SIIdField, SIPhoneFormField, SITextField } from "./SI-fields";
 import type { SIFormProps } from "./SI-types";
 
-// No Fayda ID of any kind: a cooperative / FPO is identified by its registration
-// number, and the backend holds no national ID for an organisation or its representative.
 export const FIELDS = [
   { key: "orgName", label: "Organisation Name", required: true },
   { key: "registrationNumber", label: "Registration Number", required: true },
   { key: "representativeName", label: "Authorised Representative", required: true },
   { key: "memberCount", label: "Member Count Affected", required: false },
+  { key: "representativeFaydaId", label: "Representative Fayda ID", required: true },
   { key: "phoneNumber", label: "Contact Mobile", required: true },
   { key: "email", label: "Contact Email ID", required: false },
 ];
@@ -48,6 +47,14 @@ export function CooperativeFPOForm({ values, setValue, hiddenFields = [], errors
         name="memberCount"
         label="Member Count Affected"
         placeholder="Enter Number of members affected"
+      />
+
+      <SIIdField
+        {...field}
+        name="representativeFaydaId"
+        label="Representative Fayda ID"
+        required
+        placeholder="Enter 16-digit Fayda ID"
       />
 
       {!hiddenFields.includes("phoneNumber") && (
