@@ -359,10 +359,13 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                   onChange={(value) => {
                     setDepartment(value);
                     setError('department', null);
-                    // The wired category list is department-specific — a category picked
-                    // for the old department may not even have a desk under the new one.
-                    setServiceCategories([]);
-                    setError('serviceCategories', null);
+                    // Below L3 the wired category list is department-specific — a category
+                    // picked for the old department may not even have a desk under the new
+                    // one. An L3 picks from every category, so the picks stay valid.
+                    if (level !== 'L3') {
+                      setServiceCategories([]);
+                      setError('serviceCategories', null);
+                    }
                   }}
                   placeholder="Select Department"
                 />

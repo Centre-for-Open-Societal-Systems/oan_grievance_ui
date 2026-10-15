@@ -108,4 +108,15 @@ describe('AddNodalOfficerModal for Category Admins', () => {
     const inputsCategoryBtn = await screen.findByRole('button', { name: 'Inputs' });
     expect(inputsCategoryBtn).toBeTruthy();
   });
+
+  it('keeps the categories already picked when the department is chosen afterwards', async () => {
+    renderModal({ level: 'L3' });
+
+    // A Category Admin's list is every category, not the department's, so it stays valid.
+    fireEvent.click(await screen.findByRole('button', { name: 'Inputs' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Department/ }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Ministry of Agriculture' }));
+
+    expect(screen.getByRole('button', { name: 'Inputs' }).className).toContain('bg-[#16A34A]');
+  });
 });
