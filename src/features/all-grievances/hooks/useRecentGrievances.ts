@@ -17,7 +17,9 @@ interface RecentGrievancesState {
 /**
  * The newest grievances the caller may see — the same `GET /api/v1/grievances`
  * the All Grievances table reads, so its RBAC scoping (an officer's desks, an
- * admin's everything) applies here unchanged.
+ * admin's everything) applies here unchanged. The service lists escalated cases
+ * first and orders by creation within each group, so an escalated case can outrank
+ * a newer one here.
  */
 export function useRecentGrievances(limit = RECENT_GRIEVANCES_LIMIT): RecentGrievancesState {
   const [grievances, setGrievances] = useState<Grievance[]>([]);
