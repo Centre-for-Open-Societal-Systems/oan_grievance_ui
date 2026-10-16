@@ -338,6 +338,21 @@
       "loadFailed": "የቅርብ ጊዜ ቅሬታዎችን መጫን አልተቻለም።",
       "retry": "እንደገና ይሞክሩ",
       "empty": "እስካሁን ምንም ቅሬታ የለም።"
+    },
+    "overview": {
+      "loading": "የዳሽቦርድ ስታቲስቲክስ በመጫን ላይ…",
+      "loadFailed": "የዳሽቦርድ ስታቲስቲክስን መጫን አልተቻለም።",
+      "forbidden": "የዳሽቦርድ ስታቲስቲክስን የማየት ፈቃድ የለዎትም።",
+      "retry": "እንደገና ይሞክሩ",
+      "viewAll": "ሁሉንም ይመልከቱ",
+      "escalatedBanner": "{count, plural, one {<strong># ወደ ከፍተኛ ደረጃ የተሸጋገረ ቅሬታ</strong> አስቸኳይ የከፍተኛ ባለሙያ ትኩረት ይፈልጋል።} other {<strong># ወደ ከፍተኛ ደረጃ የተሸጋገሩ ቅሬታዎች</strong> አስቸኳይ የከፍተኛ ባለሙያ ትኩረት ይፈልጋሉ።}}",
+      "retrying": "እንደገና በመሞከር ላይ…",
+      "sectionUnavailable": "ይህን ክፍል መጫን አልተቻለም።",
+      "escalatedUnavailable": "ወደ ከፍተኛ ደረጃ የተሸጋገሩ ቅሬታዎችን ብዛት መጫን አልተቻለም።",
+      "unavailableValue": "አይገኝም",
+      "uncategorised": "ያልተመደበ",
+      "otherCategories": "{count, plural, one {# ሌላ ምድብ} other {# ሌሎች ምድቦች}}",
+      "noCategories": "በምድብ የሚመደብ ቅሬታ እስካሁን የለም።"
     }
   },
   "login": {
