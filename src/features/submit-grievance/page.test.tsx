@@ -162,10 +162,23 @@ describe('SubmitGrievancePage for a registered NGO', () => {
     expect(await screen.findByText('Your organisation is awaiting verification')).toBeInTheDocument();
   });
 
+  it('holds back an NGO or FPO account that has not registered its organisation, pointing it to the right screen', async () => {
+    const { organisation: _registered, ...unregistered } = ngoUser;
+    void _registered;
+    const first = renderPage(unregistered);
+    expect(await screen.findByText('Register your organisation first')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Register your organisation' })).toHaveAttribute('href', '/ngo');
+    first.unmount();
+
+    renderPage({ ...unregistered, type: 'FPO' });
+    expect(await screen.findByRole('link', { name: 'Register your organisation' })).toHaveAttribute('href', '/fpo');
+  });
+
   it('shows no such notice, and leaves the type editable, for a farmer', async () => {
     renderPage();
     await screen.findByText('Submitter Identity', { selector: 'h3' });
     expect(screen.queryByText('Your organisation is awaiting verification')).not.toBeInTheDocument();
+    expect(screen.queryByText('Register your organisation first')).not.toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /Submitter Type/ })).toBeEnabled();
   });
 });

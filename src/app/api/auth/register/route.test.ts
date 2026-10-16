@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackendAuthError } from '@/lib/oanAuthBackend';
 
 const callBackendAuth = vi.fn();

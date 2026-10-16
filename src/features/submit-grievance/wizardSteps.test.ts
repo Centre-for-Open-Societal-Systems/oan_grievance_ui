@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { firstIncompleteStep, getDetailsErrors, type WizardFields } from './wizardSteps';
 
 const area = (id: string) => ({ id, name: id, pathCode: '' });

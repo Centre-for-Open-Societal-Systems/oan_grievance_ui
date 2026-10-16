@@ -16,7 +16,9 @@
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
       "fieldRequired": "This field is required.",
-      "organisationNotice": "After you sign in, we'll ask for your organisation's details — name, registration number, authorised representative, address and contacts."
+      "organisationNotice": "After you sign in, we'll ask for your organisation's details — name, registration number, authorised representative, address and contacts.",
+      "faydaAlreadyRegistered": "This Fayda ID is already registered to another account.",
+      "identityAlreadyRegistered": "These details are already registered to another account."
     },
     "success": {
       "title": "Account Created!",
@@ -93,7 +95,12 @@
       "back": "Back",
       "backToSignIn": "Back to Sign In",
       "register": "Register Organization",
-      "retry": "Try again"
+      "retry": "Try again",
+      "continueToSubmit": "Continue to Submit Grievance"
+    },
+    "metadata": {
+      "ngo": "NGO Registration | Grievance Management Dashboard",
+      "fpo": "FPO Registration | Grievance Management Dashboard"
     },
     "errors": {
       "required": "This field is required.",
@@ -110,7 +117,8 @@
       "generic": "We could not complete that. Please try again.",
       "forbidden": "Your account is not permitted to register an organisation.",
       "connection": "We could not reach the server. Please try again in a moment.",
-      "session": "Your session has expired. Please sign in again."
+      "session": "Your session has expired. Please sign in again.",
+      "profileRefresh": "Your organisation is registered, but we could not refresh your profile. Please try again before you submit a grievance."
     },
     "status": {
       "details": {
@@ -147,7 +155,15 @@
       "suspendedTitle": "Your organisation is suspended",
       "suspendedBody": "{name} is suspended, so grievances cannot be submitted for it. Please contact the platform administrator.",
       "reason": "Note from the administrator: {reason}",
-      "submitBlocked": "You can't submit until your organisation is verified. Your details can be saved as a draft."
+      "submitBlocked": "You can't submit until your organisation is verified. Your details can be saved as a draft.",
+      "unregisteredTitle": "Register your organisation first",
+      "unregisteredBody": "Your account is for an organisation that has not been registered yet. You can prepare and save your grievance now, but it can only be submitted once your organisation is registered and verified.",
+      "unregisteredAction": "Register your organisation",
+      "unregisteredSubmitBlocked": "You can't submit until your organisation is registered and verified. Your details can be saved as a draft."
+    },
+    "reviewStep": {
+      "submit": "Submit Grievance",
+      "submitting": "Submitting…"
     },
     "identityStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",

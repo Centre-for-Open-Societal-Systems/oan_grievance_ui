@@ -18,13 +18,13 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getMyOrganisation, type Organisation } from '../api/organisationApi';
 import { buildInitialOrganisationValues } from '../lib/defaults';
-import { backendMessageOf, knownFailureOf } from '../lib/errors';
+import { backendMessageOf, knownFailureOf, type KnownFailure } from '../lib/errors';
 import { OrganisationRegistrationForm } from './OrganisationRegistrationForm';
 import { OrganisationStatusCard } from './OrganisationStatusCard';
 
 type PageState =
   | { phase: 'loading' }
-  | { phase: 'error'; message: string }
+  | { phase: 'error'; known: KnownFailure | null; backendMessage: string | null }
   | { phase: 'register' }
   | { phase: 'registered'; organisation: Organisation };
 
@@ -41,31 +41,40 @@ export function OrganisationPage({ kind }: { kind: OrganisationKind }) {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectUser);
   const [state, setState] = useState<PageState>({ phase: 'loading' });
+  // Set when the organisation registered but the profile could not be re-read afterwards.
+  const [profileStale, setProfileStale] = useState(false);
+  const [continuing, setContinuing] = useState(false);
+
+  // Which kind of onboarding screen this account belongs on is decided by one source at a time:
+  // the account's own type if it has one, and only otherwise the organisation on record. Were
+  // both consulted, an account typed NGO whose organisation was recorded as an FPO would send
+  // each page to the other forever.
+  const ownKind = organisationKindOf(user);
 
   // A representative who opens the other kind's URL is sent to their own — the
   // route guard in proxy.ts only sees roles, so it cannot tell NGO from FPO.
   // A user with no organisation type at all (a farmer who typed the URL) stays:
   // choosing to register an organisation is theirs to do.
   useEffect(() => {
-    const own = organisationKindOf(user);
-    if (own && own !== kind) router.replace(ORGANISATION_ROUTE[own]);
-  }, [user, kind, router]);
+    if (ownKind && ownKind !== kind) router.replace(ORGANISATION_ROUTE[ownKind]);
+  }, [ownKind, kind, router]);
 
   const load = useCallback(async () => {
+    // Already on the screen the account's type points at (or being sent there): nothing to settle.
+    if (ownKind && ownKind !== kind) return;
     try {
       const organisation = await getMyOrganisation();
-      // The organisation on record settles it, over what the URL says.
+      // With no account type to go by, the organisation on record settles it, over what the URL says.
       const recordedKind = organisationKindFor(organisation?.orgType);
-      if (organisation && recordedKind && recordedKind !== kind) {
+      if (!ownKind && organisation && recordedKind && recordedKind !== kind) {
         router.replace(ORGANISATION_ROUTE[recordedKind]);
         return;
       }
       setState(organisation ? { phase: 'registered', organisation } : { phase: 'register' });
     } catch (error) {
-      const known = knownFailureOf(error);
-      setState({ phase: 'error', message: known ? t(`errors.${known}`) : (backendMessageOf(error) ?? t('errors.generic')) });
+      setState({ phase: 'error', known: knownFailureOf(error), backendMessage: backendMessageOf(error) });
     }
-  }, [kind, router, t]);
+  }, [kind, ownKind, router]);
 
   // Loads the organisation on mount. `load` only sets state after its fetch resolves, not synchronously.
   useEffect(() => {
@@ -80,13 +89,31 @@ export function OrganisationPage({ kind }: { kind: OrganisationKind }) {
 
   const initialValues = useMemo(() => buildInitialOrganisationValues(user), [user]);
 
+  // Re-reads the signed-in profile, once more if the first read fails (`refreshMeThunk` swallows
+  // its errors and answers null). True once the user in the store is the fresh one.
+  const refreshProfile = async (): Promise<boolean> => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (await dispatch(refreshMeThunk()).unwrap()) return true;
+    }
+    return false;
+  };
+
   // Registered: re-read the signed-in profile first, so Submit Grievance — which pre-fills
   // from it — sees the organisation (its name, registration number, status and whether it
-  // may file) rather than the account as it was before registering, then go there.
+  // may file) rather than the account as it was before registering, then go there. If the
+  // profile cannot be re-read, stay here and say so: Submit Grievance would otherwise show
+  // an account that looks unregistered, with no notice and no block.
+  const goToSubmitGrievance = async () => {
+    setContinuing(true);
+    const refreshed = await refreshProfile();
+    setContinuing(false);
+    setProfileStale(!refreshed);
+    if (refreshed) router.push('/submit-grievance');
+  };
+
   const handleRegistered = async (organisation: Organisation) => {
     setState({ phase: 'registered', organisation });
-    await dispatch(refreshMeThunk());
-    router.push('/submit-grievance');
+    await goToSubmitGrievance();
   };
 
   // The account is already an NGO / FPO on the backend (set at sign-up), so signing out loses
@@ -126,7 +153,7 @@ export function OrganisationPage({ kind }: { kind: OrganisationKind }) {
 
           {state.phase === 'error' && (
             <div className="space-y-4">
-              <ErrorAlert>{state.message}</ErrorAlert>
+              <ErrorAlert>{state.known ? t(`errors.${state.known}`) : (state.backendMessage ?? t('errors.generic'))}</ErrorAlert>
               <Button type="button" variant="outline" onClick={retry}>
                 {t('actions.retry')}
               </Button>
@@ -140,6 +167,15 @@ export function OrganisationPage({ kind }: { kind: OrganisationKind }) {
               onRegistered={handleRegistered}
               onBackToSignIn={handleBackToSignIn}
             />
+          )}
+
+          {state.phase === 'registered' && profileStale && (
+            <div className="space-y-4">
+              <ErrorAlert>{t('errors.profileRefresh')}</ErrorAlert>
+              <Button type="button" onClick={goToSubmitGrievance} disabled={continuing}>
+                {t('actions.continueToSubmit')}
+              </Button>
+            </div>
           )}
 
           {state.phase === 'registered' && <OrganisationStatusCard organisation={state.organisation} />}

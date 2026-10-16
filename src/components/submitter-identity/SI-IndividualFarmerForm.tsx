@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { SIIdField, SIPhoneFormField, SITextField } from "./SI-fields";
 import type { SIFormProps } from "./SI-types";

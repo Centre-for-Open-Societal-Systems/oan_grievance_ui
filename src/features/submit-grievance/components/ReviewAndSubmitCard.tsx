@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { FileText, Info, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
@@ -37,8 +38,10 @@ interface ReviewAndSubmitCardProps {
   attachments: WizardAttachment[];
   /**
    * Set when the account may not file right now (an NGO / FPO whose organisation
-   * is not yet verified): shown beside the footer and the Submit button is held
-   * disabled. The backend refuses such a submit anyway; this says why up front.
+   * is not yet registered or verified): shown beside the footer and the Submit
+   * button is held disabled. The backend refuses an organisation that is not
+   * Active, but not an NGO / FPO account that has no organisation at all, so this
+   * is the only guard for that case.
    */
   submissionBlockedMessage?: string;
 }
@@ -87,6 +90,7 @@ export function ReviewAndSubmitCard({
   attachments,
   submissionBlockedMessage,
 }: ReviewAndSubmitCardProps) {
+  const t = useTranslations("submitGrievance.reviewStep");
   const [consentChecked, setConsentChecked] = useState(false);
   // Same national-ID field set fields.ts validates as a Fayda ID (imported
   // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
@@ -322,7 +326,7 @@ export function ReviewAndSubmitCard({
               disabled={!consentChecked || isSubmitting || Boolean(submissionBlockedMessage)}
               aria-describedby={submissionBlockedMessage ? "review-submit-blocked" : undefined}
             >
-              {isSubmitting ? "Submitting…" : "Submit Grievance"}
+              {isSubmitting ? t("submitting") : t("submit")}
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
             </button>
           </div>

@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import en from '../../../../messages/en.json';
 import { kebeleRef, makeStore, regionRef, woredaRef, zoneRef } from '../testFixtures';
 import { GrievanceSubmittedCard } from './GrievanceSubmittedCard';
 import { ReviewAndSubmitCard } from './ReviewAndSubmitCard';
@@ -27,23 +29,25 @@ function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCa
   const onSubmitted = vi.fn();
   render(
     <Provider store={store}>
-      <ReviewAndSubmitCard
-        onBack={vi.fn()}
-        onSubmitted={onSubmitted}
-        submitFields={BASE_FIELDS}
-        submitterType="individual"
-        submissionChannel="web"
-        identityValues={{}}
-        serviceCategory="inputs"
-        grievanceType="Fertilizer Shortage"
-        region={regionRef}
-        zone={zoneRef}
-        woreda={woredaRef}
-        kebele={kebeleRef}
-        description={DESCRIPTION}
-        attachments={[]}
-        {...props}
-      />
+      <NextIntlClientProvider locale="en" messages={en}>
+        <ReviewAndSubmitCard
+          onBack={vi.fn()}
+          onSubmitted={onSubmitted}
+          submitFields={BASE_FIELDS}
+          submitterType="individual"
+          submissionChannel="web"
+          identityValues={{}}
+          serviceCategory="inputs"
+          grievanceType="Fertilizer Shortage"
+          region={regionRef}
+          zone={zoneRef}
+          woreda={woredaRef}
+          kebele={kebeleRef}
+          description={DESCRIPTION}
+          attachments={[]}
+          {...props}
+        />
+      </NextIntlClientProvider>
     </Provider>
   );
   return { onSubmitted };

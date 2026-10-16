@@ -13,6 +13,15 @@ describe('organisationKindFor', () => {
     expect(organisationKindFor('cooperative')).toBe('fpo');
   });
 
+  it('maps any cooperative spelling by whole word, but not a type that merely contains the letters', () => {
+    for (const fpo of ['Cooperative Society', 'Cooperative / FPO', 'Primary Co-op', 'coop']) {
+      expect(organisationKindFor(fpo)).toBe('fpo');
+    }
+    for (const other of ['Cooper Industries', 'Chickencoops', 'Scooped']) {
+      expect(organisationKindFor(other)).toBeNull();
+    }
+  });
+
   it('is null for every other type, role and empty value', () => {
     for (const other of [
       'Individual Farmer',

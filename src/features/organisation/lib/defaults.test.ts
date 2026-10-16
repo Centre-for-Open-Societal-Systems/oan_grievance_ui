@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { buildInitialOrganisationValues } from './defaults';
 
 describe('buildInitialOrganisationValues', () => {

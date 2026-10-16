@@ -28,7 +28,9 @@ export function organisationKindFor(type: string | null | undefined): Organisati
   const lower = type?.toLowerCase().trim();
   if (!lower) return null;
   if (/\bngo\b/.test(lower)) return 'ngo';
-  if (/\bfpo\b/.test(lower) || lower.includes('coop')) return 'fpo';
+  // Whole words only ("cooperative", "co-op", "coop"), so a type that merely contains the letters
+  // does not land on the FPO screen.
+  if (/\bfpo\b/.test(lower) || /\bco-?op(erative)?s?\b/.test(lower)) return 'fpo';
   return null;
 }
 

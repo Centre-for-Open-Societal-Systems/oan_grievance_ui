@@ -42,6 +42,23 @@ describe('OrganisationVerificationNotice', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Note from the administrator: Certificate could not be confirmed');
   });
 
+  it('asks an NGO / FPO account with no organisation yet to register it, linking to its own screen', () => {
+    const { rerender } = render(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <OrganisationVerificationNotice organisation={undefined} unregisteredKind="ngo" />
+      </NextIntlClientProvider>
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('Register your organisation first');
+    expect(screen.getByRole('link', { name: 'Register your organisation' })).toHaveAttribute('href', '/ngo');
+
+    rerender(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <OrganisationVerificationNotice organisation={undefined} unregisteredKind="fpo" />
+      </NextIntlClientProvider>
+    );
+    expect(screen.getByRole('link', { name: 'Register your organisation' })).toHaveAttribute('href', '/fpo');
+  });
+
   it('renders nothing for an organisation that may file, or for a user with none', () => {
     const { container, rerender } = renderNotice({ ...ORG, status: 'Active', canFile: true });
     expect(container).toBeEmptyDOMElement();

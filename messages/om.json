@@ -16,7 +16,9 @@
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
-      "organisationNotice": "Erga seentanii booda, bal'ina dhaabbata keessanii — maqaa, lakkoofsa galmee, bakka bu'aa aangoo qabu, teessoo fi qunnamtii — isin gaafanna."
+      "organisationNotice": "Erga seentanii booda, bal'ina dhaabbata keessanii — maqaa, lakkoofsa galmee, bakka bu'aa aangoo qabu, teessoo fi qunnamtii — isin gaafanna.",
+      "faydaAlreadyRegistered": "ID Fayda kun duraan akkaawuntii biraatiin galmaa'eera.",
+      "identityAlreadyRegistered": "Bal'inni kun duraan akkaawuntii biraatiin galmaa'eera."
     },
     "success": {
       "title": "Akkaawuntiin Uumameera!",
@@ -93,7 +95,12 @@
       "back": "Duubatti",
       "backToSignIn": "Gara Seensaatti Deebi'i",
       "register": "Dhaabbata Galmeessi",
-      "retry": "Deebi'ii yaali"
+      "retry": "Deebi'ii yaali",
+      "continueToSubmit": "Komii Dhiheessuutti Itti Fufi"
+    },
+    "metadata": {
+      "ngo": "Galmee NGO | Daashboordii Bulchiinsa Komii",
+      "fpo": "Galmee FPO | Daashboordii Bulchiinsa Komii"
     },
     "errors": {
       "required": "Gabateen kun barbaachisaadha.",
@@ -110,7 +117,8 @@
       "generic": "Kana xumuruu hin dandeenye. Maaloo irra deebi'ii yaali.",
       "forbidden": "Akkaawuntiin keessan dhaabbata galmeessuuf hayyamamuu hin qabu.",
       "connection": "Sarvarii qunnamuu hin dandeenye. Maaloo yeroo muraasa booda irra deebi'ii yaali.",
-      "session": "Yeroon keessan xumurameera. Maaloo irra deebi'ii seenaa."
+      "session": "Yeroon keessan xumurameera. Maaloo irra deebi'ii seenaa.",
+      "profileRefresh": "Dhaabbanni keessan galmaa'eera, garuu profaayilii keessan haaromsuu hin dandeenye. Maaloo komii dhiheessuu keessan dura irra deebi'ii yaalaa."
     },
     "status": {
       "details": {
@@ -147,7 +155,15 @@
       "suspendedTitle": "Dhaabbanni keessan dhaabateera",
       "suspendedBody": "{name} dhaabateera; kanaaf komiin isaaf dhiyaachuu hin danda'u. Maaloo bulchaa pilaatfoormii qunnamaa.",
       "reason": "Ergaa bulchaa irraa: {reason}",
-      "submitBlocked": "Hanga dhaabbanni keessan mirkanaa'utti dhiheessuu hin dandeessan. Bal'ina keessan akka tarreetti olkaa'uu dandeessu."
+      "submitBlocked": "Hanga dhaabbanni keessan mirkanaa'utti dhiheessuu hin dandeessan. Bal'ina keessan akka tarreetti olkaa'uu dandeessu.",
+      "unregisteredTitle": "Dura dhaabbata keessan galmeessaa",
+      "unregisteredBody": "Akkaawuntiin keessan dhaabbata hanga ammaatti hin galmoofne ti. Amma komii keessan qopheessuu fi olkaa'uu dandeessu, garuu dhiheessuun kan danda'amu erga dhaabbanni keessan galmaa'ee mirkanaa'ee booda qofa.",
+      "unregisteredAction": "Dhaabbata keessan galmeessaa",
+      "unregisteredSubmitBlocked": "Hanga dhaabbanni keessan galmaa'ee mirkanaa'utti dhiheessuu hin dandeessan. Bal'ina keessan akka tarreetti olkaa'uu dandeessu."
+    },
+    "reviewStep": {
+      "submit": "Komii dhiheessi",
+      "submitting": "Dhiheessaa jira…"
     },
     "identityStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",

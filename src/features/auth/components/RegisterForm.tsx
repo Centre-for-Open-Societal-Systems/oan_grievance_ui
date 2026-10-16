@@ -58,7 +58,12 @@ const FAYDA_FIELD_BY_TYPE: Record<string, string> = {
 // A rejection the profile step caused (a duplicate or malformed Fayda ID, an
 // unknown type) is shown there, where it can be fixed; anything else is about
 // the account step's fields.
-const PROFILE_REJECTION_PATTERN = /fayda|submitter type|dedupe key/i;
+const PROFILE_REJECTION_PATTERN = /fayda|submitter type/i;
+
+// "A Submitter Profile with dedupe key 'fayda:6557…' is already registered" — the backend's
+// wording for a duplicate identity, which names an internal concept and the start of the ID.
+// It is replaced by our own sentence rather than shown; the scheme says which field it is about.
+const DEDUPE_KEY_PATTERN = /dedupe key\s*'?\s*([a-z]+):/i;
 
 type RegisterStep = 'account' | 'profile' | 'success';
 
@@ -194,7 +199,16 @@ export function RegisterForm() {
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
-      if (PROFILE_REJECTION_PATTERN.test(message)) {
+      const duplicate = DEDUPE_KEY_PATTERN.exec(message);
+      if (duplicate) {
+        // A duplicate Fayda ID is fixed on the profile step; any other identity (the phone) on the account step.
+        if (duplicate[1]!.toLowerCase() === 'fayda') {
+          setProfileError(t('faydaAlreadyRegistered'));
+        } else {
+          setError(t('identityAlreadyRegistered'));
+          setStep('account');
+        }
+      } else if (PROFILE_REJECTION_PATTERN.test(message)) {
         setProfileError(message);
       } else {
         setError(message);

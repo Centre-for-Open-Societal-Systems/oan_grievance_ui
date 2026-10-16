@@ -1,4 +1,4 @@
-﻿import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildInitialOrganisationValues } from '../lib/defaults';
 import { extractFieldErrors } from '@/lib/api/fetchApi';
 import {

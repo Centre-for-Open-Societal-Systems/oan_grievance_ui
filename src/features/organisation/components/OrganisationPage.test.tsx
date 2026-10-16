@@ -12,7 +12,9 @@ const getMyOrganisation = vi.fn();
 const getMe = vi.fn();
 const order: string[] = [];
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push, replace }) }));
+// One router object for every render, like Next's: a fresh one each time would re-run the page's load effect.
+const router = { push, replace };
+vi.mock('next/navigation', () => ({ useRouter: () => router }));
 vi.mock('@/components/layout/OrganisationHeader', () => ({ OrganisationHeader: () => null }));
 vi.mock('../api/organisationApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/organisationApi')>()),
@@ -66,9 +68,9 @@ const USER_AFTER: User = {
   },
 };
 
-function renderPage(kind: 'ngo' | 'fpo' = 'ngo') {
+function renderPage(kind: 'ngo' | 'fpo' = 'ngo', user: User = USER_BEFORE) {
   const store = makeStore();
-  store.dispatch({ type: loginThunk.fulfilled.type, payload: USER_BEFORE });
+  store.dispatch({ type: loginThunk.fulfilled.type, payload: user });
   render(
     <Provider store={store}>
       <NextIntlClientProvider locale="en" messages={en}>
@@ -104,12 +106,29 @@ describe('OrganisationPage', () => {
     expect(store.getState().auth.status).toBe('succeeded'); // never flipped to "loading" (the full-screen "Restoring your session…")
   });
 
-  it('still goes to Submit Grievance if refreshing the profile fails', async () => {
+  it('retries a failed profile refresh once before giving up', async () => {
+    getMe.mockRejectedValueOnce(new Error('blip'));
+    const store = renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'register' }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/submit-grievance'));
+    expect(getMe).toHaveBeenCalledTimes(2);
+    expect(store.getState().auth.user?.organisation?.legalName).toBe('Test NGO Org');
+  });
+
+  it('stays put with a note and a way to continue if the profile cannot be refreshed, rather than opening Submit Grievance on the old profile', async () => {
     getMe.mockRejectedValue(new Error('down'));
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'register' }));
 
+    expect(await screen.findByRole('alert')).toHaveTextContent('we could not refresh your profile');
+    expect(screen.getByText('Your organisation is registered and in review')).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+
+    getMe.mockImplementation(async () => USER_AFTER);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to Submit Grievance' }));
     await waitFor(() => expect(push).toHaveBeenCalledWith('/submit-grievance'));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });
 
   it('shows the status instead of the form for an organisation that is already registered, without redirecting', async () => {
@@ -144,5 +163,31 @@ describe('OrganisationPage', () => {
     renderPage('ngo');
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/fpo'));
+  });
+
+  it("sends an account to the screen its type names, without loading anything on the wrong one", async () => {
+    renderPage('ngo', { ...USER_BEFORE, type: 'FPO' });
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/fpo'));
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(getMyOrganisation).not.toHaveBeenCalled();
+  });
+
+  it("does not bounce between the two screens when the account's type and its organisation's recorded type disagree", async () => {
+    getMyOrganisation.mockResolvedValue({
+      id: 'ORG-1',
+      legalName: 'Selam Union',
+      brandName: null,
+      orgType: 'FPO',
+      entityType: 'Cooperative Union',
+      registrationNumber: 'ET1',
+      status: 'Active',
+      statusReason: null,
+    });
+    // Typed NGO, organisation recorded as an FPO: /ngo is where the type says it belongs, and it stays.
+    renderPage('ngo', { ...USER_BEFORE, type: 'NGO' });
+
+    expect(await screen.findByText('Your organisation is active')).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
   });
 });

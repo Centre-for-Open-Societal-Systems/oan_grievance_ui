@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
@@ -21,6 +21,7 @@ import {
 import { buildSubmitFields } from "./submitPayload";
 import { firstIncompleteStep, type WizardStep } from "./wizardSteps";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
+import { organisationKindOf } from "@/lib/organisationKind";
 import type { WizardAttachment } from "@/lib/attachments";
 import { useAppSelector } from "@/store/hooks";
 import type { SubmitGrievanceResult } from "./api/submitGrievanceApi";
@@ -207,8 +208,17 @@ export default function SubmitGrievancePage() {
   });
 
   // An NGO / FPO may only file once its organisation is verified — see OrganisationVerificationNotice.
-  const submissionBlockedMessage =
-    user?.organisation && !user.organisation.canFile ? tOrganisation("submitBlocked") : undefined;
+  // An NGO / FPO account (by its type) with no organisation at all has not even registered it yet,
+  // and is held back the same way: the backend only checks an account that has an organisation,
+  // so without this it could file as a plain, unverified NGO.
+  const unregisteredKind = user?.organisation ? null : organisationKindOf(user);
+  const submissionBlockedMessage = user?.organisation
+    ? user.organisation.canFile
+      ? undefined
+      : tOrganisation("submitBlocked")
+    : unregisteredKind
+      ? tOrganisation("unregisteredSubmitBlocked")
+      : undefined;
 
   if (submitted) {
     return (
@@ -236,7 +246,7 @@ export default function SubmitGrievancePage() {
       {/* Page Header */}
       <SubmitGrievanceHeader />
 
-      <OrganisationVerificationNotice organisation={user?.organisation} />
+      <OrganisationVerificationNotice organisation={user?.organisation} unregisteredKind={unregisteredKind} />
 
       {/* Stepper */}
       <Stepper currentStep={currentStep} onStepClick={(step) => goToStep(step)} />

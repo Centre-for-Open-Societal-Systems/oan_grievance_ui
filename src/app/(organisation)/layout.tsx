@@ -14,7 +14,7 @@ export default function OrganisationLayout({
 }>) {
   return (
     <>
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-[#f3f4f6]">{children}</div>
+      <div className="flex h-dvh w-full flex-col overflow-hidden bg-[#f3f4f6]">{children}</div>
       <IdleSessionGuard />
       <RealtimeConnection />
     </>
