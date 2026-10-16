@@ -167,21 +167,15 @@ export interface TimelineEntry {
     | string;
   is_internal: boolean;
   body: string;
-  /** `body` split into its two parts when it is a two-part department response. */
-  body_parts?: ResponseParts | null;
   action_taken?: string | null;
   resolution_summary?: string | null;
   response_number?: number;
-  author_user?: string | null;
-  author_submitter?: string | null;
   author_type?: 'submitter' | 'officer' | 'system' | string;
   author_name?: string | null;
   author_role?: string | null;
   from_status?: string | null;
   to_status?: string | null;
   attachments?: GrievanceTimelineAttachment[];
-  ref_doctype?: string | null;
-  ref_docname?: string | null;
   action?: string | null;
   created_on: string;
 }
@@ -340,6 +334,8 @@ export interface GrievanceCurrentState {
   department?: string | null;
   updated_at?: string | null;
   available_actions?: GrievanceAvailableAction[];
+  /** Whether the submitter can be contacted (a phone number or email is on file). */
+  can_request_more_info?: boolean;
 }
 
 export interface GrievanceActionResult {

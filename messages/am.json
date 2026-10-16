@@ -44,7 +44,11 @@
   },
   "notifications": {
     "label": "ማሳወቂያዎች",
-    "unreadLabel": "ማሳወቂያዎች፣ {count} አዲስ"
+    "unreadLabel": "ማሳወቂያዎች፣ {count} አዲስ",
+    "title": "ማሳወቂያዎች",
+    "markAllRead": "ሁሉንም እንደተነበበ ምልክት አድርግ",
+    "empty": "ምንም ማሳወቂያ የለም።",
+    "loadError": "ማሳወቂያዎችን መጫን አልተቻለም።"
   },
   "caseActions": {
     "submitterTitle": "የእኔ ምላሽ",

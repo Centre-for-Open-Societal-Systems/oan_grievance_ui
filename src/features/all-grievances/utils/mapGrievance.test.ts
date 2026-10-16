@@ -116,7 +116,6 @@ describe('normalizeTimelineEntry', () => {
       entry_type: 'note',
       is_internal: true,
       body: 'Investigating warehouse logs.',
-      author_user: 'officer@example.com',
       author_name: 'Tigist Alemu',
       author_type: 'officer',
       created_on: '2026-04-12T10:15:00Z',
@@ -198,14 +197,12 @@ describe('normalizeTimelineEntry', () => {
     expect(normRejection.typeLabel).toBe('Rejection');
   });
 
-  it('resolves officer author from author_user without ambiguous fallbacks', () => {
+  it('resolves officer author from author_type and author_role', () => {
     const officerEntry: TimelineEntry = {
       name: 'GR-TIME-005628',
       action: 'Start Work',
       author_role: 'Nodal Officer',
-      author_submitter: null,
       author_type: 'officer',
-      author_user: 'officer@oan.com',
       body: 'Action taken:\nhi\n\nResolution summary:\nhi',
       entry_type: 'status_change',
       is_internal: false,
@@ -224,9 +221,7 @@ describe('normalizeTimelineEntry', () => {
       name: 'GR-TIME-005608',
       action: null,
       author_role: 'Individual Farmer',
-      author_submitter: 'SUB-00141',
       author_type: 'submitter',
-      author_user: null,
       body: 'sssssssssssssssssssssssss',
       entry_type: 'submission',
       is_internal: false,

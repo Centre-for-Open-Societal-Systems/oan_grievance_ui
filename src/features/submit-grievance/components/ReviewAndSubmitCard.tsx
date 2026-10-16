@@ -81,6 +81,9 @@ export function ReviewAndSubmitCard({
   attachments,
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
+  // Hides the submitter's identity from the handling desks; the justification is optional context for reviewers.
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [anonymityJustification, setAnonymityJustification] = useState('');
   // Same national-ID field set fields.ts validates as a Fayda ID (imported
   // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
   // action pattern as SIMaskedIdField and the Profile page's MaskedField.
@@ -115,7 +118,13 @@ export function ReviewAndSubmitCard({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await submitGrievance({ ...submitFields, consent_given: 1 });
+      const result = await submitGrievance({
+        ...submitFields,
+        consent_given: 1,
+        ...(isAnonymous
+          ? { is_anonymous: 1, ...(anonymityJustification.trim() ? { anonymity_justification: anonymityJustification.trim() } : {}) }
+          : {}),
+      });
       // The case exists now, so the staged files can attach to its ticket.
       // A failed upload doesn't undo the filing — the submitter is told on
       // the confirmation screen and can add the files from the case instead.
@@ -260,6 +269,42 @@ export function ReviewAndSubmitCard({
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Anonymity */}
+          <div className="mt-4">
+            <div
+              className="flex items-start gap-3 cursor-pointer group"
+              onClick={() => setIsAnonymous(!isAnonymous)}
+            >
+              <div className="relative mt-0.5 flex-shrink-0">
+                <input
+                  id="submit-anonymously"
+                  type="checkbox"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-5 h-5 accent-[#16A34A] cursor-pointer"
+                />
+              </div>
+              <label htmlFor="submit-anonymously" onClick={(e) => e.stopPropagation()} className="text-sm font-medium text-gray-600 leading-relaxed cursor-pointer">
+                Submit anonymously — hide my name and contact details from the officers handling this grievance.
+              </label>
+            </div>
+            {isAnonymous && (
+              <div className="mt-3 ml-8">
+                <label htmlFor="anonymity-justification" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Why do you need anonymity? <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  id="anonymity-justification"
+                  rows={2}
+                  value={anonymityJustification}
+                  onChange={(e) => setAnonymityJustification(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white resize-none"
+                />
+              </div>
+            )}
           </div>
 
           {/* Consent Checkbox */}

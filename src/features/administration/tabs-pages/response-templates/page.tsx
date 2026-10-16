@@ -141,7 +141,7 @@ export default function ResponseTemplatesPage() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder={t('searchPlaceholder')}
                         aria-label={t('searchPlaceholder')}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] transition-colors placeholder:text-gray-400"
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] transition-colors placeholder:text-gray-400"
                     />
                 </div>
 
