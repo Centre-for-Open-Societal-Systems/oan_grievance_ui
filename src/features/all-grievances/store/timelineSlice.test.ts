@@ -157,6 +157,35 @@ describe('timelineSlice', () => {
     expect(nextState.timelineData?.timeline?.[1]?.body).toBe('Resolution confirmed by submitter');
   });
 
+  it('appends the written entry on postTimelineMessageThunk and addTimelineNoteThunk without a refetch', () => {
+    const base: TimelineState = {
+      selectedTicketNumber: 'ET14IN000012026',
+      timelineData: { ...sampleTimelineData },
+      status: 'succeeded',
+      error: null,
+      isSubmitting: true,
+      submitError: null,
+    };
+    const result = {
+      ticket_number: 'ET14IN000012026',
+      current_state: { status: 'In Progress', escalated: false, available_actions: [] },
+      timeline_event: {
+        id: 'GR-TIME-000009',
+        entry_type: 'message',
+        is_internal: false,
+        body: 'We are looking into it.',
+        created_on: '2026-04-11T11:00:00Z',
+        attachments: [],
+      },
+    };
+
+    for (const type of ['timeline/postMessage/fulfilled', 'timeline/addNote/fulfilled']) {
+      const next = timelineReducer(base, { type, payload: result, meta: { arg: { ticketNumber: 'ET14IN000012026' } } });
+      expect(next.isSubmitting).toBe(false);
+      expect(next.timelineData?.timeline?.at(-1)?.body).toBe('We are looking into it.');
+    }
+  });
+
   it('updates sla_due_date and appends timeline_event on deferSLAGrievanceThunk.fulfilled', () => {
     const currentState: TimelineState = {
       selectedTicketNumber: 'ET14IN000012026',

@@ -44,7 +44,11 @@
   },
   "notifications": {
     "label": "Notifications",
-    "unreadLabel": "Notifications, {count} new"
+    "unreadLabel": "Notifications, {count} new",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "You have no notifications.",
+    "loadError": "Could not load notifications."
   },
   "caseActions": {
     "submitterTitle": "My response",

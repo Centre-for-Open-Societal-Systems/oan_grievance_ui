@@ -345,12 +345,13 @@ describe('grievanceService', () => {
     expect(list.items).toHaveLength(1);
     expect(calledUrl()).toContain('/api/proxy/api/v1/change-requests?status=Pending&scope=pending_with_me');
 
-    mockJsonResponse({ name: 'CR-0001', status: 'Approved' });
+    mockJsonResponse({ ticket_number: 'T-1', status: 'In Progress', change_request: { name: 'CR-0001', status: 'Approved' } });
     const decided = await grievanceService.decideChangeRequest('CR-0001', {
       decision: 'Approved',
       note: 'Verified and approved',
     });
-    expect(decided.status).toBe('Approved');
+    expect(decided.change_request.status).toBe('Approved');
+    expect(decided.status).toBe('In Progress');
     expect(calledUrl()).toContain('/api/proxy/api/v1/change-requests/CR-0001/decide');
   });
 });

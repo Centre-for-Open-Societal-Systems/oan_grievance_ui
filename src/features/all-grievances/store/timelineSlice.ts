@@ -76,6 +76,16 @@ function appendTimelineEvent(data: GrievanceTimelineData, event: TimelineEntry) 
   if (!exists) data.timeline = [...list, event];
 }
 
+function applyWriteResult(
+  state: TimelineState,
+  action: { payload: GrievanceActionResult; meta: { arg: { ticketNumber: string } } }
+) {
+  if (!state.timelineData || !isForSelectedTicket(state, action.meta.arg.ticketNumber)) return;
+  const result = action.payload;
+  if (result.current_state) mergeCurrentState(state.timelineData, result.current_state);
+  if (result.timeline_event) appendTimelineEvent(state.timelineData, result.timeline_event);
+}
+
 export const fetchTimelineThunk = createAsyncThunk<
   GrievanceTimelineData,
   {
@@ -98,11 +108,9 @@ export const postTimelineMessageThunk = createAsyncThunk<
   GrievanceActionResult,
   { ticketNumber: string; body: string },
   { rejectValue: string }
->('timeline/postMessage', async ({ ticketNumber, body }, { dispatch, rejectWithValue }) => {
+>('timeline/postMessage', async ({ ticketNumber, body }, { rejectWithValue }) => {
   try {
-    const result = await postGrievanceMessage(ticketNumber, body);
-    void dispatch(fetchTimelineThunk({ ticketNumber }));
-    return result;
+    return await postGrievanceMessage(ticketNumber, body);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to post message';
     return rejectWithValue(msg);
@@ -113,11 +121,9 @@ export const addTimelineNoteThunk = createAsyncThunk<
   GrievanceActionResult,
   { ticketNumber: string; body: string; isInternal?: boolean },
   { rejectValue: string }
->('timeline/addNote', async ({ ticketNumber, body, isInternal = true }, { dispatch, rejectWithValue }) => {
+>('timeline/addNote', async ({ ticketNumber, body, isInternal = true }, { rejectWithValue }) => {
   try {
-    const result = await addGrievanceNote(ticketNumber, body, isInternal);
-    void dispatch(fetchTimelineThunk({ ticketNumber }));
-    return result;
+    return await addGrievanceNote(ticketNumber, body, isInternal);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to add note';
     return rejectWithValue(msg);
@@ -128,11 +134,9 @@ export const executeTimelineActionThunk = createAsyncThunk<
   GrievanceActionResult,
   { ticketNumber: string; payload: GrievanceActionPayload },
   { rejectValue: string }
->('timeline/executeAction', async ({ ticketNumber, payload }, { dispatch, rejectWithValue }) => {
+>('timeline/executeAction', async ({ ticketNumber, payload }, { rejectWithValue }) => {
   try {
-    const result = await executeGrievanceAction(ticketNumber, payload);
-    void dispatch(fetchTimelineThunk({ ticketNumber }));
-    return result;
+    return await executeGrievanceAction(ticketNumber, payload);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to execute action';
     return rejectWithValue(msg);
@@ -232,6 +236,12 @@ export const timelineSlice = createSlice({
         state.status = 'failed';
         state.error = action.payload ?? 'Failed to fetch timeline';
       });
+
+    // A message or note answers with the entry it wrote and the case afterwards, so the
+    // cached timeline is updated in place — no refetch.
+    builder
+      .addCase(postTimelineMessageThunk.fulfilled, applyWriteResult)
+      .addCase(addTimelineNoteThunk.fulfilled, applyWriteResult);
 
     // Specific mutation payload handlers
     builder

@@ -44,7 +44,11 @@
   },
   "notifications": {
     "label": "Beeksisoota",
-    "unreadLabel": "Beeksisoota, {count} haaraa"
+    "unreadLabel": "Beeksisoota, {count} haaraa",
+    "title": "Beeksisoota",
+    "markAllRead": "Hunda akka dubbifameetti mallatteessi",
+    "empty": "Beeksisni hin jiru.",
+    "loadError": "Beeksisoota fe'uu hin dandeenye."
   },
   "caseActions": {
     "submitterTitle": "Deebii koo",

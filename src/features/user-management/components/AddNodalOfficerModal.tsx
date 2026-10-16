@@ -16,7 +16,6 @@ import {
   validateEmail,
   validateFullName,
   validateOptionalLocalPhone,
-  validateRequired,
   validateTemporaryPassword,
 } from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors';
@@ -90,8 +89,8 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
   const [serviceCategories, setServiceCategories] = useState<string[]>([]);
   const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
   const allCategoryOptions = useAppSelector(selectCategoryFilterOptions);
-  const isCategoriesLoading = level === 'L3' ? grievanceOptionsStatus === 'loading' : isCategoryOptionsLoading;
-  const categoryList = level === 'L3' ? allCategoryOptions : categoryOptions;
+  const isCategoriesLoading = !department ? grievanceOptionsStatus === 'loading' : isCategoryOptionsLoading;
+  const categoryList = !department ? allCategoryOptions : categoryOptions;
   const [region, setRegion] = useState('');
   const [status, setStatus] = useState<string>('Active');
   const [reportsTo, setReportsTo] = useState('');
@@ -111,9 +110,9 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
       case 'password':
         return validateTemporaryPassword(password);
       case 'designation':
-        return isReviewer ? null : validateRequired(designation, 'Enter a designation.');
+        return null;
       case 'department':
-        return validateRequired(department, 'Select a department.');
+        return null;
       case 'serviceCategories':
         return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
@@ -168,9 +167,9 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
       const result = await createOfficer({
         role,
         full_name: fullName,
-        designation: isReviewer ? null : designation,
+        designation: isReviewer ? null : (designation.trim() || null),
         level: isReviewer ? null : level,
-        department,
+        department: department.trim() || null,
         email,
         service_categories: serviceCategories,
         temporary_password: password,
@@ -334,7 +333,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
               {!isReviewer && (
                 <div className="flex flex-col gap-2">
                   <label htmlFor={FIELD_IDS.designation} className="text-sm font-bold text-gray-900">
-                    Designation <span className="text-red-500">*</span>
+                    Designation
                   </label>
                   <input
                     {...a11y('designation')}
@@ -350,7 +349,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
 
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
-                  Department <span className="text-red-500">*</span>
+                  Department
                 </label>
                 <AnimatedSelect
                   id={FIELD_IDS.department}
@@ -359,10 +358,9 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                   onChange={(value) => {
                     setDepartment(value);
                     setError('department', null);
-                    // Below L3 the wired category list is department-specific — a category
-                    // picked for the old department may not even have a desk under the new
-                    // one. An L3 picks from every category, so the picks stay valid.
-                    if (level !== 'L3') {
+                    // The category list is department-specific — a category picked for the old
+                    // department may not even have a desk under the new one.
+                    if (value) {
                       setServiceCategories([]);
                       setError('serviceCategories', null);
                     }
@@ -418,13 +416,11 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                 aria-describedby={fieldErrors.serviceCategories ? errorIdFor(FIELD_IDS.serviceCategories) : undefined}
                 className="flex flex-wrap gap-2"
               >
-                {level !== 'L3' && !department ? (
-                  <span className="text-sm text-gray-400">Select a department first.</span>
-                ) : isCategoriesLoading ? (
+                {isCategoriesLoading ? (
                   <span className="text-sm text-gray-400">Loading categories…</span>
                 ) : categoryList.length === 0 ? (
                   <span className="text-sm text-gray-400">
-                    {level === 'L3'
+                    {!department
                       ? 'No service categories available. Create a category first.'
                       : 'No service category is routed to this department yet.'}
                   </span>

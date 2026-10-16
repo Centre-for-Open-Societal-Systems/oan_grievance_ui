@@ -74,7 +74,7 @@ export function EditOfficerModal({ isOpen, onClose, officer }: EditOfficerModalP
               {/* Title / Designation */}
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                  Title / Designation <span className="text-red-500">*</span>
+                  Title / Designation
                 </label>
                 <input
                   type="text"
@@ -87,7 +87,7 @@ export function EditOfficerModal({ isOpen, onClose, officer }: EditOfficerModalP
               {/* Department */}
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                  Department <span className="text-red-500">*</span>
+                  Department
                 </label>
                 <CustomSelect
                   options={departmentOptions}

@@ -348,7 +348,9 @@ export async function fetchChangeRequest(
 }
 
 /**
- * Decides (Approve/Reject) on a pending change request.
+ * Decides (Approve/Reject) on a pending change request. Answers with the case as it
+ * stands afterwards (`current_state`, `timeline_event`) and the decided request under
+ * `change_request` — same shape as reassign and defer-sla.
  *
  * Corresponding REST endpoint: POST /api/v1/change-requests/:name/decide
  */
@@ -356,8 +358,8 @@ export async function decideChangeRequest(
   name: string,
   payload: DecideChangeRequestPayload,
   options: RequestOptions = {}
-): Promise<ChangeRequestData> {
-  return fetchApi<ChangeRequestData>(
+): Promise<GrievanceChangeResponseData> {
+  return fetchApi<GrievanceChangeResponseData>(
     `/api/v1/change-requests/${encodeURIComponent(name)}/decide`,
     {
       method: 'POST',
