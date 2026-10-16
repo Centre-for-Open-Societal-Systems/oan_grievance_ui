@@ -5,6 +5,7 @@ import {
   getFieldErrors,
   getFieldFormatErrors,
   getMissingRequiredFields,
+  SI_FIELDS_BY_TYPE,
   submitsOnBehalfOfOthers,
 } from './fields';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
@@ -54,7 +55,16 @@ describe('getFieldFormatErrors', () => {
 
   it('checks representativeFaydaId / officialFaydaId under the same rule as faydaId', () => {
     expect(getFieldFormatErrors('cooperative', { representativeFaydaId: 'ab' }).length).toBe(1);
+    expect(getFieldFormatErrors('ngo', { representativeFaydaId: 'ab' }).length).toBe(1);
+    expect(getFieldFormatErrors('ngo', { representativeFaydaId: '1234567890123456' }).length).toBe(0);
     expect(getFieldFormatErrors('woreda_kebele', { officialFaydaId: '1234567890123456' }).length).toBe(0);
+  });
+
+  it("asks an NGO and a Cooperative / FPO for the representative's Fayda ID, and requires it", () => {
+    for (const type of ['ngo', 'cooperative']) {
+      expect(SI_FIELDS_BY_TYPE[type]!.some((field) => field.key === 'representativeFaydaId')).toBe(true);
+      expect(getMissingRequiredFields(type, {})).toContain('Representative Fayda ID');
+    }
   });
 
   it('validates registrationNumber only for the types that collect it', () => {
@@ -130,7 +140,8 @@ describe('getFieldError / getFieldErrors (the message shown under a field)', () 
 
   it('is fine with a valid value, an empty optional field, a hidden field, or a field the type does not have', () => {
     expect(getFieldError('individual', 'faydaId', { faydaId: '1234567890123456' })).toBeNull();
-    expect(getFieldError('individual', 'email', {})).toBeNull();
+    // The farmer's email a Development Agent files for is optional; the filer's own is not (below).
+    expect(getFieldError('development_agent', 'email', {})).toBeNull();
     expect(getFieldError('individual', 'fullName', {}, ['fullName'])).toBeNull();
     expect(getFieldError('individual', 'orgName', {})).toBeNull();
   });
@@ -141,6 +152,18 @@ describe('getFieldError / getFieldErrors (the message shown under a field)', () 
       faydaId: DEFAULT_REQUIRED_MESSAGE,
       phoneNumber: DEFAULT_REQUIRED_MESSAGE,
     });
+  });
+
+  it('requires the contact email of every type that files for itself, but not the farmer a Development Agent files for', () => {
+    for (const type of ['individual', 'cooperative', 'ngo', 'woreda_kebele']) {
+      expect(getFieldError(type, 'email', {})).toBe(DEFAULT_REQUIRED_MESSAGE);
+      expect(getFieldError(type, 'email', { email: '   ' })).toBe(DEFAULT_REQUIRED_MESSAGE);
+      expect(getFieldError(type, 'email', { email: 'rep@example.org' })).toBeNull();
+      expect(getMissingRequiredFields(type, {})).toContain('Contact Email ID');
+      // hidden where it was already collected (the register account step)
+      expect(getFieldError(type, 'email', {}, ['email'])).toBeNull();
+    }
+    expect(getMissingRequiredFields('development_agent', {})).not.toContain("Farmer's Contact Email ID");
   });
 
   it('collects every failing field of a type, keyed by field, in form order', () => {

@@ -10,15 +10,18 @@ import {
   selectSubmitterTypeOptions,
   type AreaRef,
 } from "@/features/metadata";
+import { useTranslations } from "next-intl";
 import {
   buildInitialIdentityValues,
   identityAfterReset,
+  isSubmitterTypeLocked,
   resolveInitialSubmissionChannel,
   resolveInitialSubmitterType,
 } from "./initialIdentity";
 import { buildSubmitFields } from "./submitPayload";
 import { firstIncompleteStep, type WizardStep } from "./wizardSteps";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
+import { organisationKindOf } from "@/lib/organisationKind";
 import type { WizardAttachment } from "@/lib/attachments";
 import { useAppSelector } from "@/store/hooks";
 import type { SubmitGrievanceResult } from "./api/submitGrievanceApi";
@@ -27,6 +30,7 @@ import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
 import { ReviewAndSubmitCard } from "./components/ReviewAndSubmitCard";
 import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
+import { OrganisationVerificationNotice } from "./components/OrganisationVerificationNotice";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
@@ -68,6 +72,7 @@ export default function SubmitGrievancePage() {
   // phone, submitter type), so they aren't asked for the same details
   // twice.
   const user = useAppSelector(selectUser);
+  const tOrganisation = useTranslations("submitGrievance.organisation");
 
   const savedProfile = useMemo(
     () => (user?.email ? loadSubmitterProfile(user.email) : null),
@@ -202,6 +207,19 @@ export default function SubmitGrievancePage() {
     desiredOutcome,
   });
 
+  // An NGO / FPO may only file once its organisation is verified — see OrganisationVerificationNotice.
+  // An NGO / FPO account (by its type) with no organisation at all has not even registered it yet,
+  // and is held back the same way: the backend only checks an account that has an organisation,
+  // so without this it could file as a plain, unverified NGO.
+  const unregisteredKind = user?.organisation ? null : organisationKindOf(user);
+  const submissionBlockedMessage = user?.organisation
+    ? user.organisation.canFile
+      ? undefined
+      : tOrganisation("submitBlocked")
+    : unregisteredKind
+      ? tOrganisation("unregisteredSubmitBlocked")
+      : undefined;
+
   if (submitted) {
     return (
       <div className="font-sans pb-2">
@@ -228,6 +246,8 @@ export default function SubmitGrievancePage() {
       {/* Page Header */}
       <SubmitGrievanceHeader />
 
+      <OrganisationVerificationNotice organisation={user?.organisation} unregisteredKind={unregisteredKind} />
+
       {/* Stepper */}
       <Stepper currentStep={currentStep} onStepClick={(step) => goToStep(step)} />
 
@@ -242,6 +262,7 @@ export default function SubmitGrievancePage() {
             setSubmissionChannel={setSubmissionChannel}
             identityValues={identityValues}
             setIdentityValue={setIdentityValue}
+            submitterTypeLocked={isSubmitterTypeLocked(user)}
             profileSubmitterType={user?.submitter_type || user?.type}
             profileSubmissionChannel={user?.submission_channel}
           />
@@ -290,6 +311,7 @@ export default function SubmitGrievancePage() {
             desiredOutcome={desiredOutcome}
             serviceProvider={serviceProvider}
             attachments={attachments}
+            submissionBlockedMessage={submissionBlockedMessage}
           />
         )}
       </div>

@@ -1,6 +1,7 @@
 import { normalizeSubmissionChannel, normalizeSubmitterType } from "@/features/metadata";
 import type { User } from "@/features/auth/store/authSlice";
 import { submitsOnBehalfOfOthers } from "@/components/submitter-identity/fields";
+import { organisationKindFor } from "@/lib/organisationKind";
 import { splitPhoneNumber } from "@/lib/validation/phone";
 import { DEFAULT_SUBMISSION_CHANNEL } from "@/lib/validation/registerSubmitter";
 import type { SubmitterProfile } from "@/lib/submitterProfile";
@@ -82,5 +83,49 @@ export function buildInitialIdentityValues(
     }
     if (user.email) initial.email = user.email;
   }
+  Object.assign(initial, organisationIdentityValues(user, submitterType));
+  if (organisationKindFor(submitterType) !== null) {
+    // The Fayda ID an NGO / FPO's account holds is its representative's, given at sign-up,
+    // and the organisation form calls that field `representativeFaydaId` (not `faydaId`).
+    if (user?.fayda_id) initial.representativeFaydaId = user.fayda_id;
+    delete initial.faydaId;
+  }
   return initial;
+}
+
+/**
+ * The NGO / FPO fields Step 1 shares with the registered organisation: its
+ * legal name, registration number and authorised representative, straight from
+ * `/auth/me`'s `organization` — what the representative typed on the onboarding
+ * screen, so the same facts are not asked a second time. Overrides the
+ * registration snapshot, since the backend's record is the verified one.
+ *
+ * Empty unless Step 1 is on an organisation type: an NGO representative who
+ * switches the form to another type is not filing as the organisation. Without a
+ * registered organisation yet, only a registration number the backend already
+ * holds is known. (The representative's Fayda ID is filled in above.)
+ */
+function organisationIdentityValues(user: User | null, submitterType: string): Record<string, string> {
+  if (!user || organisationKindFor(submitterType) === null) return {};
+  const organisation = user.organisation;
+  // Before the organisation is registered the registration number is still known: it is what
+  // the account signed up with.
+  const registrationNumber = organisation?.registrationNumber ?? user.registration_number;
+  if (!organisation) return registrationNumber ? { registrationNumber } : {};
+
+  const representative = organisation.representativeName ?? user.full_name;
+  return {
+    orgName: organisation.legalName,
+    ...(registrationNumber ? { registrationNumber } : {}),
+    ...(representative ? { representativeName: representative } : {}),
+  };
+}
+
+/**
+ * Whether Step 1's submitter type is fixed by the account. A registered
+ * organisation files as itself — its type came from the verified registration —
+ * so the dropdown is not offered; anyone else may still pick.
+ */
+export function isSubmitterTypeLocked(user: User | null): boolean {
+  return Boolean(user?.organisation && organisationKindFor(user.type) !== null);
 }

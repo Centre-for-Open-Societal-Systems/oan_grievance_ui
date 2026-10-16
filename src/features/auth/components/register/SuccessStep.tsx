@@ -3,8 +3,11 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 
-/** Step 3 of registration — confirmation. */
-export function SuccessStep() {
+/**
+ * Step 3 of registration — confirmation. An NGO / FPO representative is told
+ * their organisation's details are the next thing asked, once they sign in.
+ */
+export function SuccessStep({ organisation = false }: { organisation?: boolean }) {
   const t = useTranslations('register.success');
 
   return (
@@ -16,7 +19,7 @@ export function SuccessStep() {
       </div>
       <div>
         <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('title')}</h3>
-        <p className="text-gray-500 font-medium">{t('body')}</p>
+        <p className="text-gray-500 font-medium">{organisation ? t('organisationBody') : t('body')}</p>
       </div>
       <Link
         href="/login"

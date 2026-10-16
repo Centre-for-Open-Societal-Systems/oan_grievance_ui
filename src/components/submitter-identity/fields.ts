@@ -13,6 +13,7 @@ import { FIELDS as DEVELOPMENT_AGENT_FIELDS } from "./SI-DevelopmentAgentForm";
 import type { SIFieldMeta } from "./SI-types";
 import { isEthiopianDialCode, isValidPhoneNumber } from "@/lib/validation/phone";
 import { EMAIL_PATTERN } from "@/lib/validation/fieldRules";
+import { organisationKindFor } from "@/lib/organisationKind";
 
 /** Which field set applies to each submitter type. */
 export const SI_FIELDS_BY_TYPE: Record<string, SIFieldMeta[]> = {
@@ -49,6 +50,17 @@ export const submissionChannelOptions = [
  */
 export function submitsOnBehalfOfOthers(submitterType: string): boolean {
   return submitterType === "development_agent";
+}
+
+/**
+ * True for a submitter type that is an organisation the portal onboards in its
+ * own step after the representative first signs in (NGO, and Cooperative /
+ * FPO — see features/organisation). Registration sends only the account, the
+ * type and the representative's Fayda ID; the organisation's address, contacts
+ * and the rest are asked once, on that onboarding screen.
+ */
+export function onboardsOrganisationAfterSignIn(submitterType: string): boolean {
+  return organisationKindFor(submitterType) !== null;
 }
 
 /**

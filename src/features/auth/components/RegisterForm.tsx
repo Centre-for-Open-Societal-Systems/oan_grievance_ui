@@ -1,7 +1,11 @@
 'use client';
 
 import { registerUser } from '@/features/auth/api/authApi';
-import { ID_FIELD_KEYS, submitsOnBehalfOfOthers } from '@/components/submitter-identity/fields';
+import {
+  ID_FIELD_KEYS,
+  onboardsOrganisationAfterSignIn,
+  submitsOnBehalfOfOthers,
+} from '@/components/submitter-identity/fields';
 import { useIdentityErrors } from '@/components/submitter-identity/useIdentityErrors';
 import { saveSubmitterProfile } from '@/lib/submitterProfile';
 import {
@@ -27,18 +31,23 @@ import { SuccessStep } from './register/SuccessStep';
 // Development Agent has no entry: it collects no profile fields here at all
 // (see `submitsOnBehalfOfOthers`) — an agent files for other people, so the
 // name/ID/phone/email fields on its form describe the farmer, not the agent.
+//
+// An NGO / FPO is asked only for its representative's Fayda ID here (see
+// OrganisationSignupForm); the organisation's own fields are collected on the
+// onboarding screen at first sign-in, so they are listed too — skipped by the
+// required-field check rather than demanded.
+const ORGANISATION_FIELDS_ASKED_LATER = ['orgName', 'registrationNumber', 'representativeName', 'memberCount'];
 const ALREADY_COLLECTED_FIELDS_BY_TYPE: Record<string, string[]> = {
   individual: ['fullName', 'phoneNumber', 'email'],
-  cooperative: ['fullName', 'phoneNumber', 'email'],
-  ngo: ['fullName', 'phoneNumber', 'email'],
+  cooperative: ['fullName', 'phoneNumber', 'email', ...ORGANISATION_FIELDS_ASKED_LATER],
+  ngo: ['fullName', 'phoneNumber', 'email', ...ORGANISATION_FIELDS_ASKED_LATER],
   woreda_kebele: ['fullName', 'phoneNumber', 'email'],
 };
 
-// The identity field holding each type's national ID. Only an Individual Farmer
-// is registered under it as its own; the organisation types are registered with
-// their representative's/official's, since the backend (which registers them as
-// the default type, see submitterType.ts) needs a Fayda ID for every account it
-// creates that way.
+// The identity field holding each type's national ID, which registration sends
+// as `fayda_id`. An Individual Farmer registers with their own; an NGO or FPO
+// with its representative's; a Woreda/Kebele Body, which still registers under
+// the default type, with its official's.
 const FAYDA_FIELD_BY_TYPE: Record<string, string> = {
   individual: 'faydaId',
   cooperative: 'representativeFaydaId',
@@ -50,6 +59,11 @@ const FAYDA_FIELD_BY_TYPE: Record<string, string> = {
 // unknown type) is shown there, where it can be fixed; anything else is about
 // the account step's fields.
 const PROFILE_REJECTION_PATTERN = /fayda|submitter type/i;
+
+// "A Submitter Profile with dedupe key 'fayda:6557…' is already registered" — the backend's
+// wording for a duplicate identity, which names an internal concept and the start of the ID.
+// It is replaced by our own sentence rather than shown; the scheme says which field it is about.
+const DEDUPE_KEY_PATTERN = /dedupe key\s*'?\s*([a-z]+):/i;
 
 type RegisterStep = 'account' | 'profile' | 'success';
 
@@ -92,7 +106,7 @@ export function RegisterForm() {
   // so switching submitter type can reset it here alongside identityValues —
   // consent given for one national-ID field (e.g. Fayda ID) must not carry
   // over silently to a different one after a mid-step type change (e.g.
-  // Individual -> Cooperative swaps in representativeFaydaId).
+  // Individual -> Woreda/Kebele Body swaps in officialFaydaId).
   const [consentChecked, setConsentChecked] = useState(false);
 
   const handleSubmitterTypeChange = (value: string) => {
@@ -185,7 +199,16 @@ export function RegisterForm() {
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
-      if (PROFILE_REJECTION_PATTERN.test(message)) {
+      const duplicate = DEDUPE_KEY_PATTERN.exec(message);
+      if (duplicate) {
+        // A duplicate Fayda ID is fixed on the profile step; any other identity (the phone) on the account step.
+        if (duplicate[1]!.toLowerCase() === 'fayda') {
+          setProfileError(t('faydaAlreadyRegistered'));
+        } else {
+          setError(t('identityAlreadyRegistered'));
+          setStep('account');
+        }
+      } else if (PROFILE_REJECTION_PATTERN.test(message)) {
         setProfileError(message);
       } else {
         setError(message);
@@ -211,6 +234,22 @@ export function RegisterForm() {
 
     let profileToSave: { submitterType: string; identityValues: Record<string, string> };
 
+    // Submit Grievance's own Step 1 isn't pre-filterable to just the "new"
+    // fields the way this page is — it always shows the full per-type form.
+    // Folding the account-step fields in here too (under the same keys those
+    // forms already use) means that page comes back genuinely pre-filled
+    // rather than just missing a few fields, since name/phone aren't
+    // otherwise available after login (the JWT only carries email + roles).
+    // Only for the fields this type actually treats as "the registrant's
+    // own" — see ALREADY_COLLECTED_FIELDS_BY_TYPE.
+    const accountStepValues: Record<string, string> = {
+      ...(hiddenFields.includes('fullName') ? { fullName: fullName.trim() } : {}),
+      ...(hiddenFields.includes('phoneNumber')
+        ? { phoneCode: countryCode, phoneNumber: stripLeadingZero(phoneNumber) }
+        : {}),
+      ...(hiddenFields.includes('email') ? { email: email.trim() } : {}),
+    };
+
     if (submitsOnBehalfOfOthers(submitterType)) {
       // Nothing to validate and nothing of the agent's own worth remembering
       // beyond their type — Submit Grievance asks for the farmer's/NGO's
@@ -218,26 +257,10 @@ export function RegisterForm() {
       identity.clear();
       profileToSave = { submitterType, identityValues: {} };
     } else {
+      // Includes an NGO / FPO; the rest of its details are collected on the onboarding
+      // screen after first sign-in.
       if (!identity.validateAll([typeCheck])) return;
-      // Submit Grievance's own Step 1 isn't pre-filterable to just the "new"
-      // fields the way this page is — it always shows the full per-type form.
-      // Folding the account-step fields in here too (under the same keys those
-      // forms already use) means that page comes back genuinely pre-filled
-      // rather than just missing a few fields, since name/phone aren't
-      // otherwise available after login (the JWT only carries email + roles).
-      // Only for the fields this type actually treats as "the registrant's
-      // own" — see ALREADY_COLLECTED_FIELDS_BY_TYPE.
-      profileToSave = {
-        submitterType,
-        identityValues: {
-          ...identityValues,
-          ...(hiddenFields.includes('fullName') ? { fullName: fullName.trim() } : {}),
-          ...(hiddenFields.includes('phoneNumber')
-            ? { phoneCode: countryCode, phoneNumber: stripLeadingZero(phoneNumber) }
-            : {}),
-          ...(hiddenFields.includes('email') ? { email: email.trim() } : {}),
-        },
-      };
+      profileToSave = { submitterType, identityValues: { ...identityValues, ...accountStepValues } };
     }
 
     setError(null);
@@ -277,7 +300,7 @@ export function RegisterForm() {
   }
 
   if (step === 'success') {
-    return <SuccessStep />;
+    return <SuccessStep organisation={onboardsOrganisationAfterSignIn(submitterType)} />;
   }
 
   return (

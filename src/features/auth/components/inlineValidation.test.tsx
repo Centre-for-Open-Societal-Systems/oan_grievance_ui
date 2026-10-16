@@ -291,17 +291,17 @@ describe('Register — profile step', () => {
     expect(registerUser.mock.calls[0]![0]).not.toHaveProperty('fayda_id');
   });
 
-  it('registers an organisation under the default type, with its representative’s Fayda ID', async () => {
+  it('registers a Woreda/Kebele Body under the default type, with its official’s Fayda ID', async () => {
     registerUser.mockResolvedValue(undefined);
     renderRegister();
     await completeAccountStep();
 
-    fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Woreda/Kebele Body' }));
     fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
-    fireEvent.change(document.getElementById('si-orgName')!, { target: { value: 'Green NGO' } });
-    fireEvent.change(document.getElementById('si-registrationNumber')!, { target: { value: 'NGO-123' } });
-    fireEvent.change(document.getElementById('si-representativeName')!, { target: { value: 'Tigist Bekele' } });
-    fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: '6557092147530500' } });
+    fireEvent.change(document.getElementById('si-officeName')!, { target: { value: 'Bole Woreda Office' } });
+    fireEvent.change(document.getElementById('si-adminZone')!, { target: { value: 'Addis Ababa' } });
+    fireEvent.change(document.getElementById('si-responsibleOfficial')!, { target: { value: 'Tigist Bekele' } });
+    fireEvent.change(document.getElementById('si-officialFaydaId')!, { target: { value: '6557092147530500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
@@ -310,7 +310,23 @@ describe('Register — profile step', () => {
     expect(fields.fayda_id).toBe('6557092147530500');
   });
 
-  it('stays on the profile step with the backend’s message when the Fayda ID is already registered, keeping what was typed', async () => {
+  it('registers an NGO under its own type with its representative’s Fayda ID alone', async () => {
+    registerUser.mockResolvedValue(undefined);
+    renderRegister();
+    await completeAccountStep();
+
+    fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
+    fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
+    fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: '6557092147530500' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
+    const fields = registerUser.mock.calls[0]![0] as Record<string, unknown>;
+    expect(fields.submitter_type).toBe('NGO');
+    expect(fields.fayda_id).toBe('6557092147530500');
+    expect(fields).not.toHaveProperty('registration_number');
+  });
+  it('stays on the profile step with our own message when the Fayda ID is already registered, keeping what was typed — never the backend’s dedupe-key wording', async () => {
     const message = "A Submitter Profile with dedupe key 'fayda:6557…' is already registered under another account.";
     registerUser.mockImplementation(async () => {
       throw new Error(message);
@@ -323,9 +339,29 @@ describe('Register — profile step', () => {
     fireEvent.change(document.getElementById('si-faydaId')!, { target: { value: '6557092147530500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('This Fayda ID is already registered to another account.');
+    expect(alert).not.toHaveTextContent(/dedupe|Submitter Profile|6557…/);
     expect(screen.getByText('Almost done!')).toBeInTheDocument();
     expect(document.getElementById('si-faydaId')).toHaveValue('6557092147530500');
+  });
+
+  it('returns to the account step with our own message when the backend’s duplicate is the phone number', async () => {
+    registerUser.mockImplementation(async () => {
+      throw new Error("A Submitter Profile with dedupe key 'phone:+2519110…' is already registered.");
+    });
+    renderRegister();
+    await completeAccountStep();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Individual Farmer' }));
+    fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
+    fireEvent.change(document.getElementById('si-faydaId')!, { target: { value: '6557092147530500' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('These details are already registered to another account.');
+    expect(alert).not.toHaveTextContent(/dedupe/);
+    expect(screen.queryByText('Almost done!')).not.toBeInTheDocument();
   });
 
   it('clears that message once the next attempt goes through', async () => {

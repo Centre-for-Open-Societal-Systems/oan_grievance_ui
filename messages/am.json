@@ -15,15 +15,156 @@
       "consentCheckboxLabel": "ብሔራዊ መታወቂያ ቁጥሬን ለማንነት ማረጋገጫ ለመስጠት እስማማለሁ።",
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
-      "fieldRequired": "ይህ መስክ ያስፈልጋል።"
+      "fieldRequired": "ይህ መስክ ያስፈልጋል።",
+      "organisationNotice": "ከገቡ በኋላ የድርጅትዎን ዝርዝሮች — ስም፣ የምዝገባ ቁጥር፣ ስልጣን የተሰጠው ተወካይ፣ አድራሻ እና የመገናኛ መረጃ — እንጠይቅዎታለን።",
+      "faydaAlreadyRegistered": "ይህ የፋይዳ መታወቂያ አስቀድሞ በሌላ መለያ ተመዝግቧል።",
+      "identityAlreadyRegistered": "እነዚህ ዝርዝሮች አስቀድመው በሌላ መለያ ተመዝግበዋል።"
     },
     "success": {
       "title": "መለያ ተፈጥሯል!",
       "body": "የእርስዎ መለያ በተሳካ ሁኔታ ተፈጥሯል። አሁን በኢሜይልዎ እና የይለፍ ቃልዎ መግባት ይችላሉ።",
+      "organisationBody": "የእርስዎ መለያ በተሳካ ሁኔታ ተፈጥሯል። ድርጅትዎን ለመመዝገብ ይግቡ።",
       "proceedToLogin": "ወደ መግቢያ ይቀጥሉ"
     }
   },
+  "organisation": {
+    "header": {
+      "completeRegistration": "ምዝገባን ያጠናቅቁ",
+      "registered": "ድርጅት"
+    },
+    "loading": "ድርጅትዎ በመጫን ላይ…",
+    "intro": {
+      "eyebrow": "የድርጅት ምዝገባ።",
+      "heading": {
+        "ngo": "መንግሥታዊ ያልሆነ ድርጅትዎን ይመዝግቡ",
+        "fpo": "የአምራች ድርጅትዎን ይመዝግቡ"
+      },
+      "body": "ድርጅትዎን በOAN የቅሬታ አውታረ መረብ ላይ ለማረጋገጥ ጥቂት ዝርዝሮች። የKYC ሰነዶች ከምዝገባ በኋላ ይሰበሰባሉ።"
+    },
+    "sections": {
+      "organisation": "ድርጅት",
+      "address": "የተመዘገበ አድራሻ",
+      "contact": "የመገናኛ ዝርዝሮች"
+    },
+    "fields": {
+      "legalName": { "label": "የድርጅት ስም", "placeholder": "የድርጅት ስም ያስገቡ" },
+      "brandName": {
+        "label": "የንግድ ምልክት / የማሳያ ስም",
+        "placeholder": "ከሕጋዊ ስሙ የተለየ ከሆነ ያስገቡ",
+        "hint": "ከሕጋዊ ስሙ የተለየ ከሆነ"
+      },
+      "entityType": { "label": "የተቋም ዓይነት", "placeholder": "የተቋም ዓይነት ይምረጡ" },
+      "taxId": {
+        "label": "የምዝገባ ቁጥር",
+        "placeholder": "የምዝገባ ቁጥር ያስገቡ",
+        "hint": "ለድርጅትዎ የተሰጠ የምዝገባ ወይም የፈቃድ ቁጥር"
+      },
+      "representativeName": { "label": "ስልጣን የተሰጠው ተወካይ", "placeholder": "የተወካዩን ሙሉ ስም ያስገቡ" },
+      "memberCount": { "label": "የተጎዱ አባላት ብዛት", "placeholder": "የተጎዱ አባላትን ብዛት ያስገቡ" },
+      "streetAddress": { "label": "የመንገድ አድራሻ", "placeholder": "የመንገድ አድራሻ ያስገቡ" },
+      "kebele": { "label": "ቀበሌ / መንደር", "placeholder": "ቀበሌ / መንደር ያስገቡ" },
+      "woreda": { "label": "ወረዳ", "placeholder": "ወረዳ ያስገቡ" },
+      "zone": { "label": "ዞን", "placeholder": "ዞን ያስገቡ" },
+      "region": { "label": "ክልል", "placeholder": "ክልል ያስገቡ" },
+      "country": { "label": "አገር", "placeholder": "አገር ያስገቡ" },
+      "postalCode": { "label": "የፖስታ ኮድ", "placeholder": "የፖስታ ኮድ ያስገቡ" },
+      "website": {
+        "label": "ድር ጣቢያ",
+        "placeholder": "ድር ጣቢያ ያስገቡ",
+        "hint": "ድር ጣቢያዎ - እንደ አውታረ መረብ አድራሻዎ ያገለግላል - በኋላ ሊጨመር ይችላል"
+      },
+      "email": {
+        "label": "የሥራ ኢሜይል",
+        "placeholder": "ኢሜይል አድራሻ ያስገቡ",
+        "hint": "የሥራ ኢሜይልዎን ይጠቀሙ — የምዝገባ ሂደት ዝመናዎችን ወደዚህ እንልካለን"
+      },
+      "phone": { "label": "ስልክ", "placeholder": "ስልክ ቁጥር ያስገቡ" }
+    },
+    "entityTypes": {
+      "localNgo": "የሀገር ውስጥ መንግሥታዊ ያልሆነ ድርጅት",
+      "internationalNgo": "ዓለም አቀፍ መንግሥታዊ ያልሆነ ድርጅት",
+      "cbo": "በማኅበረሰብ ላይ የተመሠረተ ድርጅት",
+      "cso": "የሲቪል ማኅበረሰብ ድርጅት",
+      "fpo": "የአርሶ አደር አምራቾች ድርጅት",
+      "primaryCooperative": "የመጀመሪያ ደረጃ ኅብረት ሥራ ማኅበር",
+      "cooperativeUnion": "የኅብረት ሥራ ማኅበራት ዩኒየን",
+      "cooperativeFederation": "የኅብረት ሥራ ማኅበራት ፌዴሬሽን"
+    },
+    "consent": "ይህንን ድርጅት ለመመዝገብ ሥልጣን እንዳለኝ አረጋግጣለሁ፣ እንዲሁም <policy>የOAN የግላዊነት ፖሊሲን</policy> እስማማለሁ። በአውታረ መረቡ ላይ መሳተፍ <agreement>የOAN የአውታረ መረብ ተሳትፎ ስምምነት</agreement> ተገዥ እንደሆነ ተረድቻለሁ፤ ሥራ ከመጀመሬ በፊት ገምግሜ እቀበለዋለሁ።",
+    "actions": {
+      "back": "ተመለስ",
+      "backToSignIn": "ወደ መግቢያ ተመለስ",
+      "register": "ድርጅት ይመዝግቡ",
+      "retry": "እንደገና ይሞክሩ",
+      "continueToSubmit": "ወደ ቅሬታ ማቅረቢያ ይቀጥሉ"
+    },
+    "metadata": {
+      "ngo": "የNGO ምዝገባ | የቅሬታ አስተዳደር ዳሽቦርድ",
+      "fpo": "የአምራች ድርጅት ምዝገባ | የቅሬታ አስተዳደር ዳሽቦርድ"
+    },
+    "errors": {
+      "required": "ይህ መስክ ያስፈልጋል።",
+      "tooLong": "ከ{max} ቁምፊዎች ያልበለጠ ይጠቀሙ።",
+      "entityType": "ከተዘረዘሩት የተቋም ዓይነቶች አንዱን ይምረጡ።",
+      "taxId": "ከ3 እስከ 60 ፊደላት ወይም ቁጥሮች ይጠቀሙ፤ በመካከላቸው ሰረዝ ወይም ሰያፍ መስመር ሊኖር ይችላል።",
+      "memberCount": "ሙሉ ቁጥር ያስገቡ፣ ለምሳሌ 120።",
+      "postalCode": "ትክክለኛ የፖስታ ኮድ ያስገቡ፣ ለምሳሌ 1000።",
+      "registrationNumberTaken": "በዚህ የምዝገባ ቁጥር የተመዘገበ ድርጅት አስቀድሞ አለ።",
+      "website": "ትክክለኛ የድር ጣቢያ አድራሻ ያስገቡ፣ ለምሳሌ www.example.org።",
+      "email": "ትክክለኛ ኢሜይል አድራሻ ያስገቡ፣ ለምሳሌ name@example.com።",
+      "phoneEthiopia": "ትክክለኛ የኢትዮጵያ ሞባይል ቁጥር ያስገቡ፣ ለምሳሌ 0911234567 ወይም 911234567 (በ09፣ 07፣ 9 ወይም 7 ይጀምራል)።",
+      "phone": "ለተመረጠው አገር ትክክለኛ ስልክ ቁጥር ያስገቡ።",
+      "generic": "ይህን ማጠናቀቅ አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "forbidden": "መለያዎ ድርጅት እንዲመዘግብ አልተፈቀደለትም።",
+      "connection": "አገልጋዩን ማግኘት አልተቻለም። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።",
+      "session": "የእርስዎ ክፍለ ጊዜ አብቅቷል። እባክዎ እንደገና ይግቡ።",
+      "profileRefresh": "ድርጅትዎ ተመዝግቧል፤ ነገር ግን መገለጫዎን ማደስ አልተቻለም። ቅሬታ ከማቅረብዎ በፊት እባክዎ እንደገና ይሞክሩ።"
+    },
+    "status": {
+      "details": {
+        "legalName": "የድርጅት ስም",
+        "brandName": "የንግድ ምልክት / የማሳያ ስም",
+        "entityType": "የተቋም ዓይነት",
+        "registrationNumber": "የምዝገባ ቁጥር",
+        "reason": "ከአስተዳዳሪው የተሰጠ ማስታወሻ",
+        "status": "ሁኔታ"
+      },
+      "inReview": {
+        "badge": "በግምገማ ላይ",
+        "title": "ድርጅትዎ ተመዝግቧል፤ በግምገማ ላይ ነው",
+        "body": "ድርጅትዎ ሥራ ከመጀመሩ በፊት የመድረኩ አስተዳዳሪ ይገመግመዋል። ሲጸድቅ እናሳውቅዎታለን።"
+      },
+      "active": {
+        "badge": "ንቁ",
+        "title": "ድርጅትዎ ንቁ ነው",
+        "body": "ድርጅትዎ በአውታረ መረቡ ላይ ጸድቋል። አሁን ቅሬታዎችን ማቅረብ እና መከታተል ይችላሉ።",
+        "submit": "ቅሬታ ያቅርቡ",
+        "track": "ቅሬታዎችን ይከታተሉ"
+      },
+      "suspended": {
+        "badge": "ታግዷል",
+        "title": "ድርጅትዎ ታግዷል",
+        "body": "የድርጅትዎ መዳረሻ ታግዷል። እባክዎ የመድረኩን አስተዳዳሪ ያነጋግሩ።"
+      }
+    }
+  },
   "submitGrievance": {
+    "organisation": {
+      "inReviewTitle": "ድርጅትዎ ማረጋገጫ በመጠበቅ ላይ ነው",
+      "inReviewBody": "{name} አሁንም በግምገማ ላይ ነው። ቅሬታዎን አሁን ማዘጋጀት እና ማስቀመጥ ይችላሉ፤ ነገር ግን ማቅረብ የሚቻለው አስተዳዳሪ ድርጅትዎን ካረጋገጠ በኋላ ብቻ ነው።",
+      "suspendedTitle": "ድርጅትዎ ታግዷል",
+      "suspendedBody": "{name} ታግዷል፤ ስለዚህ ለእሱ ቅሬታ ማቅረብ አይቻልም። እባክዎ የመድረኩን አስተዳዳሪ ያነጋግሩ።",
+      "reason": "ከአስተዳዳሪው የተሰጠ ማስታወሻ፦ {reason}",
+      "submitBlocked": "ድርጅትዎ እስኪረጋገጥ ድረስ ማቅረብ አይችሉም። ዝርዝሮችዎን እንደ ረቂቅ ማስቀመጥ ይችላሉ።",
+      "unregisteredTitle": "መጀመሪያ ድርጅትዎን ይመዝግቡ",
+      "unregisteredBody": "መለያዎ ገና ላልተመዘገበ ድርጅት ነው። ቅሬታዎን አሁን ማዘጋጀት እና ማስቀመጥ ይችላሉ፤ ነገር ግን ማቅረብ የሚቻለው ድርጅትዎ ከተመዘገበና ከተረጋገጠ በኋላ ብቻ ነው።",
+      "unregisteredAction": "ድርጅትዎን ይመዝግቡ",
+      "unregisteredSubmitBlocked": "ድርጅትዎ እስኪመዘገብና እስኪረጋገጥ ድረስ ማቅረብ አይችሉም። ዝርዝሮችዎን እንደ ረቂቅ ማስቀመጥ ይችላሉ።"
+    },
+    "reviewStep": {
+      "submit": "ቅሬታ ያቅርቡ",
+      "submitting": "በማቅረብ ላይ…"
+    },
     "identityStep": {
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",

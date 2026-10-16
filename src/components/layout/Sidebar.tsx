@@ -8,7 +8,9 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { canAccessRoute, canViewAllGrievances } from "@/features/auth/rbac";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { useAppSelector } from "@/store/hooks";
+import { ORGANISATION_ROUTE, organisationKindOf } from "@/lib/organisationKind";
 import {
+  Building2,
   LayoutDashboard,
   FileText,
   PlusCircle,
@@ -42,7 +44,13 @@ export function Sidebar() {
   const visibleNavItems = useMemo(() => {
     const userRoles = user?.roles ?? [];
     const seesAll = canViewAllGrievances(userRoles);
-    return navItems
+    // An NGO / FPO representative's way back to their organisation's status
+    // (or to finishing its registration) from the rest of the portal.
+    const organisationKind = organisationKindOf(user);
+    const items = organisationKind
+      ? [...navItems, { name: "My Organisation", href: ORGANISATION_ROUTE[organisationKind], icon: Building2 }]
+      : navItems;
+    return items
       .filter((item) => canAccessRoute(item.href, userRoles))
       .map((item) => {
         if (item.href === "/all-grievances" && !seesAll) {
@@ -50,7 +58,7 @@ export function Sidebar() {
         }
         return item;
       });
-  }, [user?.roles]);
+  }, [user]);
 
   return (
     <div className={`h-screen bg-[#0e3b25] flex flex-col flex-shrink-0 font-sans shadow-xl z-40 relative transition-all duration-300 ${isSidebarCollapsed ? 'w-[88px]' : 'w-[280px]'}`}>

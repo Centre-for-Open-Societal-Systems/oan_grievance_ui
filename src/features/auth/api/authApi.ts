@@ -1,12 +1,27 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { fetchApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
-import type { User } from '@/features/auth/store/authSlice';
+import type { User, UserOrganisation } from '@/features/auth/store/authSlice';
+import { toOrganisationStatus } from '@/lib/organisationStatus';
 
 interface LoginCredentials {
   usr: string;
   pwd: string;
   rememberMe?: boolean;
+}
+
+/** `profiles.grievance.organization` in `/auth/me`. */
+export interface BackendOrganization {
+  id?: string | null;
+  legal_name?: string | null;
+  brand_name?: string | null;
+  org_type?: string | null;
+  entity_type?: string | null;
+  registration_number?: string | null;
+  representative_name?: string | null;
+  status?: string | null;
+  status_reason?: string | null;
+  can_file?: boolean | null;
 }
 
 export interface BackendAuthMeData {
@@ -41,6 +56,8 @@ export interface BackendAuthMeData {
       role?: string | null;
       role_level?: string | null;
       type?: string | null;
+      /** An NGO / FPO representative's registered organisation — absent until it is registered. */
+      organization?: BackendOrganization | null;
       /** The backend submitter type name, e.g. `Individual Farmer` — same value as `type` for a submitter. */
       submitter_type?: string | null;
       /** The channel the account was registered through, by name, e.g. `Web Portal`. */
@@ -66,6 +83,17 @@ export function resolveFaydaId(
   identities: Array<{ scheme?: string | null; value?: string | null }> | null | undefined
 ): string | undefined {
   return identities?.find((i) => i.scheme === 'fayda')?.value ?? undefined;
+}
+
+/**
+ * An NGO's / FPO's registration number as the `org` entry of `identities` — where the backend
+ * has it from sign-up, before the organisation is registered (the flat `registration_number`
+ * on the profile is still empty then).
+ */
+export function resolveOrganisationNumber(
+  identities: Array<{ scheme?: string | null; value?: string | null }> | null | undefined
+): string | undefined {
+  return identities?.find((i) => i.scheme === 'org')?.value ?? undefined;
 }
 
 export async function loginUser({ usr, pwd, rememberMe = false }: LoginCredentials): Promise<User> {
@@ -96,7 +124,7 @@ export interface RegisterFields {
   phone_number: string;
   /** Backend submitter type to register as (see `backendSubmitterTypeFor`). Omit for the default, Individual Farmer. */
   submitter_type?: string;
-  /** 16-digit Fayda ID. The backend requires one for an Individual Farmer. */
+  /** 16-digit Fayda ID. The backend requires one for an Individual Farmer; for an NGO / FPO it is the representative's. */
   fayda_id?: string;
 }
 
@@ -251,6 +279,25 @@ async function fetchAndValidateMe(): Promise<BackendAuthMeData> {
   return d;
 }
 
+/** The organisation block of `/auth/me`, or undefined when the account has none (or it has no name to show). */
+export function toUserOrganisation(raw: BackendOrganization | null | undefined): UserOrganisation | undefined {
+  if (!raw?.legal_name) return undefined;
+  const status = toOrganisationStatus(raw.status);
+  return {
+    id: raw.id || null,
+    legalName: raw.legal_name,
+    brandName: raw.brand_name || null,
+    orgType: raw.org_type || null,
+    entityType: raw.entity_type || null,
+    registrationNumber: raw.registration_number || null,
+    representativeName: raw.representative_name || null,
+    status,
+    statusReason: raw.status_reason || null,
+    // The backend says so itself; only if it doesn't is it worked out — and then only Active may file.
+    canFile: typeof raw.can_file === 'boolean' ? raw.can_file : status === 'Active',
+  };
+}
+
 /**
  * Restores the user session from the backend /api/v1/auth/me endpoint via proxy.
  * Only extracts needed profile and identity fields; discards unnecessary backend metadata/claims.
@@ -275,10 +322,15 @@ export async function getMe(): Promise<User> {
     submitter_type: grievanceProfile?.submitter_type || undefined,
     submission_channel: grievanceProfile?.submission_channel || undefined,
     profile_id: grievanceProfile?.profile_id || undefined,
+    // For an NGO / FPO this is its representative's Fayda ID, given at sign-up.
     fayda_id: grievanceProfile?.fayda_id || resolveFaydaId(grievanceProfile?.identities),
+    // An NGO's / FPO's registration number once the backend holds it (it is not part of sign-up,
+    // so before the organisation is registered it is normally absent).
+    registration_number: grievanceProfile?.registration_number || resolveOrganisationNumber(grievanceProfile?.identities),
     administrative_area: grievanceProfile?.administrative_area || undefined,
     administrative_unit: grievanceProfile?.administrative_unit || undefined,
     preferred_language: grievanceProfile?.preferred_language || undefined,
+    organisation: toUserOrganisation(grievanceProfile?.organization),
   };
 }
 

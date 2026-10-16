@@ -113,6 +113,76 @@ describe('SubmitGrievancePage URL step filter', () => {
   });
 });
 
+describe('SubmitGrievancePage for a registered NGO', () => {
+  const ngoUser: User = {
+    email: 'test_ngo@gmail.com',
+    roles: ['Grievance Submitter'],
+    full_name: 'Test NGO',
+    mobile_no: '+251987654312',
+    phone_number: '987654312',
+    country_code: '+251',
+    type: 'NGO',
+    organisation: {
+      id: 'ORG-02216',
+      legalName: 'Test NGO Org',
+      brandName: 'NGO Org',
+      orgType: 'NGO',
+      entityType: 'International NGO',
+      registrationNumber: '1234567890',
+      representativeName: 'Test NGO',
+      status: 'In Review',
+      statusReason: null,
+      canFile: false,
+    },
+  };
+
+  it("opens Step 1 as the organisation: its details filled in and the submitter type fixed to NGO", async () => {
+    renderPage(ngoUser);
+
+    expect(await screen.findByLabelText(/^Organisation Name/)).toHaveValue('Test NGO Org');
+    expect(screen.getByLabelText(/^Registration Number/)).toHaveValue('1234567890');
+    expect(screen.getByLabelText(/^Authorised Representative/)).toHaveValue('Test NGO');
+    expect(screen.getByLabelText(/^Contact Email ID/)).toHaveValue('test_ngo@gmail.com');
+    // The type comes from the verified registration, so it cannot be switched to another.
+    expect(screen.getByRole('combobox', { name: /Submitter Type/ })).toBeDisabled();
+  });
+
+  it("also fills the representative's Fayda ID, which the account got at sign-up", async () => {
+    renderPage({ ...ngoUser, fayda_id: '6557092147530500' });
+
+    await screen.findByLabelText(/^Organisation Name/);
+    expect(document.getElementById('si-representativeFaydaId')).toBeInTheDocument();
+    // masked on screen by default, like every national-ID field
+    expect(document.getElementById('si-representativeFaydaId')).toHaveAttribute('type', 'password');
+    expect(document.getElementById('si-representativeFaydaId')).toHaveValue('6557092147530500');
+  });
+
+  it('tells an organisation that is still In Review it cannot submit yet', async () => {
+    renderPage(ngoUser);
+    expect(await screen.findByText('Your organisation is awaiting verification')).toBeInTheDocument();
+  });
+
+  it('holds back an NGO or FPO account that has not registered its organisation, pointing it to the right screen', async () => {
+    const { organisation: _registered, ...unregistered } = ngoUser;
+    void _registered;
+    const first = renderPage(unregistered);
+    expect(await screen.findByText('Register your organisation first')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Register your organisation' })).toHaveAttribute('href', '/ngo');
+    first.unmount();
+
+    renderPage({ ...unregistered, type: 'FPO' });
+    expect(await screen.findByRole('link', { name: 'Register your organisation' })).toHaveAttribute('href', '/fpo');
+  });
+
+  it('shows no such notice, and leaves the type editable, for a farmer', async () => {
+    renderPage();
+    await screen.findByText('Submitter Identity', { selector: 'h3' });
+    expect(screen.queryByText('Your organisation is awaiting verification')).not.toBeInTheDocument();
+    expect(screen.queryByText('Register your organisation first')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Submitter Type/ })).toBeEnabled();
+  });
+});
+
 describe('SubmitGrievancePage Step 1 prefill from /auth/me', () => {
   const channels = {
     submitterOptions: {
