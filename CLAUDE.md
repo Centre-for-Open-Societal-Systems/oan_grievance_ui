@@ -26,6 +26,15 @@ NGO and FPO representatives register through the ordinary `/register` flow — t
 - The JWT carries roles only, so `proxy.ts` cannot tell NGO from FPO (both are plain Submitters). The landing route is picked at sign-in by `homeRouteForUser` (`features/auth/rbac.ts`) from `organisationKindOf` (`lib/organisationKind.ts`), i.e. the backend profile `type` from `/auth/me`. The backend records NGO/FPO at sign-up, so this is known from the first sign-in, on any browser — nothing is kept in localStorage for it.
 - The screen talks to `oan_grievance_service`'s `/api/v1/orgs` endpoints through `/api/proxy` (contract: that repo's `docs/organization-registration-api.md`): `GET /orgs/me` (404 until registered) and `POST /orgs` (answers with the record, status `In Review`; requires `consent_given: true`, which the form's checkbox gates). The onboarding form's registration number starts from the one given at sign-up. The request body is built in one place, `toRegistrationPayload` in `organisationApi.ts`; the registration number is sent as `registration_number` (the backend dropped the `tax_registration_number` alias and refuses unknown keys), and error shapes (400 `details`; the plain-message 400s "Registration Number must be unique" and "Representative Account must be unique", which `duplicateRegistrationOf` tells apart; 403) are handled in `OrganisationRegistrationForm.tsx`. Once registered, `/auth/me` also carries `profiles.grievance.organization` (status, `can_file`, ...), which Submit Grievance reads. The admin verification endpoints (`GET /orgs`, `PATCH /orgs/{id}/status`) have no UI yet.
 
+## Dashboard
+
+`src/features/dashboard/` renders the landing page from one request, `GET /api/v1/charts?charts=grvKpis,grvStatusDistribution,grvByCategory,grvMonthlyTrend` (via `/api/proxy`). The service narrows counts to an officer's own desks and returns everything to an admin, so nothing in the UI filters by role; a 403 shows the "forbidden" message.
+
+- `api/dashboardApi.ts` parses each chart with its own Zod schema; a chart that is `null`, missing or in an unknown shape becomes `null`, never zeros. If every chart is `null` the page shows its error state.
+- `utils/mapDashboardCharts.ts` turns the parsed charts into what the components draw. `null` means "unavailable" and renders as a retryable section, which is different from an empty list.
+- Recent Grievances (`src/app/(dashboard)/dashboard/components/`) reads the All Grievances list on its own, so it still renders when the statistics fail.
+- All copy is in `messages/*.json` under `dashboard.*`; `messages.test.ts` fails if a locale is missing a key. Backend status labels are translated when known and shown as sent otherwise.
+
 ## Required environment variables
 
 | Variable | Required | Default | Purpose |
