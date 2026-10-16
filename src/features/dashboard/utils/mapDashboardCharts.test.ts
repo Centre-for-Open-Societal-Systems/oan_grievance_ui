@@ -37,11 +37,11 @@ describe('mapDashboardCharts', () => {
   it('maps the KPI rows to the four cards in display order', () => {
     const { kpis, escalated } = mapDashboardCharts(charts);
 
-    expect(kpis?.map((card) => [card.metric, card.title, card.value, card.trend, card.type])).toEqual([
-      ['total', 'Total Grievances', 128, 12.5, 'percentage'],
-      ['awaiting_action', 'Awaiting Action', 40, 5, 'number'],
-      ['resolved', 'Resolved', 48, 8, 'number'],
-      ['escalated', 'Escalated', 1, null, 'alert'],
+    expect(kpis?.map((card) => [card.metric, card.value, card.trend, card.type])).toEqual([
+      ['total', 128, 12.5, 'percentage'],
+      ['awaiting_action', 40, 5, 'number'],
+      ['resolved', 48, 8, 'number'],
+      ['escalated', 1, null, 'alert'],
     ]);
     expect(escalated).toBe(1);
   });

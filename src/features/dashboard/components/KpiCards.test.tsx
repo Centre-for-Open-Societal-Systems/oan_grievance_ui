@@ -61,6 +61,14 @@ describe('KpiCards', () => {
     expect(zeroResolved.className).toContain('text-slate-500');
   });
 
+  it('explains the escalated card in one neutral line, without an arrow or the good-news colour', () => {
+    renderCards([{ metric: 'escalated', value: 11 }]);
+
+    const caption = screen.getByText('Triggered by SLA breach');
+    expect(caption.className).not.toContain('emerald');
+    expect(caption.textContent).not.toMatch(/[↗↘]/);
+  });
+
   it('hides the arrow glyphs from screen readers', () => {
     const { container } = renderCards([{ metric: 'awaiting_action', value: 4, delta: 2 }]);
 

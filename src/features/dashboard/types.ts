@@ -7,7 +7,6 @@ export type KpiKind = 'percentage' | 'number' | 'alert';
 
 export interface KpiCard {
   metric: KpiMetric;
-  title: string;
   /** Null when the service did not report this metric — shown as unavailable, never as 0. */
   value: number | null;
   /** Null when there is nothing meaningful to show, so the card shows only its value. */

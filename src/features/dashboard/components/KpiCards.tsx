@@ -25,25 +25,20 @@ const BACKGROUNDS: Record<KpiMetric, string> = {
  * something to notice, and resolved cases are good news. A zero is never an
  * improvement, so it takes the neutral colour.
  */
-const DELTAS: Partial<Record<KpiMetric, { caption: string; tone: string }>> = {
-  total: { caption: "from last month", tone: "text-slate-600" },
-  awaiting_action: { caption: "new this week", tone: "text-amber-600" },
-  resolved: { caption: "resolved this week", tone: "text-emerald-600" },
+const DELTAS: Partial<Record<KpiMetric, { caption: "fromLastMonth" | "newThisWeek" | "resolvedThisWeek"; tone: string }>> = {
+  total: { caption: "fromLastMonth", tone: "text-slate-600" },
+  awaiting_action: { caption: "newThisWeek", tone: "text-amber-600" },
+  resolved: { caption: "resolvedThisWeek", tone: "text-emerald-600" },
 };
 const NEUTRAL_TONE = "text-slate-500";
 
 function Delta({ card }: { card: KpiCard }) {
+  const t = useTranslations("dashboard.overview");
   const format = useFormatter();
 
   if (card.type === "alert") {
-    return (
-      <>
-        <span className="text-[14px] font-bold text-emerald-600 tracking-tight">
-          <span aria-hidden="true">↗</span> SLA breach
-        </span>
-        <span className="text-[13px] text-gray-600">triggers</span>
-      </>
-    );
+    // A fixed note on what escalates a case, not a change in the number: no arrow, and not the good-news colour.
+    return <span className="text-[13px] text-gray-600">{t("escalatedCaption")}</span>;
   }
 
   const delta = DELTAS[card.metric];
@@ -60,7 +55,7 @@ function Delta({ card }: { card: KpiCard }) {
         {card.trend !== 0 && <span aria-hidden="true">{card.trend > 0 ? "↗" : "↘"} </span>}
         {text}
       </span>
-      <span className="text-[13px] text-gray-600">{delta.caption}</span>
+      <span className="text-[13px] text-gray-600">{t(`kpi.${delta.caption}`)}</span>
     </>
   );
 }
@@ -78,7 +73,7 @@ export function KpiCards({ data: kpis }: { data: KpiCard[] }) {
         >
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[16px] font-semibold text-slate-500 mb-2">{card.title}</p>
+              <p className="text-[16px] font-semibold text-slate-500 mb-2">{t(`kpi.${card.metric}`)}</p>
               <h3 className="text-[32px] leading-none font-bold text-slate-800 tracking-tight">
                 {card.value === null ? (
                   <>
