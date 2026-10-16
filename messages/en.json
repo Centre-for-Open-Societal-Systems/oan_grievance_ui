@@ -352,7 +352,35 @@
       "unavailableValue": "Not available",
       "uncategorised": "Uncategorised",
       "otherCategories": "{count, plural, one {# other category} other {# other categories}}",
-      "noCategories": "No grievances to group by category yet."
+      "noCategories": "No grievances to group by category yet.",
+      "title": "OAN Grievance Dashboard",
+      "subtitle": "Agriculture domain grievances — Ethiopia OAN Portal",
+      "kpi": {
+        "total": "Total Grievances",
+        "awaiting_action": "Awaiting Action",
+        "resolved": "Resolved",
+        "escalated": "Escalated",
+        "fromLastMonth": "from last month",
+        "newThisWeek": "new this week",
+        "resolvedThisWeek": "resolved this week"
+      },
+      "byServiceCategory": "By Service Category",
+      "statusDistribution": "Status Distribution",
+      "statusTotal": "Total",
+      "monthlyTrend": "Monthly Submission & Resolution Trend",
+      "submitted": "Submitted",
+      "resolved": "Resolved",
+      "statuses": {
+        "submitted": "Submitted",
+        "assigned": "Assigned",
+        "inProgress": "In Progress",
+        "moreInfoNeeded": "More Info Needed",
+        "resolved": "Resolved",
+        "closed": "Closed",
+        "rejected": "Rejected"
+      },
+      "noStatuses": "No grievances to show by status yet.",
+      "escalatedCaption": "Triggered by SLA breach"
     }
   },
   "login": {

@@ -352,7 +352,35 @@
       "unavailableValue": "አይገኝም",
       "uncategorised": "ያልተመደበ",
       "otherCategories": "{count, plural, one {# ሌላ ምድብ} other {# ሌሎች ምድቦች}}",
-      "noCategories": "በምድብ የሚመደብ ቅሬታ እስካሁን የለም።"
+      "noCategories": "በምድብ የሚመደብ ቅሬታ እስካሁን የለም።",
+      "title": "የOAN ቅሬታ ዳሽቦርድ",
+      "subtitle": "የግብርና ዘርፍ ቅሬታዎች — የኢትዮጵያ OAN ፖርታል",
+      "kpi": {
+        "total": "ጠቅላላ ቅሬታዎች",
+        "awaiting_action": "እርምጃ በመጠባበቅ ላይ",
+        "resolved": "የተፈቱ",
+        "escalated": "ወደ ከፍተኛ ደረጃ የተሸጋገሩ",
+        "fromLastMonth": "ከባለፈው ወር",
+        "newThisWeek": "በዚህ ሳምንት አዲስ",
+        "resolvedThisWeek": "በዚህ ሳምንት የተፈቱ"
+      },
+      "byServiceCategory": "በአገልግሎት ምድብ",
+      "statusDistribution": "የሁኔታ ስርጭት",
+      "statusTotal": "ጠቅላላ",
+      "monthlyTrend": "ወርሃዊ የቅሬታ ማቅረብና የመፍታት አዝማሚያ",
+      "submitted": "የቀረቡ",
+      "resolved": "የተፈቱ",
+      "statuses": {
+        "submitted": "የቀረበ",
+        "assigned": "የተመደበ",
+        "inProgress": "በሂደት ላይ",
+        "moreInfoNeeded": "ተጨማሪ መረጃ ያስፈልጋል",
+        "resolved": "የተፈታ",
+        "closed": "የተዘጋ",
+        "rejected": "ውድቅ የተደረገ"
+      },
+      "noStatuses": "በሁኔታ የሚታይ ቅሬታ እስካሁን የለም።",
+      "escalatedCaption": "በSLA ጥሰት የሚቀሰቀስ"
     }
   },
   "login": {

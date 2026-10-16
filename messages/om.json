@@ -352,7 +352,35 @@
       "unavailableValue": "Hin argamu",
       "uncategorised": "Ramaddii hin qabne",
       "otherCategories": "{count, plural, one {Ramaddii biraa #} other {Ramaddiiwwan biroo #}}",
-      "noCategories": "Komiin ramaddiidhaan gurmaa’u ammaaf hin jiru."
+      "noCategories": "Komiin ramaddiidhaan gurmaa’u ammaaf hin jiru.",
+      "title": "Daashboordii Komii OAN",
+      "subtitle": "Komiiwwan damee qonnaa — Poortaalii OAN Itoophiyaa",
+      "kpi": {
+        "total": "Komiiwwan Waliigalaa",
+        "awaiting_action": "Tarkaanfii Eegaa Jira",
+        "resolved": "Furaman",
+        "escalated": "Ol-guddifaman",
+        "fromLastMonth": "ji’a darbe irraa",
+        "newThisWeek": "torban kana haaraa",
+        "resolvedThisWeek": "torban kana furaman"
+      },
+      "byServiceCategory": "Ramaddii Tajaajilaan",
+      "statusDistribution": "Raabsa Haala",
+      "statusTotal": "Waliigala",
+      "monthlyTrend": "Adeemsa Ji’aa Dhiyeessuu fi Furuu Komii",
+      "submitted": "Dhiyaate",
+      "resolved": "Furame",
+      "statuses": {
+        "submitted": "Dhiyaate",
+        "assigned": "Ramadame",
+        "inProgress": "Adeemsa irra",
+        "moreInfoNeeded": "Odeeffannoon Dabalataa Barbaachisa",
+        "resolved": "Furame",
+        "closed": "Cufame",
+        "rejected": "Didame"
+      },
+      "noStatuses": "Komiin haalaan agarsiisuu ammaaf hin jiru.",
+      "escalatedCaption": "Cabsa SLAn kakaafame"
     }
   },
   "login": {

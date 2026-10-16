@@ -13,12 +13,7 @@ import type {
 } from '../types';
 
 /** The cards in the order the dashboard shows them. */
-const KPI_ORDER: { metric: KpiMetric; title: string }[] = [
-  { metric: 'total', title: 'Total Grievances' },
-  { metric: 'awaiting_action', title: 'Awaiting Action' },
-  { metric: 'resolved', title: 'Resolved' },
-  { metric: 'escalated', title: 'Escalated' },
-];
+const KPI_ORDER: KpiMetric[] = ['total', 'awaiting_action', 'resolved', 'escalated'];
 
 /**
  * The service names a status by its workflow label and sends no id or colour, so
@@ -50,7 +45,7 @@ export const SERVICE_CATEGORY_LIMIT = 5;
 function mapKpis(rows: KpiRow[] | null): KpiCard[] | null {
   if (!rows) return null;
   const byMetric = new Map(rows.map((row) => [row.metric, row]));
-  return KPI_ORDER.map(({ metric, title }) => {
+  return KPI_ORDER.map((metric) => {
     const row = byMetric.get(metric);
     const type = metric === 'total' ? 'percentage' : metric === 'escalated' ? 'alert' : 'number';
     let trend: number | null = null;
@@ -60,11 +55,12 @@ function mapKpis(rows: KpiRow[] | null): KpiCard[] | null {
       // "New / resolved this week" is a count: a negative one means nothing, so it is not shown.
       trend = row?.delta !== undefined && row.delta >= 0 ? row.delta : null;
     }
-    return { metric, title, value: row?.value ?? null, trend, type };
+    return { metric, value: row?.value ?? null, trend, type };
   });
 }
 
-function normalizeStatus(status: string): string {
+/** A status label with case, spacing and `_`/`-` forgiven — the key colours and translations are looked up by. */
+export function normalizeStatus(status: string): string {
   return status.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
 }
 
