@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { SIIdField, SIPhoneFormField, SITextField } from "./SI-fields";
 import type { SIFormProps } from "./SI-types";
@@ -7,7 +7,7 @@ export const FIELDS = [
   { key: "fullName", label: "Full Name", required: true },
   { key: "faydaId", label: "Fayda ID", required: true },
   { key: "phoneNumber", label: "Contact Number", required: true },
-  { key: "email", label: "Contact Email ID", required: false },
+  { key: "email", label: "Contact Email ID", required: true },
 ];
 
 export function IndividualFarmerForm({ values, setValue, hiddenFields = [], errors, onFieldBlur }: SIFormProps) {
@@ -25,7 +25,7 @@ export function IndividualFarmerForm({ values, setValue, hiddenFields = [], erro
       )}
 
       {!hiddenFields.includes("email") && (
-        <SITextField {...field} name="email" type="email" label="Contact Email ID" placeholder="Enter Contact Email ID" />
+        <SITextField {...field} name="email" type="email" label="Contact Email ID" required placeholder="Enter Contact Email ID" />
       )}
     </div>
   );

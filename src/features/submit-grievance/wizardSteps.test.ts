@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import { firstIncompleteStep, getDetailsErrors, type WizardFields } from './wizardSteps';
 
 const area = (id: string) => ({ id, name: id, pathCode: '' });
@@ -6,7 +6,7 @@ const area = (id: string) => ({ id, name: id, pathCode: '' });
 const COMPLETE: WizardFields = {
   submitterType: 'individual',
   submissionChannel: 'web',
-  identityValues: { fullName: 'Tigist Bekele', phoneCode: '+251', phoneNumber: '0911000000', faydaId: '1234567890123456' },
+  identityValues: { fullName: 'Tigist Bekele', phoneCode: '+251', phoneNumber: '0911000000', faydaId: '1234567890123456', email: 'tigist@example.com' },
   serviceCategory: 'Inputs',
   grievanceType: 'GTYPE-00001',
   region: area('region-ET04'),

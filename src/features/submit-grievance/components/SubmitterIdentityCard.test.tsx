@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
@@ -110,12 +110,12 @@ describe('Step 1 — inline validation', () => {
 
     saveAndContinue();
 
-    // Full Name, Fayda ID, Contact Number — Contact Email is optional.
-    expect(screen.getAllByText('This field is required.')).toHaveLength(3);
+    // Full Name, Fayda ID, Contact Number and Contact Email ID.
+    expect(screen.getAllByText('This field is required.')).toHaveLength(4);
     expect(byId('si-fullName')).toHaveAttribute('aria-invalid', 'true');
     expect(byId('si-faydaId')).toHaveAttribute('aria-invalid', 'true');
     expect(byId('si-phoneNumber')).toHaveAttribute('aria-invalid', 'true');
-    expect(byId('si-email')).not.toHaveAttribute('aria-invalid');
+    expect(byId('si-email')).toHaveAttribute('aria-invalid', 'true');
     expect(onNext).not.toHaveBeenCalled();
   });
 
@@ -131,7 +131,7 @@ describe('Step 1 — inline validation', () => {
     expect(screen.queryByText('Enter a valid Fayda ID: exactly 16 digits.')).not.toBeInTheDocument();
   });
 
-  it('rejects a malformed contact email, but leaves it alone when it is empty', () => {
+  it('marks the contact email required, and rejects a malformed one', () => {
     renderCard({ initialType: 'individual', initialChannel: 'web' });
     const email = byId('si-email');
 
@@ -139,9 +139,12 @@ describe('Step 1 — inline validation', () => {
     fireEvent.blur(email);
     expect(screen.getByText('Enter a valid email address, e.g. name@example.com.')).toBeInTheDocument();
 
+    // Empty is now a missing required field, not a malformed one.
     fireEvent.change(email, { target: { value: '' } });
     fireEvent.blur(email);
     expect(screen.queryByText('Enter a valid email address, e.g. name@example.com.')).not.toBeInTheDocument();
+    expect(screen.getByText('This field is required.')).toBeInTheDocument();
+    expect(screen.getByText('Contact Email ID', { selector: 'label' }).textContent).toContain('*');
   });
 
   it('advances once every required field for the chosen type is filled in validly', () => {
@@ -150,6 +153,7 @@ describe('Step 1 — inline validation', () => {
     fireEvent.change(byId('si-fullName'), { target: { value: 'Abebe Kebede' } });
     fireEvent.change(byId('si-faydaId'), { target: { value: '1234567890123456' } });
     fireEvent.change(byId('si-phoneNumber'), { target: { value: '0912345678' } });
+    fireEvent.change(byId('si-email'), { target: { value: 'abebe@example.com' } });
 
     saveAndContinue();
 
