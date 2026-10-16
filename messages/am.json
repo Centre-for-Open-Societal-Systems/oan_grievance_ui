@@ -102,6 +102,7 @@
       "taxId": "ከ3 እስከ 60 ፊደላት ወይም ቁጥሮች ይጠቀሙ፤ በመካከላቸው ሰረዝ ወይም ሰያፍ መስመር ሊኖር ይችላል።",
       "memberCount": "ሙሉ ቁጥር ያስገቡ፣ ለምሳሌ 120።",
       "postalCode": "ትክክለኛ የፖስታ ኮድ ያስገቡ፣ ለምሳሌ 1000።",
+      "registrationNumberTaken": "በዚህ የምዝገባ ቁጥር የተመዘገበ ድርጅት አስቀድሞ አለ።",
       "website": "ትክክለኛ የድር ጣቢያ አድራሻ ያስገቡ፣ ለምሳሌ www.example.org።",
       "email": "ትክክለኛ ኢሜይል አድራሻ ያስገቡ፣ ለምሳሌ name@example.com።",
       "phoneEthiopia": "ትክክለኛ የኢትዮጵያ ሞባይል ቁጥር ያስገቡ፣ ለምሳሌ 0911234567 ወይም 911234567 (በ09፣ 07፣ 9 ወይም 7 ይጀምራል)።",
@@ -171,7 +172,7 @@
     "unreadLabel": "ማሳወቂያዎች፣ {count} አዲስ"
   },
   "caseActions": {
-    "submitterTitle": "የእርስዎ ምላሽ",
+    "submitterTitle": "የእኔ ምላሽ",
     "chooseAction": "እርምጃ ይምረጡ",
     "nothingToDo": "አሁን ከእርስዎ የሚጠበቅ እርምጃ የለም። ቅሬታዎ ሲለወጥ እናሳውቅዎታለን።",
     "reasonLabel": "ምክንያት",
@@ -211,7 +212,9 @@
     "selectTemplate": "የምላሽ አብነት ይምረጡ",
     "selectActionFirst": "መጀመሪያ እርምጃ ይምረጡ",
     "loadingTemplates": "አብነቶች በመጫን ላይ ናቸው…",
-    "noTemplates": "ምንም የሚገኙ አብነቶች የሉም"
+    "noTemplates": "ምንም የሚገኙ አብነቶች የሉም",
+    "caseTerminalTitle": "ጉዳይ {status}",
+    "caseTerminalMessage": "ይህ ቅሬታ {status} ነው። ተጨማሪ ምላሾችን ማስገባት አይቻልም።"
   },
   "admin": {
     "responseTemplates": {
@@ -339,7 +342,22 @@
       "milestoneSubmit": "አስገባ",
       "milestoneReminder": "50% አስታዋሽ",
       "milestoneUrgent": "80% አስቸኳይ",
-      "milestoneDeadline": "የመጨረሻ ቀን"
+      "milestoneDeadline": "የመጨረሻ ቀን",
+      "grievanceTypesHeading": "የቅሬታ ዓይነቶች",
+      "noGrievanceTypes": "በዚህ ምድብ ውስጥ እስካሁን ንቁ የቅሬታ ዓይነት የለም።",
+      "addGrievanceTypeLabel": "የቅሬታ ዓይነት ያክሉ",
+      "addType": "ያክሉ",
+      "deactivate": "አቦዝን",
+      "deactivateTypeLabel": "{name}ን አቦዝን",
+      "deactivateTypeConfirm": "ይህ ዓይነት መቅረቡ ይቁም? ያሉት ቅሬታዎች ይይዙታል።",
+      "deactivateCategory": "ምድቡን አቦዝን",
+      "deactivateCategoryConfirm": "ይህ ምድብ መቅረቡ ይቁም? ያሉት ቅሬታዎች ይይዙታል።",
+      "categoryDeactivatedNotice": "\"{name}\" ተቦዝኗል።",
+      "categoryRenameQueued": "SLA ተቀምጧል። ምድቡ ወደ \"{name}\" እየተቀየረ ነው — አዲሱ ስም ለውጡ ሲጠናቀቅ ይታያል።",
+      "categoryRenamePending": "ወደ \"{name}\" እየተቀየረ ነው…",
+      "department": "ክፍል",
+      "departmentHint": "አማራጭ። የዚህን ምድብ ዴስክ ባለ ክፍል ውስጥ ይከፍታል፤ ኃላፊዎች በኋላ ይጨመራሉ።",
+      "departmentNone": "ገና ክፍል የለም"
     },
     "slaPolicy": {
       "loading": "ፖሊሲ በመጫን ላይ…",
@@ -436,5 +454,36 @@
     "approve": "Approve",
     "failedSubmit": "Failed to submit decision",
     "officerRole": "Grievance Officer"
+  },
+  "dashboard": {
+    "recentGrievances": {
+      "title": "የቅርብ ጊዜ ቅሬታዎች",
+      "viewAll": "ሁሉንም ይመልከቱ",
+      "loading": "የቅርብ ጊዜ ቅሬታዎች በመጫን ላይ…",
+      "loadFailed": "የቅርብ ጊዜ ቅሬታዎችን መጫን አልተቻለም።",
+      "retry": "እንደገና ይሞክሩ",
+      "empty": "እስካሁን ምንም ቅሬታ የለም።"
+    },
+    "overview": {
+      "loading": "የዳሽቦርድ ስታቲስቲክስ በመጫን ላይ…",
+      "loadFailed": "የዳሽቦርድ ስታቲስቲክስን መጫን አልተቻለም።",
+      "forbidden": "የዳሽቦርድ ስታቲስቲክስን የማየት ፈቃድ የለዎትም።",
+      "retry": "እንደገና ይሞክሩ",
+      "viewAll": "ሁሉንም ይመልከቱ",
+      "escalatedBanner": "{count, plural, one {<strong># ወደ ከፍተኛ ደረጃ የተሸጋገረ ቅሬታ</strong> አስቸኳይ የከፍተኛ ባለሙያ ትኩረት ይፈልጋል።} other {<strong># ወደ ከፍተኛ ደረጃ የተሸጋገሩ ቅሬታዎች</strong> አስቸኳይ የከፍተኛ ባለሙያ ትኩረት ይፈልጋሉ።}}",
+      "retrying": "እንደገና በመሞከር ላይ…",
+      "sectionUnavailable": "ይህን ክፍል መጫን አልተቻለም።",
+      "escalatedUnavailable": "ወደ ከፍተኛ ደረጃ የተሸጋገሩ ቅሬታዎችን ብዛት መጫን አልተቻለም።",
+      "unavailableValue": "አይገኝም",
+      "uncategorised": "ያልተመደበ",
+      "otherCategories": "{count, plural, one {# ሌላ ምድብ} other {# ሌሎች ምድቦች}}",
+      "noCategories": "በምድብ የሚመደብ ቅሬታ እስካሁን የለም።"
+    }
+  },
+  "login": {
+    "switchAccount": "ይውጡና ሌላ መለያ ይጠቀሙ",
+    "switchingAccount": "በመውጣት ላይ…",
+    "switchAccountHint": "እዚህ መዳረሻ በሌለው የሠራተኛ መለያ ገብተዋል። መውጣት ከመዝገቡ እና ከሌሎች OpenG2P መተግበሪያዎችም ያስወጣዎታል።",
+    "switchAccountFailed": "ከሠራተኛ መለያው ማስወጣት አልተቻለም። ከመዝገቡ ይውጡና እንደገና ይሞክሩ።"
   }
 }

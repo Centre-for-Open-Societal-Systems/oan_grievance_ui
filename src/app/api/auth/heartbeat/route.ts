@@ -1,9 +1,8 @@
 import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
-import { isIdleExpired, touchActivityCookie } from '@/lib/idleSession';
-import { decodeAccessToken } from '@/lib/jwt';
+import { touchActivityCookie } from '@/lib/idleSession';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
-import { AUTH_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '@/lib/session';
+import { hasSession, isSessionIdleExpired, readActiveSession, sessionRateLimitSecret } from '@/lib/activeSession';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -20,25 +19,21 @@ export async function POST(request: NextRequest) {
   if (csrfError) return csrfError;
 
   const clientIp = getClientIp(request);
-  const token = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
-  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
-  const claims = token ? decodeAccessToken(token) : null;
+  const session = readActiveSession(request);
 
   // Keyed by IP *and* a hash of the session's own refresh token when one is
   // present — same reasoning as login/refresh/logout: when clientIp can't be
   // trusted, every caller collapses to the same "unknown" bucket, and one
   // session's tabs firing heartbeats would otherwise exhaust the shared
   // budget for every other active session site-wide.
-  const limitKey = buildRateLimitKey('heartbeat', clientIp, { secret: refreshToken });
+  const limitKey = buildRateLimitKey('heartbeat', clientIp, { secret: sessionRateLimitSecret(session) });
   const limit = checkRateLimit(limitKey, RATE_LIMITS.heartbeat.limit, RATE_LIMITS.heartbeat.windowMs);
   if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds);
-
-  const hasRefreshToken = !!refreshToken;
 
   // Nothing to keep alive: a merely-expired access token still counts (the
   // refresh token proves there's a real session behind it), only the
   // complete absence of either does not.
-  if (!claims && !hasRefreshToken) {
+  if (!hasSession(session)) {
     return NextResponse.json({ message: 'No active session' }, { status: 401 });
   }
 
@@ -49,7 +44,7 @@ export async function POST(request: NextRequest) {
   // check catches up) would touch the activity cookie and undo server-side
   // idle enforcement, same as every other session-cookie entry point in
   // `isIdleExpired`'s own doc comment.
-  if (isIdleExpired(!!claims || hasRefreshToken, request)) {
+  if (isSessionIdleExpired(session, request)) {
     return NextResponse.json({ message: 'No active session' }, { status: 401 });
   }
 

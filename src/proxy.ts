@@ -1,13 +1,8 @@
 import { canAccessRoute, homeRouteForRoles, isProtectedRoute, isPublicRouteAllowedWhenAuthenticated } from '@/features/auth/rbac';
 import { env } from '@/lib/env';
-import { hasRecentActivity } from '@/lib/idleSession';
-import { decodeAccessToken, isExpired } from '@/lib/jwt';
-import {
-  AUTH_TOKEN_COOKIE,
-  clearAuthTokenCookie,
-  clearSessionCookies,
-  REFRESH_TOKEN_COOKIE,
-} from '@/lib/session';
+import { canRenewSession, isSessionIdleExpired, readActiveSession } from '@/lib/activeSession';
+import { isExpired } from '@/lib/jwt';
+import { clearAuthTokenCookie, clearIdleSessionCookies } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -86,9 +81,12 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  const token = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
-  const hasRefreshToken = !!request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
-  const claims = token ? decodeAccessToken(token) : null;
+  // Either a local session or a staff (IAM) one — see `activeSession.ts`.
+  // Both decode to the same claims shape, so nothing below tells them apart.
+  const session = readActiveSession(request);
+  const token = session?.token;
+  const claims = session?.claims ?? null;
+  const canRenew = !!session && canRenewSession(session);
   // Classified once — `isProtectedRoute` is just `!isPublicRoute`, so
   // computing both separately below would run the same PUBLIC_ROUTES scan
   // twice per request on this route guard that runs on nearly every page load.
@@ -98,10 +96,10 @@ export function proxy(request: NextRequest) {
   // the access token is meant to expire every 15 minutes and be rotated by
   // `/api/auth/me` / `/api/auth/refresh`, so bouncing on expiry alone would
   // sign everyone out constantly.
-  const hasValidSession = !!claims && (!isExpired(claims) || hasRefreshToken);
+  const hasValidSession = !!claims && (!isExpired(claims) || canRenew);
 
   // A valid token pair only proves a session was *opened*, not that it's
-  // still active. `hasRecentActivity` is the idle clock: refreshed by
+  // still active. `last_activity` is the idle clock: refreshed by
   // `/api/auth/heartbeat` on real user interaction and by every login/refresh,
   // it naturally expires on its own once nothing has touched it for
   // `IDLE_TIMEOUT_MS`. Its absence on an otherwise-valid session means idle
@@ -113,7 +111,11 @@ export function proxy(request: NextRequest) {
   // isPublicRoute redirect below instead of seeing the login form — they'd
   // only actually get idle-kicked (with the cookie clearing and ?reason=idle
   // messaging below) on whatever protected route they hit *after* that.
-  const idleExpired = hasValidSession && !hasRecentActivity(request);
+  //
+  // Local sessions only: a staff (IAM) session is single sign-on, its idle
+  // timeout is IAM's, and it may well have been opened at another app (the
+  // registry) that never started this app's clock — see `activeSession.ts`.
+  const idleExpired = hasValidSession && isSessionIdleExpired(session, request);
   const isAuthenticated = hasValidSession && !idleExpired;
 
   if (protectedRoute && !isAuthenticated) {
@@ -121,9 +123,10 @@ export function proxy(request: NextRequest) {
     if (idleExpired) {
       // Idle timeout ends the session for real, not just this one cookie —
       // unlike the malformed-token case below, there's a genuine live session
-      // being closed out, so every session cookie goes with it.
-      clearSessionCookies(response);
-    } else if (token && !claims) {
+      // being closed out, so all of its cookies go with it. Any IAM session
+      // the browser also holds stays (see `clearIdleSessionCookies`).
+      clearIdleSessionCookies(response);
+    } else if (session?.kind === 'local' && token && !claims) {
       // A cookie present but unusable (malformed, wrong shape) is misleading,
       // not just useless — drop it. A merely-expired one is left alone: it's
       // still the shape `/api/auth/me` can refresh from.

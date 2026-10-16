@@ -102,6 +102,7 @@
       "taxId": "Arfii ykn lakkoofsa 3 hanga 60 fayyadami; gidduu isaanii sarara gabaabaa ykn sarara muraasuu ni danda'ama.",
       "memberCount": "Lakkoofsa guutuu galchi, fkn 120.",
       "postalCode": "Koodii poostaa sirrii galchi, fkn 1000.",
+      "registrationNumberTaken": "Dhaabbanni lakkoofsa galmee kanaan galmaa'e duraanuu jira.",
       "website": "Teessoo marsariitii sirrii galchi, fkn www.example.org.",
       "email": "Teessoo imeelii sirrii galchi, fkn name@example.com.",
       "phoneEthiopia": "Lakkoofsa bilbilaa Itiyoophiyaa sirrii galchi, fkn 0911234567 ykn 911234567 (09, 07, 9 ykn 7 jalqaba).",
@@ -171,7 +172,7 @@
     "unreadLabel": "Beeksisoota, {count} haaraa"
   },
   "caseActions": {
-    "submitterTitle": "Deebii keessan",
+    "submitterTitle": "Deebii koo",
     "chooseAction": "Tarkaanfii filadhaa",
     "nothingToDo": "Amma tarkaanfiin isin irraa eegamu hin jiru. Yeroo komiin keessan jijjiiramu isin beeksifna.",
     "reasonLabel": "Sababa",
@@ -211,7 +212,9 @@
     "selectTemplate": "Unkaa deebii filadhaa",
     "selectActionFirst": "Dursa tarkaanfii filadhaa",
     "loadingTemplates": "Unkaaleen fe'amaa jiru…",
-    "noTemplates": "Unkaaleen jiran hin jiru"
+    "noTemplates": "Unkaaleen jiran hin jiru",
+    "caseTerminalTitle": "Dhimma {status}",
+    "caseTerminalMessage": "Komiin kun {status} ta'eera. Deebii dabalataa galchuun hin danda'amu."
   },
   "admin": {
     "responseTemplates": {
@@ -339,7 +342,22 @@
       "milestoneSubmit": "Galchi",
       "milestoneReminder": "Yaadachiisa 50%",
       "milestoneUrgent": "Ariifachiisaa 80%",
-      "milestoneDeadline": "Guyyaa Dhumaa"
+      "milestoneDeadline": "Guyyaa Dhumaa",
+      "grievanceTypesHeading": "Gosoota komii",
+      "noGrievanceTypes": "Ramaddii kana keessatti gosti komii hojii irra jiru hin jiru.",
+      "addGrievanceTypeLabel": "Gosa komii dabali",
+      "addType": "Dabali",
+      "deactivate": "Dhaabi",
+      "deactivateTypeLabel": "{name} dhaabi",
+      "deactivateTypeConfirm": "Gosni kun akka hin dhiyaanne? Komiiwwan jiran ni qabatu.",
+      "deactivateCategory": "Ramaddii dhaabi",
+      "deactivateCategoryConfirm": "Ramaddiin kun akka hin dhiyaanne? Komiiwwan jiran ni qabatu.",
+      "categoryDeactivatedNotice": "\"{name}\" dhaabameera.",
+      "categoryRenameQueued": "SLA olkaa’ameera. Maqaan ramaddii gara \"{name}\"tti jijjiiramaa jira — maqaan haaraan erga jijjiiramni xumuramee mul’ata.",
+      "categoryRenamePending": "Gara \"{name}\"tti jijjiiramaa jira…",
+      "department": "Kutaa",
+      "departmentHint": "Filannoo. Deeskii ramaddii kanaa kutaa jiru keessatti bana; qondaaltonni booda ni dabalamu.",
+      "departmentNone": "Ammaaf kutaa hin qabu"
     },
     "slaPolicy": {
       "loading": "Imaammanni fe’amaa jira…",
@@ -436,5 +454,36 @@
     "approve": "Approve",
     "failedSubmit": "Failed to submit decision",
     "officerRole": "Grievance Officer"
+  },
+  "dashboard": {
+    "recentGrievances": {
+      "title": "Komiiwwan Dhiyoo",
+      "viewAll": "Hunda ilaali",
+      "loading": "Komiiwwan dhiyoo fe’amaa jiru…",
+      "loadFailed": "Komiiwwan dhiyoo fe’uun hin danda’amne.",
+      "retry": "Irra deebi’ii yaali",
+      "empty": "Ammaaf komiin hin jiru."
+    },
+    "overview": {
+      "loading": "Istaatistiksii daashboordii fe’amaa jira…",
+      "loadFailed": "Istaatistiksii daashboordii fe’uun hin danda’amne.",
+      "forbidden": "Istaatistiksii daashboordii ilaaluuf hayyama hin qabdan.",
+      "retry": "Irra deebi’ii yaali",
+      "viewAll": "Hunda ilaali",
+      "escalatedBanner": "{count, plural, one {<strong>Komiin ol-guddifame #</strong> xiyyeeffannoo ogeessa ol’aanaa saffisaa barbaada.} other {<strong>Komiiwwan ol-guddifaman #</strong> xiyyeeffannoo ogeessa ol’aanaa saffisaa barbaadu.}}",
+      "retrying": "Irra deebi’ee yaalaa jira…",
+      "sectionUnavailable": "Kutaa kana fe’uun hin danda’amne.",
+      "escalatedUnavailable": "Lakkoofsi komiiwwan ol-guddifaman fe’uun hin danda’amne.",
+      "unavailableValue": "Hin argamu",
+      "uncategorised": "Ramaddii hin qabne",
+      "otherCategories": "{count, plural, one {Ramaddii biraa #} other {Ramaddiiwwan biroo #}}",
+      "noCategories": "Komiin ramaddiidhaan gurmaa’u ammaaf hin jiru."
+    }
+  },
+  "login": {
+    "switchAccount": "Ba'iitii herrega biraa fayyadami",
+    "switchingAccount": "Ba'aa jira…",
+    "switchAccountHint": "Herrega hojjetaa asitti hayyama hin qabneen seenteetta. Ba'uun galmee fi appiliikeeshinii OpenG2P biroo irraas si baasa.",
+    "switchAccountFailed": "Herrega hojjetaa irraa si baasuun hin danda'amne. Galmee irraa ba'iitii irra deebi'ii yaali."
   }
 }

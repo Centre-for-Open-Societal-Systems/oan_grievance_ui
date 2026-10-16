@@ -6,15 +6,20 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { useIsReviewOfficer } from '@/features/auth/hooks/useIsReviewOfficer';
 import { useGrievanceOptions } from '@/features/metadata';
 import {
+    createGrievanceType,
     createServiceCategory,
+    deactivateGrievanceType,
+    deactivateServiceCategory,
+    fetchGrievanceTypes,
     fetchServiceCategories,
     MAX_PAGE_SIZE,
+    updateServiceCategory,
 } from './api/taxonomyApi';
 import { fetchSlaConfigurations, updateSlaConfiguration } from './api/slaSettingsApi';
 import { AddCategoryModal } from './components/AddCategoryModal';
 import { GlobalSlaPolicyCard } from './components/GlobalSlaPolicyCard';
 import { SlaCategoryCard } from './components/SlaCategoryCard';
-import type { ServiceCategoryRecord } from './components/taxonomyTypes';
+import type { GrievanceTypeRecord, ServiceCategoryRecord } from './components/taxonomyTypes';
 import type { SlaConfiguration } from './components/slaSettingsTypes';
 import { CATEGORY_COLORS, type SlaCategory } from './components/types';
 
@@ -56,6 +61,7 @@ export default function CategorySlaConfigurationPage() {
     const canManage = !useIsReviewOfficer();
     const [categories, setCategories] = useState<ServiceCategoryRecord[]>([]);
     const [configs, setConfigs] = useState<SlaConfiguration[]>([]);
+    const [grievanceTypes, setGrievanceTypes] = useState<GrievanceTypeRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
@@ -70,10 +76,12 @@ export default function CategorySlaConfigurationPage() {
         Promise.all([
             fetchServiceCategories({ page_size: MAX_PAGE_SIZE }, { signal: controller.signal }),
             fetchSlaConfigurations({ page_size: MAX_PAGE_SIZE }, { signal: controller.signal }),
+            fetchGrievanceTypes({ is_active: true, page_size: MAX_PAGE_SIZE }, { signal: controller.signal }),
         ])
-            .then(([categoryData, configData]) => {
+            .then(([categoryData, configData, typeData]) => {
                 setCategories(categoryData?.service_categories ?? []);
                 setConfigs(configData?.sla_configurations ?? []);
+                setGrievanceTypes(typeData?.grievance_types ?? []);
                 setError(null);
             })
             .catch((err) => {
@@ -99,7 +107,9 @@ export default function CategorySlaConfigurationPage() {
             for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) | 0;
             return Math.abs(hash);
         };
-        return configs.map((config) =>
+        // A deactivated category keeps its SLA configuration; it just leaves this list.
+        const inactive = new Set(categories.filter((c) => !c.is_active).map((c) => c.category_name));
+        return configs.filter((config) => !inactive.has(config.service_category)).map((config) =>
             toSlaCategory(
                 config,
                 colorOf(config.service_category),
@@ -107,6 +117,37 @@ export default function CategorySlaConfigurationPage() {
             )
         );
     }, [categories, configs, grievanceOptions]);
+
+    const typesByCategory = useMemo(() => {
+        const grouped = new Map<string, GrievanceTypeRecord[]>();
+        for (const type of grievanceTypes) {
+            grouped.set(type.service_category, [...(grouped.get(type.service_category) ?? []), type]);
+        }
+        return grouped;
+    }, [grievanceTypes]);
+
+    const defaultCategory = categories.find((c) => c.is_default)?.category_name;
+
+    const handleAddType = async (category: string, typeName: string) => {
+        await createGrievanceType({ service_category: category, type_name: typeName });
+        reload();
+    };
+
+    const handleDeactivateType = async (grievanceTypeId: string) => {
+        await deactivateGrievanceType(grievanceTypeId);
+        reload();
+    };
+
+    const handleDeactivateCategory = async (category: string) => {
+        await deactivateServiceCategory(category);
+        setNotice(t('categoryDeactivatedNotice', { name: category }));
+        reload();
+    };
+
+    const handleRenameCategory = async (category: string, newName: string) => {
+        await updateServiceCategory(category, { category_name: newName });
+        reload();
+    };
 
     const handleSaveSla = async (
         configId: string,
@@ -167,7 +208,18 @@ export default function CategorySlaConfigurationPage() {
                 ) : (
                     <div className="flex flex-col">
                         {cards.map((card) => (
-                            <SlaCategoryCard key={card.id} categoryData={card} onSaveSla={canManage ? handleSaveSla : undefined} />
+                            <SlaCategoryCard
+                                key={card.id}
+                                categoryData={card}
+                                onSaveSla={canManage ? handleSaveSla : undefined}
+                                grievanceTypes={typesByCategory.get(card.category) ?? []}
+                                isDefaultCategory={card.category === defaultCategory}
+                                onAddType={canManage ? (name) => handleAddType(card.category, name) : undefined}
+                                onDeactivateType={canManage ? handleDeactivateType : undefined}
+                                onDeactivateCategory={canManage ? () => handleDeactivateCategory(card.category) : undefined}
+                                onRenameCategory={canManage ? (name) => handleRenameCategory(card.category, name) : undefined}
+                                renamingTo={categories.find((c) => c.category_name === card.category)?.renaming_to ?? null}
+                            />
                         ))}
                     </div>
                 )}
@@ -177,6 +229,7 @@ export default function CategorySlaConfigurationPage() {
             {canManage && isAdding && (
                 <AddCategoryModal
                     takenCodes={categories.map((c) => c.code)}
+                    departments={grievanceOptions?.departments ?? []}
                     onCreate={async (payload) => {
                         await createServiceCategory(payload);
                         setNotice(t('categoryCreatedNotice', { name: payload.category_name }));

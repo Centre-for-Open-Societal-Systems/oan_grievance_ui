@@ -8,6 +8,7 @@ import { useGrievanceOptions } from '@/features/metadata/hooks/useMetadata';
 import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
 import { ReviewReassignmentPopup } from './ReviewReassignmentPopup';
 import type { GrievanceChangeResponseData, GrievanceTimelineData, ReassignGrievancePayload } from '../../types';
+import { isTerminalStatus } from '../../utils/mapGrievance';
 
 interface CaseManagementProps {
   canManageCase: boolean;
@@ -15,6 +16,7 @@ interface CaseManagementProps {
   timelineData?: GrievanceTimelineData | null;
   onReassign?: (payload: ReassignGrievancePayload) => Promise<unknown>;
   onDecideReassignment?: (name: string, decision: 'Approved' | 'Rejected', comments: string) => Promise<void>;
+  isTerminal?: boolean;
 }
 
 export function CaseManagement({
@@ -23,6 +25,7 @@ export function CaseManagement({
   timelineData,
   onReassign,
   onDecideReassignment,
+  isTerminal: propIsTerminal,
 }: CaseManagementProps) {
   const activeTicket = ticketNumber || timelineData?.ticket_number || '';
   const optionsData = useAppSelector((state) => state.metadata?.grievanceOptions);
@@ -44,6 +47,10 @@ export function CaseManagement({
   const user = useAppSelector((state) => state.auth?.user);
   const isApprover = !!activeReassignment && activeReassignment.pending_with === user?.email;
 
+  const currentStatus = timelineData?.status || timelineData?.current_status || '';
+  const resolvedIsTerminal =
+    propIsTerminal ?? isTerminalStatus(currentStatus, optionsData?.statuses);
+
   // Re-sync only when the ticket or its server-side department actually
   // changes. Keying on the whole timelineData object reset the form on every
   // timeline refetch (status change, comment, the refetch after a reassign),
@@ -51,17 +58,18 @@ export function CaseManagement({
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setDepartment(initialDepartment);
+    setTargetOfficer(initialOfficer);
     setReassignReason('');
-  }, [activeTicket, initialDepartment]);
+  }, [activeTicket, initialDepartment, initialOfficer]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (department !== initialDepartment) {
+  const handleDepartmentChange = (val: string) => {
+    setDepartment(val);
+    if (val !== initialDepartment) {
       setTargetOfficer('');
     } else {
       setTargetOfficer(initialOfficer);
     }
-  }, [department, initialDepartment, initialOfficer]);
+  };
 
   const { data: deptOptions, isLoading: isLoadingOfficers } = useGrievanceOptions(
     { department },
@@ -82,7 +90,7 @@ export function CaseManagement({
     }));
   }, [deptOptions]);
 
-  if (!canManageCase && !isApprover) return null;
+  if (!canManageCase && !isApprover && !resolvedIsTerminal) return null;
 
   const isReassignment =
     (department && department !== initialDepartment) || (targetOfficer !== initialOfficer);
@@ -168,7 +176,27 @@ export function CaseManagement({
           </div>
         )}
 
-        {canManageCase && (
+        {resolvedIsTerminal ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[13px] font-semibold text-[#1B362D]">Department</span>
+              <div className="w-full border border-gray-200 bg-gray-50/80 rounded-lg px-3 py-2.5 text-sm text-gray-900 font-medium">
+                {initialDepartment || 'None'}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[13px] font-semibold text-[#1B362D]">Officer</span>
+              <div className="w-full border border-gray-200 bg-gray-50/80 rounded-lg px-3 py-2.5 text-sm text-gray-900 font-medium">
+                {officerOptions.find((o) => o.value === initialOfficer)?.label || initialOfficer || 'Unassigned'}
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-500 italic mt-0.5">
+              Case is {currentStatus ? currentStatus.toLowerCase() : 'closed'} and cannot be reassigned.
+            </div>
+          </div>
+        ) : canManageCase ? (
           <>
             <div className="flex flex-col gap-1.5">
               <label htmlFor={departmentSelectId} className="text-[13px] font-semibold text-[#1B362D]">
@@ -178,7 +206,7 @@ export function CaseManagement({
                 id={departmentSelectId}
                 placeholder="Select Department"
                 value={department}
-                onChange={setDepartment}
+                onChange={handleDepartmentChange}
                 options={departmentOptions}
               />
             </div>
@@ -227,7 +255,7 @@ export function CaseManagement({
               {isSaving ? 'Saving…' : isReassignment ? 'Submit Reassignment Request' : 'Save Changes'}
             </button>
           </>
-        )}
+        ) : null}
       </div>
 
       {showViewPopup && activeReassignment && (

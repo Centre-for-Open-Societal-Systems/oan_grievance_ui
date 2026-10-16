@@ -2,7 +2,7 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 import http from 'node:http';
 import httpProxy from 'http-proxy-3';
-import { decodeAccessToken, isExpired } from '../src/lib/jwt';
+import { decodeAccessToken, decodeIamAccessToken, isExpired } from '../src/lib/jwt';
 import { checkRateLimit, RATE_LIMITS } from '../src/lib/rateLimit';
 
 // Helper to parse cookies from a raw Cookie header
@@ -94,31 +94,41 @@ server.on('upgrade', (req, socket, head) => {
   }
 
   const cookies = parseCookies(req.headers.cookie);
-  const token = cookies['auth_token'];
-  
+  // A local session's `auth_token`, or else a staff session's IAM access
+  // token (see src/lib/iamSession.ts). Both are sent to Frappe as a Bearer
+  // token; oan_auth_service tells them apart by issuer.
+  const iamApplication = process.env.IAM_APPLICATION;
+  const iamToken = iamApplication ? cookies[`${process.env.IAM_COOKIE_PREFIX ?? ''}X-Access-Token`] : undefined;
+  const token = cookies['auth_token'] || iamToken;
+
   if (!token) {
-    console.error('[gateway] No auth_token cookie');
+    console.error('[gateway] No session token cookie');
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();
     return;
   }
 
-  // Check idle session
+  // Check idle session — a local session only. A staff (IAM) session is
+  // single sign-on whose idle timeout is IAM's, and may have been opened at
+  // another app that never started this app's clock (see
+  // src/lib/activeSession.ts).
   const cookieReader = {
     cookies: {
       get: (name: string) => (cookies[name] ? { value: cookies[name] } : undefined)
     }
   };
-  
-  if (!hasRecentActivity(cookieReader)) {
+
+  if (cookies['auth_token'] && !hasRecentActivity(cookieReader)) {
     console.error('[gateway] Session is idle');
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();
     return;
   }
 
-  const claims = decodeAccessToken(token);
-  if (!claims || isExpired(claims, 0)) {
+  const claims = cookies['auth_token'] ? decodeAccessToken(token) : decodeIamAccessToken(token, iamApplication!);
+  // A staff session counts only with a role on this app's client — same
+  // rule as `hasAppAccess` in src/lib/activeSession.ts.
+  if (!claims || isExpired(claims, 0) || (!cookies['auth_token'] && claims.roles.length === 0)) {
     console.error('[gateway] Token invalid or expired');
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();

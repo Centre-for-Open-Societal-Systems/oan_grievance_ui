@@ -12,8 +12,8 @@ import { useState } from 'react';
 import {
   BACKEND_FIELD_TO_FORM_FIELD,
   cleanBackendMessage,
+  duplicateRegistrationOf,
   getMyOrganisation,
-  isDuplicateRegistration,
   registerOrganisation,
   toRegistrationPayload,
   type Organisation,
@@ -152,15 +152,22 @@ export function OrganisationRegistrationForm({
    * message under that field, otherwise one alert for the form.
    */
   const showFailure = async (error: unknown) => {
-    // 409: either this account already has an organisation (a second tab, a
-    // double submit) — then just show it — or the registration number is taken.
-    if (isDuplicateRegistration(error)) {
-      const existing = await getMyOrganisation().catch(() => null);
-      if (existing) {
-        onRegistered(existing);
+    // "Already registered": either this account already has an organisation (a second tab,
+    // a double submit) — then just show it — or the registration number is taken.
+    const duplicate = duplicateRegistrationOf(error);
+    if (duplicate) {
+      if (duplicate !== 'number') {
+        const existing = await getMyOrganisation().catch(() => null);
+        if (existing) {
+          onRegistered(existing);
+          return;
+        }
+      }
+      if (duplicate === 'account') {
+        setFormError(backendMessageOf(error) ?? t('errors.generic'));
         return;
       }
-      const taken = { taxId: cleanBackendMessage((error as Error).message) };
+      const taken = { taxId: t('errors.registrationNumberTaken') };
       fieldErrors.setAll(taken);
       focusFirstError(FIELD_ORDER, taken);
       return;

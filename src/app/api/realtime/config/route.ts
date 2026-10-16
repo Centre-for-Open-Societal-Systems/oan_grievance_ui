@@ -1,12 +1,11 @@
 import { getClientIp } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { env } from '@/lib/env';
-import { isIdleExpired } from '@/lib/idleSession';
-import { decodeAccessToken, isExpired } from '@/lib/jwt';
+import { isExpired } from '@/lib/jwt';
 import { logger } from '@/lib/logger';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
-import { AUTH_TOKEN_COOKIE, clearSessionCookies, REFRESH_TOKEN_COOKIE, setSessionCookies } from '@/lib/session';
-import { performRefresh } from '@/lib/sessionRefresh';
+import { isSessionIdleExpired, readActiveSession, renewSession, sessionRateLimitSecret } from '@/lib/activeSession';
+import { clearIdleSessionCookies, clearSessionCookies } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -35,32 +34,31 @@ export async function POST(request: NextRequest) {
   }
 
   const clientIp = getClientIp(request);
-  const token = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
-  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
-  const claims = token ? decodeAccessToken(token) : null;
+  const session = readActiveSession(request);
 
-  const limitKey = buildRateLimitKey('realtime-config', clientIp, { secret: refreshToken });
+  const limitKey = buildRateLimitKey('realtime-config', clientIp, { secret: sessionRateLimitSecret(session) });
   const limit = checkRateLimit(limitKey, RATE_LIMITS.realtimeConfig.limit, RATE_LIMITS.realtimeConfig.windowMs);
   if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds);
 
-  if (isIdleExpired(!!claims || !!refreshToken, request)) return noSession();
+  if (isSessionIdleExpired(session, request)) {
+    const response = NextResponse.json({ message: 'No active session' }, { status: 401, headers: NO_STORE });
+    clearIdleSessionCookies(response);
+    return response;
+  }
+  if (!session) return noSession();
 
   const connection = { enabled: true, url: realtime.url, site: realtime.site, path: realtime.path };
 
-  if (token && claims && !isExpired(claims, MIN_TOKEN_LIFETIME_SECONDS)) {
+  if (session.claims && !isExpired(session.claims, MIN_TOKEN_LIFETIME_SECONDS)) {
     return NextResponse.json(connection, { headers: NO_STORE });
   }
 
   try {
-    const result = await performRefresh(request, clientIp);
-    if (!result) return noSession();
+    const renewed = await renewSession(request, session, clientIp);
+    if (!renewed) return noSession();
 
     const response = NextResponse.json(connection, { headers: NO_STORE });
-    setSessionCookies(response, {
-      token: result.pair.access_token,
-      refreshToken: result.pair.refresh_token,
-      rememberMe: result.rememberMe,
-    });
+    renewed.apply(response);
     return response;
   } catch (error) {
     logger.error('Realtime config refresh error:', error);

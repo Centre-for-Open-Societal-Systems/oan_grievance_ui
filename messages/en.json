@@ -102,6 +102,7 @@
       "taxId": "Use 3-60 letters or numbers; hyphens or slashes are allowed between them.",
       "memberCount": "Enter a whole number of members, e.g. 120.",
       "postalCode": "Enter a valid postal code, e.g. 1000.",
+      "registrationNumberTaken": "An organisation with this registration number is already registered.",
       "website": "Enter a valid website address, e.g. www.example.org.",
       "email": "Enter a valid email address, e.g. name@example.com.",
       "phoneEthiopia": "Enter a valid Ethiopian mobile number, e.g. 0911234567 or 911234567 (starts with 09, 07, 9, or 7).",
@@ -171,7 +172,7 @@
     "unreadLabel": "Notifications, {count} new"
   },
   "caseActions": {
-    "submitterTitle": "Your response",
+    "submitterTitle": "My response",
     "chooseAction": "Choose an action",
     "nothingToDo": "No action is needed from you right now. We'll let you know when your grievance changes.",
     "reasonLabel": "Reason",
@@ -211,7 +212,9 @@
     "selectTemplate": "Select Response Template",
     "selectActionFirst": "Select an action first",
     "loadingTemplates": "Loading templates…",
-    "noTemplates": "No templates available"
+    "noTemplates": "No templates available",
+    "caseTerminalTitle": "Case {status}",
+    "caseTerminalMessage": "This grievance is {status}. No further responses can be submitted."
   },
   "admin": {
     "responseTemplates": {
@@ -339,7 +342,22 @@
       "milestoneSubmit": "Submit",
       "milestoneReminder": "50% reminder",
       "milestoneUrgent": "80% urgent",
-      "milestoneDeadline": "Deadline"
+      "milestoneDeadline": "Deadline",
+      "grievanceTypesHeading": "Grievance types",
+      "noGrievanceTypes": "No active grievance types in this category yet.",
+      "addGrievanceTypeLabel": "Add a grievance type",
+      "addType": "Add",
+      "deactivate": "Deactivate",
+      "deactivateTypeLabel": "Deactivate {name}",
+      "deactivateTypeConfirm": "Stop offering this type? Existing grievances keep it.",
+      "deactivateCategory": "Deactivate category",
+      "deactivateCategoryConfirm": "Stop offering this category? Existing grievances keep it.",
+      "categoryDeactivatedNotice": "\"{name}\" was deactivated.",
+      "categoryRenameQueued": "SLA saved. Renaming the category to \"{name}\" — the new name appears once the rename finishes.",
+      "categoryRenamePending": "Being renamed to \"{name}\"…",
+      "department": "Department",
+      "departmentHint": "Optional. Opens this category's desk in an existing department; officers are added later.",
+      "departmentNone": "No department yet"
     },
     "slaPolicy": {
       "loading": "Loading policy…",
@@ -436,5 +454,36 @@
     "approve": "Approve",
     "failedSubmit": "Failed to submit decision",
     "officerRole": "Grievance Officer"
+  },
+  "dashboard": {
+    "recentGrievances": {
+      "title": "Recent Grievances",
+      "viewAll": "View all",
+      "loading": "Loading recent grievances…",
+      "loadFailed": "Could not load recent grievances.",
+      "retry": "Retry",
+      "empty": "No grievances yet."
+    },
+    "overview": {
+      "loading": "Loading dashboard statistics…",
+      "loadFailed": "Could not load the dashboard statistics.",
+      "forbidden": "You do not have access to the dashboard statistics.",
+      "retry": "Retry",
+      "viewAll": "View all",
+      "escalatedBanner": "{count, plural, one {<strong># escalated grievance</strong> requires immediate senior officer attention.} other {<strong># escalated grievances</strong> require immediate senior officer attention.}}",
+      "retrying": "Retrying…",
+      "sectionUnavailable": "This section could not be loaded.",
+      "escalatedUnavailable": "The number of escalated grievances could not be loaded.",
+      "unavailableValue": "Not available",
+      "uncategorised": "Uncategorised",
+      "otherCategories": "{count, plural, one {# other category} other {# other categories}}",
+      "noCategories": "No grievances to group by category yet."
+    }
+  },
+  "login": {
+    "switchAccount": "Sign out and use a different account",
+    "switchingAccount": "Signing out…",
+    "switchAccountHint": "You are signed in with a staff account that has no access here. Signing out also signs you out of the registry and other OpenG2P apps.",
+    "switchAccountFailed": "Could not sign you out of the staff account. Sign out from the registry, then try again."
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { sendHeartbeat } from '@/features/auth/api/authApi';
+import { getIdleManaged, sendHeartbeat } from '@/features/auth/api/authApi';
 import { performLogout } from '@/features/auth/logout';
 import { selectUser } from '@/features/auth/store/authSlice';
 import { CLIENT_IDLE_TIMEOUT_MS, CLIENT_IDLE_WARNING_LEAD_MS } from '@/lib/idleTimeoutConfig';
@@ -31,12 +31,19 @@ export interface IdleTimerState {
  * never runs (JS disabled, tab frozen, etc.). This exists purely to warn the
  * user before that happens and to end the session gracefully instead of
  * their next click just bouncing them to `/login` with no explanation.
+ *
+ * Inert for a staff (IAM) session: its idle timeout is Keycloak's, and
+ * signing it out here would end the user's whole SSO session, the
+ * registry's included. It stays inert until `/api/auth/me` says the session
+ * is a local one — if that lookup fails, the server-side check still ends
+ * an idle local session, just without this warning first.
  */
 export function useIdleTimer(): IdleTimerState {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const userEmail = useAppSelector(selectUser)?.email ?? null;
 
+  const [idleManaged, setIdleManaged] = useState(false);
   const [warning, setWarning] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(Math.ceil(CLIENT_IDLE_WARNING_LEAD_MS / 1000));
 
@@ -56,9 +63,9 @@ export function useIdleTimer(): IdleTimerState {
     // on the very page meant to end it.
     void (async () => {
       const currentUrl = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '';
-      await performLogout(dispatch, userEmail);
       const returnParam = currentUrl && !currentUrl.startsWith('/login') ? `&returnUrl=${encodeURIComponent(currentUrl)}` : '';
-      router.push(`/login?reason=idle${returnParam}`);
+      const loginUrl = `/login?reason=idle${returnParam}`;
+      if (!(await performLogout(dispatch, userEmail, loginUrl))) router.push(loginUrl);
     })();
   }, [dispatch, router, userEmail]);
 
@@ -80,15 +87,27 @@ export function useIdleTimer(): IdleTimerState {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    void getIdleManaged().then((managed) => {
+      if (!cancelled) setIdleManaged(managed === true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!idleManaged) return;
     const now = Date.now();
     lastActivityRef.current = now;
     lastHeartbeatRef.current = now;
 
     ACTIVITY_EVENTS.forEach((event) => window.addEventListener(event, recordActivity, { passive: true }));
     return () => ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, recordActivity));
-  }, [recordActivity]);
+  }, [idleManaged, recordActivity]);
 
   useEffect(() => {
+    if (!idleManaged) return;
     const warnAtMs = CLIENT_IDLE_TIMEOUT_MS - CLIENT_IDLE_WARNING_LEAD_MS;
 
     const tick = window.setInterval(() => {
@@ -110,7 +129,7 @@ export function useIdleTimer(): IdleTimerState {
     }, 1000);
 
     return () => window.clearInterval(tick);
-  }, [signOutForIdle]);
+  }, [idleManaged, signOutForIdle]);
 
   return { warning, secondsRemaining, stayActive };
 }

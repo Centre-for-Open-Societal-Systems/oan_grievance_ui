@@ -5,7 +5,7 @@ import {
   BACKEND_FIELD_TO_FORM_FIELD,
   cleanBackendMessage,
   getMyOrganisation,
-  isDuplicateRegistration,
+  duplicateRegistrationOf,
   parseOrganisation,
   registerOrganisation,
   toRegistrationPayload,
@@ -85,13 +85,13 @@ describe('toRegistrationPayload', () => {
     phoneNumber: '0911234567',
   };
 
-  it('trims, upper-cases the registration number, adds a scheme to the website, builds an E.164 phone and a numeric member count', () => {
+  it('sends the registration number under its one backend name (the old tax_registration_number alias is gone) - trims, upper-cases it, adds a scheme to the website, builds an E.164 phone and a numeric member count', () => {
     expect(toRegistrationPayload('fpo', values)).toEqual({
       legal_name: 'Acme Farmers',
       org_type: 'FPO',
       entity_type: 'Primary Cooperative',
       brand_name: 'Acme',
-      tax_registration_number: 'ET12345678',
+      registration_number: 'ET12345678',
       representative_name: 'Almaz Tesfaye',
       members_affected: 120,
       street_address: 'Main St',
@@ -155,12 +155,22 @@ describe('registerOrganisation', () => {
     expect(org).toMatchObject({ id: 'ORG-02209', status: 'In Review', registrationNumber: 'ET01878767' });
   });
 
-  it('surfaces a 409 as an ApiError carrying the status', async () => {
-    mockFetch(409, { code: 'DUPLICATE_ENTRY', message: 'Your account already represents a registered organization.' });
-    const error = await registerOrganisation({} as Parameters<typeof registerOrganisation>[0]).catch((e: unknown) => e);
-    expect(isDuplicateRegistration(error)).toBe(true);
+  it('tells the two "already registered" refusals apart by their message (the backend answers both with a 400)', async () => {
+    mockFetch(400, { code: 'VALIDATION_ERROR', message: 'Registration Number must be unique', details: {} });
+    expect(duplicateRegistrationOf(await registerOrganisation({} as Parameters<typeof registerOrganisation>[0]).catch((e: unknown) => e))).toBe('number');
+
+    mockFetch(400, { code: 'VALIDATION_ERROR', message: 'Representative Account must be unique', details: {} });
+    expect(duplicateRegistrationOf(await registerOrganisation({} as Parameters<typeof registerOrganisation>[0]).catch((e: unknown) => e))).toBe('account');
   });
 
+  it('treats an older, unspecific 409 as unknown, and anything else as not a duplicate', async () => {
+    mockFetch(409, { code: 'DUPLICATE_ENTRY', message: 'Already registered.' });
+    expect(duplicateRegistrationOf(await registerOrganisation({} as Parameters<typeof registerOrganisation>[0]).catch((e: unknown) => e))).toBe('unknown');
+
+    mockFetch(400, { code: 'VALIDATION_ERROR', message: 'Validation failed', details: { postal_code: 'x' } });
+    expect(duplicateRegistrationOf(await registerOrganisation({} as Parameters<typeof registerOrganisation>[0]).catch((e: unknown) => e))).toBeNull();
+    expect(duplicateRegistrationOf(new Error('boom'))).toBeNull();
+  });
   it('carries a 400\'s per-field details, keyed by the request field', async () => {
     mockFetch(400, { code: 'VALIDATION_ERROR', message: 'Validation failed', details: { postal_code: 'Value error, Postal code is not valid.' } });
     const error = await registerOrganisation({} as Parameters<typeof registerOrganisation>[0]).catch((e: unknown) => e);
@@ -174,8 +184,7 @@ describe('error helpers', () => {
     expect(cleanBackendMessage('Validation failed')).toBe('Validation failed');
   });
 
-  it('maps both names of the registration number, and every contact field, onto the form', () => {
-    expect(BACKEND_FIELD_TO_FORM_FIELD.tax_registration_number).toBe('taxId');
+  it('maps the registration number, and every contact field, onto the form', () => {
     expect(BACKEND_FIELD_TO_FORM_FIELD.registration_number).toBe('taxId');
     expect(BACKEND_FIELD_TO_FORM_FIELD.contact_email).toBe('email');
     expect(BACKEND_FIELD_TO_FORM_FIELD.contact_phone).toBe('phoneNumber');

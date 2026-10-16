@@ -74,7 +74,7 @@ export function ThreadSummary({ canManageCase, timelineData }: ThreadSummaryProp
               <div className="p-2.5 bg-orange-50 text-[#E85D04] rounded-xl">
                 <FileText className="h-4 w-4" />
               </div>
-              Dept responses
+              Department responses
             </div>
             <span className="px-3 py-1 bg-[#F1F3F4] text-[#475467] text-[15px] font-bold rounded-full">
               {counts.deptResponses}

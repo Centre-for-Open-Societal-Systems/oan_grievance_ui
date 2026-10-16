@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { FileEdit, Info, ArrowRight, Save, Loader2 } from "lucide-react";
+import { FileEdit, Info, ArrowRight } from "lucide-react";
 import { errorIdFor, FieldError } from "@/components/ui/FieldError";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchSubmitterOptionsThunk, selectSubmitterTypeOptions, selectSubmissionChannelOptions } from "@/features/metadata";
@@ -13,14 +13,10 @@ import { NGOForm } from "@/components/submitter-identity/SI-NGOForm";
 import { WoredaKebeleForm } from "@/components/submitter-identity/SI-WoredaKebeleForm";
 import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-DevelopmentAgentForm";
 import { useIdentityErrors } from "@/components/submitter-identity/useIdentityErrors";
-import { saveDraft, type SaveDraftPayload } from "@/lib/drafts";
-import { logger } from "@/lib/logger";
 import { DEFAULT_SUBMISSION_CHANNEL } from "@/lib/validation/registerSubmitter";
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
-  /** The wizard's draft, already shaped for `POST /api/v1/drafts` — see page.tsx's `draftPayload`. */
-  draftPayload: SaveDraftPayload;
   submitterType: string;
   setSubmitterType: (value: string) => void;
   submissionChannel: string;
@@ -52,7 +48,6 @@ function withProfileFallback(
 
 export function SubmitterIdentityCard({
   onNext,
-  draftPayload,
   submitterType,
   setSubmitterType,
   submissionChannel,
@@ -136,39 +131,6 @@ export function SubmitterIdentityCard({
       { key: "submissionChannel", id: "submission-channel", message: submissionChannel ? null : t("fieldRequired") },
     ]);
     if (valid) onNext?.();
-  };
-
-  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-
-  // "Saved"/"Retry Save" is a snapshot of the save that already happened — an
-  // edit right after a successful save must not leave the button reading
-  // "Saved" for a value that's no longer what's on the backend. Same pattern
-  // as GrievanceDetailsCard.tsx's own Save Draft button, and for the same
-  // reason: adjusted during render (React's recommended "reset state when an
-  // input changes" pattern) by comparing against a snapshot of what the
-  // fields were on the last render. Only resets away from a settled state
-  // (saved/error); doesn't touch "saving" itself.
-  const draftPayloadSnapshot = JSON.stringify([submitterType, submissionChannel, identityValues]);
-  const [lastDraftPayloadSnapshot, setLastDraftPayloadSnapshot] = useState(draftPayloadSnapshot);
-  if (draftPayloadSnapshot !== lastDraftPayloadSnapshot) {
-    setLastDraftPayloadSnapshot(draftPayloadSnapshot);
-    if (draftSaveState === "saved" || draftSaveState === "error") setDraftSaveState("idle");
-  }
-
-  // Deliberately unvalidated, unlike `handleNext` — a Development Agent
-  // interrupted partway through a farmer's details (this step's fields are
-  // never prefilled for that type, see page.tsx's `buildInitialIdentityValues`)
-  // needs whatever they've typed so far saved, not blocked on finishing the
-  // form first.
-  const handleSaveDraft = async () => {
-    setDraftSaveState("saving");
-    try {
-      await saveDraft(draftPayload);
-      setDraftSaveState("saved");
-    } catch (error) {
-      setDraftSaveState("error");
-      logger.error("Failed to save draft:", error);
-    }
   };
 
   // What each identity form needs to show and update its inline errors.
@@ -269,18 +231,6 @@ export function SubmitterIdentityCard({
             <span>All fields marked <span className="text-red-500">*</span> are required</span>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleSaveDraft}
-              disabled={draftSaveState === "saving"}
-              className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {draftSaveState === "saving" ? (
-                <Loader2 className="w-4 h-4 text-[#0b8535] animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 text-[#0b8535]" />
-              )}
-              {draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Retry Save" : "Save Draft"}
-            </button>
             <button
               onClick={handleNext}
               className="flex items-center gap-2 px-5 py-3 bg-[#16A34A] text-white rounded-lg text-sm font-bold hover:bg-[#10883c] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b8535]/50"

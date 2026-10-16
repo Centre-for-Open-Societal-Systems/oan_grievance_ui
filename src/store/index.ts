@@ -39,10 +39,14 @@ const sessionExpiryMiddleware: Middleware<object, { auth: AuthState }> = (api) =
     const onProtectedRoute = typeof window !== 'undefined' && isProtectedRoute(window.location.pathname);
 
     // Fire-and-forget: redirect regardless of whether the server-side revoke succeeds.
-    void performLogout(api.dispatch, email).finally(() => {
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Redux middleware runs outside React component tree, no router to call
-      if (onProtectedRoute) window.location.href = '/login';
-    });
+    // A staff session is sent through the identity provider's logout instead
+    // (`performLogout` navigates itself and resolves true), which lands on /login too.
+    void performLogout(api.dispatch, email)
+      .catch(() => false)
+      .then((navigated) => {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Redux middleware runs outside React component tree, no router to call
+        if (!navigated && onProtectedRoute) window.location.href = '/login';
+      });
   }
 
   return result;

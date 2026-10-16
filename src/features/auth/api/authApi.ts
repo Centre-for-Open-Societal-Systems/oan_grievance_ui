@@ -207,20 +207,29 @@ export async function setInitialPassword(usr: string, currentPassword: string, n
 }
 
 /**
- * Clears the server-side session cookies. Returns whether the server
- * confirmed it — callers should still reset client auth state either way.
+ * Ends the session server-side. `returnTo` is the page to land on afterwards.
+ * Returns the identity provider's logout URL when the session was a staff
+ * (IAM) one — the caller navigates there so the provider's SSO session ends
+ * too, and the provider sends the browser on to `returnTo` — otherwise null.
+ * Callers should reset client auth state either way.
  */
-export async function logoutUser(): Promise<boolean> {
+export async function logoutUser(returnTo: string): Promise<string | null> {
   try {
-    const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    const res = await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ returnTo }),
+    });
     if (!res.ok) {
       logger.security(`Logout refused by the server with status ${res.status}`);
-      return false;
+      return null;
     }
-    return true;
+    const data = (await res.json().catch(() => ({}))) as { redirectTo?: unknown };
+    return typeof data.redirectTo === 'string' ? data.redirectTo : null;
   } catch (error) {
     logger.error('Logout request failed:', error);
-    return false;
+    return null;
   }
 }
 
@@ -241,8 +250,25 @@ export async function sendHeartbeat(): Promise<void> {
 }
 
 /**
+ * Whether this app's idle timeout applies to the current session — true for
+ * an email/password session, false for a staff (IAM) one, whose idle timeout
+ * is Keycloak's. Null when it can't be told (no session, network failure).
+ */
+export async function getIdleManaged(): Promise<boolean | null> {
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'include', headers: { Accept: 'application/json' } });
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => ({}))) as { idleManaged?: unknown };
+    return typeof data.idleManaged === 'boolean' ? data.idleManaged : null;
+  } catch (error) {
+    logger.error('Session kind lookup failed:', error);
+    return null;
+  }
+}
+
+/**
  * Fetches and validates /api/v1/auth/me. `fetchApi` already flattens the
- * response envelope (`.data`/`.message.data`) before returning, so what
+ * response envelope (`.data`) before returning, so what
  * comes back here is already the flat shape — no further unwrapping needed.
  */
 async function fetchAndValidateMe(): Promise<BackendAuthMeData> {

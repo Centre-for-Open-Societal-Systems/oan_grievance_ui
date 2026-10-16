@@ -180,8 +180,8 @@ export interface TimelineContext {
 const ENTRY_TYPE_LABELS: Record<string, string> = {
   note: 'Internal Note',
   message: 'Public Message',
-  response: 'Dept Response',
-  dept_response: 'Dept Response',
+  response: 'Department Response',
+  dept_response: 'Department Response',
   info_request: 'Info Request',
   info_response: 'Info Response',
   status_change: 'Status Change',
@@ -259,7 +259,7 @@ export function normalizeTimelineEntry(
   const respNum = (entry as TimelineEntry).response_number;
   const typeLabel =
     (rawType === 'dept_response' || rawType === 'response') && respNum
-      ? `Dept Response #${respNum}`
+      ? `Department Response #${respNum}`
       : (ENTRY_TYPE_LABELS[rawType] || rawType);
   const entryId = (entry as TimelineEntry).id || (entry as TimelineEntry).name || `evt-${index}-${rawCreated}`;
 
@@ -283,4 +283,24 @@ export function normalizeTimelineEntry(
     resolutionSummary: (entry as TimelineEntry).resolution_summary,
     attachments: entry.attachments,
   };
+}
+
+/**
+ * Checks whether a given grievance status string is considered terminal.
+ * Looks up against metadata statuses (where is_terminal === 1) if provided,
+ * otherwise falls back to standard terminal status names ('Closed', 'Rejected').
+ */
+export function isTerminalStatus(
+  status?: string | null,
+  statusOptions?: Array<{ status: string; is_terminal?: number }> | null
+): boolean {
+  if (!status) return false;
+  const normalized = status.trim().toLowerCase();
+  if (statusOptions && statusOptions.length > 0) {
+    const match = statusOptions.find((opt) => opt.status.trim().toLowerCase() === normalized);
+    if (match && typeof match.is_terminal === 'number') {
+      return match.is_terminal === 1;
+    }
+  }
+  return normalized === 'closed' || normalized === 'rejected';
 }

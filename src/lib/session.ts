@@ -1,3 +1,4 @@
+import { expireIamCookies } from '@/lib/iamSession';
 import { clearActivityCookie, touchActivityCookie } from '@/lib/idleSession';
 import { NextResponse } from 'next/server';
 
@@ -78,12 +79,39 @@ export function readRememberMe(request: CookieReader): boolean {
   return request.cookies.get(SESSION_REMEMBER_COOKIE)?.value === '1';
 }
 
-/** Expires every session cookie. Options must match the ones used to set them. */
-export function clearSessionCookies(response: NextResponse): void {
+/**
+ * Expires this app's own session cookies (a local password session) and
+ * nothing else. Used when a staff session replaces whatever local one the
+ * browser still held. Options must match the ones used to set them.
+ */
+export function clearLocalSessionCookies(response: NextResponse): void {
   const expired = { ...sessionCookieOptions, maxAge: 0 };
   response.cookies.set(AUTH_TOKEN_COOKIE, '', expired);
   response.cookies.set(REFRESH_TOKEN_COOKIE, '', expired);
   response.cookies.set(SESSION_REMEMBER_COOKIE, '', expired);
+}
+
+/**
+ * Expires every session cookie, of either kind: this app's own, the idle
+ * clock, and the IAM staff-session cookies (see `iamSession.ts`). A session
+ * that ends here — idle kick, failed refresh, logout — ends whichever kind it
+ * was, without each caller having to know which.
+ */
+export function clearSessionCookies(response: NextResponse): void {
+  clearLocalSessionCookies(response);
+  expireIamCookies(response);
+  clearActivityCookie(response);
+}
+
+/**
+ * Ends a session this app idled out. Only a local session idles out here (see
+ * `isSessionIdleExpired`), so only its cookies and the idle clock go. IAM's
+ * cookies stay: that single sign-on session is shared with the other apps on
+ * the domain and is not this app's to end on its own idle clock — clearing
+ * them would sign the user out of the registry too.
+ */
+export function clearIdleSessionCookies(response: NextResponse): void {
+  clearLocalSessionCookies(response);
   clearActivityCookie(response);
 }
 

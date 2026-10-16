@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import type { MonthlyTrendPoint } from "../data";
+import type { MonthlyTrendPoint } from "../types";
 
 export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
   return (
@@ -38,8 +38,8 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }}
-              ticks={[0, 35, 70, 105, 140]}
-              domain={[0, 140]}
+              allowDecimals={false}
+              domain={[0, 'auto']}
             />
             <Tooltip
               cursor={{ fill: '#f3f4f6', opacity: 0.4 }}

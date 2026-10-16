@@ -183,7 +183,7 @@ describe('OrganisationRegistrationForm', () => {
       legal_name: 'Green Highlands Development Association',
       org_type: 'NGO',
       entity_type: 'Local NGO',
-      tax_registration_number: '0012345678',
+      registration_number: '0012345678',
       representative_name: 'Almaz Tesfaye',
       street_address: 'Bole Road, Block 4',
       zone: 'Addis Ababa',
@@ -278,42 +278,74 @@ describe('OrganisationRegistrationForm', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Entity type "Cooperative Union" is not valid for an NGO.');
   });
 
-  it('shows the organisation that already exists if the account has registered one (409, e.g. a second tab)', async () => {
+  const EXISTING = {
+    id: 'ORG-0001',
+    legalName: 'Green Highlands Development Association',
+    brandName: null,
+    orgType: 'NGO',
+    entityType: 'Local NGO',
+    registrationNumber: 'ET12345678',
+    status: 'In Review',
+    statusReason: null,
+  };
+
+  // The backend's own messages: a 400 with no details, the message is all there is to go on.
+  it('shows the organisation that already exists if the account has registered one ("Representative Account must be unique")', async () => {
     registerOrganisation.mockRejectedValue(
-      new ApiError('Your account already represents a registered organization.', { code: 'DUPLICATE_ENTRY' }, 409)
+      new ApiError('Representative Account must be unique', { code: 'VALIDATION_ERROR', details: {} }, 400)
     );
-    const existing = {
-      id: 'ORG-0001',
-      legalName: 'Green Highlands Development Association',
-      brandName: null,
-      orgType: 'NGO',
-      entityType: 'Local NGO',
-      registrationNumber: 'ET12345678',
-      status: 'In Review',
-      statusReason: null,
-    };
-    getMyOrganisation.mockResolvedValue(existing);
+    getMyOrganisation.mockResolvedValue(EXISTING);
     const { onRegistered } = renderForm('ngo');
     fillValidForm('Local NGO');
     fireEvent.click(registerButton());
 
-    await waitFor(() => expect(onRegistered).toHaveBeenCalledWith(existing));
+    await waitFor(() => expect(onRegistered).toHaveBeenCalledWith(EXISTING));
   });
 
-  it('says so under the number when the registration number is already taken (409, no organisation of its own)', async () => {
+  it('says so under the number when it is already taken ("Registration Number must be unique"), and does not look for an organisation of its own', async () => {
     registerOrganisation.mockRejectedValue(
-      new ApiError("An organization with registration number '0012345678' is already registered.", { code: 'DUPLICATE_ENTRY' }, 409)
+      new ApiError('Registration Number must be unique', { code: 'VALIDATION_ERROR', details: {} }, 400)
+    );
+    const { onRegistered } = renderForm('ngo');
+    fillValidForm('Local NGO');
+    fireEvent.click(registerButton());
+
+    expect(await screen.findByText('An organisation with this registration number is already registered.')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Registration Number/)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Registration Number/)).toHaveFocus();
+    expect(onRegistered).not.toHaveBeenCalled();
+    expect(getMyOrganisation).not.toHaveBeenCalled();
+  });
+
+  it('shows the message instead if the account supposedly has an organisation but none can be found', async () => {
+    registerOrganisation.mockRejectedValue(
+      new ApiError('Representative Account must be unique', { code: 'VALIDATION_ERROR', details: {} }, 400)
     );
     getMyOrganisation.mockResolvedValue(null);
     const { onRegistered } = renderForm('ngo');
     fillValidForm('Local NGO');
     fireEvent.click(registerButton());
 
-    expect(await screen.findByText(/already registered/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Registration Number/)).toHaveAttribute('aria-invalid', 'true');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Representative Account must be unique');
     expect(onRegistered).not.toHaveBeenCalled();
   });
 
+  it('still understands the older 409 for either case', async () => {
+    registerOrganisation.mockRejectedValue(new ApiError('Already registered.', { code: 'DUPLICATE_ENTRY' }, 409));
+    getMyOrganisation.mockResolvedValueOnce(EXISTING);
+    const first = renderForm('ngo');
+    fillValidForm('Local NGO');
+    fireEvent.click(registerButton());
+    await waitFor(() => expect(first.onRegistered).toHaveBeenCalledWith(EXISTING));
+    cleanup();
+
+    getMyOrganisation.mockResolvedValueOnce(null);
+    const second = renderForm('ngo');
+    fillValidForm('Local NGO');
+    fireEvent.click(registerButton());
+    expect(await screen.findByText('An organisation with this registration number is already registered.')).toBeInTheDocument();
+    expect(second.onRegistered).not.toHaveBeenCalled();
+  });
   it.each([
     ['FORBIDDEN', 'Your account is not permitted to register an organisation.'],
     ['CONNECTION', 'We could not reach the server. Please try again in a moment.'],

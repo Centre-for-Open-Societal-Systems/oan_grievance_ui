@@ -61,8 +61,8 @@ export interface OrganisationRegistrationPayload {
   org_type: string;
   entity_type: string;
   brand_name?: string;
-  /** Sent under the name the registration screen uses; the backend stores it as `registration_number`. */
-  tax_registration_number: string;
+  /** The backend's only name for it: it no longer accepts the old `tax_registration_number` alias (and refuses unknown keys). */
+  registration_number: string;
   /** The authorised representative; the backend defaults it to the account's name when omitted. */
   representative_name?: string;
   /** Members affected — Cooperative / FPO only, a whole number from 0. */
@@ -99,7 +99,7 @@ export function toRegistrationPayload(kind: OrganisationKind, values: Organisati
     org_type: ORGANISATION_CONFIG[kind].backendOrgType,
     entity_type: values.entityType.trim(),
     ...optional('brand_name', values.brandName),
-    tax_registration_number: values.taxId.trim().toUpperCase(),
+    registration_number: values.taxId.trim().toUpperCase(),
     ...optional('representative_name', values.representativeName),
     // Only an FPO has a member count; an NGO's form doesn't show it, so it is never sent for one.
     ...(kind === 'fpo' && values.memberCount.trim() ? { members_affected: Number(values.memberCount.trim()) } : {}),
@@ -137,15 +137,13 @@ export async function registerOrganisation(payload: OrganisationRegistrationPayl
 }
 
 /**
- * Backend field names in an error's `details` (keyed by the request field, or
- * by the stored name for the registration number), mapped to this form's
- * fields so each message lands under its input.
+ * Backend field names in an error's `details` (keyed by the request field),
+ * mapped to this form's fields so each message lands under its input.
  */
 export const BACKEND_FIELD_TO_FORM_FIELD: Record<string, OrganisationField> = {
   legal_name: 'legalName',
   brand_name: 'brandName',
   entity_type: 'entityType',
-  tax_registration_number: 'taxId',
   registration_number: 'taxId',
   representative_name: 'representativeName',
   members_affected: 'memberCount',
@@ -166,7 +164,22 @@ export function cleanBackendMessage(message: string): string {
   return message.replace(/^Value error,\s*/i, '').trim();
 }
 
-/** True for the 409 DUPLICATE_ENTRY the backend answers with when the account or registration number is already registered. */
-export function isDuplicateRegistration(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 409;
+/**
+ * What a "this is already registered" refusal is about:
+ *  - `account` — the caller already has an organisation (a second tab, a double submit);
+ *  - `number` — the registration number belongs to an organisation already;
+ *  - `unknown` — a 409 that does not say which (an older backend answered both that way).
+ *
+ * The current backend answers both with a 400 and a plain message ("Representative Account
+ * must be unique", "Registration Number must be unique"), with no `details` to key off,
+ * so the message is what tells them apart.
+ */
+export type DuplicateKind = 'account' | 'number' | 'unknown';
+
+export function duplicateRegistrationOf(error: unknown): DuplicateKind | null {
+  if (!(error instanceof ApiError)) return null;
+  const message = error.message;
+  if (/representative account must be unique|already represents/i.test(message)) return 'account';
+  if (/registration number.*(must be unique|already registered)/i.test(message)) return 'number';
+  return error.status === 409 ? 'unknown' : null;
 }

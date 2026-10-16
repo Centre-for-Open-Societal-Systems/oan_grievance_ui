@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'User Management | Grievance Management Dashboard',
+  title: 'User Management | Grievance Management Portal',
 };
 
 export default function UsersRoute() {

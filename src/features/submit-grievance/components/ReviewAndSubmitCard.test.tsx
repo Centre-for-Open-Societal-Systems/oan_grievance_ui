@@ -12,7 +12,7 @@ afterEach(cleanup);
 const DESCRIPTION = 'Fertilizer allocated for the season has not reached the kebele store.';
 const CLIENT_UUID = '11111111-2222-3333-4444-555555555555';
 
-const BASE_DRAFT_PAYLOAD = {
+const BASE_FIELDS = {
   client_submission_uuid: CLIENT_UUID,
   submission_channel: 'Web Portal', // the record's name, not the wizard's "web"
   submitter_type: 'Individual Farmer',
@@ -30,7 +30,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCa
       <ReviewAndSubmitCard
         onBack={vi.fn()}
         onSubmitted={onSubmitted}
-        draftPayload={BASE_DRAFT_PAYLOAD}
+        submitFields={BASE_FIELDS}
         submitterType="individual"
         submissionChannel="web"
         identityValues={{}}
@@ -98,11 +98,52 @@ describe('Review step → POST /api/v1/grievances', () => {
     });
   });
 
+  it('uploads the staged files to the new ticket once the case is filed', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: { ticket_number: 'B00100013', status: 'Submitted' }, status: 'success' }),
+      })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: [], status: 'success' }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const file = new File(['x'], 'receipt.png', { type: 'image/png' });
+    const { onSubmitted } = renderCard({ attachments: [{ key: 'k1', file, fileName: 'receipt.png' }] });
+
+    consentAndSubmit();
+
+    await waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
+    expect(String(fetchMock.mock.calls[1]![0])).toContain('/api/v1/grievances/B00100013/attachments');
+    expect(onSubmitted).toHaveBeenCalledWith(expect.not.objectContaining({ attachment_upload_failed: true }));
+  });
+
+  it('still hands back the ticket, flagged, when the attachment upload fails', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: { ticket_number: 'B00100014', status: 'Submitted' }, status: 'success' }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ message: 'boom' }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const file = new File(['x'], 'receipt.png', { type: 'image/png' });
+    const { onSubmitted } = renderCard({ attachments: [{ key: 'k1', file, fileName: 'receipt.png' }] });
+
+    consentAndSubmit();
+
+    await waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
+    expect(onSubmitted).toHaveBeenCalledWith(
+      expect.objectContaining({ ticket_number: 'B00100014', attachment_upload_failed: true })
+    );
+  });
+
   it('files against the woreda when no kebele was chosen', async () => {
     const fetchMock = mockFetch(200, { data: { ticket_number: 'B00100011', status: 'Submitted' }, status: 'success' });
     const { onSubmitted } = renderCard({
       kebele: null,
-      draftPayload: { ...BASE_DRAFT_PAYLOAD, administrative_area: 'woreda-ET040101', administrative_unit: undefined },
+      submitFields: { ...BASE_FIELDS, administrative_area: 'woreda-ET040101', administrative_unit: undefined },
     });
 
     consentAndSubmit();
@@ -118,8 +159,8 @@ describe('Review step → POST /api/v1/grievances', () => {
     const { onSubmitted } = renderCard({
       desiredOutcome: '  Replace the fertilizer allocation  ',
       serviceProvider: 'Basona Cooperative Union',
-      draftPayload: {
-        ...BASE_DRAFT_PAYLOAD,
+      submitFields: {
+        ...BASE_FIELDS,
         desired_outcome: 'Replace the fertilizer allocation',
         associated_service_provider: 'Basona Cooperative Union',
       },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapGrievanceListItem, getInitials, normalizeTimelineEntry } from './mapGrievance';
+import { mapGrievanceListItem, getInitials, normalizeTimelineEntry, isTerminalStatus } from './mapGrievance';
 import type { GrievanceListItem, TimelineEntry, TimelineEventItem } from '../types';
 
 const baseItem: GrievanceListItem = {
@@ -248,5 +248,35 @@ describe('normalizeTimelineEntry', () => {
     });
     expect(anonymousNorm.authorName).toBe('Anonymous Submitter');
     expect(anonymousNorm.initials).toBe('AS');
+  });
+});
+
+describe('isTerminalStatus', () => {
+  it('identifies Closed and Rejected as terminal statuses by default', () => {
+    expect(isTerminalStatus('Closed')).toBe(true);
+    expect(isTerminalStatus('closed')).toBe(true);
+    expect(isTerminalStatus('Rejected')).toBe(true);
+    expect(isTerminalStatus('rejected')).toBe(true);
+  });
+
+  it('identifies non-terminal statuses correctly', () => {
+    expect(isTerminalStatus('In Progress')).toBe(false);
+    expect(isTerminalStatus('Resolved')).toBe(false);
+    expect(isTerminalStatus('Require More Info')).toBe(false);
+    expect(isTerminalStatus('Assigned')).toBe(false);
+    expect(isTerminalStatus(null)).toBe(false);
+    expect(isTerminalStatus(undefined)).toBe(false);
+  });
+
+  it('uses metadata status options when provided', () => {
+    const options = [
+      { status: 'Completed', is_terminal: 1 },
+      { status: 'Dismissed', is_terminal: 1 },
+      { status: 'In Review', is_terminal: 0 },
+    ];
+
+    expect(isTerminalStatus('Completed', options)).toBe(true);
+    expect(isTerminalStatus('Dismissed', options)).toBe(true);
+    expect(isTerminalStatus('In Review', options)).toBe(false);
   });
 });

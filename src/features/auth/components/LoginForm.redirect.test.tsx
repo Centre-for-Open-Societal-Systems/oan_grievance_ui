@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import en from '../../../../messages/en.json';
 
 const push = vi.fn();
 const loginUser = vi.fn();
@@ -32,7 +34,9 @@ async function signInAs(user: { email: string; roles: string[]; type?: string })
   getMe.mockResolvedValue(user);
   render(
     <Provider store={makeStore()}>
-      <LoginForm />
+      <NextIntlClientProvider locale="en" messages={en}>
+        <LoginForm staffSignInEnabled={false} />
+      </NextIntlClientProvider>
     </Provider>
   );
   fireEvent.change(screen.getByLabelText(/^Email/), { target: { value: user.email } });

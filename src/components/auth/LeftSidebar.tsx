@@ -1,3 +1,5 @@
+import { BrandLockup } from '@/components/layout/BrandLockup';
+
 const activeOfficers = [
   { src: '/bb4a5b79fae40c0a468fa967443678ee9eb31bee.jpg', alt: 'Officer 1' },
   { src: '/c08326dd4541f98026723b0901e8ecaa33f73c17.jpg', alt: 'Officer 2' },
@@ -12,13 +14,8 @@ interface LeftSidebarProps {
 export function LeftSidebar({ badge = 'Grievance Management Portal' }: LeftSidebarProps) {
   return (
     <div className="w-full md:w-[45%] bg-[#0B6C43] p-6 sm:p-10 md:p-14 flex flex-col relative overflow-hidden">
-      <div className="flex items-center space-x-3 mb-16 relative z-10">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="OARI Logo" width={1277} height={851} className="h-[28px] sm:h-[34px] w-auto shrink-0" />
-        <div className="flex flex-col border-l-2 border-white/30 pl-3">
-          <span className="text-[13px] font-bold text-white leading-tight tracking-wide">Ethiopia OpenAgriNet</span>
-          <span className="text-[11px] text-white/80 font-medium leading-tight tracking-wide">Grievance Management</span>
-        </div>
+      <div className="mb-16 relative z-10">
+        <BrandLockup size="lg" />
       </div>
 
       <div className="relative z-10 mb-8 md:mb-0">
