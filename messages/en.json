@@ -37,6 +37,11 @@
       "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
       "fieldRequired": "This field is required.",
       "documentsHint": "JPG, PNG, PDF or MP3 up to 10MB each · up to {max} files"
+    },
+    "reviewStep": {
+      "anonymousLabel": "Submit anonymously — hide my name and contact details from the officers handling this grievance.",
+      "canRequestMoreInfoLabel": "Officers may contact me for more information about this grievance.",
+      "canRequestMoreInfoWarning": "Your contact details will not be saved. Officers cannot reach you and you will not receive notifications about this case."
     }
   },
   "commentsAndCommunication": {

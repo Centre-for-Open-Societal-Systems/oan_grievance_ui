@@ -66,6 +66,8 @@ interface AddNodalOfficerModalProps {
  */
 export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, onCreated }: AddNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
+  // The backend only lets an L3 department head omit the department; a Reviewer and L1/L2 officers need one.
+  const departmentRequired = isReviewer || level !== 'L3';
   const dispatch = useAppDispatch();
   const departmentOptions = useAppSelector(selectDepartmentOptions);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
@@ -112,7 +114,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
       case 'designation':
         return null;
       case 'department':
-        return null;
+        return departmentRequired && !department.trim() ? 'Select a department.' : null;
       case 'serviceCategories':
         return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
@@ -349,7 +351,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
 
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
-                  Department
+                  Department{departmentRequired && <span className="text-red-500"> *</span>}
                 </label>
                 <AnimatedSelect
                   id={FIELD_IDS.department}

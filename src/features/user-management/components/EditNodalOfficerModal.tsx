@@ -59,6 +59,8 @@ interface EditNodalOfficerModalProps {
  */
 export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, tabLabel, onSaved }: EditNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
+  // The backend only lets an L3 department head omit the department; a Reviewer and L1/L2 officers need one.
+  const departmentRequired = isReviewer || level !== 'L3';
   const dispatch = useAppDispatch();
   const departmentOptions = useAppSelector(selectDepartmentOptions);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
@@ -121,7 +123,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
       case 'designation':
         return null;
       case 'department':
-        return null;
+        return departmentRequired && !department.trim() ? 'Select a department.' : null;
       case 'serviceCategories':
         return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
@@ -292,7 +294,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
 
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
-                  Department
+                  Department{departmentRequired && <span className="text-red-500"> *</span>}
                 </label>
                 <AnimatedSelect
                   options={departmentOptions.map((o) => o.label)}

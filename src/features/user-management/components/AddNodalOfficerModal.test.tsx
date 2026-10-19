@@ -126,48 +126,22 @@ describe('AddNodalOfficerModal for Category Admins', () => {
     expect(screen.getByRole('button', { name: 'Inputs' }).className).not.toContain('bg-[#16A34A]');
   });
 
-  it('allows creating an officer without department or designation and does not mark them required', async () => {
-    const { onCreated, onClose } = renderModal({ level: 'L1', tabLabel: 'Nodal Officer' });
+  it.each([
+    ['an L1 officer', { role: 'Officer' as const, level: 'L1' as const, tabLabel: 'Nodal Officer' }],
+    ['a Reviewer', { role: 'Reviewer' as const, level: undefined, tabLabel: 'Reviewer' }],
+  ])('requires a department for %s and does not submit without one', async (_name, props) => {
+    const { onCreated } = renderModal(props);
 
-    // Verify Department and Designation labels do not have a required asterisk
-    const designationLabel = screen.getByText('Designation');
-    expect(designationLabel.textContent).toBe('Designation');
-    expect(designationLabel.querySelector('.text-red-500')).toBeNull();
+    expect(screen.getByText('Department').querySelector('.text-red-500')).not.toBeNull();
 
-    const departmentLabel = screen.getByText('Department');
-    expect(departmentLabel.textContent).toBe('Department');
-    expect(departmentLabel.querySelector('.text-red-500')).toBeNull();
-
-    // Fill in only the required fields: Full Name, Email, Password (auto-generated), and Service Category
-    fireEvent.change(screen.getByPlaceholderText('Enter Full Name'), {
-      target: { value: 'Tola Degefa' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Enter Email ID'), {
-      target: { value: 'tola@example.et' },
-    });
-
-    // Pick service category without selecting a department
-    const inputsCategoryBtn = await screen.findByRole('button', { name: 'Inputs' });
-    fireEvent.click(inputsCategoryBtn);
-
+    fireEvent.change(screen.getByPlaceholderText('Enter Full Name'), { target: { value: 'Tola Degefa' } });
+    fireEvent.change(screen.getByPlaceholderText('Enter Email ID'), { target: { value: 'tola@example.et' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Inputs' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
 
-    await waitFor(() => {
-      expect(createOfficer).toHaveBeenCalledWith(
-        expect.objectContaining({
-          role: 'Officer',
-          level: 'L1',
-          full_name: 'Tola Degefa',
-          email: 'tola@example.et',
-          designation: null,
-          department: null,
-          service_categories: ['Inputs'],
-        })
-      );
-    });
-
-    expect(onCreated).toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalled();
+    expect(await screen.findByText('Select a department.')).toBeInTheDocument();
+    expect(createOfficer).not.toHaveBeenCalled();
+    expect(onCreated).not.toHaveBeenCalled();
   });
 
   it('allows creating a Category Admin without department or designation', async () => {

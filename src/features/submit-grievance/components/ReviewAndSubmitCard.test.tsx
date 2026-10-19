@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import messages from '../../../../messages/en.json';
 import { kebeleRef, makeStore, regionRef, woredaRef, zoneRef } from '../testFixtures';
 import { GrievanceSubmittedCard } from './GrievanceSubmittedCard';
 import { ReviewAndSubmitCard } from './ReviewAndSubmitCard';
@@ -26,6 +28,7 @@ const BASE_FIELDS = {
 function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCard>> = {}, store = makeStore()) {
   const onSubmitted = vi.fn();
   render(
+    <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
     <Provider store={store}>
       <ReviewAndSubmitCard
         onBack={vi.fn()}
@@ -45,6 +48,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCa
         {...props}
       />
     </Provider>
+    </NextIntlClientProvider>
   );
   return { onSubmitted };
 }

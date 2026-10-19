@@ -37,6 +37,11 @@
       "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",
       "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች"
+    },
+    "reviewStep": {
+      "anonymousLabel": "ማንነቴ ሳይታወቅ አስገባ — ስሜንና የመገኛ መረጃዬን ይህን ቅሬታ ከሚያስተናግዱ ኃላፊዎች ደብቅ።",
+      "canRequestMoreInfoLabel": "ኃላፊዎች ስለዚህ ቅሬታ ተጨማሪ መረጃ ለማግኘት ሊያነጋግሩኝ ይችላሉ።",
+      "canRequestMoreInfoWarning": "የመገኛ መረጃዎ አይቀመጥም። ኃላፊዎች ሊያገኙዎት አይችሉም፣ ስለዚህ ጉዳይም ማሳወቂያ አይደርስዎትም።"
     }
   },
   "commentsAndCommunication": {

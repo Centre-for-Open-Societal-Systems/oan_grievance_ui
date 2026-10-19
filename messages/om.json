@@ -37,6 +37,11 @@
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
       "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}"
+    },
+    "reviewStep": {
+      "anonymousLabel": "Maqaa koo osoo hin ibsin dhiyeessi — maqaa fi odeeffannoo quunnamtii koo ogeessota komii kana qabatan irraa dhoksi.",
+      "canRequestMoreInfoLabel": "Ogeessonni komii kanaan wal-qabatee odeeffannoo dabalataa argachuuf na quunnamuu danda'u.",
+      "canRequestMoreInfoWarning": "Odeeffannoon quunnamtii keessanii hin kuufamu. Ogeessonni isin quunnamuu hin danda'an, komii kanaan wal-qabatee beeksisni isiniif hin dhufu."
     }
   },
   "commentsAndCommunication": {

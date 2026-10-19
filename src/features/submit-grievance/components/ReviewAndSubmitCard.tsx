@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { FileText, Info, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
@@ -80,6 +81,7 @@ export function ReviewAndSubmitCard({
   serviceProvider,
   attachments,
 }: ReviewAndSubmitCardProps) {
+  const t = useTranslations('submitGrievance.reviewStep');
   const [consentChecked, setConsentChecked] = useState(false);
   // Hides the submitter's identity from the handling desks.
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -282,7 +284,7 @@ export function ReviewAndSubmitCard({
                 className="mt-0.5 w-5 h-5 flex-shrink-0 accent-[#16A34A] cursor-pointer"
               />
               <span className="text-sm font-medium text-gray-600 leading-relaxed">
-                Submit anonymously — hide my name and contact details from the officers handling this grievance.
+                {t('anonymousLabel')}
               </span>
             </label>
           </div>
@@ -298,12 +300,12 @@ export function ReviewAndSubmitCard({
                 className="mt-0.5 w-5 h-5 flex-shrink-0 accent-[#16A34A] cursor-pointer"
               />
               <label htmlFor="can-request-more-info" className="text-sm font-medium text-gray-600 leading-relaxed cursor-pointer">
-                Officers may contact me for more information about this grievance.
+                {t('canRequestMoreInfoLabel')}
               </label>
             </div>
             {!canRequestMoreInfo && (
               <p role="status" className="mt-2 ml-8 text-xs text-amber-700">
-                Your contact details will not be saved. Officers cannot reach you and you will not receive notifications about this case.
+                {t('canRequestMoreInfoWarning')}
               </p>
             )}
           </div>
