@@ -102,6 +102,21 @@ describe('Review step → POST /api/v1/grievances', () => {
     });
   });
 
+  it('sends is_anonymous when the submitter asks for anonymity', async () => {
+    const fetchMock = mockFetch(200, {
+      data: { ticket_number: 'B00100011', status: 'Submitted' },
+      status: 'success',
+    });
+    const { onSubmitted } = renderCard();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /submit anonymously/i }));
+    consentAndSubmit();
+
+    await waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body).toMatchObject({ is_anonymous: 1 });
+  });
+
   it('uploads the staged files to the new ticket once the case is filed', async () => {
     const fetchMock = vi
       .fn()

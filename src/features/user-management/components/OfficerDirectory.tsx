@@ -215,6 +215,7 @@ export function OfficerDirectory() {
         officer={editingOfficer}
         role={role}
         level={level}
+        tabLabel={activeTabConfig.label}
         onSaved={apiResult.refetch}
       />
 

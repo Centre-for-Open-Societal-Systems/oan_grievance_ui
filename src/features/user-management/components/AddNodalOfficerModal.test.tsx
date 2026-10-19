@@ -4,7 +4,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { makeStore } from '@/store';
 import { AddNodalOfficerModal } from './AddNodalOfficerModal';
-import { createOfficer } from '../api/officerApi';
+import { createOfficer, fetchCategoryAssignments } from '../api/officerApi';
+
+const wiredInputs = { assignments: [{ service_category: 'Inputs' }], pagination: {} } as unknown as Awaited<ReturnType<typeof fetchCategoryAssignments>>;
 
 vi.mock('../api/officerApi', () => ({
   createOfficer: vi.fn().mockResolvedValue({
@@ -12,6 +14,7 @@ vi.mock('../api/officerApi', () => ({
     message: 'Officer created successfully',
   }),
   fetchCategoryAssignments: vi.fn().mockResolvedValue({ assignments: [], pagination: {} }),
+  fetchOfficers: vi.fn().mockResolvedValue({ officers: [], pagination: { total_count: 0 } }),
 }));
 
 vi.mock('@/features/metadata/api/metadataApi', async (importOriginal) => ({
@@ -62,6 +65,7 @@ describe('AddNodalOfficerModal for Category Admins', () => {
   });
 
   it('picks an existing department and its wired categories for a department head', async () => {
+    vi.mocked(fetchCategoryAssignments).mockResolvedValueOnce(wiredInputs);
     const { onCreated, onClose } = renderModal({ level: 'L3' });
 
     fireEvent.change(screen.getByPlaceholderText('Enter Full Name'), {
@@ -109,14 +113,77 @@ describe('AddNodalOfficerModal for Category Admins', () => {
     expect(inputsCategoryBtn).toBeTruthy();
   });
 
-  it('keeps the categories already picked when the department is chosen afterwards', async () => {
+  it('narrows the categories to the chosen department and clears earlier picks', async () => {
+    vi.mocked(fetchCategoryAssignments).mockResolvedValueOnce(wiredInputs);
     renderModal({ level: 'L3' });
 
-    // A Category Admin's list is every category, not the department's, so it stays valid.
-    fireEvent.click(await screen.findByRole('button', { name: 'Inputs' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Markets' }));
     fireEvent.click(screen.getByRole('button', { name: /^Department/ }));
     fireEvent.click(await screen.findByRole('option', { name: 'Ministry of Agriculture' }));
 
-    expect(screen.getByRole('button', { name: 'Inputs' }).className).toContain('bg-[#16A34A]');
+    // Only the department's wired category remains, and the old pick is gone.
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Markets' })).toBeNull());
+    expect(screen.getByRole('button', { name: 'Inputs' }).className).not.toContain('bg-[#16A34A]');
+  });
+
+  it.each([
+    ['an L1 officer', { role: 'Officer' as const, level: 'L1' as const, tabLabel: 'Nodal Officer' }],
+    ['a Reviewer', { role: 'Reviewer' as const, level: undefined, tabLabel: 'Reviewer' }],
+  ])('requires a department for %s and does not submit without one', async (_name, props) => {
+    const { onCreated } = renderModal(props);
+
+    expect(screen.getByText('Department').querySelector('.text-red-500')).not.toBeNull();
+
+    fireEvent.change(screen.getByPlaceholderText('Enter Full Name'), { target: { value: 'Tola Degefa' } });
+    fireEvent.change(screen.getByPlaceholderText('Enter Email ID'), { target: { value: 'tola@example.et' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Inputs' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(await screen.findByText('Select a department.')).toBeInTheDocument();
+    expect(createOfficer).not.toHaveBeenCalled();
+    expect(onCreated).not.toHaveBeenCalled();
+  });
+
+  it('allows creating a Category Admin without department or designation', async () => {
+    const { onCreated, onClose } = renderModal({ level: 'L3', tabLabel: 'Category Admin' });
+
+    // Verify Department and Designation labels do not have a required asterisk
+    const designationLabel = screen.getByText('Designation');
+    expect(designationLabel.textContent).toBe('Designation');
+    expect(designationLabel.querySelector('.text-red-500')).toBeNull();
+
+    const departmentLabel = screen.getByText('Department');
+    expect(departmentLabel.textContent).toBe('Department');
+    expect(departmentLabel.querySelector('.text-red-500')).toBeNull();
+
+    fireEvent.change(screen.getByPlaceholderText('Enter Full Name'), {
+      target: { value: 'Admin User' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter Email ID'), {
+      target: { value: 'admin@example.et' },
+    });
+
+    const inputsCategoryBtn = await screen.findByRole('button', { name: 'Inputs' });
+    fireEvent.click(inputsCategoryBtn);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    await waitFor(() => {
+      expect(createOfficer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: 'Officer',
+          level: 'L3',
+          full_name: 'Admin User',
+          email: 'admin@example.et',
+          designation: null,
+          department: null,
+          service_categories: ['Inputs'],
+        })
+      );
+    });
+
+    expect(onCreated).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
   });
 });
+

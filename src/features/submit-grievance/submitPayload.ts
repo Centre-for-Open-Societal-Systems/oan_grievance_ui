@@ -25,6 +25,7 @@ export interface SubmitFields {
   description?: string;
   desired_outcome?: string;
   is_anonymous?: number;
+  can_request_more_info?: number;
 }
 
 /**

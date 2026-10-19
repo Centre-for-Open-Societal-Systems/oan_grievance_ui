@@ -146,9 +146,9 @@ export interface CreateOfficerPayload {
    * create response's `message`, not in the returned officer record.
    */
   temporary_password: string;
-  department: string;
+  department?: string | null;
   service_categories: string[];
-  /** Required when `role` is `'Officer'`; rejected (400) for a Reviewer. */
+  /** Optional when `role` is `'Officer'`; rejected (400) for a Reviewer. */
   designation?: string | null;
   /** Required when `role` is `'Officer'`; rejected (400) for a Reviewer. */
   level?: OfficerLevel | null;
@@ -169,8 +169,8 @@ export interface ResetTemporaryPasswordPayload {
 export interface UpdateOfficerPayload {
   level?: OfficerLevel;
   full_name?: string;
-  designation?: string;
-  department?: string;
+  designation?: string | null;
+  department?: string | null;
   phone?: string | null;
   region?: string | null;
   status?: OfficerBackendStatus;

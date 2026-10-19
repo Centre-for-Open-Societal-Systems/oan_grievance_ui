@@ -47,27 +47,60 @@
       "contact": "Contact Details"
     },
     "fields": {
-      "legalName": { "label": "Organisation Name", "placeholder": "Enter Organisation Name" },
+      "legalName": {
+        "label": "Organisation Name",
+        "placeholder": "Enter Organisation Name"
+      },
       "brandName": {
         "label": "Brand / display name",
         "placeholder": "Enter if different from legal name",
         "hint": "If different from legal name"
       },
-      "entityType": { "label": "Entity type", "placeholder": "Select Entity type" },
+      "entityType": {
+        "label": "Entity type",
+        "placeholder": "Select Entity type"
+      },
       "taxId": {
         "label": "Registration Number",
         "placeholder": "Enter Registration Number",
         "hint": "The registration or licence number issued to your organisation"
       },
-      "representativeName": { "label": "Authorised Representative", "placeholder": "Enter Rep's full name" },
-      "memberCount": { "label": "Member Count Affected", "placeholder": "Enter Number of members affected" },
-      "streetAddress": { "label": "Street address", "placeholder": "Enter Street address" },
-      "kebele": { "label": "Kebele / Village", "placeholder": "Enter Kebele / Village" },
-      "woreda": { "label": "Woreda / District", "placeholder": "Enter Woreda / District" },
-      "zone": { "label": "Zone", "placeholder": "Enter Zone" },
-      "region": { "label": "Region", "placeholder": "Enter Region" },
-      "country": { "label": "Country", "placeholder": "Enter Country" },
-      "postalCode": { "label": "Postal code", "placeholder": "Enter Postal code" },
+      "representativeName": {
+        "label": "Authorised Representative",
+        "placeholder": "Enter Rep's full name"
+      },
+      "memberCount": {
+        "label": "Member Count Affected",
+        "placeholder": "Enter Number of members affected"
+      },
+      "streetAddress": {
+        "label": "Street address",
+        "placeholder": "Enter Street address"
+      },
+      "kebele": {
+        "label": "Kebele / Village",
+        "placeholder": "Enter Kebele / Village"
+      },
+      "woreda": {
+        "label": "Woreda / District",
+        "placeholder": "Enter Woreda / District"
+      },
+      "zone": {
+        "label": "Zone",
+        "placeholder": "Enter Zone"
+      },
+      "region": {
+        "label": "Region",
+        "placeholder": "Enter Region"
+      },
+      "country": {
+        "label": "Country",
+        "placeholder": "Enter Country"
+      },
+      "postalCode": {
+        "label": "Postal code",
+        "placeholder": "Enter Postal code"
+      },
       "website": {
         "label": "Website",
         "placeholder": "Enter Website",
@@ -78,7 +111,10 @@
         "placeholder": "Enter email address",
         "hint": "Use your work email — we'll send onboarding updates here"
       },
-      "phone": { "label": "Phone", "placeholder": "Enter phone number" }
+      "phone": {
+        "label": "Phone",
+        "placeholder": "Enter phone number"
+      }
     },
     "entityTypes": {
       "localNgo": "Local NGO",
@@ -163,7 +199,10 @@
     },
     "reviewStep": {
       "submit": "Submit Grievance",
-      "submitting": "Submitting…"
+      "submitting": "Submitting…",
+      "anonymousLabel": "Submit anonymously — hide my name and contact details from the officers handling this grievance.",
+      "canRequestMoreInfoLabel": "Officers may contact me for more information about this grievance.",
+      "canRequestMoreInfoWarning": "Your contact details will not be saved. Officers cannot reach you and you will not receive notifications about this case."
     },
     "identityStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
@@ -185,7 +224,11 @@
   },
   "notifications": {
     "label": "Notifications",
-    "unreadLabel": "Notifications, {count} new"
+    "unreadLabel": "Notifications, {count} new",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "You have no notifications.",
+    "loadError": "Could not load notifications."
   },
   "caseActions": {
     "submitterTitle": "My response",

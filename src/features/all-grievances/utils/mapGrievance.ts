@@ -217,10 +217,6 @@ export function normalizeTimelineEntry(
   let authorType: 'submitter' | 'officer' | 'system' = 'submitter';
   if ((entry as TimelineEntry).author_type) {
     authorType = (entry as TimelineEntry).author_type as 'submitter' | 'officer' | 'system';
-  } else if ((entry as TimelineEntry).author_user) {
-    authorType = 'officer';
-  } else if ((entry as TimelineEntry).author_submitter) {
-    authorType = 'submitter';
   } else if (
     isInternal ||
     rawType === 'response' ||
@@ -234,7 +230,6 @@ export function normalizeTimelineEntry(
   }
 
   const explicitName = (entry as TimelineEntry).author_name || (entry as TimelineEventItem).actor;
-  const authorSubmitter = (entry as TimelineEntry).author_submitter;
 
   let authorName: string;
   if (explicitName) {
@@ -247,7 +242,7 @@ export function normalizeTimelineEntry(
     if (context?.isAnonymous) {
       authorName = 'Anonymous Submitter';
     } else {
-      authorName = context?.submitterName || (authorSubmitter ? `Submitter (${authorSubmitter})` : (authorRole || 'Submitter'));
+      authorName = context?.submitterName || authorRole || 'Submitter';
     }
   } else if (authorType === 'system') {
     authorName = 'System';

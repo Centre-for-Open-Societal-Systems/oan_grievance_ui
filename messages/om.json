@@ -47,27 +47,60 @@
       "contact": "Bal'ina Qunnamtii"
     },
     "fields": {
-      "legalName": { "label": "Maqaa Dhaabbataa", "placeholder": "Maqaa dhaabbataa galchi" },
+      "legalName": {
+        "label": "Maqaa Dhaabbataa",
+        "placeholder": "Maqaa dhaabbataa galchi"
+      },
       "brandName": {
         "label": "Maqaa chaappaa / agarsiisaa",
         "placeholder": "Maqaa seeraa irraa kan adda ta'e yoo ta'e galchi",
         "hint": "Maqaa seeraa irraa kan adda ta'e yoo ta'e"
       },
-      "entityType": { "label": "Gosa dhaabbataa", "placeholder": "Gosa dhaabbataa filadhu" },
+      "entityType": {
+        "label": "Gosa dhaabbataa",
+        "placeholder": "Gosa dhaabbataa filadhu"
+      },
       "taxId": {
         "label": "Lakkoofsa galmee",
         "placeholder": "Lakkoofsa galmee galchi",
         "hint": "Lakkoofsa galmee ykn hayyama dhaabbata keessaniif kenname"
       },
-      "representativeName": { "label": "Bakka Bu'aa Aangoo Qabu", "placeholder": "Maqaa guutuu bakka bu'aa galchi" },
-      "memberCount": { "label": "Baay'ina Miseensota Miidhaman", "placeholder": "Baay'ina miseensota miidhaman galchi" },
-      "streetAddress": { "label": "Teessoo daandii", "placeholder": "Teessoo daandii galchi" },
-      "kebele": { "label": "Ganda / Gandaa", "placeholder": "Ganda / Gandaa galchi" },
-      "woreda": { "label": "Aanaa", "placeholder": "Aanaa galchi" },
-      "zone": { "label": "Godina", "placeholder": "Godina galchi" },
-      "region": { "label": "Naannoo", "placeholder": "Naannoo galchi" },
-      "country": { "label": "Biyya", "placeholder": "Biyya galchi" },
-      "postalCode": { "label": "Koodii poostaa", "placeholder": "Koodii poostaa galchi" },
+      "representativeName": {
+        "label": "Bakka Bu'aa Aangoo Qabu",
+        "placeholder": "Maqaa guutuu bakka bu'aa galchi"
+      },
+      "memberCount": {
+        "label": "Baay'ina Miseensota Miidhaman",
+        "placeholder": "Baay'ina miseensota miidhaman galchi"
+      },
+      "streetAddress": {
+        "label": "Teessoo daandii",
+        "placeholder": "Teessoo daandii galchi"
+      },
+      "kebele": {
+        "label": "Ganda / Gandaa",
+        "placeholder": "Ganda / Gandaa galchi"
+      },
+      "woreda": {
+        "label": "Aanaa",
+        "placeholder": "Aanaa galchi"
+      },
+      "zone": {
+        "label": "Godina",
+        "placeholder": "Godina galchi"
+      },
+      "region": {
+        "label": "Naannoo",
+        "placeholder": "Naannoo galchi"
+      },
+      "country": {
+        "label": "Biyya",
+        "placeholder": "Biyya galchi"
+      },
+      "postalCode": {
+        "label": "Koodii poostaa",
+        "placeholder": "Koodii poostaa galchi"
+      },
       "website": {
         "label": "Marsariitii",
         "placeholder": "Marsariitii galchi",
@@ -78,7 +111,10 @@
         "placeholder": "Teessoo imeelii galchi",
         "hint": "Imeelii hojii keessan fayyadamaa — odeeffannoo haaromsaa as isinii ergina"
       },
-      "phone": { "label": "Bilbila", "placeholder": "Lakkoofsa bilbilaa galchi" }
+      "phone": {
+        "label": "Bilbila",
+        "placeholder": "Lakkoofsa bilbilaa galchi"
+      }
     },
     "entityTypes": {
       "localNgo": "NGO Naannoo",
@@ -163,7 +199,10 @@
     },
     "reviewStep": {
       "submit": "Komii dhiheessi",
-      "submitting": "Dhiheessaa jira…"
+      "submitting": "Dhiheessaa jira…",
+      "anonymousLabel": "Maqaa koo osoo hin ibsin dhiyeessi — maqaa fi odeeffannoo quunnamtii koo ogeessota komii kana qabatan irraa dhoksi.",
+      "canRequestMoreInfoLabel": "Ogeessonni komii kanaan wal-qabatee odeeffannoo dabalataa argachuuf na quunnamuu danda'u.",
+      "canRequestMoreInfoWarning": "Odeeffannoon quunnamtii keessanii hin kuufamu. Ogeessonni isin quunnamuu hin danda'an, komii kanaan wal-qabatee beeksisni isiniif hin dhufu."
     },
     "identityStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
@@ -185,7 +224,11 @@
   },
   "notifications": {
     "label": "Beeksisoota",
-    "unreadLabel": "Beeksisoota, {count} haaraa"
+    "unreadLabel": "Beeksisoota, {count} haaraa",
+    "title": "Beeksisoota",
+    "markAllRead": "Hunda akka dubbifameetti mallatteessi",
+    "empty": "Beeksisni hin jiru.",
+    "loadError": "Beeksisoota fe'uu hin dandeenye."
   },
   "caseActions": {
     "submitterTitle": "Deebii koo",

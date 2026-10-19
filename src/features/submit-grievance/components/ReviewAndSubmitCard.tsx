@@ -92,6 +92,10 @@ export function ReviewAndSubmitCard({
 }: ReviewAndSubmitCardProps) {
   const t = useTranslations("submitGrievance.reviewStep");
   const [consentChecked, setConsentChecked] = useState(false);
+  // Hides the submitter's identity from the handling desks.
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  // Backend default is true. Unchecking clears the contact details server-side: the case becomes unreachable and the submitter gets no notifications.
+  const [canRequestMoreInfo, setCanRequestMoreInfo] = useState(true);
   // Same national-ID field set fields.ts validates as a Fayda ID (imported
   // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
   // action pattern as SIMaskedIdField and the Profile page's MaskedField.
@@ -126,7 +130,12 @@ export function ReviewAndSubmitCard({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await submitGrievance({ ...submitFields, consent_given: 1 });
+      const result = await submitGrievance({
+        ...submitFields,
+        consent_given: 1,
+        ...(canRequestMoreInfo ? {} : { can_request_more_info: 0 }),
+        ...(isAnonymous ? { is_anonymous: 1 } : {}),
+      });
       // The case exists now, so the staged files can attach to its ticket.
       // A failed upload doesn't undo the filing — the submitter is told on
       // the confirmation screen and can add the files from the case instead.
@@ -271,6 +280,43 @@ export function ReviewAndSubmitCard({
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Anonymity */}
+          <div className="mt-4">
+            <label htmlFor="submit-anonymously" className="flex items-start gap-3 cursor-pointer">
+              <input
+                id="submit-anonymously"
+                type="checkbox"
+                checked={isAnonymous}
+                onChange={(e) => setIsAnonymous(e.target.checked)}
+                className="mt-0.5 w-5 h-5 flex-shrink-0 accent-[#16A34A] cursor-pointer"
+              />
+              <span className="text-sm font-medium text-gray-600 leading-relaxed">
+                {t('anonymousLabel')}
+              </span>
+            </label>
+          </div>
+
+          {/* Contactability */}
+          <div className="mt-4">
+            <div className="flex items-start gap-3">
+              <input
+                id="can-request-more-info"
+                type="checkbox"
+                checked={canRequestMoreInfo}
+                onChange={(e) => setCanRequestMoreInfo(e.target.checked)}
+                className="mt-0.5 w-5 h-5 flex-shrink-0 accent-[#16A34A] cursor-pointer"
+              />
+              <label htmlFor="can-request-more-info" className="text-sm font-medium text-gray-600 leading-relaxed cursor-pointer">
+                {t('canRequestMoreInfoLabel')}
+              </label>
+            </div>
+            {!canRequestMoreInfo && (
+              <p role="status" className="mt-2 ml-8 text-xs text-amber-700">
+                {t('canRequestMoreInfoWarning')}
+              </p>
+            )}
           </div>
 
           {/* Consent Checkbox */}

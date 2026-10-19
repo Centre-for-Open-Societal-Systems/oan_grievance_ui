@@ -26,6 +26,7 @@ interface DropdownOption {
 }
 
 const ACTION_TAKEN_MAX = 500;
+const ACTION_TAKEN_REQUIRED = new Set(['Resolve', 'Partially Resolve', 'Resolved']);
 
 const AnimatedDropdown = ({
   label,
@@ -220,9 +221,12 @@ export function ResponseForm({
   else if (isLoadingTemplates) templatePlaceholder = t('loadingTemplates');
   else if (templateOptions.length === 0) templatePlaceholder = t('noTemplates');
 
+  // Same rule as the response-template editor: only resolving actions carry a separate
+  // "action taken" part; for the rest the resolution summary alone is the response.
+  const requiresActionTaken = selectedAction !== null && ACTION_TAKEN_REQUIRED.has(selectedAction.action);
   const isResponseValid =
     selectedAction !== null &&
-    actionTaken.trim() !== '' &&
+    (!requiresActionTaken || actionTaken.trim() !== '') &&
     resolutionSummary.trim() !== '';
   const isInternalValid = internalNoteTab.trim() !== '';
 
@@ -361,7 +365,7 @@ export function ResponseForm({
             </div>
             <div className="z-10 relative">
               <label className="block text-sm font-bold text-gray-700 mb-1.5">
-                Action Taken <span className="text-red-500">*</span>{' '}
+                Action Taken{requiresActionTaken && <span className="text-red-500"> *</span>}{' '}
                 <span className="text-gray-400 font-normal">({actionTaken.length}/{ACTION_TAKEN_MAX})</span>
               </label>
               <textarea

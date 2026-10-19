@@ -47,27 +47,60 @@
       "contact": "የመገናኛ ዝርዝሮች"
     },
     "fields": {
-      "legalName": { "label": "የድርጅት ስም", "placeholder": "የድርጅት ስም ያስገቡ" },
+      "legalName": {
+        "label": "የድርጅት ስም",
+        "placeholder": "የድርጅት ስም ያስገቡ"
+      },
       "brandName": {
         "label": "የንግድ ምልክት / የማሳያ ስም",
         "placeholder": "ከሕጋዊ ስሙ የተለየ ከሆነ ያስገቡ",
         "hint": "ከሕጋዊ ስሙ የተለየ ከሆነ"
       },
-      "entityType": { "label": "የተቋም ዓይነት", "placeholder": "የተቋም ዓይነት ይምረጡ" },
+      "entityType": {
+        "label": "የተቋም ዓይነት",
+        "placeholder": "የተቋም ዓይነት ይምረጡ"
+      },
       "taxId": {
         "label": "የምዝገባ ቁጥር",
         "placeholder": "የምዝገባ ቁጥር ያስገቡ",
         "hint": "ለድርጅትዎ የተሰጠ የምዝገባ ወይም የፈቃድ ቁጥር"
       },
-      "representativeName": { "label": "ስልጣን የተሰጠው ተወካይ", "placeholder": "የተወካዩን ሙሉ ስም ያስገቡ" },
-      "memberCount": { "label": "የተጎዱ አባላት ብዛት", "placeholder": "የተጎዱ አባላትን ብዛት ያስገቡ" },
-      "streetAddress": { "label": "የመንገድ አድራሻ", "placeholder": "የመንገድ አድራሻ ያስገቡ" },
-      "kebele": { "label": "ቀበሌ / መንደር", "placeholder": "ቀበሌ / መንደር ያስገቡ" },
-      "woreda": { "label": "ወረዳ", "placeholder": "ወረዳ ያስገቡ" },
-      "zone": { "label": "ዞን", "placeholder": "ዞን ያስገቡ" },
-      "region": { "label": "ክልል", "placeholder": "ክልል ያስገቡ" },
-      "country": { "label": "አገር", "placeholder": "አገር ያስገቡ" },
-      "postalCode": { "label": "የፖስታ ኮድ", "placeholder": "የፖስታ ኮድ ያስገቡ" },
+      "representativeName": {
+        "label": "ስልጣን የተሰጠው ተወካይ",
+        "placeholder": "የተወካዩን ሙሉ ስም ያስገቡ"
+      },
+      "memberCount": {
+        "label": "የተጎዱ አባላት ብዛት",
+        "placeholder": "የተጎዱ አባላትን ብዛት ያስገቡ"
+      },
+      "streetAddress": {
+        "label": "የመንገድ አድራሻ",
+        "placeholder": "የመንገድ አድራሻ ያስገቡ"
+      },
+      "kebele": {
+        "label": "ቀበሌ / መንደር",
+        "placeholder": "ቀበሌ / መንደር ያስገቡ"
+      },
+      "woreda": {
+        "label": "ወረዳ",
+        "placeholder": "ወረዳ ያስገቡ"
+      },
+      "zone": {
+        "label": "ዞን",
+        "placeholder": "ዞን ያስገቡ"
+      },
+      "region": {
+        "label": "ክልል",
+        "placeholder": "ክልል ያስገቡ"
+      },
+      "country": {
+        "label": "አገር",
+        "placeholder": "አገር ያስገቡ"
+      },
+      "postalCode": {
+        "label": "የፖስታ ኮድ",
+        "placeholder": "የፖስታ ኮድ ያስገቡ"
+      },
       "website": {
         "label": "ድር ጣቢያ",
         "placeholder": "ድር ጣቢያ ያስገቡ",
@@ -78,7 +111,10 @@
         "placeholder": "ኢሜይል አድራሻ ያስገቡ",
         "hint": "የሥራ ኢሜይልዎን ይጠቀሙ — የምዝገባ ሂደት ዝመናዎችን ወደዚህ እንልካለን"
       },
-      "phone": { "label": "ስልክ", "placeholder": "ስልክ ቁጥር ያስገቡ" }
+      "phone": {
+        "label": "ስልክ",
+        "placeholder": "ስልክ ቁጥር ያስገቡ"
+      }
     },
     "entityTypes": {
       "localNgo": "የሀገር ውስጥ መንግሥታዊ ያልሆነ ድርጅት",
@@ -163,7 +199,10 @@
     },
     "reviewStep": {
       "submit": "ቅሬታ ያቅርቡ",
-      "submitting": "በማቅረብ ላይ…"
+      "submitting": "በማቅረብ ላይ…",
+      "anonymousLabel": "ማንነቴ ሳይታወቅ አስገባ — ስሜንና የመገኛ መረጃዬን ይህን ቅሬታ ከሚያስተናግዱ ኃላፊዎች ደብቅ።",
+      "canRequestMoreInfoLabel": "ኃላፊዎች ስለዚህ ቅሬታ ተጨማሪ መረጃ ለማግኘት ሊያነጋግሩኝ ይችላሉ።",
+      "canRequestMoreInfoWarning": "የመገኛ መረጃዎ አይቀመጥም። ኃላፊዎች ሊያገኙዎት አይችሉም፣ ስለዚህ ጉዳይም ማሳወቂያ አይደርስዎትም።"
     },
     "identityStep": {
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
@@ -185,7 +224,11 @@
   },
   "notifications": {
     "label": "ማሳወቂያዎች",
-    "unreadLabel": "ማሳወቂያዎች፣ {count} አዲስ"
+    "unreadLabel": "ማሳወቂያዎች፣ {count} አዲስ",
+    "title": "ማሳወቂያዎች",
+    "markAllRead": "ሁሉንም እንደተነበበ ምልክት አድርግ",
+    "empty": "ምንም ማሳወቂያ የለም።",
+    "loadError": "ማሳወቂያዎችን መጫን አልተቻለም።"
   },
   "caseActions": {
     "submitterTitle": "የእኔ ምላሽ",

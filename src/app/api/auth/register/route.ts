@@ -2,7 +2,7 @@ import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { getClientIp, hasTrustedProxyConfigured } from '@/lib/clientIp';
 import { checkCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
-import { BackendAuthError, callBackendAuth, type TokenPair } from '@/lib/oanAuthBackend';
+import { BackendAuthError, callBackendAuth } from '@/lib/oanAuthBackend';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { validatePassword } from '@/lib/validation/password';
 import { registerSubmitterFieldsSchema } from '@/lib/validation/registerSubmitter';
@@ -10,10 +10,10 @@ import { PHONE_NUMBER_E164_REGEX } from '@/lib/validation/phone';
 import { NextResponse } from 'next/server';
 
 /**
- * Registration issues a token pair too, but this route deliberately discards
- * it and sets no cookies — the UX is "account created, now sign in", not an
- * auto-login. That is unchanged from before this route existed; the point of
- * routing it through here at all is the same protections every credential
+ * The backend issues no tokens on registration (it answers with the new user
+ * id and roles), and this route sets no cookies — the UX is "account created,
+ * now sign in", not an auto-login. The point of routing it through here is
+ * the same protections every credential
  * endpoint gets (CSRF, per-IP rate limit, no backend URL exposed to the browser).
  */
 export async function POST(request: Request) {
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await callBackendAuth<TokenPair>(
+    await callBackendAuth<{ user: string; roles: string[] }>(
       '/api/v1/auth/register',
       {
         email,
