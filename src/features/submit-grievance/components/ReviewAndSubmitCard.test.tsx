@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { NextIntlClientProvider } from 'next-intl';
 import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import messages from '../../../../messages/en.json';
+import en from '../../../../messages/en.json';
 import { kebeleRef, makeStore, regionRef, woredaRef, zoneRef } from '../testFixtures';
 import { GrievanceSubmittedCard } from './GrievanceSubmittedCard';
 import { ReviewAndSubmitCard } from './ReviewAndSubmitCard';
@@ -28,27 +28,27 @@ const BASE_FIELDS = {
 function renderCard(props: Partial<React.ComponentProps<typeof ReviewAndSubmitCard>> = {}, store = makeStore()) {
   const onSubmitted = vi.fn();
   render(
-    <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
     <Provider store={store}>
-      <ReviewAndSubmitCard
-        onBack={vi.fn()}
-        onSubmitted={onSubmitted}
-        submitFields={BASE_FIELDS}
-        submitterType="individual"
-        submissionChannel="web"
-        identityValues={{}}
-        serviceCategory="inputs"
-        grievanceType="Fertilizer Shortage"
-        region={regionRef}
-        zone={zoneRef}
-        woreda={woredaRef}
-        kebele={kebeleRef}
-        description={DESCRIPTION}
-        attachments={[]}
-        {...props}
-      />
+      <NextIntlClientProvider locale="en" messages={en}>
+        <ReviewAndSubmitCard
+          onBack={vi.fn()}
+          onSubmitted={onSubmitted}
+          submitFields={BASE_FIELDS}
+          submitterType="individual"
+          submissionChannel="web"
+          identityValues={{}}
+          serviceCategory="inputs"
+          grievanceType="Fertilizer Shortage"
+          region={regionRef}
+          zone={zoneRef}
+          woreda={woredaRef}
+          kebele={kebeleRef}
+          description={DESCRIPTION}
+          attachments={[]}
+          {...props}
+        />
+      </NextIntlClientProvider>
     </Provider>
-    </NextIntlClientProvider>
   );
   return { onSubmitted };
 }
@@ -289,5 +289,23 @@ describe('Submitted screen', () => {
   it('links to the person’s grievance list', () => {
     render(<GrievanceSubmittedCard result={{ ticket_number: 'B00100010', status: 'Submitted' }} />);
     expect(screen.getByRole('link', { name: /View my grievances/ })).toHaveAttribute('href', '/all-grievances');
+  });
+});
+
+describe('Review step for an organisation that may not file yet', () => {
+  it('holds the Submit button disabled with the reason, and sends nothing, even with consent given', () => {
+    const fetchMock = mockFetch(200, { data: {}, status: 'success' });
+    const { onSubmitted } = renderCard({
+      submissionBlockedMessage: "You can't submit until your organisation is verified.",
+    });
+
+    fireEvent.click(screen.getByText(/I consent to this grievance being shared/));
+
+    const submit = screen.getByRole('button', { name: /Submit Grievance/ });
+    expect(submit).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent("You can't submit until your organisation is verified.");
+    fireEvent.click(submit);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(onSubmitted).not.toHaveBeenCalled();
   });
 });

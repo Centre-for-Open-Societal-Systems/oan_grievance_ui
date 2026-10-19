@@ -9,7 +9,7 @@ export const FIELDS = [
   { key: "responsibleOfficial", label: "Responsible Official", required: true },
   { key: "officialFaydaId", label: "Official's Fayda ID", required: true },
   { key: "phoneNumber", label: "Contact Mobile", required: true },
-  { key: "email", label: "Contact Email ID", required: false },
+  { key: "email", label: "Contact Email ID", required: true },
 ];
 
 export function WoredaKebeleForm({ values, setValue, hiddenFields = [], errors, onFieldBlur }: SIFormProps) {
@@ -53,7 +53,7 @@ export function WoredaKebeleForm({ values, setValue, hiddenFields = [], errors, 
       )}
 
       {!hiddenFields.includes("email") && (
-        <SITextField {...field} name="email" type="email" label="Contact Email ID" placeholder="Enter Contact Email ID" />
+        <SITextField {...field} name="email" type="email" label="Contact Email ID" required placeholder="Enter Contact Email ID" />
       )}
     </div>
   );

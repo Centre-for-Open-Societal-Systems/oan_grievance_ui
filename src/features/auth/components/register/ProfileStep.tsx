@@ -6,22 +6,26 @@ import { Check, ShieldCheck } from 'lucide-react';
 import { errorIdFor, FieldError } from '@/components/ui/FieldError';
 import { Spinner } from '@/components/ui/Spinner';
 import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
-import { CooperativeFPOForm } from '@/components/submitter-identity/SI-CooperativeFPOForm';
 import { IndividualFarmerForm } from '@/components/submitter-identity/SI-IndividualFarmerForm';
-import { NGOForm } from '@/components/submitter-identity/SI-NGOForm';
+import { OrganisationSignupForm } from '@/components/submitter-identity/SI-OrganisationSignupForm';
 import { WoredaKebeleForm } from '@/components/submitter-identity/SI-WoredaKebeleForm';
 import type { SIFormProps } from '@/components/submitter-identity/SI-types';
-import { submitterTypeOptions } from '@/components/submitter-identity/fields';
+import { onboardsOrganisationAfterSignIn, submitterTypeOptions } from '@/components/submitter-identity/fields';
 
 // Deliberately no entry for `development_agent`: an agent files for other
 // people and enters *their* details when filing each grievance, so registration
 // asks for nothing about the agent (see `submitsOnBehalfOfOthers`). Without a
 // form here the ID-consent box below isn't shown either — there is no national
 // ID being collected to consent to.
+//
+// `ngo` / `cooperative` are asked only for their representative's Fayda ID, which
+// registration sends with the type. The organisation's own details (name,
+// registration number, authorised representative, address, contacts) come on the
+// onboarding screen shown at first sign-in (see `onboardsOrganisationAfterSignIn`).
 const SUBMITTER_TYPE_FORMS: Record<string, ComponentType<SIFormProps>> = {
   individual: IndividualFarmerForm,
-  cooperative: CooperativeFPOForm,
-  ngo: NGOForm,
+  cooperative: OrganisationSignupForm,
+  ngo: OrganisationSignupForm,
   woreda_kebele: WoredaKebeleForm,
 };
 
@@ -106,6 +110,12 @@ export function ProfileStep({
           errors={errors}
           onFieldBlur={onFieldBlur}
         />
+      )}
+
+      {onboardsOrganisationAfterSignIn(submitterType) && (
+        <p className="bg-blue-50/60 border border-blue-100 rounded-xl p-4 text-[13px] text-blue-800 leading-relaxed">
+          {t('organisationNotice')}
+        </p>
       )}
 
       {collectsNationalId && (

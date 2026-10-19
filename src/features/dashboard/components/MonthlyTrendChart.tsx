@@ -9,13 +9,16 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
+import { useTranslations } from "next-intl";
 import type { MonthlyTrendPoint } from "../types";
 
 export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
+  const t = useTranslations("dashboard.overview");
+
   return (
     <div className="lg:col-span-2 bg-white rounded-2xl flex flex-col h-[400px] border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl">
       <div className="px-6 py-5 border-b border-gray-200">
-        <h3 className="text-[16px] font-semibold text-[#111827] tracking-tight">Monthly Submission & Resolution Trend</h3>
+        <h3 className="text-[16px] font-semibold text-[#111827] tracking-tight">{t("monthlyTrend")}</h3>
       </div>
 
       <div className="flex-1 w-full -ml-4 p-6 pt-4 pb-2 focus:outline-none">
@@ -49,7 +52,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
             />
             <Bar
               dataKey="submitted"
-              name="Submitted"
+              name={t("submitted")}
               fill="#2563eb"
               radius={[2, 2, 0, 0]}
               maxBarSize={30}
@@ -59,7 +62,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
             />
             <Bar
               dataKey="resolved"
-              name="Resolved"
+              name={t("resolved")}
               fill="#10b981"
               radius={[2, 2, 0, 0]}
               maxBarSize={30}
@@ -75,11 +78,11 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
       <div className="flex justify-center gap-6 text-[12px] text-gray-500 font-medium pb-6 pt-2">
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-          Submitted
+          {t("submitted")}
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-          Resolved
+          {t("resolved")}
         </div>
       </div>
     </div>

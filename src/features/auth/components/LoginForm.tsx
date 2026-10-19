@@ -6,9 +6,10 @@ import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/Fi
 import { ForgotPasswordModal } from '@/features/auth/components/ForgotPasswordModal';
 import { SetInitialPasswordModal } from '@/features/auth/components/SetInitialPasswordModal';
 import { performLogout } from '@/features/auth/logout';
-import { homeRouteForRoles } from '@/features/auth/rbac';
+import { homeRouteForUser } from '@/features/auth/rbac';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { AUTH_MESSAGES } from '@/lib/authMessages';
+import { organisationKindOf } from '@/lib/organisationKind';
 import { safeReturnPath } from '@/lib/returnPath';
 import { validateEmail, validateLoginPassword } from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors, type FieldErrors } from '@/lib/validation/useFieldErrors';
@@ -114,7 +115,10 @@ export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
 
     if (loginThunk.fulfilled.match(result)) {
       const returnUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('returnUrl') : null;
-      router.push(safeReturnPath(returnUrl) || homeRouteForRoles(result.payload.roles ?? []));
+      // An NGO / FPO representative lands on their organisation's screen, everyone else
+      // on their role's home — decided by who signed in, not by which form they used.
+      const user = result.payload;
+      router.push(safeReturnPath(returnUrl) || homeRouteForUser(user.roles ?? [], organisationKindOf(user)));
       return;
     }
 

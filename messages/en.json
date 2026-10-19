@@ -15,15 +15,195 @@
       "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
-      "fieldRequired": "This field is required."
+      "fieldRequired": "This field is required.",
+      "organisationNotice": "After you sign in, we'll ask for your organisation's details — name, registration number, authorised representative, address and contacts.",
+      "faydaAlreadyRegistered": "This Fayda ID is already registered to another account.",
+      "identityAlreadyRegistered": "These details are already registered to another account."
     },
     "success": {
       "title": "Account Created!",
       "body": "Your account has been created successfully. You can now log in using your email and password.",
+      "organisationBody": "Your account has been created successfully. Log in to register your organisation.",
       "proceedToLogin": "Proceed to Login"
     }
   },
+  "organisation": {
+    "header": {
+      "completeRegistration": "Complete Registration",
+      "registered": "Organisation"
+    },
+    "loading": "Loading your organisation…",
+    "intro": {
+      "eyebrow": "Organisation Onboarding.",
+      "heading": {
+        "ngo": "Register your NGO",
+        "fpo": "Register your FPO"
+      },
+      "body": "A few details to confirm your organisation on the OAN grievance network. KYC documents are collected after registration."
+    },
+    "sections": {
+      "organisation": "Organisation",
+      "address": "Registered Address",
+      "contact": "Contact Details"
+    },
+    "fields": {
+      "legalName": {
+        "label": "Organisation Name",
+        "placeholder": "Enter Organisation Name"
+      },
+      "brandName": {
+        "label": "Brand / display name",
+        "placeholder": "Enter if different from legal name",
+        "hint": "If different from legal name"
+      },
+      "entityType": {
+        "label": "Entity type",
+        "placeholder": "Select Entity type"
+      },
+      "taxId": {
+        "label": "Registration Number",
+        "placeholder": "Enter Registration Number",
+        "hint": "The registration or licence number issued to your organisation"
+      },
+      "representativeName": {
+        "label": "Authorised Representative",
+        "placeholder": "Enter Rep's full name"
+      },
+      "memberCount": {
+        "label": "Member Count Affected",
+        "placeholder": "Enter Number of members affected"
+      },
+      "streetAddress": {
+        "label": "Street address",
+        "placeholder": "Enter Street address"
+      },
+      "kebele": {
+        "label": "Kebele / Village",
+        "placeholder": "Enter Kebele / Village"
+      },
+      "woreda": {
+        "label": "Woreda / District",
+        "placeholder": "Enter Woreda / District"
+      },
+      "zone": {
+        "label": "Zone",
+        "placeholder": "Enter Zone"
+      },
+      "region": {
+        "label": "Region",
+        "placeholder": "Enter Region"
+      },
+      "country": {
+        "label": "Country",
+        "placeholder": "Enter Country"
+      },
+      "postalCode": {
+        "label": "Postal code",
+        "placeholder": "Enter Postal code"
+      },
+      "website": {
+        "label": "Website",
+        "placeholder": "Enter Website",
+        "hint": "Your website - used as your network address - can be added later"
+      },
+      "email": {
+        "label": "Work email",
+        "placeholder": "Enter email address",
+        "hint": "Use your work email — we'll send onboarding updates here"
+      },
+      "phone": {
+        "label": "Phone",
+        "placeholder": "Enter phone number"
+      }
+    },
+    "entityTypes": {
+      "localNgo": "Local NGO",
+      "internationalNgo": "International NGO",
+      "cbo": "Community-Based Organisation",
+      "cso": "Civil Society Organisation",
+      "fpo": "Farmer Producer Organisation",
+      "primaryCooperative": "Primary Cooperative",
+      "cooperativeUnion": "Cooperative Union",
+      "cooperativeFederation": "Cooperative Federation"
+    },
+    "consent": "I confirm I am authorised to register this organisation and agree to the <policy>OAN Privacy Policy</policy>. I understand that network participation is subject to the <agreement>OAN Network Participation Agreement</agreement>, which I will review and accept before going live.",
+    "actions": {
+      "back": "Back",
+      "backToSignIn": "Back to Sign In",
+      "register": "Register Organization",
+      "retry": "Try again",
+      "continueToSubmit": "Continue to Submit Grievance"
+    },
+    "metadata": {
+      "ngo": "NGO Registration | Grievance Management Dashboard",
+      "fpo": "FPO Registration | Grievance Management Dashboard"
+    },
+    "errors": {
+      "required": "This field is required.",
+      "tooLong": "Use {max} characters or fewer.",
+      "entityType": "Choose one of the listed entity types.",
+      "taxId": "Use 3-60 letters or numbers; hyphens or slashes are allowed between them.",
+      "memberCount": "Enter a whole number of members, e.g. 120.",
+      "postalCode": "Enter a valid postal code, e.g. 1000.",
+      "registrationNumberTaken": "An organisation with this registration number is already registered.",
+      "website": "Enter a valid website address, e.g. www.example.org.",
+      "email": "Enter a valid email address, e.g. name@example.com.",
+      "phoneEthiopia": "Enter a valid Ethiopian mobile number, e.g. 0911234567 or 911234567 (starts with 09, 07, 9, or 7).",
+      "phone": "Enter a valid phone number for the selected country.",
+      "generic": "We could not complete that. Please try again.",
+      "forbidden": "Your account is not permitted to register an organisation.",
+      "connection": "We could not reach the server. Please try again in a moment.",
+      "session": "Your session has expired. Please sign in again.",
+      "profileRefresh": "Your organisation is registered, but we could not refresh your profile. Please try again before you submit a grievance."
+    },
+    "status": {
+      "details": {
+        "legalName": "Organisation Name",
+        "brandName": "Brand / display name",
+        "entityType": "Entity type",
+        "registrationNumber": "Registration Number",
+        "reason": "Note from the administrator",
+        "status": "Status"
+      },
+      "inReview": {
+        "badge": "In Review",
+        "title": "Your organisation is registered and in review",
+        "body": "A platform administrator will review your organisation before it goes live. We'll let you know once it has been approved."
+      },
+      "active": {
+        "badge": "Active",
+        "title": "Your organisation is active",
+        "body": "Your organisation is approved on the network. You can now submit and track grievances.",
+        "submit": "Submit a grievance",
+        "track": "Track grievances"
+      },
+      "suspended": {
+        "badge": "Suspended",
+        "title": "Your organisation is suspended",
+        "body": "Your organisation's access has been suspended. Please contact the platform administrator."
+      }
+    }
+  },
   "submitGrievance": {
+    "organisation": {
+      "inReviewTitle": "Your organisation is awaiting verification",
+      "inReviewBody": "{name} is still In Review. You can prepare and save your grievance now, but it can only be submitted once an administrator verifies your organisation.",
+      "suspendedTitle": "Your organisation is suspended",
+      "suspendedBody": "{name} is suspended, so grievances cannot be submitted for it. Please contact the platform administrator.",
+      "reason": "Note from the administrator: {reason}",
+      "submitBlocked": "You can't submit until your organisation is verified. Your details can be saved as a draft.",
+      "unregisteredTitle": "Register your organisation first",
+      "unregisteredBody": "Your account is for an organisation that has not been registered yet. You can prepare and save your grievance now, but it can only be submitted once your organisation is registered and verified.",
+      "unregisteredAction": "Register your organisation",
+      "unregisteredSubmitBlocked": "You can't submit until your organisation is registered and verified. Your details can be saved as a draft."
+    },
+    "reviewStep": {
+      "submit": "Submit Grievance",
+      "submitting": "Submitting…",
+      "anonymousLabel": "Submit anonymously — hide my name and contact details from the officers handling this grievance.",
+      "canRequestMoreInfoLabel": "Officers may contact me for more information about this grievance.",
+      "canRequestMoreInfoWarning": "Your contact details will not be saved. Officers cannot reach you and you will not receive notifications about this case."
+    },
     "identityStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
@@ -37,11 +217,6 @@
       "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
       "fieldRequired": "This field is required.",
       "documentsHint": "JPG, PNG, PDF or MP3 up to 10MB each · up to {max} files"
-    },
-    "reviewStep": {
-      "anonymousLabel": "Submit anonymously — hide my name and contact details from the officers handling this grievance.",
-      "canRequestMoreInfoLabel": "Officers may contact me for more information about this grievance.",
-      "canRequestMoreInfoWarning": "Your contact details will not be saved. Officers cannot reach you and you will not receive notifications about this case."
     }
   },
   "commentsAndCommunication": {
@@ -361,7 +536,35 @@
       "unavailableValue": "Not available",
       "uncategorised": "Uncategorised",
       "otherCategories": "{count, plural, one {# other category} other {# other categories}}",
-      "noCategories": "No grievances to group by category yet."
+      "noCategories": "No grievances to group by category yet.",
+      "title": "OAN Grievance Dashboard",
+      "subtitle": "Agriculture domain grievances — Ethiopia OAN Portal",
+      "kpi": {
+        "total": "Total Grievances",
+        "awaiting_action": "Awaiting Action",
+        "resolved": "Resolved",
+        "escalated": "Escalated",
+        "fromLastMonth": "from last month",
+        "newThisWeek": "new this week",
+        "resolvedThisWeek": "resolved this week"
+      },
+      "byServiceCategory": "By Service Category",
+      "statusDistribution": "Status Distribution",
+      "statusTotal": "Total",
+      "monthlyTrend": "Monthly Submission & Resolution Trend",
+      "submitted": "Submitted",
+      "resolved": "Resolved",
+      "statuses": {
+        "submitted": "Submitted",
+        "assigned": "Assigned",
+        "inProgress": "In Progress",
+        "moreInfoNeeded": "More Info Needed",
+        "resolved": "Resolved",
+        "closed": "Closed",
+        "rejected": "Rejected"
+      },
+      "noStatuses": "No grievances to show by status yet.",
+      "escalatedCaption": "Triggered by SLA breach"
     }
   },
   "login": {
