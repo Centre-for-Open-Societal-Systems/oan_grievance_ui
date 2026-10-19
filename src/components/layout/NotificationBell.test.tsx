@@ -77,4 +77,18 @@ describe('NotificationBell', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Notifications' }));
     expect(await screen.findByText('You have no notifications.')).toBeInTheDocument();
   });
+
+  it('closes on Escape and returns focus to the bell', async () => {
+    fetchNotifications.mockResolvedValue({ unread_count: 0, notifications: [] });
+    renderBell();
+
+    const bell = await screen.findByRole('button', { name: 'Notifications' });
+    expect(bell).not.toHaveAttribute('aria-haspopup');
+    fireEvent.click(bell);
+    await screen.findByText('You have no notifications.');
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByText('You have no notifications.')).not.toBeInTheDocument();
+    expect(bell).toHaveFocus();
+  });
 });

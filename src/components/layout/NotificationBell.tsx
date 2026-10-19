@@ -25,6 +25,7 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [hasError, setHasError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -54,7 +55,9 @@ export function NotificationBell() {
       if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
+      if (event.key !== "Escape") return;
+      setIsOpen(false);
+      buttonRef.current?.focus();
     };
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -88,11 +91,11 @@ export function NotificationBell() {
   return (
     <div ref={containerRef} className="relative ml-2">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-label={unread > 0 ? t("unreadLabel", { count: unread }) : t("label")}
         aria-expanded={isOpen}
-        aria-haspopup="true"
         className="relative text-slate-500 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800/40 rounded transition-colors"
       >
         <Bell className="w-[22px] h-[22px] fill-slate-500" />

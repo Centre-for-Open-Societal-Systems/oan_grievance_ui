@@ -81,9 +81,10 @@ export function ReviewAndSubmitCard({
   attachments,
 }: ReviewAndSubmitCardProps) {
   const [consentChecked, setConsentChecked] = useState(false);
-  // Hides the submitter's identity from the handling desks; the justification is optional context for reviewers.
+  // Hides the submitter's identity from the handling desks.
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [anonymityJustification, setAnonymityJustification] = useState('');
+  // Backend default is true. Unchecking clears the contact details server-side: the case becomes unreachable and the submitter gets no notifications.
+  const [canRequestMoreInfo, setCanRequestMoreInfo] = useState(true);
   // Same national-ID field set fields.ts validates as a Fayda ID (imported
   // as ID_FIELD_KEYS) — masked here by default too, same reveal-on-explicit-
   // action pattern as SIMaskedIdField and the Profile page's MaskedField.
@@ -121,9 +122,8 @@ export function ReviewAndSubmitCard({
       const result = await submitGrievance({
         ...submitFields,
         consent_given: 1,
-        ...(isAnonymous
-          ? { is_anonymous: 1, ...(anonymityJustification.trim() ? { anonymity_justification: anonymityJustification.trim() } : {}) }
-          : {}),
+        ...(canRequestMoreInfo ? {} : { can_request_more_info: 0 }),
+        ...(isAnonymous ? { is_anonymous: 1 } : {}),
       });
       // The case exists now, so the staged files can attach to its ticket.
       // A failed upload doesn't undo the filing — the submitter is told on
@@ -273,37 +273,38 @@ export function ReviewAndSubmitCard({
 
           {/* Anonymity */}
           <div className="mt-4">
-            <div
-              className="flex items-start gap-3 cursor-pointer group"
-              onClick={() => setIsAnonymous(!isAnonymous)}
-            >
-              <div className="relative mt-0.5 flex-shrink-0">
-                <input
-                  id="submit-anonymously"
-                  type="checkbox"
-                  checked={isAnonymous}
-                  onChange={(e) => setIsAnonymous(e.target.checked)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-5 h-5 accent-[#16A34A] cursor-pointer"
-                />
-              </div>
-              <label htmlFor="submit-anonymously" onClick={(e) => e.stopPropagation()} className="text-sm font-medium text-gray-600 leading-relaxed cursor-pointer">
+            <label htmlFor="submit-anonymously" className="flex items-start gap-3 cursor-pointer">
+              <input
+                id="submit-anonymously"
+                type="checkbox"
+                checked={isAnonymous}
+                onChange={(e) => setIsAnonymous(e.target.checked)}
+                className="mt-0.5 w-5 h-5 flex-shrink-0 accent-[#16A34A] cursor-pointer"
+              />
+              <span className="text-sm font-medium text-gray-600 leading-relaxed">
                 Submit anonymously — hide my name and contact details from the officers handling this grievance.
+              </span>
+            </label>
+          </div>
+
+          {/* Contactability */}
+          <div className="mt-4">
+            <div className="flex items-start gap-3">
+              <input
+                id="can-request-more-info"
+                type="checkbox"
+                checked={canRequestMoreInfo}
+                onChange={(e) => setCanRequestMoreInfo(e.target.checked)}
+                className="mt-0.5 w-5 h-5 flex-shrink-0 accent-[#16A34A] cursor-pointer"
+              />
+              <label htmlFor="can-request-more-info" className="text-sm font-medium text-gray-600 leading-relaxed cursor-pointer">
+                Officers may contact me for more information about this grievance.
               </label>
             </div>
-            {isAnonymous && (
-              <div className="mt-3 ml-8">
-                <label htmlFor="anonymity-justification" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Why do you need anonymity? <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <textarea
-                  id="anonymity-justification"
-                  rows={2}
-                  value={anonymityJustification}
-                  onChange={(e) => setAnonymityJustification(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white resize-none"
-                />
-              </div>
+            {!canRequestMoreInfo && (
+              <p role="status" className="mt-2 ml-8 text-xs text-amber-700">
+                Your contact details will not be saved. Officers cannot reach you and you will not receive notifications about this case.
+              </p>
             )}
           </div>
 
