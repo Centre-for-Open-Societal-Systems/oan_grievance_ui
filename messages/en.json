@@ -595,7 +595,9 @@
     "loadingPreview": "Loading preview",
     "previewUnavailable": "Preview unavailable",
     "previewLoadFailed": "Could not load this file right now.",
-    "scanPending": "Not available until the scan completes."
+    "scanPending": "Not available until the scan completes.",
+    "scanInfected": "This file failed the malware scan and cannot be opened.",
+    "scanFailed": "The malware scan could not be completed, so this file cannot be opened."
   },
   "grievanceList": {
     "searchPlaceholder": "Search by ticket number, submitter name, or grievance type..."

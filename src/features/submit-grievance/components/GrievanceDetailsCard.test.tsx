@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
@@ -40,6 +40,7 @@ vi.mock('./VoiceRecorder', () => ({
   ),
 }));
 
+import { fetchSubmitterOptionsThunk } from '@/features/metadata';
 import { GrievanceDetailsCard } from './GrievanceDetailsCard';
 
 afterEach(cleanup);
@@ -142,10 +143,10 @@ const withOther = () =>
     },
   });
 
-function renderStep(initial: Initial = {}) {
+function renderStep(initial: Initial = {}, store = withOther()) {
   const onNext = vi.fn();
   render(
-    <Provider store={withOther()}>
+    <Provider store={store}>
       <NextIntlClientProvider locale="en" messages={en}>
         <Harness initial={initial} onNext={onNext} />
       </NextIntlClientProvider>
@@ -344,5 +345,64 @@ describe('Step 2 — voice recording', () => {
 
     fireEvent.click(screen.getByText('mock-record'));
     expect(screen.getByText('mock-record')).not.toBeDisabled();
+  });
+
+  it('lists the recording only under the description, not again under Supporting Documents', () => {
+    renderStep(AREAS);
+
+    fireEvent.click(screen.getByText('mock-record'));
+
+    expect(screen.queryByText('voice.mp3')).not.toBeInTheDocument();
+    // ...but it still counts toward the attachment limit
+    expect(screen.getByText(/Supporting Documents.*\(1\/10\)/)).toBeInTheDocument();
+  });
+
+  it('files under Other once the category options finish loading, if the recording was made before they did', async () => {
+    const store = makeStore({
+      submitterOptions: null,
+      submitterOptionsStatus: 'loading',
+    });
+    renderStep(AREAS, store);
+
+    fireEvent.click(screen.getByText('mock-record'));
+    expect((byId('service-category') as HTMLInputElement).value).toBe('');
+
+    await act(async () => {
+      store.dispatch({
+        type: fetchSubmitterOptionsThunk.fulfilled.type,
+        payload: {
+          submitter_types: [],
+          submission_types: [],
+          preferred_languages: [],
+          service_categories: [{ category_name: 'Other', code: '006', sort_order: 6 }],
+          grievance_types: [{ grievance_type_id: 'GTYPE-00183', type_name: 'Other', service_category: 'Other' }],
+        },
+      });
+    });
+
+    expect((byId('service-category') as HTMLInputElement).value).toBe('Other');
+    expect((byId('grievance-type') as HTMLInputElement).value).toBe('Other');
+  });
+
+  it('does not fill a category in later if the recording was deleted before the options arrived', async () => {
+    const store = makeStore({ submitterOptions: null, submitterOptionsStatus: 'loading' });
+    renderStep(AREAS, store);
+
+    fireEvent.click(screen.getByText('mock-record'));
+    fireEvent.click(screen.getByText('mock-remove'));
+    await act(async () => {
+      store.dispatch({
+        type: fetchSubmitterOptionsThunk.fulfilled.type,
+        payload: {
+          submitter_types: [],
+          submission_types: [],
+          preferred_languages: [],
+          service_categories: [{ category_name: 'Other', code: '006', sort_order: 6 }],
+          grievance_types: [{ grievance_type_id: 'GTYPE-00183', type_name: 'Other', service_category: 'Other' }],
+        },
+      });
+    });
+
+    expect((byId('service-category') as HTMLInputElement).value).toBe('');
   });
 });

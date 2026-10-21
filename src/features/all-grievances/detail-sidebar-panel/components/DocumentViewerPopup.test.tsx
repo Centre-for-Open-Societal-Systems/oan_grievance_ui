@@ -141,4 +141,28 @@ describe('DocumentViewerPopup — inline preview', () => {
 
     expect(await screen.findByText('Could not load this file right now.')).toBeInTheDocument();
   });
+
+  it('does not download a Clean file of a type it cannot show inline, and says so straight away', () => {
+    renderIntl(
+      <DocumentViewerPopup
+        attachment={{ ...CLEAN_ROW, file_name: 'report.docx', mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Preview unavailable')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading preview')).not.toBeInTheDocument();
+    expect(fetchAttachmentBlobUrl).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Infected', 'This file failed the malware scan and cannot be opened.'],
+    ['Failed', 'The malware scan could not be completed, so this file cannot be opened.'],
+    ['Pending', 'Not available until the scan completes.'],
+  ] as const)('explains a %s scan accurately, not as "still scanning"', (scan_status, message) => {
+    renderIntl(<DocumentViewerPopup attachment={{ ...CLEAN_ROW, scan_status }} onClose={vi.fn()} />);
+
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(fetchAttachmentBlobUrl).not.toHaveBeenCalled();
+  });
 });

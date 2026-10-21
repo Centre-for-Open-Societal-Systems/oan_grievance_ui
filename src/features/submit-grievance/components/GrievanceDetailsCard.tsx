@@ -235,6 +235,26 @@ export function GrievanceDetailsCard({
   // Whether the category/type now showing were filled in by a recording (not picked by the user), so deleting
   // the recording can take them back out again.
   const filledByVoice = useRef(false);
+  // Set when a recording is made with no category chosen: "Other" is filled in as soon as the options it comes
+  // from have loaded (a recording can finish before they do), then this is cleared.
+  const wantsOtherFill = useRef(false);
+  const otherType = otherTypes.find((o) => o.label.toLowerCase() === "other")?.value;
+
+  const fillOther = () => {
+    if (!otherCategory || !otherType) return;
+    wantsOtherFill.current = false;
+    filledByVoice.current = true;
+    setServiceCategory(otherCategory);
+    setGrievanceType(otherType);
+    fieldErrors.setError("serviceCategory", null);
+    fieldErrors.setError("grievanceType", null);
+  };
+
+  /* eslint-disable react-hooks/exhaustive-deps -- reacts to the options arriving; fillOther only reads them */
+  useEffect(() => {
+    if (wantsOtherFill.current && !serviceCategory && !grievanceType) fillOther();
+  }, [otherCategory, otherType]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleVoiceRecorded = (file: File) => {
     if (voiceBlockedByLimit) {
@@ -251,14 +271,8 @@ export function GrievanceDetailsCard({
     // A recording is triaged by hand, so file it under the catch-all "Other" - but only when the submitter has
     // not already chosen a category; a category they picked stays.
     if (serviceCategory || grievanceType) return;
-    const otherType = otherTypes.find((o) => o.label.toLowerCase() === "other")?.value;
-    if (otherCategory && otherType) {
-      setServiceCategory(otherCategory);
-      setGrievanceType(otherType);
-      filledByVoice.current = true;
-      fieldErrors.setError("serviceCategory", null);
-      fieldErrors.setError("grievanceType", null);
-    }
+    wantsOtherFill.current = true;
+    fillOther();
   };
 
   const handleRemoveVoice = () => {
@@ -269,12 +283,21 @@ export function GrievanceDetailsCard({
       setGrievanceType("");
     }
     filledByVoice.current = false;
+    wantsOtherFill.current = false;
   };
 
   const handleRemoveAttachment = (key: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
+    // A recording is removed the same way wherever the delete is clicked, so the category it filled in goes too.
+    if (attachments.find((item) => item.key === key)?.kind === "voice") {
+      handleRemoveVoice();
+      return;
+    }
     setAttachments((prev) => prev.filter((item) => item.key !== key));
   };
+
+  // The recording has its own player under the description; this list is for the supporting documents.
+  const documentAttachments = attachments.filter((item) => item.kind !== "voice");
 
   return (
     <>
@@ -544,9 +567,9 @@ export function GrievanceDetailsCard({
               disabled={attachments.length >= MAX_ATTACHMENTS_PER_CASE}
               onFiles={handleFiles}
             >
-              {attachments.length > 0 && (
+              {documentAttachments.length > 0 && (
                 <ul className="mt-4 flex flex-col gap-3">
-                  {attachments.map((item) => (
+                  {documentAttachments.map((item) => (
                     <FileRow
                       key={item.key}
                       name={item.fileName}

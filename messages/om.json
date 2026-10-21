@@ -595,7 +595,9 @@
     "loadingPreview": "Dursee ilaaluun fe'aa jira",
     "previewUnavailable": "Dursee ilaaluun hin argamu",
     "previewLoadFailed": "Faayilii kana yeroo ammaa fe'uun hin danda'amne.",
-    "scanPending": "Sakatta'insi hanga xumuramutti hin argamu."
+    "scanPending": "Sakatta'insi hanga xumuramutti hin argamu.",
+    "scanInfected": "Faayiliin kun sakatta'insa malwerii darbuu hin dandeenye; banuun hin danda'amu.",
+    "scanFailed": "Sakatta'insi malwerii xumuramuu hin dandeenye; kanaaf faayiliin kun banamuu hin danda'u."
   },
   "grievanceList": {
     "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi..."

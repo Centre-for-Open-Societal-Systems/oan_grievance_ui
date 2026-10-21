@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import en from '../../../../messages/en.json';
-import { encodeMp3 } from '@/lib/voiceRecording';
+import { encodeMp3, isVoiceRecordingSupported } from '@/lib/voiceRecording';
 import { VoiceRecorder } from './VoiceRecorder';
 
 vi.mock('@/lib/voiceRecording', () => ({
-  isVoiceRecordingSupported: () => true,
+  isVoiceRecordingSupported: vi.fn(() => true),
   encodeMp3: vi.fn(),
   MAX_VOICE_SECONDS: 300,
 }));
@@ -156,5 +156,14 @@ describe('VoiceRecorder — microphone handling', () => {
 
     await waitFor(() => expect(latest).toHaveBeenCalledWith(file));
     expect(first).not.toHaveBeenCalled();
+  });
+
+  it('still shows the description box, with a note instead of a mic, where recording is not supported', () => {
+    vi.mocked(isVoiceRecordingSupported).mockReturnValueOnce(false);
+    renderRecorder();
+
+    expect(screen.getByLabelText('Description')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Record' })).not.toBeInTheDocument();
+    expect(screen.getByText('Voice recording is not supported in this browser.')).toBeInTheDocument();
   });
 });

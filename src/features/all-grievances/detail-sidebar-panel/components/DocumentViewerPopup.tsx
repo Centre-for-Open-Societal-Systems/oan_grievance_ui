@@ -17,6 +17,11 @@ import {
   scanStatusBadge,
 } from "./attachmentDisplay";
 
+/** The types the viewer can show inline; anything else is not worth downloading just to say "unavailable". */
+function isPreviewableType(mimeType: string): boolean {
+  return mimeType.startsWith("audio/") || mimeType.startsWith("image/") || mimeType === "application/pdf";
+}
+
 interface DocumentViewerPopupProps {
   attachment: AttachmentRow;
   onClose: () => void;
@@ -41,8 +46,11 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
   // The result is tagged with the attachment it belongs to, so a different attachment (or one that stops
   // being Clean) never shows the previous file's — by then revoked — address or its failure.
   const [preview, setPreview] = useState<{ name: string; url: string | null; failed: boolean } | null>(null);
+  // The backend sends a mime type for every attachment, but a missing one must fall back to "unavailable", not throw.
+  const mimeType = attachment.mime_type ?? "";
+  const previewable = isClean && isPreviewableType(mimeType);
   useEffect(() => {
-    if (!isClean) return;
+    if (!previewable) return;
     let cancelled = false;
     let objectUrl: string | null = null;
     Promise.resolve(fetchAttachmentBlobUrl(attachment.name, false))
@@ -62,12 +70,24 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [attachment.name, isClean]);
-  const current = isClean && preview?.name === attachment.name ? preview : null;
+  }, [attachment.name, previewable]);
+  const current = previewable && preview?.name === attachment.name ? preview : null;
   const previewUrl = current?.url ?? null;
   const previewFailed = current?.failed ?? false;
-  // The backend sends a mime type for every attachment, but a missing one must fall back to "unavailable", not throw.
-  const mimeType = attachment.mime_type ?? "";
+  const loadingPreview = previewable && !previewFailed && !previewUrl;
+
+  // Why there is nothing to show: an unscanned, infected or unscannable file is a security matter, so each says so
+  // rather than all reading as "still scanning". A clean file of a type shown inline needs no line under the heading
+  // (the heading says it).
+  const unavailableReason = !isClean
+    ? attachment.scan_status === SCAN_STATUS.INFECTED
+      ? t("scanInfected")
+      : attachment.scan_status === SCAN_STATUS.FAILED
+        ? t("scanFailed")
+        : t("scanPending")
+    : previewable && !previewUrl
+      ? t("previewLoadFailed")
+      : null;
 
   // Dead while ATTACHMENT_DOWNLOAD_DISABLED is true (the button below stays
   // disabled), but wired to the real APIs now rather than left as an inline
@@ -159,16 +179,13 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
             <img src={previewUrl} alt={attachment.file_name} className="max-w-full max-h-[70vh] object-contain rounded border border-gray-200" />
           ) : (
             <div className="bg-white w-full max-w-2xl h-[800px] shadow-sm border border-gray-200 rounded flex flex-col items-center justify-center text-gray-400 px-8 text-center">
-              {isClean && !previewFailed && !previewUrl ? (
+              {loadingPreview ? (
                 <Loader2 className="h-10 w-10 animate-spin text-gray-300" aria-label={t("loadingPreview")} />
               ) : (
                 <>
                   <FileText className="h-16 w-16 mb-4 text-gray-300" />
                   <p className="text-lg font-medium text-gray-500">{t("previewUnavailable")}</p>
-                  {/* Loaded but not a type that can be shown inline: the heading alone says it. */}
-                  {!previewUrl && (
-                    <p className="text-sm mt-2 max-w-sm">{isClean ? t("previewLoadFailed") : t("scanPending")}</p>
-                  )}
+                  {unavailableReason && <p className="text-sm mt-2 max-w-sm">{unavailableReason}</p>}
                 </>
               )}
             </div>

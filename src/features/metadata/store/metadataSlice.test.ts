@@ -107,6 +107,9 @@ describe('normalizeSubmitterType', () => {
   it('keeps the backend\'s separate Cooperative and FPO types apart, so the dropdown never selects both', () => {
     expect(normalizeSubmitterType('Cooperative')).toBe('cooperative');
     expect(normalizeSubmitterType('FPO')).toBe('fpo');
+    expect(normalizeSubmitterType('FPO Organization')).toBe('fpo');
+    // the UI's combined label (and anything naming both) stays Cooperative
+    expect(normalizeSubmitterType('Cooperative / FPO')).toBe('cooperative');
   });
 });
 

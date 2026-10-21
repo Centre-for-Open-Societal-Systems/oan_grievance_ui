@@ -144,8 +144,9 @@ export function normalizeSubmitterType(raw: string): string {
   const lower = raw.toLowerCase().trim();
   if (lower.includes('farmer') || lower === 'ind' || lower === 'individual') return 'individual';
   // The backend lists Cooperative and FPO as separate types; they need separate keys or both options share one value.
-  if (lower === 'fpo') return 'fpo';
-  if (lower.includes('coop') || lower.includes('fpo') || lower === 'cooperative') return 'cooperative';
+  // A label that names FPO without Cooperative ("FPO", "FPO Organization") is FPO; one naming both ("Cooperative / FPO") stays Cooperative.
+  if (lower.includes('fpo') && !lower.includes('coop')) return 'fpo';
+  if (lower.includes('coop')) return 'cooperative';
   if (lower.includes('ngo')) return 'ngo';
   if (lower.includes('woreda') || lower.includes('kebele') || lower.includes('body')) return 'woreda_kebele';
   if (lower.includes('development') || lower.includes('agent') || lower === 'da') return 'development_agent';

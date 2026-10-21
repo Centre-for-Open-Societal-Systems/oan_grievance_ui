@@ -169,7 +169,14 @@ export function VoiceRecorder({
     }
   };
 
-  if (!supported) return <>{children}</>;
+  if (!supported) {
+    return (
+      <div>
+        {children}
+        <p className="mt-1.5 text-xs text-gray-500">{t("unsupported")}</p>
+      </div>
+    );
+  }
 
   const recordingNow = phase === "recording";
   const blocked = disabled && !recordingNow;
