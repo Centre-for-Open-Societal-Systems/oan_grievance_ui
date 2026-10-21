@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, waitFor, within } from '@testing-library/react';
 import { MetricCardsComponent } from './MetricCardsComponent';
 import type { GrievanceSummaryCard } from '../types';
@@ -20,6 +20,17 @@ function visuals(container: HTMLElement): string[] {
 }
 
 describe('MetricCardsComponent', () => {
+  // jsdom has no layout (every size is 0). By default the card row overflows its container, as it does
+  // on a narrow screen; tests that need a row that fits override this.
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { value: 1000, configurable: true });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { value: 400, configurable: true });
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(HTMLElement.prototype, 'scrollWidth');
+    Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth');
+  });
+
   it('renders labels and counts from the summary API cards', () => {
     const { container } = render(<MetricCardsComponent cards={cards} />);
     const view = within(container);
@@ -137,6 +148,16 @@ describe('MetricCardsComponent', () => {
 
     fireEvent.click(view.getByRole('button', { name: 'Try again' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the pagination dots when every card fits and there is nothing to scroll', () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { value: 400, configurable: true });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { value: 400, configurable: true });
+
+    const { container } = render(<MetricCardsComponent cards={cards} />);
+
+    expect(container.querySelectorAll('[data-visual]').length).toBeGreaterThan(1);
+    expect(container.querySelectorAll('button[aria-label^="Go to page"]')).toHaveLength(0);
   });
 
   it('renders pagination dots and moves the active dot indicator on scroll', async () => {

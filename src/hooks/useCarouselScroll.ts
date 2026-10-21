@@ -13,6 +13,8 @@ export interface UseCarouselScrollReturn {
   scrollRef: CarouselScrollRef;
   activeIndex: number;
   scrollProgress: number;
+  /** Whether the content is wider than the container, i.e. there is anything to scroll to. */
+  canScroll: boolean;
   scrollTo: (index: number) => void;
   scrollToProgress: (progress: number) => void;
   handleScroll: () => void;
@@ -23,6 +25,7 @@ export function useCarouselScroll(options?: UseCarouselScrollOptions): UseCarous
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [canScroll, setCanScroll] = useState(false);
 
   const scrollRef = useCallback((node: HTMLDivElement | null) => {
     containerRef.current = node;
@@ -34,6 +37,8 @@ export function useCarouselScroll(options?: UseCarouselScrollOptions): UseCarous
     if (!el) return;
 
     const maxScroll = el.scrollWidth - el.clientWidth;
+    // 1px of slack so sub-pixel rounding on a row that fits is not read as overflow.
+    setCanScroll(maxScroll > 1);
     if (maxScroll > 0) {
       setScrollProgress(Math.min(1, Math.max(0, el.scrollLeft / maxScroll)));
     } else {
@@ -147,6 +152,7 @@ export function useCarouselScroll(options?: UseCarouselScrollOptions): UseCarous
     scrollRef,
     activeIndex,
     scrollProgress,
+    canScroll,
     scrollTo,
     scrollToProgress,
     handleScroll,

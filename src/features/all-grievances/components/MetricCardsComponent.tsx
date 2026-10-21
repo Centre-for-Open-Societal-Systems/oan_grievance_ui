@@ -115,7 +115,7 @@ export function MetricCardsComponent({
   error?: string | null;
   onRetry?: () => void;
 }) {
-  const { scrollRef, scrollProgress, scrollToProgress, handleScroll } = useCarouselScroll({
+  const { scrollRef, scrollProgress, canScroll, scrollToProgress, handleScroll } = useCarouselScroll({
     enableWheelScroll: true,
   });
 
@@ -201,8 +201,8 @@ export function MetricCardsComponent({
         })}
       </div>
 
-      {/* Pagination Dots */}
-      {totalCards > 1 && (
+      {/* Pagination Dots — only when the row overflows; if every card fits there is nothing to page through. */}
+      {totalCards > 1 && canScroll && (
         <div
           className="flex justify-center items-center gap-2 mt-4"
           role="tablist"
