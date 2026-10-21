@@ -46,3 +46,17 @@ describe('getDetailsErrors', () => {
     );
   });
 });
+
+describe('voice note in place of a description', () => {
+  const noText = { ...COMPLETE, description: '' };
+
+  it('requires a description without a recording', () => {
+    expect(getDetailsErrors(noText)).toHaveProperty('description');
+    expect(firstIncompleteStep(noText)).toBe(2);
+  });
+
+  it('does not require one with a recording', () => {
+    expect(getDetailsErrors(noText, undefined, true)).not.toHaveProperty('description');
+    expect(firstIncompleteStep({ ...noText, hasVoiceNote: true })).toBe(3);
+  });
+});

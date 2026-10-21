@@ -19,6 +19,7 @@ import { organisationKindFor } from "@/lib/organisationKind";
 export const SI_FIELDS_BY_TYPE: Record<string, SIFieldMeta[]> = {
   individual: INDIVIDUAL_FIELDS,
   cooperative: COOPERATIVE_FIELDS,
+  fpo: COOPERATIVE_FIELDS,
   ngo: NGO_FIELDS,
   woreda_kebele: WOREDA_KEBELE_FIELDS,
   development_agent: DEVELOPMENT_AGENT_FIELDS,

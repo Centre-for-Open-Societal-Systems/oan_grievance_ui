@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FileText, Info, ArrowRight, ArrowLeft, Eye, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -23,6 +23,7 @@ import {
   MAX_ATTACHMENTS_PER_CASE,
   type WizardAttachment,
 } from "@/lib/attachments";
+import { VoiceRecorder } from "./VoiceRecorder";
 import { getDescriptionError, getDetailsErrors, type DetailsField } from "../wizardSteps";
 
 function isPdf(item: WizardAttachment): boolean {
@@ -109,11 +110,15 @@ export function GrievanceDetailsCard({
 }: GrievanceDetailsCardProps) {
   const t = useTranslations("submitGrievance.detailsStep");
   const tDocs = useTranslations("supportingDocuments");
+  const tVoice = useTranslations("submitGrievance.voice");
   const dispatch = useAppDispatch();
   const dynamicServiceCategories = useAppSelector(selectServiceCategoryOptions);
   const dynamicGrievanceTypes = useAppSelector((state) =>
     selectGrievanceTypeOptions(state, serviceCategory)
   );
+  // A voice recording is filed under the catch-all "Other" category and type, which routes to manual triage.
+  const otherCategory = dynamicServiceCategories.find((o) => o.label.toLowerCase() === "other")?.value;
+  const otherTypes = useAppSelector((state) => selectGrievanceTypeOptions(state, otherCategory ?? ""));
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
 
   const regions = useAreas({ level: "Region" });
@@ -126,6 +131,9 @@ export function GrievanceDetailsCard({
       void dispatch(fetchSubmitterOptionsThunk());
     }
   }, [dispatch, metadataStatus]);
+
+  const voiceNote = attachments.find((a) => a.kind === "voice") ?? null;
+  const hasVoiceNote = voiceNote !== null;
 
   // Which attachment's preview modal is open, if any — null when closed.
   const [previewItem, setPreviewItem] = useState<WizardAttachment | null>(null);
@@ -175,12 +183,14 @@ export function GrievanceDetailsCard({
     required: t("fieldRequired"),
     descriptionTooShort: (count: number) => t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count }),
   };
-  const descriptionErrorFor = (value: string): string | null => getDescriptionError(value, detailsMessages);
+  const descriptionErrorFor = (value: string): string | null =>
+    hasVoiceNote ? null : getDescriptionError(value, detailsMessages);
 
   const handleNext = () => {
     const errors: FieldErrors<DetailsField> = getDetailsErrors(
       { serviceCategory, grievanceType, region, zone, woreda, description },
-      detailsMessages
+      detailsMessages,
+      hasVoiceNote
     );
 
     fieldErrors.setAll(errors);
@@ -217,10 +227,77 @@ export function GrievanceDetailsCard({
     ]);
   };
 
+  // The case is at its attachment limit once the non-voice files fill it; a replacement recording swaps the old
+  // one out, so only a first recording is blocked.
+  const otherAttachmentCount = attachments.filter((item) => item.kind !== "voice").length;
+  const voiceBlockedByLimit = !hasVoiceNote && otherAttachmentCount >= MAX_ATTACHMENTS_PER_CASE;
+
+  // Whether the category/type now showing were filled in by a recording (not picked by the user), so deleting
+  // the recording can take them back out again.
+  const filledByVoice = useRef(false);
+  // Set when a recording is made with no category chosen: "Other" is filled in as soon as the options it comes
+  // from have loaded (a recording can finish before they do), then this is cleared.
+  const wantsOtherFill = useRef(false);
+  const otherType = otherTypes.find((o) => o.label.toLowerCase() === "other")?.value;
+
+  const fillOther = () => {
+    if (!otherCategory || !otherType) return;
+    wantsOtherFill.current = false;
+    filledByVoice.current = true;
+    setServiceCategory(otherCategory);
+    setGrievanceType(otherType);
+    fieldErrors.setError("serviceCategory", null);
+    fieldErrors.setError("grievanceType", null);
+  };
+
+  /* eslint-disable react-hooks/exhaustive-deps -- reacts to the options arriving; fillOther only reads them */
+  useEffect(() => {
+    if (wantsOtherFill.current && !serviceCategory && !grievanceType) fillOther();
+  }, [otherCategory, otherType]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
+  const handleVoiceRecorded = (file: File) => {
+    if (voiceBlockedByLimit) {
+      setError(tVoice("attachmentLimit", { max: MAX_ATTACHMENTS_PER_CASE }));
+      return;
+    }
+    setError(null);
+    setAttachments((prev) => [
+      ...prev.filter((item) => item.kind !== "voice"),
+      { key: crypto.randomUUID(), file, fileName: file.name, kind: "voice" },
+    ]);
+    fieldErrors.setError("description", null);
+
+    // A recording is triaged by hand, so file it under the catch-all "Other" - but only when the submitter has
+    // not already chosen a category; a category they picked stays.
+    if (serviceCategory || grievanceType) return;
+    wantsOtherFill.current = true;
+    fillOther();
+  };
+
+  const handleRemoveVoice = () => {
+    setAttachments((prev) => prev.filter((item) => item.kind !== "voice"));
+    // Take back the category we filled in, unless the submitter has since changed it.
+    if (filledByVoice.current && serviceCategory === otherCategory) {
+      setServiceCategory("");
+      setGrievanceType("");
+    }
+    filledByVoice.current = false;
+    wantsOtherFill.current = false;
+  };
+
   const handleRemoveAttachment = (key: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
+    // A recording is removed the same way wherever the delete is clicked, so the category it filled in goes too.
+    if (attachments.find((item) => item.key === key)?.kind === "voice") {
+      handleRemoveVoice();
+      return;
+    }
     setAttachments((prev) => prev.filter((item) => item.key !== key));
   };
+
+  // The recording has its own player under the description; this list is for the supporting documents.
+  const documentAttachments = attachments.filter((item) => item.kind !== "voice");
 
   return (
     <>
@@ -425,25 +502,33 @@ export function GrievanceDetailsCard({
           {/* Description */}
           <div>
             <label htmlFor="grievance-description" className="block text-sm font-semibold text-gray-800 mb-2">
-              Description <span className="text-red-500">*</span>
+              Description {!hasVoiceNote && <span className="text-red-500">*</span>}
             </label>
-            <textarea
-              id="grievance-description"
-              rows={4}
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                // Re-check as they type while it's showing an error, so it clears the moment it's long enough.
-                if (fieldErrors.errors.description) {
-                  fieldErrors.setError("description", descriptionErrorFor(e.target.value));
-                }
-              }}
-              onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
-              aria-invalid={fieldErrors.errors.description ? true : undefined}
-              aria-describedby={fieldErrors.errors.description ? errorIdFor("grievance-description") : undefined}
-              placeholder="Describe the issue clearly — what happened, when, where, and who was involved. Include dates, amounts, and reference numbers where available."
-              className={`w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
-            />
+            <VoiceRecorder
+              recording={voiceNote?.file ?? null}
+              onRecorded={handleVoiceRecorded}
+              onRemove={handleRemoveVoice}
+              disabled={voiceBlockedByLimit}
+              disabledReason={tVoice("attachmentLimit", { max: MAX_ATTACHMENTS_PER_CASE })}
+            >
+              <textarea
+                id="grievance-description"
+                rows={4}
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  // Re-check as they type while it's showing an error, so it clears the moment it's long enough.
+                  if (fieldErrors.errors.description) {
+                    fieldErrors.setError("description", descriptionErrorFor(e.target.value));
+                  }
+                }}
+                onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
+                aria-invalid={fieldErrors.errors.description ? true : undefined}
+                aria-describedby={fieldErrors.errors.description ? errorIdFor("grievance-description") : undefined}
+                placeholder="Describe the issue clearly — what happened, when, where, and who was involved. Include dates, amounts, and reference numbers where available."
+                className={`w-full bg-white border border-gray-300 text-gray-900 py-3 pl-4 pr-14 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
+              />
+            </VoiceRecorder>
             {fieldErrors.errors.description && (
               <FieldError id={errorIdFor("grievance-description")}>{fieldErrors.errors.description}</FieldError>
             )}
@@ -482,9 +567,9 @@ export function GrievanceDetailsCard({
               disabled={attachments.length >= MAX_ATTACHMENTS_PER_CASE}
               onFiles={handleFiles}
             >
-              {attachments.length > 0 && (
+              {documentAttachments.length > 0 && (
                 <ul className="mt-4 flex flex-col gap-3">
-                  {attachments.map((item) => (
+                  {documentAttachments.map((item) => (
                     <FileRow
                       key={item.key}
                       name={item.fileName}

@@ -64,6 +64,8 @@ export interface WizardAttachment {
   key: string;
   file: File;
   fileName: string;
+  /** Set on the recording made in the wizard's voice recorder — it stands in for the typed description. */
+  kind?: "voice";
 }
 
 /**

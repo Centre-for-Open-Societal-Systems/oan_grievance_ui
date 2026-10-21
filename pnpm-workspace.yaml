@@ -37,3 +37,6 @@ overrides:
   # handlebars here only runs inside the linter's own tooling — but still worth pinning
   # to the patched release rather than ignoring the GHSAs outright.
   handlebars@<4.7.10: ^4.7.10
+  # vitest@5 pulls vite@8.3.0 (devDependency-only, never shipped), vulnerable to the launch-editor
+  # existsSync bypass (GHSA-587h-7wmj-h5pm, high); 8.3.3 is the patched release.
+  vite@>=8.3.0 <8.3.3: ^8.3.3

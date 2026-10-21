@@ -152,7 +152,7 @@ describe('SubmitGrievancePage for a registered NGO', () => {
 
     await screen.findByLabelText(/^Organisation Name/);
     expect(document.getElementById('si-representativeFaydaId')).toBeInTheDocument();
-    // masked on screen by default, like every national-ID field
+    // masked on screen by default, like every national-ID field (jsdom cannot mask with CSS, so it uses the safe password fallback)
     expect(document.getElementById('si-representativeFaydaId')).toHaveAttribute('type', 'password');
     expect(document.getElementById('si-representativeFaydaId')).toHaveValue('6557092147530500');
   });

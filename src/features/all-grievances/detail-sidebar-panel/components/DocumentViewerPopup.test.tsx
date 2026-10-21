@@ -22,6 +22,20 @@ vi.mock('./attachmentDisplay', async (importOriginal) => ({
 
 import { DocumentViewerPopup } from './DocumentViewerPopup';
 
+import { NextIntlClientProvider } from 'next-intl';
+import en from '../../../../../messages/en.json';
+
+function renderIntl(ui: React.ReactElement) {
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <NextIntlClientProvider locale="en" messages={en}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
+
+
 afterEach(cleanup);
 
 const CLEAN_ROW: AttachmentRow = {
@@ -45,7 +59,7 @@ describe('DocumentViewerPopup — Download (with the disabled flag off)', () => 
   });
 
   it('stays disabled for an attachment that has not scanned Clean, even with the global flag off', () => {
-    render(
+    renderIntl(
       <DocumentViewerPopup
         attachment={{ ...CLEAN_ROW, scan_status: 'Pending' }}
         onClose={vi.fn()}
@@ -60,7 +74,7 @@ describe('DocumentViewerPopup — Download (with the disabled flag off)', () => 
     getAttachmentDownloadInfo.mockResolvedValue({ file_name: 'id-card.pdf', file_url: '/private/files/id-card.pdf' });
     fetchAttachmentBlobUrl.mockResolvedValue('blob:mock-url');
 
-    render(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
+    renderIntl(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
 
     const button = screen.getByTitle('Download');
     expect(button).toBeEnabled();
@@ -73,10 +87,82 @@ describe('DocumentViewerPopup — Download (with the disabled flag off)', () => 
   it('shows an error message, not just a console log, when the download fails', async () => {
     getAttachmentDownloadInfo.mockRejectedValue(new Error('boom'));
 
-    render(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
+    renderIntl(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
 
     fireEvent.click(screen.getByTitle('Download'));
 
     expect(await screen.findByText('Could not download this file right now.')).toBeInTheDocument();
+  });
+});
+
+describe('DocumentViewerPopup — inline preview', () => {
+  beforeEach(() => {
+    fetchAttachmentBlobUrl.mockReset();
+  });
+
+  it('plays a Clean voice recording inline', async () => {
+    fetchAttachmentBlobUrl.mockResolvedValue('blob:voice');
+    renderIntl(
+      <DocumentViewerPopup
+        attachment={{ ...CLEAN_ROW, file_name: 'voice.mp3', mime_type: 'audio/mpeg' }}
+        onClose={vi.fn()}
+      />
+    );
+
+    const player = await screen.findByLabelText('voice.mp3', { selector: 'audio' });
+    expect(player).toHaveAttribute('src', 'blob:voice');
+  });
+
+  it('does not carry the previous attachment preview over when the attachment changes', async () => {
+    fetchAttachmentBlobUrl.mockResolvedValue('blob:first');
+    const view = renderIntl(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
+    expect(await screen.findByTitle('id-card.pdf')).toHaveAttribute('src', 'blob:first');
+
+    view.rerender(
+      <DocumentViewerPopup attachment={{ ...CLEAN_ROW, name: 'ATT-0002', file_name: 'next.pdf', scan_status: 'Pending' }} onClose={vi.fn()} />
+    );
+
+    expect(screen.queryByTitle('id-card.pdf')).not.toBeInTheDocument();
+    expect(screen.getByText('Preview unavailable')).toBeInTheDocument();
+  });
+
+  it('falls back to "unavailable" for an attachment with no mime type instead of throwing', async () => {
+    fetchAttachmentBlobUrl.mockResolvedValue('blob:x');
+    renderIntl(
+      <DocumentViewerPopup attachment={{ ...CLEAN_ROW, mime_type: null as unknown as string }} onClose={vi.fn()} />
+    );
+
+    expect(await screen.findByText('Preview unavailable')).toBeInTheDocument();
+  });
+
+  it('says so, rather than spinning, when the preview cannot be loaded', async () => {
+    fetchAttachmentBlobUrl.mockRejectedValue(new Error('boom'));
+    renderIntl(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
+
+    expect(await screen.findByText('Could not load this file right now.')).toBeInTheDocument();
+  });
+
+  it('does not download a Clean file of a type it cannot show inline, and says so straight away', () => {
+    renderIntl(
+      <DocumentViewerPopup
+        attachment={{ ...CLEAN_ROW, file_name: 'report.docx', mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Preview unavailable')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading preview')).not.toBeInTheDocument();
+    expect(fetchAttachmentBlobUrl).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Infected', 'This file failed the malware scan and cannot be opened.'],
+    ['Failed', 'The malware scan could not be completed, so this file cannot be opened.'],
+    ['Pending', 'Not available until the scan completes.'],
+  ] as const)('explains a %s scan accurately, not as "still scanning"', (scan_status, message) => {
+    renderIntl(<DocumentViewerPopup attachment={{ ...CLEAN_ROW, scan_status }} onClose={vi.fn()} />);
+
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(fetchAttachmentBlobUrl).not.toHaveBeenCalled();
   });
 });

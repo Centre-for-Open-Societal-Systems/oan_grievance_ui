@@ -143,7 +143,10 @@ export const selectSelectedLanguage = (state: MetadataRootState): string =>
 export function normalizeSubmitterType(raw: string): string {
   const lower = raw.toLowerCase().trim();
   if (lower.includes('farmer') || lower === 'ind' || lower === 'individual') return 'individual';
-  if (lower.includes('coop') || lower.includes('fpo') || lower === 'cooperative') return 'cooperative';
+  // The backend lists Cooperative and FPO as separate types; they need separate keys or both options share one value.
+  // A label that names FPO without Cooperative ("FPO", "FPO Organization") is FPO; one naming both ("Cooperative / FPO") stays Cooperative.
+  if (lower.includes('fpo') && !lower.includes('coop')) return 'fpo';
+  if (lower.includes('coop')) return 'cooperative';
   if (lower.includes('ngo')) return 'ngo';
   if (lower.includes('woreda') || lower.includes('kebele') || lower.includes('body')) return 'woreda_kebele';
   if (lower.includes('development') || lower.includes('agent') || lower === 'da') return 'development_agent';
@@ -312,7 +315,10 @@ export const selectStatusFilterOptions = createSelector(
   (statuses): Array<{ value: string; label: string }> => {
     const map = new Map<string, string>();
     for (const s of statuses ?? []) {
-      if (s.status && !map.has(s.status)) {
+      // The backend's status list leads with an "All" card (the summary tile). The filter
+      // dropdowns add their own "All" row, so keeping it here would show it twice.
+      if (!s.status || s.status.trim().toLowerCase() === 'all') continue;
+      if (!map.has(s.status)) {
         map.set(s.status, s.label || s.status);
       }
     }

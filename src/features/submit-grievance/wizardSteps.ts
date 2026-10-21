@@ -37,7 +37,8 @@ export function getDescriptionError(value: string, messages: DetailsMessages = D
 /** Step 2's field errors — what its Next button shows, and what `firstIncompleteStep` checks. */
 export function getDetailsErrors(
   fields: DetailsFields,
-  messages: DetailsMessages = DEFAULT_DETAILS_MESSAGES
+  messages: DetailsMessages = DEFAULT_DETAILS_MESSAGES,
+  hasVoiceNote = false
 ): FieldErrors<DetailsField> {
   const errors: FieldErrors<DetailsField> = {};
   if (!fields.serviceCategory) errors.serviceCategory = messages.required;
@@ -45,7 +46,8 @@ export function getDetailsErrors(
   if (!fields.region) errors.region = messages.required;
   if (!fields.zone) errors.zone = messages.required;
   if (!fields.woreda) errors.woreda = messages.required;
-  const descriptionError = getDescriptionError(fields.description, messages);
+  // A voice recording replaces the typed description.
+  const descriptionError = hasVoiceNote ? null : getDescriptionError(fields.description, messages);
   if (descriptionError) errors.description = descriptionError;
   return errors;
 }
@@ -54,6 +56,7 @@ export interface WizardFields extends DetailsFields {
   submitterType: string;
   submissionChannel: string;
   identityValues: Record<string, string>;
+  hasVoiceNote?: boolean;
 }
 
 /**
@@ -69,6 +72,6 @@ export function firstIncompleteStep(fields: WizardFields): WizardStep {
     Boolean(fields.submissionChannel) &&
     Object.keys(getFieldErrors(fields.submitterType, fields.identityValues)).length === 0;
   if (!identityComplete) return 1;
-  if (Object.keys(getDetailsErrors(fields)).length > 0) return 2;
+  if (Object.keys(getDetailsErrors(fields, undefined, fields.hasVoiceNote)).length > 0) return 2;
   return 3;
 }

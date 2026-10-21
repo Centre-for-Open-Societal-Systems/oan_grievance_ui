@@ -18,10 +18,10 @@ const updateGlobalSlaPolicy = vi.hoisted(() =>
 );
 vi.mock('../api/slaSettingsApi', () => ({ fetchGlobalSlaPolicy, updateGlobalSlaPolicy }));
 
-function renderCard() {
+function renderCard(onMaxDeferralDaysChange?: (days: number) => void) {
   render(
     <NextIntlClientProvider locale="en" messages={en}>
-      <GlobalSlaPolicyCard />
+      <GlobalSlaPolicyCard onMaxDeferralDaysChange={onMaxDeferralDaysChange} />
     </NextIntlClientProvider>
   );
 }
@@ -54,5 +54,20 @@ describe('GlobalSlaPolicyCard', () => {
     ));
     const lastCallArg = updateGlobalSlaPolicy.mock.calls.at(-1)?.[0];
     expect(lastCallArg).not.toHaveProperty('deferral_approval');
+  });
+
+  it('reports the max SLA deferral days when it loads and again after a save, so the category bars can follow', async () => {
+    const onChange = vi.fn();
+    fetchGlobalSlaPolicy.mockResolvedValueOnce({
+      policy: { max_deferral_days: 9, auto_escalation_threshold: 100, requires_supervisor_approval: true },
+    });
+    updateGlobalSlaPolicy.mockResolvedValueOnce({
+      policy: { max_deferral_days: 12, auto_escalation_threshold: 100, requires_supervisor_approval: true },
+    });
+    renderCard(onChange);
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(9));
+    fireEvent.click(screen.getByRole('button', { name: /Save Global Policy/i }));
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(12));
   });
 });

@@ -202,7 +202,8 @@
       "submitting": "Dhiheessaa jira…",
       "anonymousLabel": "Maqaa koo osoo hin ibsin dhiyeessi — maqaa fi odeeffannoo quunnamtii koo ogeessota komii kana qabatan irraa dhoksi.",
       "canRequestMoreInfoLabel": "Ogeessonni komii kanaan wal-qabatee odeeffannoo dabalataa argachuuf na quunnamuu danda'u.",
-      "canRequestMoreInfoWarning": "Odeeffannoon quunnamtii keessanii hin kuufamu. Ogeessonni isin quunnamuu hin danda'an, komii kanaan wal-qabatee beeksisni isiniif hin dhufu."
+      "canRequestMoreInfoWarning": "Odeeffannoon quunnamtii keessanii hin kuufamu. Ogeessonni isin quunnamuu hin danda'an, komii kanaan wal-qabatee beeksisni isiniif hin dhufu.",
+      "voiceDescription": "Waraabbiin sagalee waliin hidhameera"
     },
     "identityStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
@@ -217,6 +218,23 @@
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
       "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}"
+    },
+    "voice": {
+      "hint": "Of barreessuu mannaa dubbii keessan jechoota keessaniin dubbadhaa. Ofiisarootni waraabbicha dhaggeeffatanii kutaa sirrii ta’eetti ergu.",
+      "record": "Waraabi",
+      "recordAgain": "Irra deebi’ii waraabi",
+      "stop": "Waraabuu dhaabi",
+      "recording": "Waraabaa jira {time} / {max}",
+      "processing": "Waraabbicha qopheessaa jira…",
+      "playbackLabel": "Waraabbii sagalee keessan",
+      "remove": "Waraabbii sagalee balleessi",
+      "permissionDenied": "Mikiroofoonii fayyadamuun dhorkameera. Qindaa’ina brawuzara keessanitti eeyyamaa irra deebi’aa yaalaa.",
+      "processingFailed": "Waraabbicha hojjechuu hin dandeenye. Maaloo irra deebi’ii yaalaa.",
+      "unsupported": "Brawuzarri kun waraabuu sagaleetiif deeggarsa hin kennu.",
+      "noMicrophone": "Mikiroofoonii hin argamne. Mikiroofoonii wal qabsiisaatii irra deebi'aa yaalaa.",
+      "startFailed": "Waraabuu eegaluu hin dandeenye. Maaloo irra deebi'ii yaalaa.",
+      "starting": "Mikiroofoonii qopheessaa jira…",
+      "attachmentLimit": "Komii tokkoof hanga faayilii {max} maxxansuu dandeessa. Osoo hin waraabin dura tokko balleessi."
     }
   },
   "commentsAndCommunication": {
@@ -572,5 +590,16 @@
     "switchingAccount": "Ba'aa jira…",
     "switchAccountHint": "Herrega hojjetaa asitti hayyama hin qabneen seenteetta. Ba'uun galmee fi appiliikeeshinii OpenG2P biroo irraas si baasa.",
     "switchAccountFailed": "Herrega hojjetaa irraa si baasuun hin danda'amne. Galmee irraa ba'iitii irra deebi'ii yaali."
+  },
+  "attachmentViewer": {
+    "loadingPreview": "Dursee ilaaluun fe'aa jira",
+    "previewUnavailable": "Dursee ilaaluun hin argamu",
+    "previewLoadFailed": "Faayilii kana yeroo ammaa fe'uun hin danda'amne.",
+    "scanPending": "Sakatta'insi hanga xumuramutti hin argamu.",
+    "scanInfected": "Faayiliin kun sakatta'insa malwerii darbuu hin dandeenye; banuun hin danda'amu.",
+    "scanFailed": "Sakatta'insi malwerii xumuramuu hin dandeenye; kanaaf faayiliin kun banamuu hin danda'u."
+  },
+  "grievanceList": {
+    "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi..."
   }
 }

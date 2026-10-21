@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  normalizeSubmitterType,
   selectGrievanceTypeOptions,
+  selectStatusFilterOptions,
   selectSubmissionChannelOptions,
   type MetadataRootState,
   type MetadataState,
@@ -98,5 +100,55 @@ describe('selectSubmissionChannelOptions', () => {
   it('is empty when neither source has a channel', () => {
     expect(selectSubmissionChannelOptions(createMockRootState({ submitterOptions: submitterOptions([]) }))).toEqual([]);
     expect(selectSubmissionChannelOptions(createMockRootState())).toEqual([]);
+  });
+});
+
+describe('normalizeSubmitterType', () => {
+  it('keeps the backend\'s separate Cooperative and FPO types apart, so the dropdown never selects both', () => {
+    expect(normalizeSubmitterType('Cooperative')).toBe('cooperative');
+    expect(normalizeSubmitterType('FPO')).toBe('fpo');
+    expect(normalizeSubmitterType('FPO Organization')).toBe('fpo');
+    // the UI's combined label (and anything naming both) stays Cooperative
+    expect(normalizeSubmitterType('Cooperative / FPO')).toBe('cooperative');
+  });
+});
+
+describe('selectStatusFilterOptions', () => {
+  it('leaves out the backend\'s "All" card, since the filter dropdowns add their own All row', () => {
+    const state = createMockRootState({
+      grievanceOptions: {
+        departments: [],
+        service_categories: [],
+        grievance_types: [],
+        submission_channels: [],
+        statuses: [
+          { status: 'All', label: 'All', is_open: 1, is_terminal: 0 },
+          { status: 'Assigned', label: 'Assigned', is_open: 1, is_terminal: 0 },
+          { status: 'Resolved', label: 'Resolved', is_open: 0, is_terminal: 1 },
+        ],
+      },
+    });
+
+    expect(selectStatusFilterOptions(state)).toEqual([
+      { value: 'Assigned', label: 'Assigned' },
+      { value: 'Resolved', label: 'Resolved' },
+    ]);
+  });
+
+  it('skips an entry that carries no status instead of throwing', () => {
+    const state = createMockRootState({
+      grievanceOptions: {
+        departments: [],
+        service_categories: [],
+        grievance_types: [],
+        submission_channels: [],
+        statuses: [
+          { status: undefined as unknown as string, label: 'Broken', is_open: 1, is_terminal: 0 },
+          { status: 'Resolved', label: 'Resolved', is_open: 0, is_terminal: 1 },
+        ],
+      },
+    });
+
+    expect(selectStatusFilterOptions(state)).toEqual([{ value: 'Resolved', label: 'Resolved' }]);
   });
 });

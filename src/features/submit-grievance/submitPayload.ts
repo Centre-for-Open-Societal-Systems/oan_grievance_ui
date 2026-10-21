@@ -1,4 +1,5 @@
 import { submitsOnBehalfOfOthers } from "@/components/submitter-identity/fields";
+import { MIN_DESCRIPTION_LENGTH } from "@/lib/validation/fieldRules";
 import { formatToE164 } from "@/lib/validation/phone";
 
 /**
@@ -104,6 +105,27 @@ export interface BuildSubmitFieldsInput extends WizardIdentitySource {
   associatedServiceProvider?: string;
   description?: string;
   desiredOutcome?: string;
+  /** A voice recording is attached in place of a typed description. */
+  hasVoiceNote?: boolean;
+}
+
+/**
+ * The backend requires a description of at least 20 characters, so a case
+ * described by voice alone sends this line; the recording is the real content.
+ * It is stored as case data (what officers read), not UI copy, so it is not translated.
+ */
+export const VOICE_NOTE_DESCRIPTION = "Voice grievance - please listen to the attached audio recording.";
+
+/**
+ * The description to send. With a recording attached the typed text is optional: a
+ * long enough note is sent as typed; a shorter one (which the backend would refuse)
+ * keeps what the submitter wrote and gains the standard line after it; none at all
+ * sends the standard line alone.
+ */
+export function resolveDescription(typed: string | undefined, hasVoiceNote: boolean | undefined): string {
+  const text = typed?.trim() ?? "";
+  if (!hasVoiceNote || text.length >= MIN_DESCRIPTION_LENGTH) return text;
+  return text ? `${text} - ${VOICE_NOTE_DESCRIPTION}` : VOICE_NOTE_DESCRIPTION;
 }
 
 /**
@@ -127,7 +149,7 @@ export function buildSubmitFields(input: BuildSubmitFieldsInput): SubmitFields {
     service_category: input.serviceCategoryLabel ?? "",
     grievance_type: input.grievanceType ?? "",
     associated_service_provider: input.associatedServiceProvider?.trim() ?? "",
-    description: input.description?.trim() ?? "",
+    description: resolveDescription(input.description, input.hasVoiceNote),
     desired_outcome: input.desiredOutcome?.trim() ?? "",
   };
 }

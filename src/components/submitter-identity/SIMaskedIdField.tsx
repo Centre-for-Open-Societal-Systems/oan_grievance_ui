@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { INVALID_INPUT_STYLES } from "@/components/ui/FieldError";
 
@@ -16,22 +16,41 @@ interface SIMaskedIdFieldProps {
   onBlur?: () => void;
 }
 
+const subscribeNever = () => () => {};
+
+/**
+ * Whether this browser can mask a text input with CSS (`-webkit-text-security`: Chromium, Safari and
+ * recent Firefox). Read after hydration; the server and first client render say "no", which is the safe answer.
+ */
+function canMaskWithCss(): boolean {
+  return typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("-webkit-text-security", "disc");
+}
+
 /**
  * A national-ID input (Fayda ID and its per-type variants) — masked by
  * default like a password field, with an explicit reveal toggle. A
  * government ID number is sensitive enough to warrant the same
  * shoulder-surfing/screen-share protection a password gets, not a plain text
  * input that shows it on screen the moment it's typed.
+ *
+ * Where the browser can mask with CSS the field is a text input, so it is not
+ * offered to the password manager ("save password?" on an ID number is wrong).
+ * Where it cannot, the field falls back to a real password input: that may prompt
+ * to save, but the number is never shown in clear text by accident.
  */
 export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, describedBy, onBlur }: SIMaskedIdFieldProps) {
   const [revealed, setRevealed] = useState(false);
+  const cssMask = useSyncExternalStore(subscribeNever, canMaskWithCss, () => false);
 
   return (
     <div className="relative">
       <input
         id={id}
-        type={revealed ? "text" : "password"}
+        type={revealed || cssMask ? "text" : "password"}
         autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
+        style={cssMask && !revealed ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties) : undefined}
         // Caps hand-typing at 16 (the shape FAYDA_PATTERN in fields.ts
         // requires from someone typing their own ID). A signed-in account's
         // own Fayda ID can come back longer, in the backend's issued shape
