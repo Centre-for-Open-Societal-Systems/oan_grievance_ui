@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeSubmitterType,
   selectGrievanceTypeOptions,
+  selectStatusFilterOptions,
   selectSubmissionChannelOptions,
   type MetadataRootState,
   type MetadataState,
@@ -106,5 +107,28 @@ describe('normalizeSubmitterType', () => {
   it('keeps the backend\'s separate Cooperative and FPO types apart, so the dropdown never selects both', () => {
     expect(normalizeSubmitterType('Cooperative')).toBe('cooperative');
     expect(normalizeSubmitterType('FPO')).toBe('fpo');
+  });
+});
+
+describe('selectStatusFilterOptions', () => {
+  it('leaves out the backend\'s "All" card, since the filter dropdowns add their own All row', () => {
+    const state = createMockRootState({
+      grievanceOptions: {
+        departments: [],
+        service_categories: [],
+        grievance_types: [],
+        submission_channels: [],
+        statuses: [
+          { status: 'All', label: 'All', is_open: 1, is_terminal: 0 },
+          { status: 'Assigned', label: 'Assigned', is_open: 1, is_terminal: 0 },
+          { status: 'Resolved', label: 'Resolved', is_open: 0, is_terminal: 1 },
+        ],
+      },
+    });
+
+    expect(selectStatusFilterOptions(state)).toEqual([
+      { value: 'Assigned', label: 'Assigned' },
+      { value: 'Resolved', label: 'Resolved' },
+    ]);
   });
 });
