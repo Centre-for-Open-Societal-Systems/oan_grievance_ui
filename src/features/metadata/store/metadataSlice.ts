@@ -316,8 +316,8 @@ export const selectStatusFilterOptions = createSelector(
     for (const s of statuses ?? []) {
       // The backend's status list leads with an "All" card (the summary tile). The filter
       // dropdowns add their own "All" row, so keeping it here would show it twice.
-      if (s.status.trim().toLowerCase() === 'all') continue;
-      if (s.status && !map.has(s.status)) {
+      if (!s.status || s.status.trim().toLowerCase() === 'all') continue;
+      if (!map.has(s.status)) {
         map.set(s.status, s.label || s.status);
       }
     }

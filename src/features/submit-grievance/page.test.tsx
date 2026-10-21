@@ -152,8 +152,9 @@ describe('SubmitGrievancePage for a registered NGO', () => {
 
     await screen.findByLabelText(/^Organisation Name/);
     expect(document.getElementById('si-representativeFaydaId')).toBeInTheDocument();
-    // masked on screen by default, like every national-ID field — by CSS, so the browser never offers to save it as a password
-    expect(document.getElementById('si-representativeFaydaId')).toHaveAttribute('type', 'text');    expect(document.getElementById('si-representativeFaydaId')).toHaveValue('6557092147530500');
+    // masked on screen by default, like every national-ID field (jsdom cannot mask with CSS, so it uses the safe password fallback)
+    expect(document.getElementById('si-representativeFaydaId')).toHaveAttribute('type', 'password');
+    expect(document.getElementById('si-representativeFaydaId')).toHaveValue('6557092147530500');
   });
 
   it('tells an organisation that is still In Review it cannot submit yet', async () => {

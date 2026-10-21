@@ -230,7 +230,11 @@
       "remove": "የድምፅ ቅጂውን አስወግድ",
       "permissionDenied": "የማይክሮፎን መዳረሻ ታግዷል። በአሳሽዎ ቅንብር ውስጥ ፈቅደው እንደገና ይሞክሩ።",
       "processingFailed": "ቅጂውን ማዘጋጀት አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
-      "unsupported": "ይህ አሳሽ የድምፅ ቀረጻን አይደግፍም።"
+      "unsupported": "ይህ አሳሽ የድምፅ ቀረጻን አይደግፍም።",
+      "noMicrophone": "ማይክሮፎን አልተገኘም። ማይክሮፎን ያገናኙና እንደገና ይሞክሩ።",
+      "startFailed": "ቀረጻውን መጀመር አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "starting": "ማይክሮፎን በማዘጋጀት ላይ…",
+      "attachmentLimit": "በአንድ ቅሬታ እስከ {max} ፋይሎች ማያያዝ ይችላሉ። ከመቅዳትዎ በፊት አንዱን ያስወግዱ።"
     }
   },
   "commentsAndCommunication": {
@@ -586,5 +590,14 @@
     "switchingAccount": "በመውጣት ላይ…",
     "switchAccountHint": "እዚህ መዳረሻ በሌለው የሠራተኛ መለያ ገብተዋል። መውጣት ከመዝገቡ እና ከሌሎች OpenG2P መተግበሪያዎችም ያስወጣዎታል።",
     "switchAccountFailed": "ከሠራተኛ መለያው ማስወጣት አልተቻለም። ከመዝገቡ ይውጡና እንደገና ይሞክሩ።"
+  },
+  "attachmentViewer": {
+    "loadingPreview": "ቅድመ እይታ በመጫን ላይ",
+    "previewUnavailable": "ቅድመ እይታ አይገኝም",
+    "previewLoadFailed": "ይህን ፋይል አሁን መጫን አልተቻለም።",
+    "scanPending": "ቅኝቱ እስኪጠናቀቅ ድረስ አይገኝም።"
+  },
+  "grievanceList": {
+    "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ..."
   }
 }

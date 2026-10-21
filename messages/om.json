@@ -230,7 +230,11 @@
       "remove": "Waraabbii sagalee balleessi",
       "permissionDenied": "Mikiroofoonii fayyadamuun dhorkameera. Qindaa’ina brawuzara keessanitti eeyyamaa irra deebi’aa yaalaa.",
       "processingFailed": "Waraabbicha hojjechuu hin dandeenye. Maaloo irra deebi’ii yaalaa.",
-      "unsupported": "Brawuzarri kun waraabuu sagaleetiif deeggarsa hin kennu."
+      "unsupported": "Brawuzarri kun waraabuu sagaleetiif deeggarsa hin kennu.",
+      "noMicrophone": "Mikiroofoonii hin argamne. Mikiroofoonii wal qabsiisaatii irra deebi'aa yaalaa.",
+      "startFailed": "Waraabuu eegaluu hin dandeenye. Maaloo irra deebi'ii yaalaa.",
+      "starting": "Mikiroofoonii qopheessaa jira…",
+      "attachmentLimit": "Komii tokkoof hanga faayilii {max} maxxansuu dandeessa. Osoo hin waraabin dura tokko balleessi."
     }
   },
   "commentsAndCommunication": {
@@ -586,5 +590,14 @@
     "switchingAccount": "Ba'aa jira…",
     "switchAccountHint": "Herrega hojjetaa asitti hayyama hin qabneen seenteetta. Ba'uun galmee fi appiliikeeshinii OpenG2P biroo irraas si baasa.",
     "switchAccountFailed": "Herrega hojjetaa irraa si baasuun hin danda'amne. Galmee irraa ba'iitii irra deebi'ii yaali."
+  },
+  "attachmentViewer": {
+    "loadingPreview": "Dursee ilaaluun fe'aa jira",
+    "previewUnavailable": "Dursee ilaaluun hin argamu",
+    "previewLoadFailed": "Faayilii kana yeroo ammaa fe'uun hin danda'amne.",
+    "scanPending": "Sakatta'insi hanga xumuramutti hin argamu."
+  },
+  "grievanceList": {
+    "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi..."
   }
 }

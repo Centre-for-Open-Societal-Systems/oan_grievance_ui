@@ -13,9 +13,12 @@ interface VoiceRecorderProps {
   recording: File | null;
   onRecorded: (file: File) => void;
   onRemove: () => void;
+  /** Blocks starting a new recording (e.g. the case is already at its attachment limit); `disabledReason` is shown as the button's tooltip. */
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
-type Phase = "idle" | "recording" | "processing";
+type Phase = "idle" | "starting" | "recording" | "processing";
 
 function formatClock(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -23,7 +26,22 @@ function formatClock(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function VoiceRecorder({ children, recording, onRecorded, onRemove }: VoiceRecorderProps) {
+/** Which message to show for a failed `getUserMedia` / `MediaRecorder` start. */
+function startErrorKey(error: unknown): "permissionDenied" | "noMicrophone" | "startFailed" {
+  const name = error instanceof DOMException ? error.name : "";
+  if (name === "NotAllowedError" || name === "SecurityError") return "permissionDenied";
+  if (name === "NotFoundError" || name === "OverconstrainedError") return "noMicrophone";
+  return "startFailed";
+}
+
+export function VoiceRecorder({
+  children,
+  recording,
+  onRecorded,
+  onRemove,
+  disabled = false,
+  disabledReason,
+}: VoiceRecorderProps) {
   const t = useTranslations("submitGrievance.voice");
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsed, setElapsed] = useState(0);
@@ -34,6 +52,16 @@ export function VoiceRecorder({ children, recording, onRecorded, onRemove }: Voi
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
+  const mountedRef = useRef(true);
+  // Set synchronously, so a second click while the permission prompt is still open cannot start a second stream.
+  const startingRef = useRef(false);
+  // A recording can run for minutes, and the form around it keeps changing meanwhile; `onstop` must call the
+  // callback as it is when the recording ends, not the one captured when it began.
+  const onRecordedRef = useRef(onRecorded);
+  useEffect(() => {
+    onRecordedRef.current = onRecorded;
+  });
 
   // Object URL for the player, released when the recording changes or goes away.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -57,7 +85,9 @@ export function VoiceRecorder({ children, recording, onRecorded, onRemove }: Voi
 
   // Leaving the page mid-recording must not leave the microphone on.
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       const recorder = recorderRef.current;
       if (recorder && recorder.state !== "inactive") {
         recorder.onstop = null;
@@ -73,49 +103,76 @@ export function VoiceRecorder({ children, recording, onRecorded, onRemove }: Voi
   };
 
   const start = async () => {
+    if (startingRef.current || phase !== "idle") return;
+    startingRef.current = true;
     setError(null);
-    let stream: MediaStream;
+    setPhase("starting");
+
+    let stream: MediaStream | null = null;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      setError(t("permissionDenied"));
-      return;
-    }
-    streamRef.current = stream;
+      // The user left while the permission prompt was open: nothing is listening, so hand the mic straight back.
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      streamRef.current = stream;
 
-    const recorder = new MediaRecorder(stream);
-    const parts: Blob[] = [];
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) parts.push(event.data);
-    };
-    recorder.onstop = async () => {
-      releaseMic();
-      setPhase("processing");
-      try {
-        const blob = new Blob(parts, { type: recorder.mimeType });
-        onRecorded(await encodeMp3(blob, `voice-grievance-${Date.now()}.mp3`));
+      const recorder = new MediaRecorder(stream);
+      const parts: Blob[] = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) parts.push(event.data);
+      };
+      recorder.onerror = () => {
+        releaseMic();
+        if (!mountedRef.current) return;
+        setError(t("startFailed"));
         setPhase("idle");
-      } catch {
-        setError(t("processingFailed"));
+      };
+      recorder.onstop = async () => {
+        releaseMic();
+        if (!mountedRef.current) return;
+        setPhase("processing");
+        try {
+          const blob = new Blob(parts, { type: recorder.mimeType });
+          const file = await encodeMp3(blob, `voice-grievance-${Date.now()}.mp3`);
+          if (!mountedRef.current) return;
+          onRecordedRef.current(file);
+        } catch {
+          if (mountedRef.current) setError(t("processingFailed"));
+        } finally {
+          if (mountedRef.current) setPhase("idle");
+        }
+      };
+
+      recorderRef.current = recorder;
+      recorder.start();
+      elapsedRef.current = 0;
+      setElapsed(0);
+      setPhase("recording");
+      timerRef.current = setInterval(() => {
+        elapsedRef.current += 1;
+        setElapsed(elapsedRef.current);
+        if (elapsedRef.current >= MAX_VOICE_SECONDS) stop();
+      }, 1000);
+    } catch (error) {
+      // getUserMedia succeeded but the recorder could not start (or the permission was refused):
+      // the stream must not stay open with nothing driving it.
+      stream?.getTracks().forEach((track) => track.stop());
+      releaseMic();
+      if (mountedRef.current) {
+        setError(t(startErrorKey(error)));
         setPhase("idle");
       }
-    };
-
-    recorderRef.current = recorder;
-    recorder.start();
-    setElapsed(0);
-    setPhase("recording");
-    timerRef.current = setInterval(() => {
-      setElapsed((seconds) => {
-        if (seconds + 1 >= MAX_VOICE_SECONDS) stop();
-        return seconds + 1;
-      });
-    }, 1000);
+    } finally {
+      startingRef.current = false;
+    }
   };
 
   if (!supported) return <>{children}</>;
 
   const recordingNow = phase === "recording";
+  const blocked = disabled && !recordingNow;
 
   return (
     <div>
@@ -124,9 +181,9 @@ export function VoiceRecorder({ children, recording, onRecorded, onRemove }: Voi
         <button
           type="button"
           onClick={recordingNow ? stop : start}
-          disabled={phase === "processing"}
+          disabled={phase === "processing" || phase === "starting" || blocked}
           aria-label={recordingNow ? t("stop") : recording ? t("recordAgain") : t("record")}
-          title={t("hint")}
+          title={blocked && disabledReason ? disabledReason : t("hint")}
           className={`absolute bottom-3 right-3 p-2 rounded-full border transition-colors focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed ${
             recordingNow
               ? "bg-red-600 border-red-600 text-white hover:bg-red-700 focus:ring-red-300"
@@ -143,10 +200,10 @@ export function VoiceRecorder({ children, recording, onRecorded, onRemove }: Voi
           {t("recording", { time: formatClock(elapsed), max: formatClock(MAX_VOICE_SECONDS) })}
         </p>
       )}
-      {phase === "processing" && (
+      {(phase === "processing" || phase === "starting") && (
         <p role="status" className="mt-2 flex items-center gap-2 text-sm text-gray-600">
           <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-          {t("processing")}
+          {phase === "starting" ? t("starting") : t("processing")}
         </p>
       )}
       {phase === "idle" && recording && playbackUrl && (

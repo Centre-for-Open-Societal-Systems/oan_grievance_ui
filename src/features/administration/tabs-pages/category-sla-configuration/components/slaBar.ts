@@ -5,6 +5,16 @@
 export const DEFAULT_SLA_BAR_REFERENCE_DAYS = 30;
 
 /**
+ * The figure the bars are measured against: the global SLA figure when it is a usable number, otherwise the
+ * fallback scale (so a missing, zero or negative value cannot blank every bar).
+ */
+export function slaBarReferenceDays(globalDays: number | null | undefined): number {
+  return typeof globalDays === 'number' && Number.isFinite(globalDays) && globalDays > 0
+    ? globalDays
+    : DEFAULT_SLA_BAR_REFERENCE_DAYS;
+}
+
+/**
  * How full a category's SLA bar is: its SLA window as a share of the global SLA figure
  * (the policy card's "Max SLA Deferral (days)"), capped at 100. A category longer than the
  * global figure shows a full bar.

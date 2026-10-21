@@ -19,7 +19,7 @@ import { fetchSlaConfigurations, updateSlaConfiguration } from './api/slaSetting
 import { AddCategoryModal } from './components/AddCategoryModal';
 import { GlobalSlaPolicyCard } from './components/GlobalSlaPolicyCard';
 import { SlaCategoryCard } from './components/SlaCategoryCard';
-import { DEFAULT_SLA_BAR_REFERENCE_DAYS, slaBarPercent } from './components/slaBar';
+import { slaBarPercent, slaBarReferenceDays } from './components/slaBar';
 import type { GrievanceTypeRecord, ServiceCategoryRecord } from './components/taxonomyTypes';
 import type { SlaConfiguration } from './components/slaSettingsTypes';
 import { CATEGORY_COLORS, type SlaCategory } from './components/types';
@@ -66,7 +66,7 @@ export default function CategorySlaConfigurationPage() {
     // The Global SLA Policy's "Max SLA Deferral (days)": each category bar shows its SLA against it.
     // Until it loads (or if it can't) the bars use a 30-day scale.
     const [globalSlaDays, setGlobalSlaDays] = useState<number | null>(null);
-    const barReferenceDays = globalSlaDays ?? DEFAULT_SLA_BAR_REFERENCE_DAYS;
+    const barReferenceDays = slaBarReferenceDays(globalSlaDays);
 
     const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 

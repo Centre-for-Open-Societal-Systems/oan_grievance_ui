@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useTranslations } from "next-intl";
 import { X, Download, FileText, Loader2 } from "lucide-react";
 import {
   getAttachmentDownloadInfo,
@@ -22,6 +23,7 @@ interface DocumentViewerPopupProps {
 }
 
 export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopupProps): ReactElement {
+  const t = useTranslations("attachmentViewer");
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const isClean = attachment.scan_status === SCAN_STATUS.CLEAN;
@@ -36,8 +38,9 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
 
   // Inline preview (incl. voice recordings) streams through the backend's
   // `/view` endpoint, which only serves attachments that scanned Clean.
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewFailed, setPreviewFailed] = useState(false);
+  // The result is tagged with the attachment it belongs to, so a different attachment (or one that stops
+  // being Clean) never shows the previous file's — by then revoked — address or its failure.
+  const [preview, setPreview] = useState<{ name: string; url: string | null; failed: boolean } | null>(null);
   useEffect(() => {
     if (!isClean) return;
     let cancelled = false;
@@ -49,17 +52,22 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
           return;
         }
         objectUrl = url ?? null;
-        setPreviewUrl(objectUrl);
+        setPreview({ name: attachment.name, url: objectUrl, failed: false });
       })
       .catch((error) => {
         logger.error("Failed to load attachment preview:", error);
-        if (!cancelled) setPreviewFailed(true);
+        if (!cancelled) setPreview({ name: attachment.name, url: null, failed: true });
       });
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [attachment.name, isClean]);
+  const current = isClean && preview?.name === attachment.name ? preview : null;
+  const previewUrl = current?.url ?? null;
+  const previewFailed = current?.failed ?? false;
+  // The backend sends a mime type for every attachment, but a missing one must fall back to "unavailable", not throw.
+  const mimeType = attachment.mime_type ?? "";
 
   // Dead while ATTACHMENT_DOWNLOAD_DISABLED is true (the button below stays
   // disabled), but wired to the real APIs now rather than left as an inline
@@ -142,24 +150,25 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
 
         {/* Content */}
         <div className="flex-1 bg-gray-100 p-8 overflow-y-auto flex items-center justify-center min-h-[500px]">
-          {previewUrl && attachment.mime_type.startsWith("audio/") ? (
+          {previewUrl && mimeType.startsWith("audio/") ? (
             <audio controls src={previewUrl} aria-label={attachment.file_name} className="w-full max-w-xl" />
-          ) : previewUrl && attachment.mime_type === "application/pdf" ? (
+          ) : previewUrl && mimeType === "application/pdf" ? (
             <iframe src={previewUrl} title={attachment.file_name} className="w-full max-w-2xl h-[70vh] bg-white rounded border border-gray-200" />
-          ) : previewUrl && attachment.mime_type.startsWith("image/") ? (
+          ) : previewUrl && mimeType.startsWith("image/") ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={previewUrl} alt={attachment.file_name} className="max-w-full max-h-[70vh] object-contain rounded border border-gray-200" />
           ) : (
             <div className="bg-white w-full max-w-2xl h-[800px] shadow-sm border border-gray-200 rounded flex flex-col items-center justify-center text-gray-400 px-8 text-center">
-              {isClean && !previewFailed ? (
-                <Loader2 className="h-10 w-10 animate-spin text-gray-300" aria-label="Loading preview" />
+              {isClean && !previewFailed && !previewUrl ? (
+                <Loader2 className="h-10 w-10 animate-spin text-gray-300" aria-label={t("loadingPreview")} />
               ) : (
                 <>
                   <FileText className="h-16 w-16 mb-4 text-gray-300" />
-                  <p className="text-lg font-medium text-gray-500">Preview unavailable</p>
-                  <p className="text-sm mt-2 max-w-sm">
-                    {isClean ? "Could not load this file right now." : "Not available until the scan completes."}
-                  </p>
+                  <p className="text-lg font-medium text-gray-500">{t("previewUnavailable")}</p>
+                  {/* Loaded but not a type that can be shown inline: the heading alone says it. */}
+                  {!previewUrl && (
+                    <p className="text-sm mt-2 max-w-sm">{isClean ? t("previewLoadFailed") : t("scanPending")}</p>
+                  )}
                 </>
               )}
             </div>

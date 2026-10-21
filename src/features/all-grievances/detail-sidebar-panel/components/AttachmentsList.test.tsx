@@ -11,6 +11,20 @@ vi.mock('@/lib/attachments', async (importOriginal) => ({
 }));
 import { AttachmentsList } from './AttachmentsList';
 
+import { NextIntlClientProvider } from 'next-intl';
+import en from '../../../../../messages/en.json';
+
+function renderIntl(ui: React.ReactElement) {
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <NextIntlClientProvider locale="en" messages={en}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
+
+
 afterEach(cleanup);
 
 const ROW: AttachmentRow = {
@@ -29,12 +43,12 @@ const ROW: AttachmentRow = {
 
 describe('AttachmentsList', () => {
   it('shows loading state when isLoading is true', () => {
-    render(<AttachmentsList isLoading={true} />);
+    renderIntl(<AttachmentsList isLoading={true} />);
     expect(screen.getByText('Loading attachments…')).toBeInTheDocument();
   });
 
   it('shows the case attachments with file size and scan status', () => {
-    render(<AttachmentsList attachments={[ROW]} />);
+    renderIntl(<AttachmentsList attachments={[ROW]} />);
 
     expect(screen.getByText('id-card.pdf')).toBeInTheDocument();
     expect(screen.getByText('239.3 KB')).toBeInTheDocument();
@@ -42,26 +56,26 @@ describe('AttachmentsList', () => {
   });
 
   it('shows a distinct "Scan failed" badge for a Failed scan, not the Scanning… state', () => {
-    render(<AttachmentsList attachments={[{ ...ROW, scan_status: 'Failed' }]} />);
+    renderIntl(<AttachmentsList attachments={[{ ...ROW, scan_status: 'Failed' }]} />);
 
     expect(screen.getByText('Scan failed')).toBeInTheDocument();
     expect(screen.queryByText('Scanning…')).not.toBeInTheDocument();
   });
 
   it('shows an empty state when the case has no attachments', () => {
-    render(<AttachmentsList attachments={[]} />);
+    renderIntl(<AttachmentsList attachments={[]} />);
 
     expect(screen.getByText('No attachments on this case.')).toBeInTheDocument();
   });
 
   it('shows an error state when error is passed', () => {
-    render(<AttachmentsList error="network down" />);
+    renderIntl(<AttachmentsList error="network down" />);
 
     expect(screen.getByText('Could not load attachments for this case.')).toBeInTheDocument();
   });
 
   it('opens the document viewer and keeps preview unavailable while the file has not scanned Clean', () => {
-    render(<AttachmentsList attachments={[{ ...ROW, scan_status: 'Pending' }]} />);
+    renderIntl(<AttachmentsList attachments={[{ ...ROW, scan_status: 'Pending' }]} />);
 
     fireEvent.click(screen.getByText('id-card.pdf'));
 
@@ -74,7 +88,7 @@ describe('AttachmentsList', () => {
   it('plays a clean voice recording inline so an officer can listen to it', async () => {
     fetchAttachmentBlobUrl.mockResolvedValue('blob:voice');
     const voice: AttachmentRow = { ...ROW, name: 'ATT-0002', file_name: 'voice-grievance.mp3', mime_type: 'audio/mpeg' };
-    render(<AttachmentsList attachments={[voice]} />);
+    renderIntl(<AttachmentsList attachments={[voice]} />);
 
     fireEvent.click(screen.getByText('voice-grievance.mp3'));
 
@@ -84,7 +98,7 @@ describe('AttachmentsList', () => {
   });
 
   it('never displays a delete button in the viewer popup for filed grievance attachments', () => {
-    render(<AttachmentsList attachments={[ROW]} />);
+    renderIntl(<AttachmentsList attachments={[ROW]} />);
 
     fireEvent.click(screen.getByText('id-card.pdf'));
 

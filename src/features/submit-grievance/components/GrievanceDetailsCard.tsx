@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FileText, Info, ArrowRight, ArrowLeft, Eye, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -110,6 +110,7 @@ export function GrievanceDetailsCard({
 }: GrievanceDetailsCardProps) {
   const t = useTranslations("submitGrievance.detailsStep");
   const tDocs = useTranslations("supportingDocuments");
+  const tVoice = useTranslations("submitGrievance.voice");
   const dispatch = useAppDispatch();
   const dynamicServiceCategories = useAppSelector(selectServiceCategoryOptions);
   const dynamicGrievanceTypes = useAppSelector((state) =>
@@ -182,7 +183,8 @@ export function GrievanceDetailsCard({
     required: t("fieldRequired"),
     descriptionTooShort: (count: number) => t("descriptionTooShort", { min: MIN_DESCRIPTION_LENGTH, count }),
   };
-  const descriptionErrorFor = (value: string): string | null => getDescriptionError(value, detailsMessages);
+  const descriptionErrorFor = (value: string): string | null =>
+    hasVoiceNote ? null : getDescriptionError(value, detailsMessages);
 
   const handleNext = () => {
     const errors: FieldErrors<DetailsField> = getDetailsErrors(
@@ -225,22 +227,49 @@ export function GrievanceDetailsCard({
     ]);
   };
 
+  // The case is at its attachment limit once the non-voice files fill it; a replacement recording swaps the old
+  // one out, so only a first recording is blocked.
+  const otherAttachmentCount = attachments.filter((item) => item.kind !== "voice").length;
+  const voiceBlockedByLimit = !hasVoiceNote && otherAttachmentCount >= MAX_ATTACHMENTS_PER_CASE;
+
+  // Whether the category/type now showing were filled in by a recording (not picked by the user), so deleting
+  // the recording can take them back out again.
+  const filledByVoice = useRef(false);
+
   const handleVoiceRecorded = (file: File) => {
+    if (voiceBlockedByLimit) {
+      setError(tVoice("attachmentLimit", { max: MAX_ATTACHMENTS_PER_CASE }));
+      return;
+    }
+    setError(null);
     setAttachments((prev) => [
       ...prev.filter((item) => item.kind !== "voice"),
       { key: crypto.randomUUID(), file, fileName: file.name, kind: "voice" },
     ]);
     fieldErrors.setError("description", null);
+
+    // A recording is triaged by hand, so file it under the catch-all "Other" - but only when the submitter has
+    // not already chosen a category; a category they picked stays.
+    if (serviceCategory || grievanceType) return;
     const otherType = otherTypes.find((o) => o.label.toLowerCase() === "other")?.value;
     if (otherCategory && otherType) {
       setServiceCategory(otherCategory);
       setGrievanceType(otherType);
+      filledByVoice.current = true;
       fieldErrors.setError("serviceCategory", null);
       fieldErrors.setError("grievanceType", null);
     }
   };
 
-  const handleRemoveVoice = () => setAttachments((prev) => prev.filter((item) => item.kind !== "voice"));
+  const handleRemoveVoice = () => {
+    setAttachments((prev) => prev.filter((item) => item.kind !== "voice"));
+    // Take back the category we filled in, unless the submitter has since changed it.
+    if (filledByVoice.current && serviceCategory === otherCategory) {
+      setServiceCategory("");
+      setGrievanceType("");
+    }
+    filledByVoice.current = false;
+  };
 
   const handleRemoveAttachment = (key: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -456,6 +485,8 @@ export function GrievanceDetailsCard({
               recording={voiceNote?.file ?? null}
               onRecorded={handleVoiceRecorded}
               onRemove={handleRemoveVoice}
+              disabled={voiceBlockedByLimit}
+              disabledReason={tVoice("attachmentLimit", { max: MAX_ATTACHMENTS_PER_CASE })}
             >
               <textarea
                 id="grievance-description"

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Search,
   Filter,
@@ -82,6 +83,7 @@ export function GrievanceTable({
   onClearFilters: () => void;
   onViewGrievance: (grievance: Grievance) => void;
 }) {
+  const t = useTranslations('grievanceList');
   const [openFilter, setOpenFilter] = React.useState<string | null>(null);
 
   const handlePageChange = (page: number) => {
@@ -109,7 +111,7 @@ export function GrievanceTable({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
               type="text"
-              placeholder="Search by ticket number, submitter name, or grievance type..."
+              placeholder={t('searchPlaceholder')}
               className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               value={searchTerm}
               onChange={(e) => {

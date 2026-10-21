@@ -4,6 +4,20 @@ import { render, within, fireEvent } from '@testing-library/react';
 import { GrievanceTable } from './GrievanceTable';
 import type { Grievance } from '../types';
 
+import { NextIntlClientProvider } from 'next-intl';
+import en from '../../../../messages/en.json';
+
+function renderIntl(ui: React.ReactElement) {
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <NextIntlClientProvider locale="en" messages={en}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
+
+
 const mockGrievances: Grievance[] = [
   {
     id: 'grv-1',
@@ -72,7 +86,7 @@ describe('GrievanceTable', () => {
 
   it('renders grievances rows and calls onViewGrievance on Edit click', () => {
     const onViewGrievance = vi.fn();
-    const { container } = render(
+    const { container } = renderIntl(
       <GrievanceTable {...defaultProps} onViewGrievance={onViewGrievance} />
     );
     const view = within(container);
@@ -94,7 +108,7 @@ describe('GrievanceTable', () => {
   });
 
   it('renders empty state when there are no records', () => {
-    const { container } = render(
+    const { container } = renderIntl(
       <GrievanceTable {...defaultProps} grievances={[]} totalItems={0} totalPages={0} />
     );
     expect(within(container).getByText('No grievance records found')).toBeTruthy();
@@ -102,7 +116,7 @@ describe('GrievanceTable', () => {
 
   it('renders error state and retries on button click', () => {
     const onRetry = vi.fn();
-    const { container } = render(
+    const { container } = renderIntl(
       <GrievanceTable {...defaultProps} error="Network failure" onRetry={onRetry} />
     );
     const view = within(container);

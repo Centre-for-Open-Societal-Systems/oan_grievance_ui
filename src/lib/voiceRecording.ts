@@ -1,4 +1,3 @@
-import { Mp3Encoder } from '@breezystack/lamejs';
 import { MAX_ATTACHMENT_BYTES } from '@/lib/attachments';
 
 // The backend accepts audio only as MP3 (`audio/mpeg`, sniffed from bytes),
@@ -32,6 +31,8 @@ function toInt16(samples: Float32Array): Int16Array {
 
 /** Decodes a MediaRecorder blob and returns it as a mono MP3 `File`. */
 export async function encodeMp3(recording: Blob, fileName: string): Promise<File> {
+  // Loaded on first use: the encoder is only needed once someone records, so it stays out of the Step 2 bundle.
+  const { Mp3Encoder } = await import('@breezystack/lamejs');
   const context = new AudioContext();
   try {
     const decoded = await context.decodeAudioData(await recording.arrayBuffer());

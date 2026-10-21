@@ -10,6 +10,36 @@ import en from '../../../../messages/en.json';
 import type { AreaRef } from '@/features/metadata';
 import { makeStore, regionRef, woredaRef, zoneRef } from '../testFixtures';
 
+// The recorder itself (microphone, MP3 encoding) is covered by VoiceRecorder.test.tsx; here it is a stub with
+// buttons that "finish a recording" / "delete it", so the card's own handling of a voice note can be driven.
+vi.mock('./VoiceRecorder', () => ({
+  VoiceRecorder: ({
+    children,
+    recording,
+    onRecorded,
+    onRemove,
+    disabled,
+  }: {
+    children: React.ReactNode;
+    recording: File | null;
+    onRecorded: (file: File) => void;
+    onRemove: () => void;
+    disabled?: boolean;
+  }) => (
+    <div>
+      {children}
+      <button type="button" disabled={disabled} onClick={() => onRecorded(new File(['a'], 'voice.mp3', { type: 'audio/mpeg' }))}>
+        mock-record
+      </button>
+      {recording && (
+        <button type="button" onClick={onRemove}>
+          mock-remove
+        </button>
+      )}
+    </div>
+  ),
+}));
+
 import { GrievanceDetailsCard } from './GrievanceDetailsCard';
 
 afterEach(cleanup);
@@ -24,6 +54,8 @@ interface Initial {
   woreda?: AreaRef;
   description?: string;
   attachmentFileName?: string;
+  /** This many extra image attachments (to fill the case up to its limit). */
+  extraAttachments?: number;
 }
 
 const COMPLETE: Initial = {
@@ -47,6 +79,11 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
   const [desiredOutcome, setDesiredOutcome] = useState('');
   const [serviceProvider, setServiceProvider] = useState('');
   const [attachments, setAttachments] = useState<WizardAttachment[]>(() =>
+    Array.from({ length: initial.extraAttachments ?? 0 }, (_, i) => ({
+      key: `extra-${i}`,
+      file: new File(['x'], `extra-${i}.png`, { type: 'image/png' }),
+      fileName: `extra-${i}.png`,
+    })).concat(
     initial.attachmentFileName
       ? [
           {
@@ -58,6 +95,7 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
           },
         ]
       : []
+    )
   );
   return (
     <GrievanceDetailsCard
@@ -87,10 +125,27 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
   );
 }
 
+const withOther = () =>
+  makeStore({
+    submitterOptions: {
+      submitter_types: [],
+      submission_types: [],
+      preferred_languages: [],
+      service_categories: [
+        { category_name: 'Inputs', code: '001', sort_order: 1 },
+        { category_name: 'Other', code: '006', sort_order: 6 },
+      ],
+      grievance_types: [
+        { grievance_type_id: 'GTYPE-00001', type_name: 'Fertilizer Shortage', service_category: 'Inputs' },
+        { grievance_type_id: 'GTYPE-00183', type_name: 'Other', service_category: 'Other' },
+      ],
+    },
+  });
+
 function renderStep(initial: Initial = {}) {
   const onNext = vi.fn();
   render(
-    <Provider store={makeStore()}>
+    <Provider store={withOther()}>
       <NextIntlClientProvider locale="en" messages={en}>
         <Harness initial={initial} onNext={onNext} />
       </NextIntlClientProvider>
@@ -228,5 +283,66 @@ describe('Step 2 — staged attachments', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Preview contract.pdf' }));
 
     expect(screen.getByTitle('contract.pdf')).toHaveAttribute('src', 'blob:http://localhost/mock-local-url');
+  });
+});
+
+describe('Step 2 — voice recording', () => {
+  const AREAS: Initial = { region: regionRef, zone: zoneRef, woreda: woredaRef };
+
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { areas: [], count: 0 } }) } as Response);
+  });
+
+  it('lets a recording replace the typed description, filing under Other when no category was chosen', () => {
+    const { onNext } = renderStep(AREAS);
+
+    fireEvent.click(screen.getByText('mock-record'));
+    expect((byId('service-category') as HTMLInputElement).value).toBe('Other');
+    expect((byId('grievance-type') as HTMLInputElement).value).toBe('Other');
+
+    saveAndContinue();
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a category the submitter already chose', () => {
+    renderStep({ ...AREAS, serviceCategory: 'Inputs', grievanceType: 'GTYPE-00001' });
+
+    fireEvent.click(screen.getByText('mock-record'));
+
+    expect((byId('service-category') as HTMLInputElement).value).toBe('Inputs');
+    expect((byId('grievance-type') as HTMLInputElement).value).toBe('Fertilizer Shortage');
+  });
+
+  it('takes the Other it filled in back out when the recording is deleted', () => {
+    renderStep(AREAS);
+
+    fireEvent.click(screen.getByText('mock-record'));
+    fireEvent.click(screen.getByText('mock-remove'));
+
+    expect((byId('service-category') as HTMLInputElement).value).toBe('');
+    expect((byId('grievance-type') as HTMLInputElement).value).toBe('');
+  });
+
+  it('does not show a "required" error on the description while a recording stands in for it', () => {
+    renderStep(AREAS);
+
+    fireEvent.click(screen.getByText('mock-record'));
+    fireEvent.focus(byId('grievance-description'));
+    fireEvent.blur(byId('grievance-description'));
+
+    expect(screen.queryByText('This field is required.')).not.toBeInTheDocument();
+  });
+
+  it('cannot add a first recording once the case already holds the most attachments allowed', () => {
+    renderStep({ ...AREAS, extraAttachments: 10 });
+
+    expect(screen.getByText('mock-record')).toBeDisabled();
+  });
+
+  it('can still replace a recording when the case is full', () => {
+    renderStep({ ...AREAS, extraAttachments: 9 });
+
+    fireEvent.click(screen.getByText('mock-record'));
+    expect(screen.getByText('mock-record')).not.toBeDisabled();
   });
 });

@@ -131,4 +131,21 @@ describe('selectStatusFilterOptions', () => {
       { value: 'Resolved', label: 'Resolved' },
     ]);
   });
+
+  it('skips an entry that carries no status instead of throwing', () => {
+    const state = createMockRootState({
+      grievanceOptions: {
+        departments: [],
+        service_categories: [],
+        grievance_types: [],
+        submission_channels: [],
+        statuses: [
+          { status: undefined as unknown as string, label: 'Broken', is_open: 1, is_terminal: 0 },
+          { status: 'Resolved', label: 'Resolved', is_open: 0, is_terminal: 1 },
+        ],
+      },
+    });
+
+    expect(selectStatusFilterOptions(state)).toEqual([{ value: 'Resolved', label: 'Resolved' }]);
+  });
 });

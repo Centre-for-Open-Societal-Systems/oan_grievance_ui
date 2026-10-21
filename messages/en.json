@@ -230,7 +230,11 @@
       "remove": "Remove voice recording",
       "permissionDenied": "Microphone access was blocked. Allow it in your browser settings and try again.",
       "processingFailed": "We could not process the recording. Please try again.",
-      "unsupported": "Voice recording is not supported in this browser."
+      "unsupported": "Voice recording is not supported in this browser.",
+      "noMicrophone": "No microphone was found. Connect one and try again.",
+      "startFailed": "We could not start the recording. Please try again.",
+      "starting": "Starting the microphone…",
+      "attachmentLimit": "You can attach up to {max} files per grievance. Remove one before recording."
     }
   },
   "commentsAndCommunication": {
@@ -586,5 +590,14 @@
     "switchingAccount": "Signing out…",
     "switchAccountHint": "You are signed in with a staff account that has no access here. Signing out also signs you out of the registry and other OpenG2P apps.",
     "switchAccountFailed": "Could not sign you out of the staff account. Sign out from the registry, then try again."
+  },
+  "attachmentViewer": {
+    "loadingPreview": "Loading preview",
+    "previewUnavailable": "Preview unavailable",
+    "previewLoadFailed": "Could not load this file right now.",
+    "scanPending": "Not available until the scan completes."
+  },
+  "grievanceList": {
+    "searchPlaceholder": "Search by ticket number, submitter name, or grievance type..."
   }
 }
