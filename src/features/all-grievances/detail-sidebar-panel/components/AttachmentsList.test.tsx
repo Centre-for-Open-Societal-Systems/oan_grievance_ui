@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentRow } from '@/lib/attachments';
+
+const fetchAttachmentBlobUrl = vi.fn<(attachment: string, download?: boolean) => Promise<string>>();
+vi.mock('@/lib/attachments', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/attachments')>()),
+  fetchAttachmentBlobUrl: (...args: [string, boolean?]) => fetchAttachmentBlobUrl(...args),
+}));
 import { AttachmentsList } from './AttachmentsList';
 
 afterEach(cleanup);
@@ -54,14 +60,27 @@ describe('AttachmentsList', () => {
     expect(screen.getByText('Could not load attachments for this case.')).toBeInTheDocument();
   });
 
-  it('opens the document viewer with the real file on click, showing why preview/download are unavailable', () => {
-    render(<AttachmentsList attachments={[ROW]} />);
+  it('opens the document viewer and keeps preview unavailable while the file has not scanned Clean', () => {
+    render(<AttachmentsList attachments={[{ ...ROW, scan_status: 'Pending' }]} />);
 
     fireEvent.click(screen.getByText('id-card.pdf'));
 
     expect(screen.getByRole('heading', { name: 'id-card.pdf' })).toBeInTheDocument();
     expect(screen.getByText('Preview unavailable')).toBeInTheDocument();
+    expect(fetchAttachmentBlobUrl).not.toHaveBeenCalled();
     expect(screen.queryByTitle('Delete this attachment')).not.toBeInTheDocument();
+  });
+
+  it('plays a clean voice recording inline so an officer can listen to it', async () => {
+    fetchAttachmentBlobUrl.mockResolvedValue('blob:voice');
+    const voice: AttachmentRow = { ...ROW, name: 'ATT-0002', file_name: 'voice-grievance.mp3', mime_type: 'audio/mpeg' };
+    render(<AttachmentsList attachments={[voice]} />);
+
+    fireEvent.click(screen.getByText('voice-grievance.mp3'));
+
+    const player = await screen.findByLabelText('voice-grievance.mp3', { selector: 'audio' });
+    expect(player).toHaveAttribute('src', 'blob:voice');
+    expect(fetchAttachmentBlobUrl).toHaveBeenCalledWith('ATT-0002', false);
   });
 
   it('never displays a delete button in the viewer popup for filed grievance attachments', () => {

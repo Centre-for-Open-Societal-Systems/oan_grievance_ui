@@ -143,6 +143,8 @@ export const selectSelectedLanguage = (state: MetadataRootState): string =>
 export function normalizeSubmitterType(raw: string): string {
   const lower = raw.toLowerCase().trim();
   if (lower.includes('farmer') || lower === 'ind' || lower === 'individual') return 'individual';
+  // The backend lists Cooperative and FPO as separate types; they need separate keys or both options share one value.
+  if (lower === 'fpo') return 'fpo';
   if (lower.includes('coop') || lower.includes('fpo') || lower === 'cooperative') return 'cooperative';
   if (lower.includes('ngo')) return 'ngo';
   if (lower.includes('woreda') || lower.includes('kebele') || lower.includes('body')) return 'woreda_kebele';

@@ -6,7 +6,7 @@ import { splitPhoneNumber } from "@/lib/validation/phone";
 import { DEFAULT_SUBMISSION_CHANNEL } from "@/lib/validation/registerSubmitter";
 import type { SubmitterProfile } from "@/lib/submitterProfile";
 
-const KNOWN_TYPES = ["individual", "cooperative", "ngo", "woreda_kebele", "development_agent"];
+const KNOWN_TYPES = ["individual", "cooperative", "fpo", "ngo", "woreda_kebele", "development_agent"];
 
 /**
  * Step 1's starting submitter type: the signed-in account's own type

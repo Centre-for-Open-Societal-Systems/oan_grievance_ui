@@ -104,7 +104,15 @@ export interface BuildSubmitFieldsInput extends WizardIdentitySource {
   associatedServiceProvider?: string;
   description?: string;
   desiredOutcome?: string;
+  /** A voice recording is attached in place of a typed description. */
+  hasVoiceNote?: boolean;
 }
+
+/**
+ * The backend requires a description of at least 20 characters, so a case
+ * described by voice alone sends this line; the recording is the real content.
+ */
+export const VOICE_NOTE_DESCRIPTION = "Voice grievance - please listen to the attached audio recording.";
 
 /**
  * Shapes the wizard's state into the flat field set of
@@ -127,7 +135,7 @@ export function buildSubmitFields(input: BuildSubmitFieldsInput): SubmitFields {
     service_category: input.serviceCategoryLabel ?? "",
     grievance_type: input.grievanceType ?? "",
     associated_service_provider: input.associatedServiceProvider?.trim() ?? "",
-    description: input.description?.trim() ?? "",
+    description: input.description?.trim() || (input.hasVoiceNote ? VOICE_NOTE_DESCRIPTION : ""),
     desired_outcome: input.desiredOutcome?.trim() ?? "",
   };
 }

@@ -18,7 +18,7 @@ interface SIMaskedIdFieldProps {
 
 /**
  * A national-ID input (Fayda ID and its per-type variants) — masked by
- * default like a password field, with an explicit reveal toggle. A
+ * default like a password field (without being one, so browsers don't offer to save it), with an explicit reveal toggle. A
  * government ID number is sensitive enough to warrant the same
  * shoulder-surfing/screen-share protection a password gets, not a plain text
  * input that shows it on screen the moment it's typed.
@@ -30,8 +30,14 @@ export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, des
     <div className="relative">
       <input
         id={id}
-        type={revealed ? "text" : "password"}
+        // Masked with CSS, not `type="password"`: a password-type input makes the browser
+        // offer to save a password when the form is submitted, and this is an ID number.
+        type="text"
+        inputMode="text"
         autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
+        style={revealed ? undefined : ({ WebkitTextSecurity: "disc" } as React.CSSProperties)}
         // Caps hand-typing at 16 (the shape FAYDA_PATTERN in fields.ts
         // requires from someone typing their own ID). A signed-in account's
         // own Fayda ID can come back longer, in the backend's issued shape

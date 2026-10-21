@@ -202,7 +202,8 @@
       "submitting": "Dhiheessaa jira…",
       "anonymousLabel": "Maqaa koo osoo hin ibsin dhiyeessi — maqaa fi odeeffannoo quunnamtii koo ogeessota komii kana qabatan irraa dhoksi.",
       "canRequestMoreInfoLabel": "Ogeessonni komii kanaan wal-qabatee odeeffannoo dabalataa argachuuf na quunnamuu danda'u.",
-      "canRequestMoreInfoWarning": "Odeeffannoon quunnamtii keessanii hin kuufamu. Ogeessonni isin quunnamuu hin danda'an, komii kanaan wal-qabatee beeksisni isiniif hin dhufu."
+      "canRequestMoreInfoWarning": "Odeeffannoon quunnamtii keessanii hin kuufamu. Ogeessonni isin quunnamuu hin danda'an, komii kanaan wal-qabatee beeksisni isiniif hin dhufu.",
+      "voiceDescription": "Waraabbiin sagalee waliin hidhameera"
     },
     "identityStep": {
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
@@ -217,6 +218,19 @@
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
       "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}"
+    },
+    "voice": {
+      "hint": "Of barreessuu mannaa dubbii keessan jechoota keessaniin dubbadhaa. Ofiisarootni waraabbicha dhaggeeffatanii kutaa sirrii ta’eetti ergu.",
+      "record": "Waraabi",
+      "recordAgain": "Irra deebi’ii waraabi",
+      "stop": "Waraabuu dhaabi",
+      "recording": "Waraabaa jira {time} / {max}",
+      "processing": "Waraabbicha qopheessaa jira…",
+      "playbackLabel": "Waraabbii sagalee keessan",
+      "remove": "Waraabbii sagalee balleessi",
+      "permissionDenied": "Mikiroofoonii fayyadamuun dhorkameera. Qindaa’ina brawuzara keessanitti eeyyamaa irra deebi’aa yaalaa.",
+      "processingFailed": "Waraabbicha hojjechuu hin dandeenye. Maaloo irra deebi’ii yaalaa.",
+      "unsupported": "Brawuzarri kun waraabuu sagaleetiif deeggarsa hin kennu."
     }
   },
   "commentsAndCommunication": {

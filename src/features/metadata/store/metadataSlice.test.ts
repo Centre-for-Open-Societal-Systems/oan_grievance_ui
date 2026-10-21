@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  normalizeSubmitterType,
   selectGrievanceTypeOptions,
   selectSubmissionChannelOptions,
   type MetadataRootState,
@@ -98,5 +99,12 @@ describe('selectSubmissionChannelOptions', () => {
   it('is empty when neither source has a channel', () => {
     expect(selectSubmissionChannelOptions(createMockRootState({ submitterOptions: submitterOptions([]) }))).toEqual([]);
     expect(selectSubmissionChannelOptions(createMockRootState())).toEqual([]);
+  });
+});
+
+describe('normalizeSubmitterType', () => {
+  it('keeps the backend\'s separate Cooperative and FPO types apart, so the dropdown never selects both', () => {
+    expect(normalizeSubmitterType('Cooperative')).toBe('cooperative');
+    expect(normalizeSubmitterType('FPO')).toBe('fpo');
   });
 });

@@ -202,7 +202,8 @@
       "submitting": "Submitting…",
       "anonymousLabel": "Submit anonymously — hide my name and contact details from the officers handling this grievance.",
       "canRequestMoreInfoLabel": "Officers may contact me for more information about this grievance.",
-      "canRequestMoreInfoWarning": "Your contact details will not be saved. Officers cannot reach you and you will not receive notifications about this case."
+      "canRequestMoreInfoWarning": "Your contact details will not be saved. Officers cannot reach you and you will not receive notifications about this case.",
+      "voiceDescription": "Voice recording attached"
     },
     "identityStep": {
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
@@ -217,6 +218,19 @@
       "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
       "fieldRequired": "This field is required.",
       "documentsHint": "JPG, PNG, PDF or MP3 up to 10MB each · up to {max} files"
+    },
+    "voice": {
+      "hint": "Speak in your own words instead of typing. Officers will listen to the recording and route it to the right department.",
+      "record": "Record",
+      "recordAgain": "Record again",
+      "stop": "Stop recording",
+      "recording": "Recording {time} / {max}",
+      "processing": "Preparing recording…",
+      "playbackLabel": "Your voice recording",
+      "remove": "Remove voice recording",
+      "permissionDenied": "Microphone access was blocked. Allow it in your browser settings and try again.",
+      "processingFailed": "We could not process the recording. Please try again.",
+      "unsupported": "Voice recording is not supported in this browser."
     }
   },
   "commentsAndCommunication": {

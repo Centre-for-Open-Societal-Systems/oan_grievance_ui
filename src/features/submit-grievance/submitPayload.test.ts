@@ -85,3 +85,13 @@ describe("buildSubmitFields", () => {
     expect("administrative_area" in payload).toBe(true); // present as a key, just undefined — JSON.stringify drops it
   });
 });
+
+describe('voice-only description', () => {
+  it('sends the placeholder when only a recording describes the case', async () => {
+    const { buildSubmitFields, VOICE_NOTE_DESCRIPTION } = await import('./submitPayload');
+    const base = { clientSubmissionUuid: 'u', identityValues: {}, description: '  ' };
+    expect(buildSubmitFields({ ...base, hasVoiceNote: true }).description).toBe(VOICE_NOTE_DESCRIPTION);
+    expect(VOICE_NOTE_DESCRIPTION.length).toBeGreaterThanOrEqual(20);
+    expect(buildSubmitFields(base).description).toBe('');
+  });
+});

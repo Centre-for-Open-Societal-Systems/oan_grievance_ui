@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { FileText, Info, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { FileText, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import { uploadAttachments, type WizardAttachment } from "@/lib/attachments";
@@ -253,7 +253,7 @@ export function ReviewAndSubmitCard({
               </div>
               <div className="md:col-span-2">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</p>
-                <p className="text-[15px] font-semibold text-gray-900">{description || "Not provided"}</p>
+                <p className="text-[15px] font-semibold text-gray-900">{description || (attachments.some((a) => a.kind === "voice") ? t("voiceDescription") : "Not provided")}</p>
               </div>
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Service Provider / Office</p>
@@ -359,8 +359,6 @@ export function ReviewAndSubmitCard({
               <ArrowLeft className="w-4 h-4 text-gray-600" />
               Previous
             </button>
-            <Info className="w-4 h-4 text-blue-600 mr-1.5" />
-            <span>All fields marked <span className="text-red-500">*</span> are required</span>
           </div>
           <div className="flex items-center gap-3">
             <button

@@ -202,7 +202,8 @@
       "submitting": "በማቅረብ ላይ…",
       "anonymousLabel": "ማንነቴ ሳይታወቅ አስገባ — ስሜንና የመገኛ መረጃዬን ይህን ቅሬታ ከሚያስተናግዱ ኃላፊዎች ደብቅ።",
       "canRequestMoreInfoLabel": "ኃላፊዎች ስለዚህ ቅሬታ ተጨማሪ መረጃ ለማግኘት ሊያነጋግሩኝ ይችላሉ።",
-      "canRequestMoreInfoWarning": "የመገኛ መረጃዎ አይቀመጥም። ኃላፊዎች ሊያገኙዎት አይችሉም፣ ስለዚህ ጉዳይም ማሳወቂያ አይደርስዎትም።"
+      "canRequestMoreInfoWarning": "የመገኛ መረጃዎ አይቀመጥም። ኃላፊዎች ሊያገኙዎት አይችሉም፣ ስለዚህ ጉዳይም ማሳወቂያ አይደርስዎትም።",
+      "voiceDescription": "የድምፅ ቅጂ ተያይዟል"
     },
     "identityStep": {
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
@@ -217,6 +218,19 @@
       "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",
       "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች"
+    },
+    "voice": {
+      "hint": "ከመጻፍ ይልቅ በራስዎ ቃላት ይናገሩ። ኃላፊዎች ቅጂውን አዳምጠው ወደ ትክክለኛው ክፍል ያስተላልፉታል።",
+      "record": "ቅዳ",
+      "recordAgain": "እንደገና ቅዳ",
+      "stop": "ቀረጻን አቁም",
+      "recording": "በመቅዳት ላይ {time} / {max}",
+      "processing": "ቅጂውን በማዘጋጀት ላይ…",
+      "playbackLabel": "የድምፅ ቅጂዎ",
+      "remove": "የድምፅ ቅጂውን አስወግድ",
+      "permissionDenied": "የማይክሮፎን መዳረሻ ታግዷል። በአሳሽዎ ቅንብር ውስጥ ፈቅደው እንደገና ይሞክሩ።",
+      "processingFailed": "ቅጂውን ማዘጋጀት አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "unsupported": "ይህ አሳሽ የድምፅ ቀረጻን አይደግፍም።"
     }
   },
   "commentsAndCommunication": {

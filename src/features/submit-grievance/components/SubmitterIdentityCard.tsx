@@ -176,6 +176,7 @@ export function SubmitterIdentityCard({
               value={submitterType}
               onChange={handleSubmitterTypeChange}
               disabled={submitterTypeLocked}
+              clearable={false}
               invalid={!!identity.errors.submitterType}
               describedBy={identity.errors.submitterType ? errorIdFor("submitter-type") : undefined}
             />
@@ -217,7 +218,7 @@ export function SubmitterIdentityCard({
           </div>
         </div>
         {submitterType === "individual" && <IndividualFarmerForm {...identityForm} />}
-        {submitterType === "cooperative" && <CooperativeFPOForm {...identityForm} />}
+        {(submitterType === "cooperative" || submitterType === "fpo") && <CooperativeFPOForm {...identityForm} />}
         {submitterType === "ngo" && <NGOForm {...identityForm} />}
         {submitterType === "woreda_kebele" && <WoredaKebeleForm {...identityForm} />}
         {submitterType === "development_agent" && <DevelopmentAgentForm {...identityForm} />}

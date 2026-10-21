@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -52,18 +52,6 @@ export function Header() {
 
       {/* Right Section */}
       <div className="flex items-center gap-5">
-
-        {/* Search Bar */}
-        <div className="relative hidden md:block w-80 lg:w-[400px]">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-slate-400 stroke-[2.5]" />
-          </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-4 py-2.5 bg-[#f1f5f9] border border-transparent rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-[#0b5c36]/20 focus:border-[#0b5c36] placeholder-slate-500 text-slate-700 transition-all outline-none"
-            placeholder="Search grievances..."
-          />
-        </div>
 
         {/* Notifications */}
         <NotificationBell />

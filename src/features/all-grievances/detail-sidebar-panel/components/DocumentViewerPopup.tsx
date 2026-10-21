@@ -34,6 +34,33 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
     };
   }, []);
 
+  // Inline preview (incl. voice recordings) streams through the backend's
+  // `/view` endpoint, which only serves attachments that scanned Clean.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+  useEffect(() => {
+    if (!isClean) return;
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    Promise.resolve(fetchAttachmentBlobUrl(attachment.name, false))
+      .then((url) => {
+        if (cancelled) {
+          if (url) URL.revokeObjectURL(url);
+          return;
+        }
+        objectUrl = url ?? null;
+        setPreviewUrl(objectUrl);
+      })
+      .catch((error) => {
+        logger.error("Failed to load attachment preview:", error);
+        if (!cancelled) setPreviewFailed(true);
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment.name, isClean]);
+
   // Dead while ATTACHMENT_DOWNLOAD_DISABLED is true (the button below stays
   // disabled), but wired to the real APIs now rather than left as an inline
   // comment — flipping that one flag is then the only change needed to bring
@@ -115,11 +142,28 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
 
         {/* Content */}
         <div className="flex-1 bg-gray-100 p-8 overflow-y-auto flex items-center justify-center min-h-[500px]">
-          <div className="bg-white w-full max-w-2xl h-[800px] shadow-sm border border-gray-200 rounded flex flex-col items-center justify-center text-gray-400 px-8 text-center">
-            <FileText className="h-16 w-16 mb-4 text-gray-300" />
-            <p className="text-lg font-medium text-gray-500">Preview unavailable</p>
-            <p className="text-sm mt-2 max-w-sm">{ATTACHMENT_BYTES_UNAVAILABLE_REASON}</p>
-          </div>
+          {previewUrl && attachment.mime_type.startsWith("audio/") ? (
+            <audio controls src={previewUrl} aria-label={attachment.file_name} className="w-full max-w-xl" />
+          ) : previewUrl && attachment.mime_type === "application/pdf" ? (
+            <iframe src={previewUrl} title={attachment.file_name} className="w-full max-w-2xl h-[70vh] bg-white rounded border border-gray-200" />
+          ) : previewUrl && attachment.mime_type.startsWith("image/") ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={previewUrl} alt={attachment.file_name} className="max-w-full max-h-[70vh] object-contain rounded border border-gray-200" />
+          ) : (
+            <div className="bg-white w-full max-w-2xl h-[800px] shadow-sm border border-gray-200 rounded flex flex-col items-center justify-center text-gray-400 px-8 text-center">
+              {isClean && !previewFailed ? (
+                <Loader2 className="h-10 w-10 animate-spin text-gray-300" aria-label="Loading preview" />
+              ) : (
+                <>
+                  <FileText className="h-16 w-16 mb-4 text-gray-300" />
+                  <p className="text-lg font-medium text-gray-500">Preview unavailable</p>
+                  <p className="text-sm mt-2 max-w-sm">
+                    {isClean ? "Could not load this file right now." : "Not available until the scan completes."}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -123,6 +123,8 @@ export default function SubmitGrievancePage() {
   // The files upload once the grievance is filed.
   const [attachments, setAttachments] = useState<WizardAttachment[]>([]);
 
+  const hasVoiceNote = attachments.some((a) => a.kind === "voice");
+
   // The step shown is the URL's, clamped to the furthest one the wizard's
   // data allows — opening `?step=3` directly, or reloading it once the
   // in-memory data is gone, lands on the first step that still needs work.
@@ -130,7 +132,7 @@ export default function SubmitGrievancePage() {
     requestedStep,
     firstIncompleteStep({
       submitterType, submissionChannel, identityValues,
-      serviceCategory, grievanceType, region, zone, woreda, description,
+      serviceCategory, grievanceType, region, zone, woreda, description, hasVoiceNote,
     })
   ) as WizardStep;
 
@@ -204,6 +206,7 @@ export default function SubmitGrievancePage() {
     grievanceType,
     associatedServiceProvider: serviceProvider,
     description,
+    hasVoiceNote,
     desiredOutcome,
   });
 

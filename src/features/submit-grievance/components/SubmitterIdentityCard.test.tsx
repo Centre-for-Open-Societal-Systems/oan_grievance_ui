@@ -195,12 +195,12 @@ describe('Step 1 — submission channel', () => {
     },
   };
 
-  it('has no clear (×) button on the required channel field, though the type field keeps its own', () => {
+  it('has no clear (×) button on the required type and channel fields', () => {
     renderCard({ initialType: 'individual', initialChannel: 'web' });
 
     const channel = byId('submission-channel').closest('div')!.parentElement!;
     expect(within(channel).queryByRole('button', { name: 'Clear selection' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Clear selection' })).toHaveLength(1);
+    expect(screen.queryAllByRole('button', { name: 'Clear selection' })).toHaveLength(0);
   });
 
   it('says so, and offers a retry, when the options request failed', async () => {

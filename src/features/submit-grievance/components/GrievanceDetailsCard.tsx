@@ -23,6 +23,7 @@ import {
   MAX_ATTACHMENTS_PER_CASE,
   type WizardAttachment,
 } from "@/lib/attachments";
+import { VoiceRecorder } from "./VoiceRecorder";
 import { getDescriptionError, getDetailsErrors, type DetailsField } from "../wizardSteps";
 
 function isPdf(item: WizardAttachment): boolean {
@@ -114,6 +115,9 @@ export function GrievanceDetailsCard({
   const dynamicGrievanceTypes = useAppSelector((state) =>
     selectGrievanceTypeOptions(state, serviceCategory)
   );
+  // A voice recording is filed under the catch-all "Other" category and type, which routes to manual triage.
+  const otherCategory = dynamicServiceCategories.find((o) => o.label.toLowerCase() === "other")?.value;
+  const otherTypes = useAppSelector((state) => selectGrievanceTypeOptions(state, otherCategory ?? ""));
   const metadataStatus = useAppSelector((state) => state.metadata.submitterOptionsStatus);
 
   const regions = useAreas({ level: "Region" });
@@ -126,6 +130,9 @@ export function GrievanceDetailsCard({
       void dispatch(fetchSubmitterOptionsThunk());
     }
   }, [dispatch, metadataStatus]);
+
+  const voiceNote = attachments.find((a) => a.kind === "voice") ?? null;
+  const hasVoiceNote = voiceNote !== null;
 
   // Which attachment's preview modal is open, if any — null when closed.
   const [previewItem, setPreviewItem] = useState<WizardAttachment | null>(null);
@@ -180,7 +187,8 @@ export function GrievanceDetailsCard({
   const handleNext = () => {
     const errors: FieldErrors<DetailsField> = getDetailsErrors(
       { serviceCategory, grievanceType, region, zone, woreda, description },
-      detailsMessages
+      detailsMessages,
+      hasVoiceNote
     );
 
     fieldErrors.setAll(errors);
@@ -216,6 +224,23 @@ export function GrievanceDetailsCard({
       ...filesToStage.map((file) => ({ key: crypto.randomUUID(), file, fileName: file.name })),
     ]);
   };
+
+  const handleVoiceRecorded = (file: File) => {
+    setAttachments((prev) => [
+      ...prev.filter((item) => item.kind !== "voice"),
+      { key: crypto.randomUUID(), file, fileName: file.name, kind: "voice" },
+    ]);
+    fieldErrors.setError("description", null);
+    const otherType = otherTypes.find((o) => o.label.toLowerCase() === "other")?.value;
+    if (otherCategory && otherType) {
+      setServiceCategory(otherCategory);
+      setGrievanceType(otherType);
+      fieldErrors.setError("serviceCategory", null);
+      fieldErrors.setError("grievanceType", null);
+    }
+  };
+
+  const handleRemoveVoice = () => setAttachments((prev) => prev.filter((item) => item.kind !== "voice"));
 
   const handleRemoveAttachment = (key: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -425,25 +450,31 @@ export function GrievanceDetailsCard({
           {/* Description */}
           <div>
             <label htmlFor="grievance-description" className="block text-sm font-semibold text-gray-800 mb-2">
-              Description <span className="text-red-500">*</span>
+              Description {!hasVoiceNote && <span className="text-red-500">*</span>}
             </label>
-            <textarea
-              id="grievance-description"
-              rows={4}
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                // Re-check as they type while it's showing an error, so it clears the moment it's long enough.
-                if (fieldErrors.errors.description) {
-                  fieldErrors.setError("description", descriptionErrorFor(e.target.value));
-                }
-              }}
-              onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
-              aria-invalid={fieldErrors.errors.description ? true : undefined}
-              aria-describedby={fieldErrors.errors.description ? errorIdFor("grievance-description") : undefined}
-              placeholder="Describe the issue clearly — what happened, when, where, and who was involved. Include dates, amounts, and reference numbers where available."
-              className={`w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
-            />
+            <VoiceRecorder
+              recording={voiceNote?.file ?? null}
+              onRecorded={handleVoiceRecorded}
+              onRemove={handleRemoveVoice}
+            >
+              <textarea
+                id="grievance-description"
+                rows={4}
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  // Re-check as they type while it's showing an error, so it clears the moment it's long enough.
+                  if (fieldErrors.errors.description) {
+                    fieldErrors.setError("description", descriptionErrorFor(e.target.value));
+                  }
+                }}
+                onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
+                aria-invalid={fieldErrors.errors.description ? true : undefined}
+                aria-describedby={fieldErrors.errors.description ? errorIdFor("grievance-description") : undefined}
+                placeholder="Describe the issue clearly — what happened, when, where, and who was involved. Include dates, amounts, and reference numbers where available."
+                className={`w-full bg-white border border-gray-300 text-gray-900 py-3 pl-4 pr-14 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
+              />
+            </VoiceRecorder>
             {fieldErrors.errors.description && (
               <FieldError id={errorIdFor("grievance-description")}>{fieldErrors.errors.description}</FieldError>
             )}
