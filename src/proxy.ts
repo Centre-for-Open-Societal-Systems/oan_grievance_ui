@@ -47,6 +47,10 @@ function buildCsp(nonce: string): string {
     // it's ever uploaded) — without it the browser blocks its own object
     // URL and the preview modal shows nothing.
     `img-src 'self' data: blob: https://i.pravatar.cc`,
+    // blob: the voice recorder's playback and the officer's attachment viewer play and
+    // preview files through object URLs (audio element / PDF iframe).
+    `media-src 'self' blob:`,
+    `frame-src 'self' blob:`,
     `font-src 'self'`,
     `connect-src 'self'${realtimeConnectSrc()}`,
     `object-src 'none'`,

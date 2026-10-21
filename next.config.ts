@@ -12,7 +12,8 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    // microphone=(self): the Submit Grievance voice recorder (VoiceRecorder.tsx) needs it.
+    value: "camera=(), microphone=(self), geolocation=(), interest-cohort=()",
   },
   // Meaningless (and unenforceable) over plain HTTP in development.
   ...(process.env.NODE_ENV === "production"
