@@ -20,7 +20,14 @@ const inputClass =
     'w-full bg-white border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400';
 
 /** The installation-wide SLA policy (GET/PATCH /api/v1/sla-policy). */
-export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean }) {
+export function GlobalSlaPolicyCard({
+    canManage = true,
+    onMaxDeferralDaysChange,
+}: {
+    canManage?: boolean;
+    /** Called with the saved "Max SLA Deferral (days)" once the policy loads and after each save, so the category cards can scale their bars to it. */
+    onMaxDeferralDaysChange?: (days: number) => void;
+}) {
     const t = useTranslations('admin.slaPolicy');
     const [maxDeferralDays, setMaxDeferralDays] = useState('');
     const [threshold, setThreshold] = useState('');
@@ -40,6 +47,7 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
                 setThreshold(String(data.policy.auto_escalation_threshold));
                 setDeferralPolicy(approvalFromBoolean(data.policy.requires_supervisor_approval));
                 setLoaded(true);
+                onMaxDeferralDaysChange?.(data.policy.max_deferral_days);
             })
             .catch((err) => {
                 if (controller.signal.aborted) return;
@@ -57,6 +65,7 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
                 if (!controller.signal.aborted) setIsLoading(false);
             });
         return () => controller.abort();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- the callback is only a notification; re-fetching on its identity would loop
     }, [t]);
 
     const handleSave = async () => {
@@ -89,6 +98,7 @@ export function GlobalSlaPolicyCard({ canManage = true }: { canManage?: boolean 
             setMaxDeferralDays(String(data.policy.max_deferral_days));
             setThreshold(String(data.policy.auto_escalation_threshold));
             setDeferralPolicy(approvalFromBoolean(data.policy.requires_supervisor_approval));
+            onMaxDeferralDaysChange?.(data.policy.max_deferral_days);
             setMessage({ kind: 'success', text: t('saved') });
         } catch (err) {
             setMessage({

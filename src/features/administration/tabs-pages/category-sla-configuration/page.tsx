@@ -19,27 +19,22 @@ import { fetchSlaConfigurations, updateSlaConfiguration } from './api/slaSetting
 import { AddCategoryModal } from './components/AddCategoryModal';
 import { GlobalSlaPolicyCard } from './components/GlobalSlaPolicyCard';
 import { SlaCategoryCard } from './components/SlaCategoryCard';
+import { DEFAULT_SLA_BAR_REFERENCE_DAYS, slaBarPercent } from './components/slaBar';
 import type { GrievanceTypeRecord, ServiceCategoryRecord } from './components/taxonomyTypes';
 import type { SlaConfiguration } from './components/slaSettingsTypes';
 import { CATEGORY_COLORS, type SlaCategory } from './components/types';
-
-/**
- * A fixed reference window for the card's length-of-SLA bar, not a business rule — just
- * something stable to compare against. Previously this was the longest `sla_days` among
- * whichever categories happened to be loaded, so every bar's meaning silently shifted
- * depending on what else was on the page (a 5-day SLA read as "3/4 full" purely because
- * the longest other category was 7 days). 30 matches the Global SLA Policy card's own
- * `max_deferral_days` default shown above it on this same page, so the two numbers agree
- * instead of implying two different "typical maximums".
- */
-const SLA_BAR_REFERENCE_DAYS = 30;
 
 /**
  * One card per category: its SLA window, auto-escalate and notify-on-breach
  * flags (GET /api/v1/sla-configurations), shared by every department that
  * serves the category. The card names those departments.
  */
-function toSlaCategory(config: SlaConfiguration, colorIndex: number, departmentNames: string): SlaCategory {
+function toSlaCategory(
+    config: SlaConfiguration,
+    colorIndex: number,
+    departmentNames: string,
+    barReferenceDays: number
+): SlaCategory {
     return {
         id: config.name,
         category: config.service_category,
@@ -49,7 +44,7 @@ function toSlaCategory(config: SlaConfiguration, colorIndex: number, departmentN
         slaDays: config.sla_days,
         autoEscalate: config.auto_escalate,
         notifyOnBreach: config.notify_on_breach,
-        progressPercentage: Math.min(100, Math.round((config.sla_days / SLA_BAR_REFERENCE_DAYS) * 100)),
+        progressPercentage: slaBarPercent(config.sla_days, barReferenceDays),
     };
 }
 
@@ -68,6 +63,10 @@ export default function CategorySlaConfigurationPage() {
     const [isAdding, setIsAdding] = useState(false);
     const [notice, setNotice] = useState<string | null>(null);
     const { data: grievanceOptions } = useGrievanceOptions();
+    // The Global SLA Policy's "Max SLA Deferral (days)": each category bar shows its SLA against it.
+    // Until it loads (or if it can't) the bars use a 30-day scale.
+    const [globalSlaDays, setGlobalSlaDays] = useState<number | null>(null);
+    const barReferenceDays = globalSlaDays ?? DEFAULT_SLA_BAR_REFERENCE_DAYS;
 
     const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
@@ -113,10 +112,11 @@ export default function CategorySlaConfigurationPage() {
             toSlaCategory(
                 config,
                 colorOf(config.service_category),
-                config.departments.map((id) => departments.get(id) ?? id).join(', ')
+                config.departments.map((id) => departments.get(id) ?? id).join(', '),
+                barReferenceDays
             )
         );
-    }, [categories, configs, grievanceOptions]);
+    }, [categories, configs, grievanceOptions, barReferenceDays]);
 
     const typesByCategory = useMemo(() => {
         const grouped = new Map<string, GrievanceTypeRecord[]>();
@@ -163,7 +163,7 @@ export default function CategorySlaConfigurationPage() {
             <div className="flex-1 overflow-y-auto p-6 flex flex-col [scrollbar-color:#16A34A_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#16A34A] [&::-webkit-scrollbar-thumb]:rounded-full">
 
                 {/* Section 1: Global SLA Policy — GlobalSlaPolicyCard carries its own heading. */}
-                <GlobalSlaPolicyCard canManage={canManage} />
+                <GlobalSlaPolicyCard canManage={canManage} onMaxDeferralDaysChange={setGlobalSlaDays} />
 
                 {notice && (
                     <div
