@@ -24,6 +24,8 @@ import {
   type WizardAttachment,
 } from "@/lib/attachments";
 import { VoiceRecorder } from "./VoiceRecorder";
+import { ServiceProviderCombobox } from "./ServiceProviderCombobox";
+import type { ServiceProviderRef } from "../api/serviceProviderApi";
 import { getDescriptionError, getDetailsErrors, type DetailsField } from "../wizardSteps";
 
 function isPdf(item: WizardAttachment): boolean {
@@ -63,9 +65,9 @@ interface GrievanceDetailsCardProps {
   /** What the submitter would like done about it — optional. Sent as `desired_outcome`. */
   desiredOutcome: string;
   setDesiredOutcome: (value: string) => void;
-  /** The store, cooperative, bank or market the grievance is about — optional. Sent as `associated_service_provider`. */
-  serviceProvider: string;
-  setServiceProvider: (value: string) => void;
+  /** The store, cooperative, bank or market the grievance is about — optional. Chosen from the directory; its ID is sent as `associated_service_provider`. */
+  serviceProvider: ServiceProviderRef | null;
+  setServiceProvider: (value: ServiceProviderRef | null) => void;
   // The staged attachment list — owned by page.tsx, not local state here, so
   // it survives this component unmounting on every Step 1<->2 navigation and
   // so Step 3's review card can see it too. The files upload only once the
@@ -487,16 +489,7 @@ export function GrievanceDetailsCard({
             <label htmlFor="grievance-service-provider" className="block text-sm font-semibold text-gray-800 mb-2">
               Service Provider / Branch / Office Name
             </label>
-            <input
-              id="grievance-service-provider"
-              type="text"
-              // The backend stores this in a 140-character field.
-              maxLength={140}
-              value={serviceProvider}
-              onChange={(e) => setServiceProvider(e.target.value)}
-              placeholder="Enter Input store, cooperative, bank, or market name (if applicable)"
-              className="w-full bg-white border border-gray-300 text-gray-900 py-2.5 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm"
-            />
+            <ServiceProviderCombobox id="grievance-service-provider" value={serviceProvider} onChange={setServiceProvider} />
           </div>
 
           {/* Description */}

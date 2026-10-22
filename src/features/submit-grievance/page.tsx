@@ -32,6 +32,7 @@ import { ReviewAndSubmitCard } from "./components/ReviewAndSubmitCard";
 import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
 import { OrganisationVerificationNotice } from "./components/OrganisationVerificationNotice";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
+import type { ServiceProviderRef } from "./api/serviceProviderApi";
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
   return (
@@ -114,7 +115,7 @@ export default function SubmitGrievancePage() {
   const [kebele, setKebele] = useState<AreaRef | null>(null);
   const [description, setDescription] = useState("");
   const [desiredOutcome, setDesiredOutcome] = useState("");
-  const [serviceProvider, setServiceProvider] = useState("");
+  const [serviceProvider, setServiceProvider] = useState<ServiceProviderRef | null>(null);
   // The attachment list — lifted up here (not kept local to
   // GrievanceDetailsCard) for two reasons: page.tsx conditionally unmounts
   // that component on every Step 1<->2 navigation (`{currentStep === 2 &&
@@ -171,7 +172,7 @@ export default function SubmitGrievancePage() {
     setKebele(null);
     setDescription("");
     setDesiredOutcome("");
-    setServiceProvider("");
+    setServiceProvider(null);
     setAttachments([]);
     // A fresh submission key for the next grievance — reusing the old one
     // would make the backend treat the next, different grievance as a retry
@@ -204,7 +205,7 @@ export default function SubmitGrievancePage() {
     kebele: kebele?.name,
     serviceCategoryLabel: serviceCategory ? labelFor(serviceCategories, serviceCategory) : undefined,
     grievanceType,
-    associatedServiceProvider: serviceProvider,
+    associatedServiceProvider: serviceProvider?.id,
     description,
     hasVoiceNote,
     desiredOutcome,
@@ -312,7 +313,7 @@ export default function SubmitGrievancePage() {
             kebele={kebele}
             description={description}
             desiredOutcome={desiredOutcome}
-            serviceProvider={serviceProvider}
+            serviceProvider={serviceProvider?.name}
             attachments={attachments}
             submissionBlockedMessage={submissionBlockedMessage}
           />
