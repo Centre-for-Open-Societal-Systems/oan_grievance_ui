@@ -29,7 +29,7 @@ import { LoginForm } from './LoginForm';
 
 const SUBMITTER = 'Grievance Submitter';
 
-async function signInAs(user: { email: string; roles: string[]; type?: string }) {
+async function signInAs(user: { email: string; roles: string[]; type?: string; organisation?: { legalName: string } }) {
   loginUser.mockResolvedValue(user);
   getMe.mockResolvedValue(user);
   render(
@@ -65,6 +65,18 @@ describe('where signing in lands', () => {
     // Nothing in localStorage: the type comes from the account (registered as NGO at sign-up).
     expect(localStorage.length).toBe(0);
     expect(await signInAs({ email: 'new@ngo.org', roles: [SUBMITTER], type: 'NGO' })).toBe('/ngo');
+  });
+
+  it('lands an NGO / FPO representative on Submit Grievance once the organisation is registered, whatever its status', async () => {
+    const organisation = { legalName: 'Farmer Production Pvt. Ltd' };
+    expect(await signInAs({ email: 'rep@fpo.org', roles: [SUBMITTER], type: 'FPO', organisation })).toBe(
+      '/submit-grievance'
+    );
+    cleanup();
+    push.mockClear();
+    expect(await signInAs({ email: 'rep@ngo.org', roles: [SUBMITTER], type: 'NGO', organisation })).toBe(
+      '/submit-grievance'
+    );
   });
 
   it('keeps farmers on Submit Grievance', async () => {

@@ -115,10 +115,13 @@ export function LoginForm({ staffSignInEnabled }: LoginFormProps) {
 
     if (loginThunk.fulfilled.match(result)) {
       const returnUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('returnUrl') : null;
-      // An NGO / FPO representative lands on their organisation's screen, everyone else
-      // on their role's home — decided by who signed in, not by which form they used.
+      // An NGO / FPO representative lands on their organisation's screen until it is registered
+      // (`/auth/me` carries the organisation once it is), everyone else on their role's home —
+      // decided by who signed in, not by which form they used.
       const user = result.payload;
-      router.push(safeReturnPath(returnUrl) || homeRouteForUser(user.roles ?? [], organisationKindOf(user)));
+      router.push(
+        safeReturnPath(returnUrl) || homeRouteForUser(user.roles ?? [], organisationKindOf(user), Boolean(user.organisation))
+      );
       return;
     }
 

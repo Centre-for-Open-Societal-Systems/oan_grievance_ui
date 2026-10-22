@@ -144,6 +144,11 @@ describe('homeRouteForUser', () => {
     expect(homeRouteForUser([], 'ngo')).toBe('/ngo');
   });
 
+  it('sends a representative whose organisation is already registered to Submit Grievance', () => {
+    expect(homeRouteForUser([ROLES.SUBMITTER], 'ngo', true)).toBe('/submit-grievance');
+    expect(homeRouteForUser([ROLES.SUBMITTER], 'fpo', true)).toBe('/submit-grievance');
+  });
+
   it('leaves everyone else on the home route of their role', () => {
     expect(homeRouteForUser([ROLES.SUBMITTER], null)).toBe('/submit-grievance');
     expect(homeRouteForUser([ROLES.OFFICER], null)).toBe('/all-grievances');

@@ -192,16 +192,26 @@ export function homeRouteForRoles(roles: string[]): string {
  * Where a user lands after signing in. Same as `homeRouteForRoles`, except an
  * NGO or FPO representative — someone whose highest role is Submitter and whose
  * submitter type is an organisation (see `organisationKindOf`) — lands on
- * their organisation's onboarding screen instead of Submit Grievance. Staff
- * roles never take the organisation route, whatever their profile type says.
+ * their organisation's onboarding screen instead of Submit Grievance, until
+ * the organisation is registered. Once it is (`organisationRegistered`), the
+ * onboarding screen has nothing left to ask, so they land on Submit Grievance
+ * like any other submitter; the status screen stays reachable from the sidebar.
+ * Staff roles never take the organisation route, whatever their profile type says.
  *
- * `organisationKind` is a parameter, not looked up here, so this stays a pure
- * function of its inputs and importable from `proxy.ts`.
+ * `organisationKind` and `organisationRegistered` are parameters, not looked
+ * up here, so this stays a pure function of its inputs and importable from
+ * `proxy.ts`.
  */
-export function homeRouteForUser(roles: string[], organisationKind: OrganisationKind | null): string {
+export function homeRouteForUser(
+  roles: string[],
+  organisationKind: OrganisationKind | null,
+  organisationRegistered = false
+): string {
   const held = effectiveRoles(roles);
   const primary = ROLE_PRIORITY.find((role) => held.includes(role));
-  if (primary === ROLES.SUBMITTER && organisationKind) return ORGANISATION_ROUTE[organisationKind];
+  if (primary === ROLES.SUBMITTER && organisationKind && !organisationRegistered) {
+    return ORGANISATION_ROUTE[organisationKind];
+  }
   return homeRouteForRoles(roles);
 }
 
