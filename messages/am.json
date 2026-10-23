@@ -597,6 +597,17 @@
     "title": "ትንተናና ሪፖርት",
     "subtitle": "የግብርና ቅሬታ አፈጻጸም መለኪያዎች — የኢትዮጵያ OAN፣ {month}",
     "monthLabel": "የሪፖርት ወር",
+    "dataAsOf": "መረጃው እስከ {time}",
+    "filters": {
+      "title": "ማጣሪያዎች",
+      "region": "ክልል",
+      "category": "የአገልግሎት ምድብ",
+      "department": "ክፍል",
+      "allRegions": "ሁሉም ክልሎች",
+      "allCategories": "ሁሉም ምድቦች",
+      "allDepartments": "ሁሉም ክፍሎች",
+      "clear": "ማጣሪያዎችን አጽዳ"
+    },
     "loading": "ትንተናውን በመጫን ላይ…",
     "loadFailed": "ትንተናውን መጫን አልተቻለም።",
     "forbidden": "ትንተናውን የማየት ፈቃድ የለዎትም።",

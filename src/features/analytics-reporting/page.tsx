@@ -2,8 +2,13 @@
 
 import { useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { ROLES } from "@/features/auth/rbac";
+import { selectUser } from "@/features/auth/store/authSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAnalyticsFilterOptions } from "./hooks/useAnalyticsFilterOptions";
 import { useAnalyticsReport } from "./hooks/useAnalyticsReport";
-import type { AnalyticsReport } from "./types";
+import { NO_FILTERS, type AnalyticsFilters, type AnalyticsReport } from "./types";
+import { AnalyticsFiltersBar } from "./components/AnalyticsFiltersBar";
 import { AnalyticsSkeleton } from "./components/AnalyticsSkeleton";
 import { AvgResolutionChart } from "./components/AvgResolutionChart";
 import { CARD_WHITE } from "./components/cardStyles";
@@ -82,7 +87,11 @@ export function AnalyticsReportingPage() {
   const locale = useLocale();
   const [maxMonth] = useState(currentMonth);
   const [month, setMonth] = useState(maxMonth);
-  const state = useAnalyticsReport(month, locale);
+  const [filters, setFilters] = useState<AnalyticsFilters>(NO_FILTERS);
+  // Only an admin can narrow by department: the service answers 404 for that list to anyone else.
+  const isAdmin = useAppSelector(selectUser)?.roles.includes(ROLES.ADMIN) ?? false;
+  const filterOptions = useAnalyticsFilterOptions(isAdmin);
+  const state = useAnalyticsReport(month, filters, locale);
   const bodyRef = useRef<HTMLDivElement>(null);
 
   // The Retry button of a failed page is replaced by the loading state; move focus to
@@ -94,7 +103,13 @@ export function AnalyticsReportingPage() {
 
   return (
     <div className="flex flex-col gap-6 font-sans pb-2">
-      <TopHeader month={month} maxMonth={maxMonth} onMonthChange={setMonth} />
+      <TopHeader
+        month={month}
+        maxMonth={maxMonth}
+        onMonthChange={setMonth}
+        asOf={state.status === "ready" ? state.asOf : null}
+      />
+      <AnalyticsFiltersBar options={filterOptions} filters={filters} onChange={setFilters} />
 
       <div ref={bodyRef} tabIndex={-1} className="flex flex-col gap-6 outline-none">
         {state.status === "ready" && <AnalyticsSections report={state.report} onRetry={state.retry} />}

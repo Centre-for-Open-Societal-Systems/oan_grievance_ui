@@ -59,6 +59,29 @@ export interface PerformanceScoreAxis {
   basis: number;
 }
 
+/** One thing a filter can be set to. */
+export interface FilterOption {
+  value: string;
+  label: string;
+}
+
+/** The filters in force; an empty value means "all". */
+export interface AnalyticsFilters {
+  region: string;
+  serviceCategory: string;
+  assignedDept: string;
+}
+
+export const NO_FILTERS: AnalyticsFilters = { region: '', serviceCategory: '', assignedDept: '' };
+
+/** What each filter offers; a list is null when it could not be loaded, and that control is left out. */
+export interface AnalyticsFilterOptions {
+  regions: FilterOption[] | null;
+  categories: FilterOption[] | null;
+  /** Admin only. */
+  departments: FilterOption[] | null;
+}
+
 /** What the page draws. A chart that is unavailable is `null` — never zeros, which would read as "no cases". */
 export interface AnalyticsReport {
   kpis: PerformanceKpi[] | null;

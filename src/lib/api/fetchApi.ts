@@ -271,6 +271,11 @@ export async function fetchApi<T = unknown>(
     if (!('message' in unwrapped) && typeof responseData?.message === 'string') {
       extra.message = responseData.message;
     }
+    // `GET /api/v1/charts` keeps when each chart was refreshed (`meta.as_of`) beside `data`. Only a
+    // `meta` object is merged in, and never over a key the data has itself.
+    if (!('meta' in unwrapped) && responseData?.meta && typeof responseData.meta === 'object') {
+      extra.meta = responseData.meta;
+    }
     if (Object.keys(extra).length > 0) {
       return { ...unwrapped, ...extra } as T;
     }

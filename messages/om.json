@@ -597,6 +597,17 @@
     "title": "Xiinxala fi Gabaasa",
     "subtitle": "Safartuuwwan raawwii komii damee qonnaa — OAN Itoophiyaa, {month}",
     "monthLabel": "Ji’a gabaasaa",
+    "dataAsOf": "Odeeffannoon hanga {time}",
+    "filters": {
+      "title": "Calleewwan",
+      "region": "Naannoo",
+      "category": "Ramaddii tajaajilaa",
+      "department": "Kutaa",
+      "allRegions": "Naannoowwan hundaa",
+      "allCategories": "Ramaddiiwwan hundaa",
+      "allDepartments": "Kutaawwan hundaa",
+      "clear": "Calleewwan haqi"
+    },
     "loading": "Xiinxala fe’aa jira…",
     "loadFailed": "Xiinxala fe’uun hin danda’amne.",
     "forbidden": "Xiinxala ilaaluuf hayyama hin qabdan.",

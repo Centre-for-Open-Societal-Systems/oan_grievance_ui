@@ -10,6 +10,8 @@ interface TopHeaderProps {
   /** Latest month that can be picked (`YYYY-MM`) — the service refuses a future one. */
   maxMonth: string;
   onMonthChange: (month: string) => void;
+  /** ISO timestamp the data was last refreshed, once there is data. */
+  asOf?: string | null;
 }
 
 /** `2026-04` → a date in that month, safe from time-zone shifts. */
@@ -18,18 +20,24 @@ function monthStart(month: string): Date | null {
   return match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)) : null;
 }
 
-export function TopHeader({ month, maxMonth, onMonthChange }: TopHeaderProps) {
+export function TopHeader({ month, maxMonth, onMonthChange, asOf = null }: TopHeaderProps) {
   const t = useTranslations("analytics");
   const format = useFormatter();
   const inputId = useId();
   const start = monthStart(month);
   const monthName = start ? format.dateTime(start, { month: "long", year: "numeric", timeZone: "UTC" }) : month;
+  const refreshed = asOf && !Number.isNaN(Date.parse(asOf)) ? new Date(asOf) : null;
 
   return (
     <div className={`${CARD_WHITE} ${CARD_HOVER} p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`}>
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
         <p className="text-gray-500 text-sm mt-2">{t("subtitle", { month: monthName })}</p>
+        {refreshed && (
+          <p className="text-gray-400 text-xs mt-1">
+            {t("dataAsOf", { time: format.dateTime(refreshed, { dateStyle: "medium", timeStyle: "short" }) })}
+          </p>
+        )}
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor={inputId} className="text-xs font-semibold text-gray-600">

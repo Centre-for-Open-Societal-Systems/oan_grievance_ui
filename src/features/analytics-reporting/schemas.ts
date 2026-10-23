@@ -78,6 +78,17 @@ export const ANALYTICS_CHART_SCHEMAS = {
   grvPerformanceScore: z.array(performanceScoreRowSchema),
 } as const;
 
+/** The lists the filters offer: every value that has cases, most cases first. */
+export const FILTER_OPTION_SCHEMAS = {
+  grvFilterRegions: z.array(
+    z.object({ region_code: z.string().min(1), region_name: z.string().nullable().optional(), grievances: count })
+  ),
+  grvFilterCategories: z.array(z.object({ category: z.string().min(1), grievances: count })),
+  grvFilterDepartments: z.array(z.object({ department: z.string().min(1), grievances: count })),
+} as const;
+
+export type FilterOptionChartId = keyof typeof FILTER_OPTION_SCHEMAS;
+
 export type AnalyticsChartId = keyof typeof ANALYTICS_CHART_SCHEMAS;
 
 export type PerformanceKpiRow = z.infer<typeof performanceKpiRowSchema>;

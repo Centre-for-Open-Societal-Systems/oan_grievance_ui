@@ -1,5 +1,12 @@
 import { fetchApi } from '@/lib/api';
-import { ANALYTICS_CHART_SCHEMAS, type AnalyticsChartId, type AnalyticsCharts } from '../schemas';
+import {
+  ANALYTICS_CHART_SCHEMAS,
+  FILTER_OPTION_SCHEMAS,
+  type AnalyticsChartId,
+  type AnalyticsCharts,
+  type FilterOptionChartId,
+} from '../schemas';
+import type { AnalyticsFilterOptions, AnalyticsFilters } from '../types';
 
 export const ANALYTICS_CHART_IDS = Object.keys(ANALYTICS_CHART_SCHEMAS) as AnalyticsChartId[];
 
@@ -11,7 +18,16 @@ const ESTABLISHED_CHART_IDS = ANALYTICS_CHART_IDS.filter(
 export interface AnalyticsRequestOptions {
   /** `YYYY-MM`. Drives the KPI cards, and the weekly and category charts through `from`/`to`; the service uses its own windows when it is left out. */
   month?: string;
+  /** Narrow every chart to one region, service category or department. An empty value means all. */
+  filters?: AnalyticsFilters;
   signal?: AbortSignal;
+}
+
+/** The parsed charts, and when the oldest of them was last refreshed. */
+export interface AnalyticsResponse {
+  charts: AnalyticsCharts;
+  /** ISO timestamp, or null when the service did not say. */
+  asOf: string | null;
 }
 
 /**
@@ -32,6 +48,26 @@ export function parseAnalyticsCharts(raw: unknown): AnalyticsCharts {
     (parsed as Record<AnalyticsChartId, unknown>)[id] = result.success ? result.data : null;
   }
   return parsed;
+}
+
+/**
+ * When the data on screen was last refreshed: the oldest `meta.as_of` among the
+ * charts, since the page is only as fresh as its stalest chart. Null when the
+ * service sent none that is a date.
+ */
+export function parseAsOf(raw: unknown): string | null {
+  const meta = (raw as { meta?: { as_of?: unknown } } | null)?.meta;
+  const asOf = meta?.as_of;
+  if (!asOf || typeof asOf !== 'object' || Array.isArray(asOf)) return null;
+
+  let oldest: { time: number; iso: string } | null = null;
+  for (const value of Object.values(asOf)) {
+    if (typeof value !== 'string') continue;
+    const time = Date.parse(value);
+    if (Number.isNaN(time)) continue;
+    if (!oldest || time < oldest.time) oldest = { time, iso: value };
+  }
+  return oldest?.iso ?? null;
 }
 
 function isoDate(date: Date): string {
@@ -55,13 +91,40 @@ export function monthRange(month: string, today = new Date()): { from: string; t
   return { from, to: lastDay < todayDate ? lastDay : todayDate };
 }
 
+/** The query string of a charts request. */
+function chartsQuery(ids: string[], options: AnalyticsRequestOptions): string {
+  const params = new URLSearchParams({ charts: ids.join(',') });
+  if (options.month) {
+    params.set('month', options.month);
+    const range = monthRange(options.month);
+    if (range) {
+      params.set('from', range.from);
+      params.set('to', range.to);
+    }
+  }
+  const { region, serviceCategory, assignedDept } = options.filters ?? {};
+  if (region) params.set('region', region);
+  if (serviceCategory) params.set('service_category', serviceCategory);
+  if (assignedDept) params.set('assigned_dept', assignedDept);
+  // URLSearchParams would encode the commas in `charts`; the service accepts that, but keep the URL readable.
+  return params.toString().replace(/%2C/g, ',');
+}
+
+async function requestCharts(ids: AnalyticsChartId[], options: AnalyticsRequestOptions): Promise<AnalyticsResponse> {
+  const raw = await fetchApi<unknown>(`/api/v1/charts?${chartsQuery(ids, options)}`, {
+    method: 'GET',
+    signal: options.signal,
+  });
+  return { charts: parseAnalyticsCharts(raw), asOf: parseAsOf(raw) };
+}
+
 /**
  * The Analytics & Reporting charts in one round trip. An officer gets the same
  * charts narrowed to their own desks; an admin gets everything.
  *
  * Corresponding REST endpoint: GET /api/v1/charts?charts=...&month=YYYY-MM&from=YYYY-MM-DD&to=YYYY-MM-DD
  */
-export async function fetchAnalyticsCharts(options: AnalyticsRequestOptions = {}): Promise<AnalyticsCharts> {
+export async function fetchAnalyticsCharts(options: AnalyticsRequestOptions = {}): Promise<AnalyticsResponse> {
   try {
     return await requestCharts(ANALYTICS_CHART_IDS, options);
   } catch (err) {
@@ -72,22 +135,35 @@ export async function fetchAnalyticsCharts(options: AnalyticsRequestOptions = {}
   }
 }
 
-async function requestCharts(ids: AnalyticsChartId[], options: AnalyticsRequestOptions): Promise<AnalyticsCharts> {
-  const params = new URLSearchParams({ charts: ids.join(',') });
-  if (options.month) {
-    params.set('month', options.month);
-    const range = monthRange(options.month);
-    if (range) {
-      params.set('from', range.from);
-      params.set('to', range.to);
-    }
-  }
-  // URLSearchParams would encode the commas in `charts`; the service accepts that, but keep the URL readable.
-  const query = params.toString().replace(/%2C/g, ',');
+/**
+ * What the filters can be set to. Each list is parsed on its own, so one that
+ * fails leaves its control out instead of breaking the others. The department
+ * list is for an admin only: the service answers 404 to anyone else, and that
+ * would fail the whole request.
+ */
+export async function fetchFilterOptions(
+  options: { includeDepartments: boolean; signal?: AbortSignal }
+): Promise<AnalyticsFilterOptions> {
+  const ids: FilterOptionChartId[] = ['grvFilterRegions', 'grvFilterCategories'];
+  if (options.includeDepartments) ids.push('grvFilterDepartments');
 
-  const raw = await fetchApi<unknown>(`/api/v1/charts?${query}`, {
+  const raw = await fetchApi<Record<string, unknown> | null>(`/api/v1/charts?charts=${ids.join(',')}`, {
     method: 'GET',
     signal: options.signal,
   });
-  return parseAnalyticsCharts(raw);
+  const body = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+
+  const regions = FILTER_OPTION_SCHEMAS.grvFilterRegions.safeParse(body.grvFilterRegions);
+  const categories = FILTER_OPTION_SCHEMAS.grvFilterCategories.safeParse(body.grvFilterCategories);
+  const departments = FILTER_OPTION_SCHEMAS.grvFilterDepartments.safeParse(body.grvFilterDepartments);
+
+  return {
+    regions: regions.success
+      ? regions.data.map((row) => ({ value: row.region_code, label: row.region_name?.trim() || row.region_code }))
+      : null,
+    categories: categories.success ? categories.data.map((row) => ({ value: row.category, label: row.category })) : null,
+    departments: departments.success
+      ? departments.data.map((row) => ({ value: row.department, label: row.department }))
+      : null,
+  };
 }

@@ -597,6 +597,17 @@
     "title": "Analytics & Reporting",
     "subtitle": "Agriculture grievance performance metrics — OAN Ethiopia, {month}",
     "monthLabel": "Report month",
+    "dataAsOf": "Data as of {time}",
+    "filters": {
+      "title": "Filters",
+      "region": "Region",
+      "category": "Service category",
+      "department": "Department",
+      "allRegions": "All regions",
+      "allCategories": "All categories",
+      "allDepartments": "All departments",
+      "clear": "Clear filters"
+    },
     "loading": "Loading analytics…",
     "loadFailed": "Could not load the analytics.",
     "forbidden": "You do not have access to the analytics.",

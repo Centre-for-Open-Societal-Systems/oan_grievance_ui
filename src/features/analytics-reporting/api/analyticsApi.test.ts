@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchAnalyticsCharts, monthRange, parseAnalyticsCharts } from './analyticsApi';
+import {
+  fetchAnalyticsCharts,
+  fetchFilterOptions,
+  monthRange,
+  parseAnalyticsCharts,
+  parseAsOf,
+} from './analyticsApi';
 
 describe('fetchAnalyticsCharts', () => {
   const originalFetch = global.fetch;
@@ -21,14 +27,22 @@ describe('fetchAnalyticsCharts', () => {
             grvPerformanceKpis: [{ metric: 'resolution_rate', value: 37.5, unit: 'percent', delta: 4.2 }],
             grvWeeklyTrend: null,
           },
-          meta: { as_of: {}, errors: { grvWeeklyTrend: 'This chart could not be built' } },
+          meta: {
+            as_of: {
+              grvPerformanceKpis: '2026-10-22T10:15:00+03:00',
+              grvWeeklyTrend: '2026-10-22T09:45:00+03:00',
+            },
+            errors: { grvWeeklyTrend: 'This chart could not be built' },
+          },
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     );
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const data = await fetchAnalyticsCharts({ month: '2026-04' });
+    const { charts: data, asOf } = await fetchAnalyticsCharts({ month: '2026-04' });
+
+    expect(asOf).toBe('2026-10-22T09:45:00+03:00');
 
     const [calledUrl, calledInit] = fetchMock.mock.calls[0] ?? [];
     const url = new URL(String(calledUrl));
@@ -67,7 +81,7 @@ describe('fetchAnalyticsCharts', () => {
       );
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const data = await fetchAnalyticsCharts({ month: '2026-04' });
+    const { charts: data } = await fetchAnalyticsCharts({ month: '2026-04' });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const retried = new URL(String(fetchMock.mock.calls[1]?.[0]));
@@ -107,6 +121,103 @@ describe('fetchAnalyticsCharts', () => {
     expect(url.searchParams.has('month')).toBe(false);
     expect(url.searchParams.has('from')).toBe(false);
     expect(url.searchParams.has('to')).toBe(false);
+  });
+});
+
+describe('filters', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  const okResponse = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+  it('sends only the filters that are set', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse({ status: 'success', data: {} }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await fetchAnalyticsCharts({
+      month: '2026-04',
+      filters: { region: 'ET14', serviceCategory: 'Inputs', assignedDept: '' },
+    });
+
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(url.searchParams.get('region')).toBe('ET14');
+    expect(url.searchParams.get('service_category')).toBe('Inputs');
+    expect(url.searchParams.has('assigned_dept')).toBe(false);
+  });
+
+  it('keeps the filters when it asks again for the established charts', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(okResponse({ status: 'success', data: {} }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await fetchAnalyticsCharts({ filters: { region: 'ET14', serviceCategory: '', assignedDept: '' } });
+
+    const retried = new URL(String(fetchMock.mock.calls[1]?.[0]));
+    expect(retried.searchParams.get('region')).toBe('ET14');
+  });
+
+  it('reads each option list on its own, naming a region by its name or else its code', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okResponse({
+        status: 'success',
+        data: {
+          grvFilterRegions: [
+            { region_code: 'ET14', region_name: 'Addis Ababa', grievances: 5 },
+            { region_code: 'ET99', region_name: null, grievances: 1 },
+          ],
+          grvFilterCategories: [{ category: 'Inputs' }],
+        },
+      })
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const options = await fetchFilterOptions({ includeDepartments: false });
+
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(url.searchParams.get('charts')).toBe('grvFilterRegions,grvFilterCategories');
+    expect(options.regions).toEqual([
+      { value: 'ET14', label: 'Addis Ababa' },
+      { value: 'ET99', label: 'ET99' },
+    ]);
+    expect(options.categories).toBeNull();
+    expect(options.departments).toBeNull();
+  });
+
+  it('asks for the department list only for an admin', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okResponse({ status: 'success', data: { grvFilterDepartments: [{ department: 'Extension', grievances: 3 }] } })
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const options = await fetchFilterOptions({ includeDepartments: true });
+
+    expect(new URL(String(fetchMock.mock.calls[0]?.[0])).searchParams.get('charts')).toBe(
+      'grvFilterRegions,grvFilterCategories,grvFilterDepartments'
+    );
+    expect(options.departments).toEqual([{ value: 'Extension', label: 'Extension' }]);
+  });
+});
+
+describe('parseAsOf', () => {
+  it('is the oldest chart refresh, since the page is only as fresh as its stalest chart', () => {
+    expect(
+      parseAsOf({
+        meta: { as_of: { a: '2026-10-22T10:15:00+03:00', b: '2026-10-22T09:45:00+03:00', c: null, d: 'soon' } },
+      })
+    ).toBe('2026-10-22T09:45:00+03:00');
+  });
+
+  it('is null when the service sent no refresh time', () => {
+    expect(parseAsOf({})).toBeNull();
+    expect(parseAsOf({ meta: { as_of: {} } })).toBeNull();
+    expect(parseAsOf({ meta: { as_of: [] } })).toBeNull();
+    expect(parseAsOf(null)).toBeNull();
   });
 });
 
