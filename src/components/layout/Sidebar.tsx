@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { BrandLockup } from "@/components/layout/BrandLockup";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { canAccessRoute, canViewAllGrievances } from "@/features/auth/rbac";
@@ -32,6 +33,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const { isSidebarCollapsed } = useSidebar();
   const user = useAppSelector(selectUser);
+  // Only this item is translated so far; the rest of the labels still need their own pass.
+  const tAnalytics = useTranslations("analytics");
   // Reuses the same deny-by-default allow-list `proxy.ts` enforces
   // server-side — links a role can't open are hidden rather than left to a
   // 404/redirect. (`canAccessRoute` denies anything absent from both
@@ -73,6 +76,7 @@ export function Sidebar() {
         <ul className="space-y-2 px-4">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
+            const label = item.href === "/analytics-reporting" ? tAnalytics("title") : item.name;
             // Determine active state (matching dashboard route for visual demonstration)
             const isActive = pathname === item.href || (item.name === "Dashboard" && pathname?.includes("dashboard"));
 
@@ -85,12 +89,12 @@ export function Sidebar() {
                       ? "bg-[#0b8535] text-white shadow-sm font-semibold"
                       : "text-[#a3cca8] hover:bg-[#144f33] hover:text-white"
                     }`}
-                  title={isSidebarCollapsed ? item.name : undefined}
+                  title={isSidebarCollapsed ? label : undefined}
                 >
                   <Icon className={`w-[22px] h-[22px] shrink-0 stroke-[1.5] ${isActive ? "text-white" : "text-[#a3cca8]"}`} />
                   {!isSidebarCollapsed && (
                     <span className="whitespace-nowrap overflow-hidden transition-all duration-300">
-                      {item.name}
+                      {label}
                     </span>
                   )}
                 </Link>

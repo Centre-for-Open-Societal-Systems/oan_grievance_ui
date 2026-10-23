@@ -35,6 +35,10 @@ NGO and FPO representatives register through the ordinary `/register` flow — t
 - Recent Grievances (`src/app/(dashboard)/dashboard/components/`) reads the All Grievances list on its own, so it still renders when the statistics fail.
 - All copy is in `messages/*.json` under `dashboard.*`; `messages.test.ts` fails if a locale is missing a key. Backend status labels are translated when known and shown as sent otherwise.
 
+## Analytics & Reporting
+
+`src/features/analytics-reporting/` renders `/analytics-reporting` from the same endpoint as the Dashboard with different chart ids: `GET /api/v1/charts?charts=grvPerformanceKpis,grvWeeklyTrend,grvResolutionRateByRegion,grvCategoryResolution&month=YYYY-MM&from=YYYY-MM-DD&to=YYYY-MM-DD` (via `/api/proxy`). It follows the Dashboard's pattern: `schemas.ts` parses each chart on its own (a bad or `null` chart becomes `null`, shown as a retryable section), `utils/mapAnalyticsCharts.ts` turns rows into what the components draw, and `hooks/useAnalyticsReport.ts` owns loading/error state. The month picker drives the KPI cards through `month` (which cannot be in the future) and the weekly trend and category charts through `from`/`to` (the month's first day to its last, or today for the current month — `monthRange` in `analyticsApi.ts`); the region chart is an all-time snapshot the service does not scope by date. Whether a KPI change is good depends on the metric (resolution time and escalation rate: down is good), which the mapper decides. Copy is in `messages/*.json` under `analytics.*`; `messages.test.ts` fails if a locale is missing a key.
+
 ## Required environment variables
 
 | Variable | Required | Default | Purpose |

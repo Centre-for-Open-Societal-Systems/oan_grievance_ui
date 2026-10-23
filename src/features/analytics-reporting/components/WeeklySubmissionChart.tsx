@@ -1,3 +1,5 @@
+"use client";
+
 import {
   AreaChart,
   Area,
@@ -9,16 +11,8 @@ import {
   Legend,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
-
-const lineChartData = [
-  { name: "W1\nMar 26", received: 1, resolved: 0 },
-  { name: "W2\nMar 26", received: 1, resolved: 0 },
-  { name: "W3\nMar 26", received: 2, resolved: 1 },
-  { name: "W4\nMar 26", received: 0, resolved: 0 },
-  { name: "W1\nApr 26", received: 1, resolved: 1 },
-  { name: "W2\nApr 26", received: 1, resolved: 0 },
-  { name: "W3\nApr 26", received: 2, resolved: 1 },
-];
+import { useTranslations } from "next-intl";
+import type { WeeklyTrendPoint } from "../types";
 
 const CustomTooltip = ({ active, payload, label }: TooltipContentProps) => {
   if (active && payload && payload.length) {
@@ -42,65 +36,71 @@ const CustomTooltip = ({ active, payload, label }: TooltipContentProps) => {
   return null;
 };
 
-export function WeeklySubmissionChart() {
+export function WeeklySubmissionChart({ data }: { data: WeeklyTrendPoint[] }) {
+  const t = useTranslations("analytics");
+
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md flex flex-col border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 h-full">
       <div className="px-6 py-5 border-b border-[#E5E7EB]">
-        <h3 className="text-[16px] font-bold text-gray-900 tracking-tight">Weekly Submission vs Resolution</h3>
+        <h3 className="text-[16px] font-bold text-gray-900 tracking-tight">{t("weeklyTrend")}</h3>
       </div>
       <div className="p-6 pt-5 flex-1 w-full min-h-[380px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={lineChartData} margin={{ top: 5, right: 40, left: -20, bottom: 20 }}>
-            <CartesianGrid vertical={true} horizontal={true} stroke="#F1F3F4" />
-            <XAxis
-              dataKey="name"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
-              dy={15}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
-              domain={[0, 3]}
-              ticks={[0, 1, 2, 3]}
-              dx={-10}
-            />
-            <Tooltip content={CustomTooltip} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />
-            <Legend
-              iconType="circle"
-              wrapperStyle={{ bottom: '-10px', fontSize: '13px', fontWeight: 500, color: '#475569' }}
-            />
-            <Area
-              type="monotone"
-              dataKey="received"
-              name="Received"
-              stroke="#3b82f6"
-              strokeWidth={3}
-              fill="#eef6fd"
-              fillOpacity={1}
-              dot={{ r: 4, fill: "#3b82f6", strokeWidth: 0 }}
-              activeDot={{ r: 6, strokeWidth: 0 }}
-              isAnimationActive={true}
-              animationDuration={1500}
-              animationEasing="ease-out"
-            />
-            <Area
-              type="monotone"
-              dataKey="resolved"
-              name="Resolved"
-              stroke="#10B981"
-              strokeWidth={3}
-              fill="none"
-              dot={{ r: 4, fill: "#10B981", strokeWidth: 0 }}
-              activeDot={{ r: 6, strokeWidth: 0 }}
-              isAnimationActive={true}
-              animationDuration={1500}
-              animationEasing="ease-out"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {data.length === 0 ? (
+          <p className="text-sm text-gray-500">{t("noData")}</p>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 5, right: 40, left: -20, bottom: 20 }}>
+              <CartesianGrid vertical={true} horizontal={true} stroke="#F1F3F4" />
+              <XAxis
+                dataKey="week"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
+                dy={15}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
+                allowDecimals={false}
+                domain={[0, 'auto']}
+                dx={-10}
+              />
+              <Tooltip content={CustomTooltip} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Legend
+                iconType="circle"
+                wrapperStyle={{ bottom: '-10px', fontSize: '13px', fontWeight: 500, color: '#475569' }}
+              />
+              <Area
+                type="monotone"
+                dataKey="received"
+                name={t("received")}
+                stroke="#3b82f6"
+                strokeWidth={3}
+                fill="#eef6fd"
+                fillOpacity={1}
+                dot={{ r: 4, fill: "#3b82f6", strokeWidth: 0 }}
+                activeDot={{ r: 6, strokeWidth: 0 }}
+                isAnimationActive={true}
+                animationDuration={1500}
+                animationEasing="ease-out"
+              />
+              <Area
+                type="monotone"
+                dataKey="resolved"
+                name={t("resolved")}
+                stroke="#10B981"
+                strokeWidth={3}
+                fill="none"
+                dot={{ r: 4, fill: "#10B981", strokeWidth: 0 }}
+                activeDot={{ r: 6, strokeWidth: 0 }}
+                isAnimationActive={true}
+                animationDuration={1500}
+                animationEasing="ease-out"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
