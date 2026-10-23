@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WizardAttachment } from '@/lib/attachments';
 import en from '../../../../messages/en.json';
 import type { AreaRef } from '@/features/metadata';
+import type { ServiceProviderRef } from '../api/serviceProviderApi';
 import { makeStore, regionRef, woredaRef, zoneRef } from '../testFixtures';
 
 // The recorder itself (microphone, MP3 encoding) is covered by VoiceRecorder.test.tsx; here it is a stub with
@@ -39,6 +40,9 @@ vi.mock('./VoiceRecorder', () => ({
     </div>
   ),
 }));
+
+const { searchServiceProviders } = vi.hoisted(() => ({ searchServiceProviders: vi.fn() }));
+vi.mock('../api/serviceProviderApi', () => ({ searchServiceProviders }));
 
 import { fetchSubmitterOptionsThunk } from '@/features/metadata';
 import { GrievanceDetailsCard } from './GrievanceDetailsCard';
@@ -78,7 +82,7 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
   const [kebele, setKebele] = useState<AreaRef | null>(null);
   const [description, setDescription] = useState(initial.description ?? '');
   const [desiredOutcome, setDesiredOutcome] = useState('');
-  const [serviceProvider, setServiceProvider] = useState('');
+  const [serviceProvider, setServiceProvider] = useState<ServiceProviderRef | null>(null);
   const [attachments, setAttachments] = useState<WizardAttachment[]>(() =>
     Array.from({ length: initial.extraAttachments ?? 0 }, (_, i) => ({
       key: `extra-${i}`,
@@ -228,17 +232,34 @@ describe('Step 2 — Save & Continue', () => {
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
-  it('shows what was typed in those two fields, and caps the provider at the backend’s 140 characters', () => {
+  it('lets the person search the provider directory and pick a listed provider', async () => {
+    searchServiceProviders.mockResolvedValue([
+      { id: 'SP-00042', name: 'Basona Cooperative Union', type: 'Cooperative Union', parent: null, area: null },
+    ]);
     renderStep(COMPLETE);
     const outcome = byId('grievance-desired-outcome') as HTMLTextAreaElement;
     const provider = byId('grievance-service-provider') as HTMLInputElement;
 
     fireEvent.change(outcome, { target: { value: 'Replace the allocation' } });
-    fireEvent.change(provider, { target: { value: 'Basona Cooperative Union' } });
+    fireEvent.change(provider, { target: { value: 'Baso' } });
+    // The query is debounced, so the first list is the unfiltered one; wait for the typed search.
+    await waitFor(() => expect(searchServiceProviders).toHaveBeenLastCalledWith('Baso', expect.any(AbortSignal)));
+    const option = await screen.findByRole('option', { name: /Basona Cooperative Union/ });
+    fireEvent.mouseDown(option);
 
     expect(outcome.value).toBe('Replace the allocation');
     expect(provider.value).toBe('Basona Cooperative Union');
-    expect(provider).toHaveAttribute('maxlength', '140');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear service provider' }));
+    expect(provider.value).toBe('');
+  });
+
+  it('says so when the directory has no match, without blocking the optional field', async () => {
+    searchServiceProviders.mockResolvedValue([]);
+    renderStep(COMPLETE);
+
+    fireEvent.change(byId('grievance-service-provider'), { target: { value: 'Nowhere Bank' } });
+
+    expect(await screen.findByText(/No matching provider/)).toBeInTheDocument();
   });
 });
 

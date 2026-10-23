@@ -219,6 +219,14 @@
       "fieldRequired": "This field is required.",
       "documentsHint": "JPG, PNG, PDF or MP3 up to 10MB each · up to {max} files"
     },
+    "serviceProvider": {
+      "placeholder": "Search input store, cooperative, bank, or market (if applicable)",
+      "listLabel": "Service providers",
+      "clear": "Clear service provider",
+      "searching": "Searching…",
+      "loadError": "Could not load service providers. Try again, or leave this empty and describe the provider below.",
+      "noMatch": "No matching provider. Leave this empty and describe the provider in the description."
+    },
     "voice": {
       "hint": "Speak in your own words instead of typing. Officers will listen to the recording and route it to the right department.",
       "record": "Record",

@@ -219,6 +219,14 @@
       "fieldRequired": "Gabateen kun barbaachisaadha.",
       "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}"
     },
+    "serviceProvider": {
+      "placeholder": "Suuqii galtee, hawaasa daldalaa, baankii ykn gabaa barbaadi (yoo jiraate)",
+      "listLabel": "Dhiyeessitoota tajaajilaa",
+      "clear": "Dhiyeessaa tajaajilaa haqi",
+      "searching": "Barbaadaa jira…",
+      "loadError": "Dhiyeessitoota tajaajilaa fe’uun hin danda’amne. Irra deebi’ii yaali, ykn kana duwwaa dhiisii dhiyeessaa kana ibsa keessatti ibsi.",
+      "noMatch": "Dhiyeessaan wal simu hin jiru. Kana duwwaa dhiisii dhiyeessaa kana ibsa keessatti ibsi."
+    },
     "voice": {
       "hint": "Of barreessuu mannaa dubbii keessan jechoota keessaniin dubbadhaa. Ofiisarootni waraabbicha dhaggeeffatanii kutaa sirrii ta’eetti ergu.",
       "record": "Waraabi",
