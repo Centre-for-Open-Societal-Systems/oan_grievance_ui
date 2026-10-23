@@ -55,7 +55,12 @@ function listData(officers: ReturnType<typeof officerRecord>[], totalCount = off
 const fetchOfficers = vi.hoisted(() => vi.fn().mockResolvedValue({ officers: [], pagination: { page: 1, page_size: 9, total_count: 0, total_pages: 1, has_next: false, has_prev: false } }));
 const fetchOfficerStatistics = vi.hoisted(() => vi.fn().mockRejectedValue(new Error('Not Found')));
 const fetchOfficerStatusCounts = vi.hoisted(() => vi.fn().mockResolvedValue({ active: 0, on_leave: 0, inactive: 0, total: 0 }));
-vi.mock('../api/officerApi', () => ({ fetchOfficers, fetchOfficerStatistics, fetchOfficerStatusCounts }));
+vi.mock('../api/officerApi', () => ({
+  fetchOfficers,
+  fetchOfficerStatistics,
+  fetchOfficerStatusCounts,
+  fetchOfficerCandidates: vi.fn().mockResolvedValue({ candidates: [] }),
+}));
 
 const fetchAdministrativeAreas = vi.hoisted(() =>
   vi.fn().mockResolvedValue({

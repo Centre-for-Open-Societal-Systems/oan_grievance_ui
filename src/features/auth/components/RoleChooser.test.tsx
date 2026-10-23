@@ -2,17 +2,21 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
+import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import en from '../../../../messages/en.json';
+import { makeStore } from '@/store';
 import { RoleChooser, type RoleChooserProps } from './RoleChooser';
 
 const assign = vi.fn();
 
 function renderRoleChooser(props: RoleChooserProps = {}) {
   return render(
-    <NextIntlClientProvider locale="en" messages={en}>
-      <RoleChooser {...props} />
-    </NextIntlClientProvider>
+    <Provider store={makeStore()}>
+      <NextIntlClientProvider locale="en" messages={en}>
+        <RoleChooser {...props} />
+      </NextIntlClientProvider>
+    </Provider>
   );
 }
 
