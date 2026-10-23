@@ -12,9 +12,10 @@ import { NextResponse } from 'next/server';
 const MIN_TOKEN_LIFETIME_SECONDS = 30;
 const NO_STORE = { 'Cache-Control': 'no-store' };
 
-function noSession() {
+function noSession(apply?: (response: NextResponse) => void) {
   const response = NextResponse.json({ message: 'No active session' }, { status: 401, headers: NO_STORE });
   clearSessionCookies(response);
+  apply?.(response);
   return response;
 }
 
@@ -55,7 +56,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const renewed = await renewSession(request, session, clientIp);
-    if (!renewed) return noSession();
+    if (renewed.status === 'unavailable') {
+      return NextResponse.json({ message: 'Session check unavailable' }, { status: 503, headers: NO_STORE });
+    }
+    if (renewed.status === 'ended') return noSession(renewed.apply);
 
     const response = NextResponse.json(connection, { headers: NO_STORE });
     renewed.apply(response);

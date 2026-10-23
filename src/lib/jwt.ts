@@ -41,36 +41,26 @@ export function decodeAccessToken(token: string): AccessTokenClaims | null {
 }
 
 /**
- * Same as `decodeAccessToken`, for an access token issued through the OpenG2P
- * IAM service (a Keycloak token today). Its shape differs from ours: roles
- * sit per client under `resource_access`, and `sub` is the identity
- * provider's opaque user id. `application` picks the client whose roles count
- * — the same list oan_auth_service syncs onto the local user — so routing
- * here and authorization in the backend agree. `sub` is set to the email (or
- * username) since it is only ever shown, never used as an identifier.
+ * The subject and expiry of any JWT, for a token whose claims this app does
+ * not interpret otherwise — an access token issued through an OpenG2P IAM
+ * service. Its roles are deliberately not read: an identity provider may put
+ * none in the token (eSignet) and oan_auth_service adds default roles the
+ * token never shows, so roles come from the backend's `/auth/me` instead
+ * (see `iamSession.ts`).
  */
-export function decodeIamAccessToken(token: string, application: string): AccessTokenClaims | null {
+export function peekToken(token: string): { sub: string; exp: number } | null {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
 
   try {
     const payload = JSON.parse(base64UrlDecode(parts[1]!)) as Record<string, unknown>;
     if (typeof payload.sub !== 'string' || typeof payload.exp !== 'number') return null;
-
-    const resourceAccess = payload.resource_access as Record<string, { roles?: unknown }> | undefined;
-    const roles = resourceAccess?.[application]?.roles;
-    const display = [payload.email, payload.preferred_username].find((v): v is string => typeof v === 'string');
-
-    return {
-      sub: display ?? payload.sub,
-      roles: Array.isArray(roles) ? roles.filter((r): r is string => typeof r === 'string') : [],
-      exp: payload.exp,
-    };
+    return { sub: payload.sub, exp: payload.exp };
   } catch {
     return null;
   }
 }
 
-export function isExpired(claims: AccessTokenClaims, skewSeconds = 5): boolean {
+export function isExpired(claims: Pick<AccessTokenClaims, 'exp'>, skewSeconds = 5): boolean {
   return claims.exp <= Date.now() / 1000 + skewSeconds;
 }

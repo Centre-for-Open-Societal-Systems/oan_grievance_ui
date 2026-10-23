@@ -1,8 +1,15 @@
 import { canAccessRoute, homeRouteForRoles, isProtectedRoute, isPublicRouteAllowedWhenAuthenticated } from '@/features/auth/rbac';
 import { env } from '@/lib/env';
-import { canRenewSession, isSessionIdleExpired, readActiveSession } from '@/lib/activeSession';
+import {
+  activeSessionFromAdoption,
+  canRenewSession,
+  isSessionIdleExpired,
+  readActiveSession,
+} from '@/lib/activeSession';
+import { getClientIp } from '@/lib/clientIp';
+import { adoptIamSession, applyIamCookies, needsIamAdoption, type AdoptedIamSession } from '@/lib/iamSession';
 import { isExpired } from '@/lib/jwt';
-import { clearAuthTokenCookie, clearIdleSessionCookies } from '@/lib/session';
+import { clearAuthTokenCookie, clearIdleSessionCookies, setLoginOptionCookie } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -74,20 +81,35 @@ function buildCsp(nonce: string): string {
  * as a session, and an expired-but-refreshable one is distinguished from a
  * genuinely absent one.
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const csp = buildCsp(nonce);
 
+  // Either a local session or an IAM one — see `activeSession.ts`. Both come
+  // out in the same claims shape, so nothing below tells them apart.
+  let session = readActiveSession(request);
+
+  // An IAM session this app did not start — the user signed in at another
+  // OpenG2P app — has no `login_option` yet: look it up once and record it on
+  // whatever response goes out (see `adoptIamSession`). Only page loads do
+  // this; every API call comes after one.
+  let adopted: AdoptedIamSession | null = null;
+  if (!session && needsIamAdoption(request)) {
+    adopted = await adoptIamSession(request, getClientIp(request));
+    if (adopted) session = activeSessionFromAdoption(request, adopted);
+  }
+
   function withCsp(response: NextResponse): NextResponse {
     response.headers.set('Content-Security-Policy', csp);
+    if (adopted) {
+      applyIamCookies(response, adopted.setCookies);
+      setLoginOptionCookie(response, adopted.option);
+    }
     return response;
   }
 
-  // Either a local session or a staff (IAM) one — see `activeSession.ts`.
-  // Both decode to the same claims shape, so nothing below tells them apart.
-  const session = readActiveSession(request);
   const token = session?.token;
   const claims = session?.claims ?? null;
   const canRenew = !!session && canRenewSession(session);
@@ -116,7 +138,7 @@ export function proxy(request: NextRequest) {
   // only actually get idle-kicked (with the cookie clearing and ?reason=idle
   // messaging below) on whatever protected route they hit *after* that.
   //
-  // Local sessions only: a staff (IAM) session is single sign-on, its idle
+  // Local sessions only: an IAM session is single sign-on, its idle
   // timeout is IAM's, and it may well have been opened at another app (the
   // registry) that never started this app's clock — see `activeSession.ts`.
   const idleExpired = hasValidSession && isSessionIdleExpired(session, request);

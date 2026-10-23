@@ -14,27 +14,28 @@ const mockTimelineData: GrievanceTimelineData = {
   ticket_number: 'ET14IN000012026',
   status: 'In Progress',
   escalated: false,
+  service_category: 'Seeds',
   assignment: {
     department: 'Inputs Supply & Distribution Agency',
     assigned_to: 'Tigist Alemu',
   },
 };
 
-const mockDepartments = [
-  { department_id: 'dept-1', department_name: 'Inputs Supply & Distribution Agency' },
-  { department_id: 'dept-2', department_name: 'Credit & Financial Services' },
-  { department_id: 'dept-3', department_name: 'Market Development & Trade Bureau' },
-];
+const mockCategories = [
+  { category_name: 'Seeds' },
+  { category_name: 'Credit' },
+  { category_name: 'Market Access' },
+] as unknown as NonNullable<MetadataState['grievanceOptions']>['service_categories'];
 
-function renderWithStore(ui: React.ReactElement, initialDepartments = mockDepartments) {
+function renderWithStore(ui: React.ReactElement, categories = mockCategories) {
   const initialMetadataState: MetadataState = {
     submitterOptions: null,
     submitterOptionsStatus: 'idle',
     submitterOptionsError: null,
     grievanceOptions: {
-      departments: initialDepartments,
+      departments: [],
       submission_channels: [],
-      service_categories: [],
+      service_categories: categories,
       grievance_types: [],
       statuses: [],
     },
@@ -72,7 +73,7 @@ describe('CaseManagement', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('renders department and case management header', () => {
+  it('renders category and case management header', () => {
     renderWithStore(
       <CaseManagement
         canManageCase={true}
@@ -81,8 +82,7 @@ describe('CaseManagement', () => {
     );
 
     expect(screen.getByText('Case Management')).toBeInTheDocument();
-    expect(screen.getByText('Department')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Department' })).toHaveValue('Inputs Supply & Distribution Agency');
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('Seeds');
   });
 
   it('shows message when saving without changes', async () => {
@@ -98,11 +98,11 @@ describe('CaseManagement', () => {
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/No department changes to save/i)).toBeInTheDocument();
+      expect(screen.getByText(/No changes to save/i)).toBeInTheDocument();
     });
   });
 
-  it('shows justification and calls onReassign when department is modified', async () => {
+  it('shows justification and calls onReassign when category is modified', async () => {
     const onReassign = vi.fn().mockResolvedValue({
       ticket_number: 'ET14IN000012026',
       status: 'Assigned',
@@ -119,11 +119,11 @@ describe('CaseManagement', () => {
       />
     );
 
-    // Open Department combobox from the keyboard, then pick Credit & Financial Services
-    const combobox = screen.getByRole('combobox', { name: 'Department' });
+    // Open Category combobox from the keyboard, then pick Credit
+    const combobox = screen.getByRole('combobox', { name: 'Category' });
     combobox.focus();
     fireEvent.keyDown(combobox, { key: 'ArrowDown' });
-    fireEvent.click(screen.getByRole('option', { name: 'Credit & Financial Services' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Credit' }));
 
     // Reassignment justification box should appear
     expect(screen.getByText('Reassignment Justification')).toBeInTheDocument();
@@ -131,7 +131,7 @@ describe('CaseManagement', () => {
       screen.getByText(/Junior officer reassignment requests will be routed to your supervisor/i)
     ).toBeInTheDocument();
 
-    const reasonInput = screen.getByPlaceholderText(/Provide justification for routing to this department/i);
+    const reasonInput = screen.getByPlaceholderText(/Provide justification for routing to this category/i);
     fireEvent.change(reasonInput, { target: { value: 'Dispute relates to farmer credit facility' } });
 
     // Click Submit Reassignment Request button
@@ -140,7 +140,7 @@ describe('CaseManagement', () => {
 
     await waitFor(() => {
       expect(onReassign).toHaveBeenCalledWith({
-        target_department: 'Credit & Financial Services',
+        target_category: 'Credit',
         reason: 'Dispute relates to farmer credit facility',
       });
       expect(
@@ -149,7 +149,7 @@ describe('CaseManagement', () => {
     });
   });
 
-  it('renders read-only department and officer without edit controls when status is terminal', () => {
+  it('renders read-only category and officer without edit controls when status is terminal', () => {
     const closedTimeline: GrievanceTimelineData = {
       ...mockTimelineData,
       status: 'Closed',
@@ -163,10 +163,10 @@ describe('CaseManagement', () => {
     );
 
     expect(screen.getByText('Case Management')).toBeInTheDocument();
-    expect(screen.getByText('Inputs Supply & Distribution Agency')).toBeInTheDocument();
+    expect(screen.getByText('Seeds')).toBeInTheDocument();
     expect(screen.getByText('Tigist Alemu')).toBeInTheDocument();
     expect(screen.getByText(/cannot be reassigned/i)).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Department' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Category' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
   });
 });

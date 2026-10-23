@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Copy, RefreshCw, Save, X } from 'lucide-react';
+import { Save, X } from 'lucide-react';
 import { ApiError } from '@/lib/api';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
-import { useCopyFeedback } from '@/components/ui/useCopyFeedback';
 import { useModalA11y } from '@/components/ui/useModalA11y';
-import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, selectDepartmentOptions, useAreas } from '@/features/metadata';
+import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { formatToE164 } from '@/lib/validation/phone';
 import { generateRandomPassword } from '@/lib/validation/password';
@@ -16,25 +15,20 @@ import {
   validateEmail,
   validateFullName,
   validateOptionalLocalPhone,
-  validateTemporaryPassword,
 } from '@/lib/validation/fieldRules';
 import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors';
 import { AnimatedSelect } from './AnimatedSelect';
-import { createOfficer } from '../api/officerApi';
+import { createOfficer, fetchOfficerCandidates } from '../api/officerApi';
 import { OFFICER_STATUS_OPTIONS, REVIEWER_STATUS_OPTIONS } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
-import { useWiredCategoryOptions } from '../hooks/useWiredCategoryOptions';
-import type { OfficerBackendStatus, OfficerLevel, OfficerRole } from '../types';
+import type { OfficerBackendStatus, OfficerCandidate, OfficerLevel, OfficerRole } from '../types';
 
-type FormField = 'fullName' | 'email' | 'phoneNumber' | 'password' | 'designation' | 'department' | 'serviceCategories';
+type FormField = 'fullName' | 'email' | 'phoneNumber' | 'serviceCategories';
 
 const FIELD_IDS: Record<FormField, string> = {
   fullName: 'add-officer-full-name',
   email: 'add-officer-email',
   phoneNumber: 'add-officer-phone',
-  password: 'add-officer-password',
-  designation: 'add-officer-designation',
-  department: 'add-officer-department',
   serviceCategories: 'add-officer-categories',
 };
 
@@ -66,10 +60,7 @@ interface AddNodalOfficerModalProps {
  */
 export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, onCreated }: AddNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
-  // The backend only lets an L3 department head omit the department; a Reviewer and L1/L2 officers need one.
-  const departmentRequired = isReviewer || level !== 'L3';
   const dispatch = useAppDispatch();
-  const departmentOptions = useAppSelector(selectDepartmentOptions);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const { areas: regionAreas } = useAreas({ level: 'Region' });
   const { options: supervisorOptions } = useL2OfficerOptions(isOpen && level === 'L1');
@@ -80,25 +71,35 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
     }
   }, [dispatch, grievanceOptionsStatus]);
 
+  // Logins that already hold the officer role but sit on no desk (e.g. onboarded at the identity
+  // provider): picking one fills the name and email. Best-effort — without it the form still works.
+  const [candidates, setCandidates] = useState<OfficerCandidate[]>([]);
+  const [candidate, setCandidate] = useState('');
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    fetchOfficerCandidates({ role }, { signal: controller.signal })
+      .then((data) => setCandidates(data.candidates ?? []))
+      .catch(() => setCandidates([]));
+    return () => controller.abort();
+  }, [isOpen, role]);
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+251');
   const [phoneNumber, setPhoneNumber] = useState('');
+  // Hidden: officers sign in through the identity provider. The backend still requires one, so a
+  // random password is sent that nobody is told.
   const [password, setPassword] = useState(() => generateRandomPassword());
-  const { isCopied: isPasswordCopied, copy: copyPassword, reset: resetPasswordCopied } = useCopyFeedback();
-  const [designation, setDesignation] = useState('');
-  const [department, setDepartment] = useState('');
   const [serviceCategories, setServiceCategories] = useState<string[]>([]);
-  const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
   const allCategoryOptions = useAppSelector(selectCategoryFilterOptions);
-  const isCategoriesLoading = !department ? grievanceOptionsStatus === 'loading' : isCategoryOptionsLoading;
-  const categoryList = !department ? allCategoryOptions : categoryOptions;
+  const isCategoriesLoading = grievanceOptionsStatus === 'loading';
+  const categoryList = allCategoryOptions;
   const [region, setRegion] = useState('');
   const [status, setStatus] = useState<string>('Active');
   const [reportsTo, setReportsTo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [passwordUnusedWarning, setPasswordUnusedWarning] = useState<string | null>(null);
   const { errors: fieldErrors, setError, setAll } = useFieldErrors<FormField>();
 
   const validateField = (field: FormField): string | null => {
@@ -109,32 +110,32 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
         return validateEmail(email);
       case 'phoneNumber':
         return validateOptionalLocalPhone(phoneNumber, countryCode);
-      case 'password':
-        return validateTemporaryPassword(password);
-      case 'designation':
-        return null;
-      case 'department':
-        return departmentRequired && !department.trim() ? 'Select a department.' : null;
       case 'serviceCategories':
         return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
   };
 
+  const pickCandidate = (name: string) => {
+    setCandidate(name);
+    const picked = candidates.find((c) => c.name === name);
+    if (!picked) return;
+    setFullName(picked.full_name);
+    setEmail(picked.email);
+    setAll({});
+  };
+
   const resetForm = () => {
+    setCandidate('');
     setFullName('');
     setEmail('');
     setCountryCode('+251');
     setPhoneNumber('');
     setPassword(generateRandomPassword());
-    resetPasswordCopied();
-    setDesignation('');
-    setDepartment('');
     setServiceCategories([]);
     setRegion('');
     setStatus('Active');
     setReportsTo('');
     setFormError(null);
-    setPasswordUnusedWarning(null);
     setAll({});
   };
 
@@ -166,12 +167,12 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
     setIsSubmitting(true);
     setFormError(null);
     try {
-      const result = await createOfficer({
+      await createOfficer({
         role,
         full_name: fullName,
-        designation: isReviewer ? null : (designation.trim() || null),
+        designation: null,
         level: isReviewer ? null : level,
-        department: department.trim() || null,
+        department: null,
         email,
         service_categories: serviceCategories,
         temporary_password: password,
@@ -181,15 +182,8 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
         reports_to: level === 'L1' && reportsTo ? reportsTo : null,
       });
       onCreated();
-      // The officer was still created successfully — only the temporary password above
-      // wasn't applied, because `email` already had a login. Hold the modal open on that
-      // warning instead of closing, so the admin doesn't go hand it to the officer.
-      if (result.message?.includes('existing password is unchanged')) {
-        setPasswordUnusedWarning(result.message);
-      } else {
-        resetForm();
-        onClose();
-      }
+      resetForm();
+      onClose();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Failed to create officer. Please try again.');
     } finally {
@@ -234,15 +228,23 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
             {formError && (
               <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{formError}</div>
             )}
-            {passwordUnusedWarning && (
-              <div className="px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
-                <p className="font-semibold">Officer created — but don&apos;t share the temporary password above.</p>
-                <p className="mt-1">{passwordUnusedWarning}</p>
-              </div>
-            )}
 
-            <fieldset disabled={!!passwordUnusedWarning} className="contents">
+            <fieldset className="contents">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              {candidates.length > 0 && (
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label htmlFor="add-officer-candidate" className="text-sm font-bold text-gray-900">
+                    Existing account
+                  </label>
+                  <AnimatedSelect
+                    id="add-officer-candidate"
+                    options={candidates.map((c) => ({ value: c.name, label: `${c.full_name} (${c.email})` }))}
+                    value={candidate}
+                    onChange={pickCandidate}
+                    placeholder="Pick an account that already has the role, or fill the form below"
+                  />
+                </div>
+              )}
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.fullName} className="text-sm font-bold text-gray-900">
                   Full Name <span className="text-red-500">*</span>
@@ -290,86 +292,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                   onBlur={() => setError('phoneNumber', validateField('phoneNumber'))}
                 />
                 {fieldError('phoneNumber')}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor={FIELD_IDS.password} className="text-sm font-bold text-gray-900">
-                  Temporary Password <span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    {...a11y('password')}
-                    type="text"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 8 characters, a letter and a number"
-                    className={`flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPassword(generateRandomPassword());
-                      setError('password', null);
-                    }}
-                    aria-label="Generate a new password"
-                    className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-                  >
-                    <RefreshCw size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void copyPassword(password)}
-                    aria-label="Copy password"
-                    className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-                  >
-                    {isPasswordCopied ? <Check size={16} className="text-[#16A34A]" /> : <Copy size={16} />}
-                  </button>
-                </div>
-                {fieldError('password') ?? (
-                  <p className="text-xs text-gray-400">
-                    Tell the officer this directly (in person or by phone) — it isn&apos;t emailed. They&apos;ll be required to replace it before they can sign in.
-                  </p>
-                )}
-              </div>
-
-              {!isReviewer && (
-                <div className="flex flex-col gap-2">
-                  <label htmlFor={FIELD_IDS.designation} className="text-sm font-bold text-gray-900">
-                    Designation
-                  </label>
-                  <input
-                    {...a11y('designation')}
-                    type="text"
-                    value={designation}
-                    onChange={(e) => setDesignation(e.target.value)}
-                    placeholder="e.g. Inputs Quality Grievance Officer"
-                    className={`border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
-                  />
-                  {fieldError('designation')}
-                </div>
-              )}
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
-                  Department{departmentRequired && <span className="text-red-500"> *</span>}
-                </label>
-                <AnimatedSelect
-                  id={FIELD_IDS.department}
-                  options={departmentOptions.map((o) => o.label)}
-                  value={department}
-                  onChange={(value) => {
-                    setDepartment(value);
-                    setError('department', null);
-                    // The category list is department-specific — a category picked for the old
-                    // department may not even have a desk under the new one.
-                    if (value) {
-                      setServiceCategories([]);
-                      setError('serviceCategories', null);
-                    }
-                  }}
-                  placeholder="Select Department"
-                />
-                {fieldError('department')}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -422,9 +344,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                   <span className="text-sm text-gray-400">Loading categories…</span>
                 ) : categoryList.length === 0 ? (
                   <span className="text-sm text-gray-400">
-                    {!department
-                      ? 'No service categories available. Create a category first.'
-                      : 'No service category is routed to this department yet.'}
+                    No service categories available. Create a category first.
                   </span>
                 ) : (
                   categoryList.map((option) => (
@@ -452,19 +372,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
           </div>
 
           <div className="px-8 py-5 flex justify-end gap-4 mt-4 border-t border-gray-100">
-            {passwordUnusedWarning ? (
-              <button
-                type="button"
-                onClick={() => {
-                  resetForm();
-                  onClose();
-                }}
-                className="px-6 py-2.5 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"
-              >
-                Done
-              </button>
-            ) : (
-              <>
+            <>
                 <button type="button" onClick={handleClose} disabled={isSubmitting} className="px-8 py-2.5 border border-[#1e293b] text-[#1e293b] rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50">
                   Cancel
                 </button>
@@ -477,7 +385,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                   {isSubmitting ? 'Adding…' : 'Add'}
                 </button>
               </>
-            )}
           </div>
         </form>
       </div>
