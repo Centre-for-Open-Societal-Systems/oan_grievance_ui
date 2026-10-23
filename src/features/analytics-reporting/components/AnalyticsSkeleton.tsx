@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-const BLOCK = "animate-pulse rounded-xl bg-gray-100";
+const BLOCK = "animate-pulse rounded-xl bg-gray-200";
 
 /** The page's shape while the charts load, so it does not jump when they arrive. */
 export function AnalyticsSkeleton() {
