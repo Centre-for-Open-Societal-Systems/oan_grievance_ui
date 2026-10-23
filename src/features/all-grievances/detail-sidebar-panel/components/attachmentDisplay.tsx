@@ -22,21 +22,18 @@ export function scanStatusBadge(row: Pick<AttachmentRow, "scan_status">): ReactN
 }
 
 /**
- * `fetchAttachmentBlobUrl` always 401s right now — a documented backend gap
- * (see its own doc comment in `@/lib/attachments`): `file_url` points at
- * Frappe's `/private/files/*`, which this app's JWT auth can't reach. Preview
- * and download both need those bytes, so both stay disabled with this same
- * reason until a backend fix (a whitelisted streaming endpoint) lands. One
- * exported string so `AttachmentsList` and `DocumentViewerPopup` show
- * identical wording rather than two guesses at the same explanation.
+ * Download is held back until `/view?download=1` has been checked against the
+ * backend: it is the same streaming endpoint preview already uses, so it is
+ * expected to work, but it has not been verified end to end. One exported
+ * string so `AttachmentsList` and `DocumentViewerPopup` show identical wording
+ * rather than two guesses at the same explanation.
  */
 export const ATTACHMENT_BYTES_UNAVAILABLE_REASON =
   "Not available yet — a backend gap blocks file downloads through this app's login for now.";
 
 /**
- * Flip this once `fetchAttachmentBlobUrl`'s 401 gap is actually fixed
- * server-side — a single point to re-enable Download, rather than deleting/
- * re-adding the disabled prop by hand. `DocumentViewerPopup`'s download
+ * Flip this once `/view?download=1` is verified — a single point to re-enable
+ * Download, rather than deleting/re-adding the disabled prop by hand. `DocumentViewerPopup`'s download
  * handler is already wired to the real API calls behind this flag, so
  * flipping it is the only change needed.
  */

@@ -327,13 +327,8 @@ export function CommentsAndCommunication({
                                     if (attId) {
                                       const viewUrl = `/api/proxy/v1/attachments/${encodeURIComponent(attId)}/view`;
                                       window.open(viewUrl, '_blank', 'noopener,noreferrer');
-                                    } else if (att.file_url) {
-                                      const proxyUrl = att.file_url.startsWith('/api/proxy')
-                                        ? att.file_url
-                                        : `/api/proxy${att.file_url.startsWith('/') ? '' : '/'}${att.file_url}`;
-                                      window.open(proxyUrl, '_blank', 'noopener,noreferrer');
                                     } else if (att.file_name) {
-                                      console.warn('Cannot open attachment without URL or ID:', att.file_name);
+                                      console.warn('Cannot open attachment without an ID:', att.file_name);
                                     }
                                   }}
                                   className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 font-medium transition-colors shadow-2xs group"

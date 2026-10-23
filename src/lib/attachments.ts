@@ -158,16 +158,8 @@ export interface UploadAttachmentResult {
   mime_type: string;
   size_bytes: number;
   checksum_sha256: string;
-  /** Always Pending fresh off upload — no `file_url` comes back until a scanner clears it (see `download`). */
+  /** Always Pending fresh off upload — `/view` serves no bytes until a scanner clears it. */
   scan_status: ScanStatus;
-}
-
-export interface AttachmentDownloadInfo {
-  file_name: string;
-  file_url: string;
-  mime_type: string;
-  size_bytes: number;
-  checksum_sha256: string;
 }
 
 /**
@@ -209,11 +201,6 @@ export async function getAttachments(grievance: string): Promise<AttachmentRow[]
   return fetchApi<AttachmentRow[]>(`v1/grievances/${grievance}/attachments`, { method: 'GET' });
 }
 
-/** GET /api/v1/attachments/<attachment>/download — only succeeds once the attachment has scanned Clean. */
-export async function getAttachmentDownloadInfo(attachment: string): Promise<AttachmentDownloadInfo> {
-  return fetchApi<AttachmentDownloadInfo>(`v1/attachments/${attachment}/download`, { method: 'GET' });
-}
-
 /** DELETE /api/v1/attachments/<attachment> — only while the case is still open. */
 export async function deleteAttachment(attachment: string): Promise<void> {
   await fetchApi(`v1/attachments/${attachment}`, { method: 'DELETE' });
@@ -232,14 +219,8 @@ export function getAttachmentViewUrl(attachment: string, download = false): stri
  * Fetches an attachment's bytes through the auth proxy and returns an object
  * URL for download or inline preview.
  */
-export async function fetchAttachmentBlobUrl(attachmentOrUrl: string, download = true): Promise<string> {
-  const url = attachmentOrUrl.startsWith('/api/proxy')
-    ? attachmentOrUrl
-    : attachmentOrUrl.startsWith('/')
-      ? `/api/proxy${attachmentOrUrl}`
-      : getAttachmentViewUrl(attachmentOrUrl, download);
-
-  const response = await fetch(url);
+export async function fetchAttachmentBlobUrl(attachment: string, download = true): Promise<string> {
+  const response = await fetch(getAttachmentViewUrl(attachment, download));
   if (!response.ok) {
     throw new ApiError('Failed to download the file.', null, response.status);
   }
