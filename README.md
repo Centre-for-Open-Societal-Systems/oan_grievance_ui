@@ -11,10 +11,10 @@ Auth (`/login`, `/register`) is backed by `oan_auth_service` — see its
 for the full API. The browser never talks to it directly: `/api/auth/*` and
 `/api/proxy/*` Next.js routes hold the actual host server-side and manage the
 session as an httpOnly cookie. Point those routes at a running instance by
-setting, in `.env.local`:
+setting, in `.env.local` (the value includes the `/api` prefix; code paths start at the version, e.g. `/v1/grievances`):
 
 ```
-AUTH_API_BASE_URL=https://your-auth-service-host
+AUTH_API_BASE_URL=https://your-auth-service-host/api
 ```
 
 Without it, the auth routes return a clear 500 instead of a bare fetch failure.

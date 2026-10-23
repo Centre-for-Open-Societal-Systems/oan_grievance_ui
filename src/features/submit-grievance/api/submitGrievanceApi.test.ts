@@ -105,7 +105,7 @@ describe('submitGrievance', () => {
     expect(result.ticket_number).toBe('B00100010');
 
     const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
-    expect(String(url)).toContain('/api/proxy/api/v1/grievances');
+    expect(String(url)).toContain('/api/proxy/v1/grievances');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual(payload);
   });

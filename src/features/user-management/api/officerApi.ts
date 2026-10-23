@@ -39,7 +39,7 @@ export async function fetchOfficers(
   params: ListOfficersParams = {},
   options: RequestOptions = {}
 ): Promise<OfficerListData> {
-  return fetchApi<OfficerListData>(`/api/v1/officers${buildQuery(params)}`, {
+  return fetchApi<OfficerListData>(`/v1/officers${buildQuery(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -51,7 +51,7 @@ export async function fetchOfficers(
  * Corresponding REST endpoint: GET /api/v1/officers/:officer
  */
 export async function fetchOfficer(officerId: string, options: RequestOptions = {}): Promise<OfficerData> {
-  return fetchApi<OfficerData>(`/api/v1/officers/${encodeURIComponent(officerId)}`, {
+  return fetchApi<OfficerData>(`/v1/officers/${encodeURIComponent(officerId)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -67,7 +67,7 @@ export async function fetchOfficerCandidates(
   params: { role?: 'Officer' | 'Reviewer'; q?: string } = {},
   options: RequestOptions = {}
 ): Promise<OfficerCandidateData> {
-  return fetchApi<OfficerCandidateData>(`/api/v1/officers/candidates${buildQuery(params)}`, {
+  return fetchApi<OfficerCandidateData>(`/v1/officers/candidates${buildQuery(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -83,7 +83,7 @@ export async function createOfficer(
   payload: CreateOfficerPayload,
   options: RequestOptions = {}
 ): Promise<OfficerData> {
-  return fetchApi<OfficerData>('/api/v1/officers', {
+  return fetchApi<OfficerData>('/v1/officers', {
     method: 'POST',
     body: JSON.stringify(payload),
     signal: options.signal,
@@ -102,7 +102,7 @@ export async function fetchOfficerStatusCounts(
   params: ListOfficerStatusCountsParams = {},
   options: RequestOptions = {}
 ): Promise<OfficerStatusCounts> {
-  return fetchApi<OfficerStatusCounts>(`/api/v1/officers/status-counts${buildQuery(params)}`, {
+  return fetchApi<OfficerStatusCounts>(`/v1/officers/status-counts${buildQuery(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -119,7 +119,7 @@ export async function updateOfficer(
   payload: UpdateOfficerPayload,
   options: RequestOptions = {}
 ): Promise<OfficerData> {
-  return fetchApi<OfficerData>(`/api/v1/officers/${encodeURIComponent(officerId)}`, {
+  return fetchApi<OfficerData>(`/v1/officers/${encodeURIComponent(officerId)}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
     signal: options.signal,
@@ -138,7 +138,7 @@ export async function resetTemporaryPassword(
   payload: ResetTemporaryPasswordPayload,
   options: RequestOptions = {}
 ): Promise<OfficerData> {
-  return fetchApi<OfficerData>(`/api/v1/officers/${encodeURIComponent(officerId)}/password-resets`, {
+  return fetchApi<OfficerData>(`/v1/officers/${encodeURIComponent(officerId)}/password-resets`, {
     method: 'POST',
     body: JSON.stringify(payload),
     signal: options.signal,
@@ -157,7 +157,7 @@ export async function fetchOfficerStatistics(
   params: ListOfficerStatisticsParams = {},
   options: RequestOptions = {}
 ): Promise<OfficerStatisticsListData> {
-  return fetchApi<OfficerStatisticsListData>(`/api/v1/officers/statistics${buildQuery(params)}`, {
+  return fetchApi<OfficerStatisticsListData>(`/v1/officers/statistics${buildQuery(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -173,7 +173,7 @@ export async function fetchCategoryAssignments(
   params: ListCategoryAssignmentsParams = {},
   options: RequestOptions = {}
 ): Promise<CategoryAssignmentListData> {
-  return fetchApi<CategoryAssignmentListData>(`/api/v1/category-assignments${buildQuery(params)}`, {
+  return fetchApi<CategoryAssignmentListData>(`/v1/category-assignments${buildQuery(params)}`, {
     method: 'GET',
     signal: options.signal,
   });

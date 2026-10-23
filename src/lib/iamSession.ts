@@ -223,7 +223,7 @@ function isAllowedRedirect(value: string): boolean {
 export async function startIamLogin(key: string, returnUrl: string, clientIp: string): Promise<IamLoginStart> {
   try {
     const { data } = await requestBackendAuth<unknown>(
-      '/api/v1/auth/iam/login',
+      '/v1/auth/iam/login',
       { body: { key, return_url: returnUrl } },
       clientIp
     );
@@ -274,7 +274,7 @@ export async function lookupIamUser(accessToken: string, clientIp: string): Prom
   const token = peekToken(accessToken);
   try {
     const { data } = await requestBackendAuth<unknown>(
-      '/api/v1/auth/me',
+      '/v1/auth/me',
       { method: 'GET', headers: { Authorization: `Bearer ${accessToken}` } },
       clientIp
     );
@@ -322,7 +322,7 @@ async function refreshIamToken(
 ): Promise<IamRefresh> {
   try {
     const { data, setCookies } = await requestBackendAuth<{ refreshed?: unknown }>(
-      '/api/v1/auth/refresh',
+      '/v1/auth/refresh',
       { body: { access_token: accessToken }, headers: { Cookie: iamCookieHeader(option, request) } },
       clientIp
     );
@@ -447,7 +447,7 @@ export async function revokeIamSession(session: IamSession, request: CookieReade
 
   try {
     const { data, setCookies } = await requestBackendAuth<{ provider_logout?: unknown; logout_url?: unknown }>(
-      '/api/v1/auth/logout',
+      '/v1/auth/logout',
       { body: { access_token: session.accessToken }, headers: { Cookie: iamCookieHeader(session.option, request) } },
       clientIp
     );
@@ -483,7 +483,7 @@ let providersCache: { at: number; providers: LoginProvider[] } | null = null;
 export async function fetchLoginProviders(clientIp: string): Promise<LoginProvider[] | null> {
   if (providersCache && Date.now() - providersCache.at < PROVIDERS_TTL_MS) return providersCache.providers;
   try {
-    const { data } = await requestBackendAuth<unknown>('/api/v1/auth/iam/providers', { method: 'GET' }, clientIp);
+    const { data } = await requestBackendAuth<unknown>('/v1/auth/iam/providers', { method: 'GET' }, clientIp);
     const parsed = providersSchema.safeParse(data);
     if (!parsed.success) {
       logger.error('Login options answered in an unknown shape');

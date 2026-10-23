@@ -26,7 +26,7 @@ export function fetchNotifications(
     if (value !== undefined) query.set(key, String(value));
   }
   const qs = query.toString();
-  return fetchApi<NotificationListData>(`/api/v1/notifications${qs ? `?${qs}` : ''}`, {
+  return fetchApi<NotificationListData>(`/v1/notifications${qs ? `?${qs}` : ''}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -34,7 +34,7 @@ export function fetchNotifications(
 
 /** PATCH /api/v1/notifications/:id — marks one notification read or unread. */
 export function markNotificationRead(id: string, read = true): Promise<NotificationItem> {
-  return fetchApi<NotificationItem>(`/api/v1/notifications/${encodeURIComponent(id)}`, {
+  return fetchApi<NotificationItem>(`/v1/notifications/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify({ read }),
   });
@@ -42,7 +42,7 @@ export function markNotificationRead(id: string, read = true): Promise<Notificat
 
 /** PATCH /api/v1/notifications with `all: true` — marks the whole inbox read. */
 export function markAllNotificationsRead(): Promise<unknown> {
-  return fetchApi<unknown>('/api/v1/notifications', {
+  return fetchApi<unknown>('/v1/notifications', {
     method: 'PATCH',
     body: JSON.stringify({ all: true, read: true }),
   });

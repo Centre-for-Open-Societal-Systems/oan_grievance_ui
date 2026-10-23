@@ -39,7 +39,7 @@ NGO and FPO representatives register through the ordinary `/register` flow — t
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `AUTH_API_BASE_URL` | Yes | — | Base URL of `oan_auth_service` (see `src/lib/env.ts`) |
+| `AUTH_API_BASE_URL` | Yes | — | Base URL of `oan_auth_service` including its `/api` prefix, e.g. `https://auth.example.org/api` (see `src/lib/env.ts`). Call sites name only the versioned route (`/v1/...`) |
 | `TRUSTED_PROXY_HOPS` | No | `0` (don't trust `X-Forwarded-For`) | Reverse-proxy hop count for client-IP resolution |
 | `RATE_LIMIT_<LOGIN\|REGISTER\|REGISTER_SHARED\|REFRESH\|LOGOUT\|HEARTBEAT\|FORGOT_PASSWORD\|RESET_PASSWORD\|SET_INITIAL_PASSWORD\|REALTIME_CONFIG\|IAM_LOGIN>_MAX` / `_WINDOW_MS` | No | see `rateLimit.ts` | Per-route rate-limit overrides. `REGISTER_SHARED` is the effective ceiling for `/api/auth/register` whenever `TRUSTED_PROXY_HOPS` is unset — see that route's own comments. `SET_INITIAL_PASSWORD` guards `/api/auth/set-initial-password`, where an officer replaces an admin-issued temporary password (`oan_auth_service`'s `POST /api/v1/auth/password/initial`) |
 | `IDLE_TIMEOUT_MS` / `IDLE_WARNING_LEAD_MS` | No | 15 min / 60 s | Server-enforced idle-session cutoff and warning lead — local (email/password) sessions only; IAM sessions use the identity provider's idle timeout |

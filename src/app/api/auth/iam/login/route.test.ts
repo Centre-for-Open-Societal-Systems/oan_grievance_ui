@@ -16,7 +16,7 @@ function start(query: string) {
 
 describe('GET /api/auth/iam/login', () => {
   beforeEach(() => {
-    process.env.AUTH_API_BASE_URL = 'http://auth.internal';
+    process.env.AUTH_API_BASE_URL = 'http://auth.internal/api';
     vi.stubGlobal('fetch', fetchMock);
   });
 

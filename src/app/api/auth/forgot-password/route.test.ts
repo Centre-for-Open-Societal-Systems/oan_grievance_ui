@@ -35,7 +35,7 @@ describe('POST /api/auth/forgot-password', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
     expect(callBackendAuth).toHaveBeenCalledWith(
-      '/api/v1/auth/forgot-password',
+      '/v1/auth/forgot-password',
       { usr: 'ok@example.com' },
       expect.any(String)
     );

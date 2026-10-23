@@ -160,7 +160,7 @@ describe('authApi - getMe()', () => {
     // Verify proxy URL was called
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const calledUrl = (global.fetch as any).mock.calls[0][0]; // eslint-disable-line @typescript-eslint/no-explicit-any
-    expect(calledUrl).toContain('/api/proxy/api/v1/auth/me');
+    expect(calledUrl).toContain('/api/proxy/v1/auth/me');
 
     // Verify needed fields are present
     expect(user.full_name).toBe('Abebe Bikila');

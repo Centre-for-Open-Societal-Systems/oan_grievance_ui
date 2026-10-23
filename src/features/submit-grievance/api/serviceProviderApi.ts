@@ -34,7 +34,7 @@ export async function searchServiceProviders(search: string, signal?: AbortSigna
   const text = search.trim();
   if (text.length >= MIN_PROVIDER_SEARCH_LENGTH) params.set('search', text);
   const list = await fetchApi<ServiceProviderList>(
-    `/api/v1/service-providers?${params.toString()}`,
+    `/v1/service-providers?${params.toString()}`,
     { signal },
     SEARCH_TIMEOUT_MS
   );

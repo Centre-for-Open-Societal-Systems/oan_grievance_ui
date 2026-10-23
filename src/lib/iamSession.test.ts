@@ -26,7 +26,7 @@ function sentTo(call = 0): { url: string; init: RequestInit & { headers: Record<
 }
 
 beforeEach(() => {
-  process.env.AUTH_API_BASE_URL = 'http://auth.internal';
+  process.env.AUTH_API_BASE_URL = 'http://auth.internal/api';
   vi.stubGlobal('fetch', fetchMock);
 });
 

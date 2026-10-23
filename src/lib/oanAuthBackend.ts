@@ -35,7 +35,7 @@ interface BackendAuthRequest {
 }
 
 /**
- * `path` is the REST route under `AUTH_API_BASE_URL` (e.g. `/api/v1/auth/login`).
+ * `path` is the REST route under `AUTH_API_BASE_URL` (e.g. `/v1/auth/login`).
  * Returns the unwrapped `data` and every `Set-Cookie` the backend answered
  * with — on an IAM refresh or logout those are IAM's own cookies, relayed by
  * oan_auth_service, for the caller to pass on to the browser unchanged.

@@ -41,7 +41,7 @@ describe('metadataService', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
 
     const calledUrl = (global.fetch as any).mock.calls[0][0]; // eslint-disable-line @typescript-eslint/no-explicit-any
-    expect(calledUrl).toContain('/api/proxy/api/v1/submitters/options?service_category=Inputs');
+    expect(calledUrl).toContain('/api/proxy/v1/submitters/options?service_category=Inputs');
   });
 
   it('calls administrative areas endpoint with query params', async () => {
@@ -70,7 +70,7 @@ describe('metadataService', () => {
     expect(result).toEqual(mockAreas);
 
     const calledUrl = (global.fetch as any).mock.calls[0][0]; // eslint-disable-line @typescript-eslint/no-explicit-any
-    expect(calledUrl).toContain('/api/proxy/api/v1/administrative-areas?level_name=Region&limit=10');
+    expect(calledUrl).toContain('/api/proxy/v1/administrative-areas?level_name=Region&limit=10');
   });
 
   it('serializes multiple parents as comma-separated list in query params', async () => {
@@ -86,6 +86,6 @@ describe('metadataService', () => {
     });
 
     const calledUrl = (global.fetch as any).mock.calls[0][0]; // eslint-disable-line @typescript-eslint/no-explicit-any
-    expect(calledUrl).toContain('/api/proxy/api/v1/administrative-areas?parent=zone-ET1401%2Czone-ET1402&level_name=Woreda');
+    expect(calledUrl).toContain('/api/proxy/v1/administrative-areas?parent=zone-ET1401%2Czone-ET1402&level_name=Woreda');
   });
 });

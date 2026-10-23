@@ -279,7 +279,7 @@ export function mobileOf(d: Pick<BackendAuthMeData, 'country_code' | 'phone_numb
 }
 
 async function fetchAndValidateMe(): Promise<BackendAuthMeData> {
-  const d = await fetchApi<BackendAuthMeData>('/api/v1/auth/me', { method: 'GET' });
+  const d = await fetchApi<BackendAuthMeData>('/v1/auth/me', { method: 'GET' });
   if (!d || (!d.user && !d.login_email)) {
     throw new Error(AUTH_MESSAGES.sessionExpired);
   }

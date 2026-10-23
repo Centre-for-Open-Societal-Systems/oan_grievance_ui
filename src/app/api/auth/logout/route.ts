@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   // it could still redeem it for a live session after "sign out".
   if (session?.kind === 'local' && session.refreshToken) {
     try {
-      await callBackendAuth('/api/v1/auth/logout', { refresh_token: session.refreshToken }, clientIp);
+      await callBackendAuth('/v1/auth/logout', { refresh_token: session.refreshToken }, clientIp);
     } catch (error) {
       // Best-effort: a backend that's down must not trap someone in a session
       // they asked to leave. The cookies are cleared below regardless.

@@ -122,7 +122,7 @@ describe('getMyOrganisation', () => {
     const fetchMock = mockFetch(200, { status: 'success', data: { legal_name: 'Acme', status: 'In Review' } });
     const org = await getMyOrganisation();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('/api/proxy/api/v1/orgs/me');
+    expect(url).toContain('/api/proxy/v1/orgs/me');
     expect(init.method).toBe('GET');
     expect(org?.legalName).toBe('Acme');
   });
@@ -148,7 +148,7 @@ describe('registerOrganisation', () => {
     });
     const org = await registerOrganisation({ legal_name: 'Acme' } as Parameters<typeof registerOrganisation>[0]);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('/api/proxy/api/v1/orgs');
+    expect(url).toContain('/api/proxy/v1/orgs');
     expect(url).not.toContain('/orgs/me');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body as string)).toEqual({ legal_name: 'Acme' });

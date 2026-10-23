@@ -33,7 +33,7 @@ export function fetchResponseTemplates(
   params: ResponseTemplateListParams = {},
   options: RequestOptions = {}
 ): Promise<ResponseTemplateListData> {
-  return fetchApi<ResponseTemplateListData>(`/api/v1/response-templates${query(params)}`, {
+  return fetchApi<ResponseTemplateListData>(`/v1/response-templates${query(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -43,7 +43,7 @@ export function fetchResponseTemplates(
  * Corresponding REST endpoint: POST /api/v1/response-templates
  */
 export function createResponseTemplate(payload: CreateResponseTemplatePayload): Promise<ResponseTemplateData> {
-  return fetchApi<ResponseTemplateData>('/api/v1/response-templates', {
+  return fetchApi<ResponseTemplateData>('/v1/response-templates', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -58,7 +58,7 @@ export function updateResponseTemplate(
   template: string,
   payload: UpdateResponseTemplatePayload
 ): Promise<ResponseTemplateData> {
-  return fetchApi<ResponseTemplateData>(`/api/v1/response-templates/${encodeURIComponent(template)}`, {
+  return fetchApi<ResponseTemplateData>(`/v1/response-templates/${encodeURIComponent(template)}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
@@ -71,7 +71,7 @@ export function updateResponseTemplate(
  * Corresponding REST endpoint: DELETE /api/v1/response-templates/:template
  */
 export function retireResponseTemplate(template: string): Promise<ResponseTemplateData> {
-  return fetchApi<ResponseTemplateData>(`/api/v1/response-templates/${encodeURIComponent(template)}`, {
+  return fetchApi<ResponseTemplateData>(`/v1/response-templates/${encodeURIComponent(template)}`, {
     method: 'DELETE',
   });
 }

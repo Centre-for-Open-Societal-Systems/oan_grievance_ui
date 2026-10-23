@@ -47,7 +47,7 @@ describe('POST /api/auth/register — submitter fields', () => {
 
     expect(res.status).toBe(200);
     expect(callBackendAuth).toHaveBeenCalledWith(
-      '/api/v1/auth/register',
+      '/v1/auth/register',
       expect.objectContaining({ submitter_type: 'Development Agent' }),
       expect.any(String)
     );

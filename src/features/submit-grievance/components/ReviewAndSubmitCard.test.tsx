@@ -87,7 +87,7 @@ describe('Review step → POST /api/v1/grievances', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(String(url)).toContain('/api/proxy/api/v1/grievances');
+    expect(String(url)).toContain('/api/proxy/v1/grievances');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual({
       client_submission_uuid: CLIENT_UUID,
@@ -133,7 +133,7 @@ describe('Review step → POST /api/v1/grievances', () => {
     consentAndSubmit();
 
     await waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
-    expect(String(fetchMock.mock.calls[1]![0])).toContain('/api/v1/grievances/B00100013/attachments');
+    expect(String(fetchMock.mock.calls[1]![0])).toContain('/v1/grievances/B00100013/attachments');
     expect(onSubmitted).toHaveBeenCalledWith(expect.not.objectContaining({ attachment_upload_failed: true }));
   });
 

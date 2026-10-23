@@ -28,7 +28,7 @@ function query(params: object): string {
  * Corresponding REST endpoint: GET /api/v1/sla-policy
  */
 export function fetchGlobalSlaPolicy(options: RequestOptions = {}): Promise<GlobalSlaPolicyData> {
-  return fetchApi<GlobalSlaPolicyData>('/api/v1/sla-policy', { method: 'GET', signal: options.signal });
+  return fetchApi<GlobalSlaPolicyData>('/v1/sla-policy', { method: 'GET', signal: options.signal });
 }
 
 /**
@@ -38,7 +38,7 @@ export function fetchGlobalSlaPolicy(options: RequestOptions = {}): Promise<Glob
  * Corresponding REST endpoint: PATCH /api/v1/sla-policy
  */
 export function updateGlobalSlaPolicy(payload: UpdateGlobalSlaPolicyPayload): Promise<GlobalSlaPolicyData> {
-  return fetchApi<GlobalSlaPolicyData>('/api/v1/sla-policy', {
+  return fetchApi<GlobalSlaPolicyData>('/v1/sla-policy', {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
@@ -53,7 +53,7 @@ export function fetchSlaConfigurations(
   params: ListSlaConfigurationsParams = {},
   options: RequestOptions = {}
 ): Promise<SlaConfigurationListData> {
-  return fetchApi<SlaConfigurationListData>(`/api/v1/sla-configurations${query(params)}`, {
+  return fetchApi<SlaConfigurationListData>(`/v1/sla-configurations${query(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -69,7 +69,7 @@ export function updateSlaConfiguration(
   config: string,
   payload: UpdateSlaConfigurationPayload
 ): Promise<SlaConfigurationData> {
-  return fetchApi<SlaConfigurationData>(`/api/v1/sla-configurations/${encodeURIComponent(config)}`, {
+  return fetchApi<SlaConfigurationData>(`/v1/sla-configurations/${encodeURIComponent(config)}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });

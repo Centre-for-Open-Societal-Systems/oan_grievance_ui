@@ -53,7 +53,7 @@ export async function fetchSubmitterOptions(
     service_category: params.service_category,
   });
 
-  return fetchApi<SubmitterOptionsData>(`/api/v1/submitters/options${query}`, {
+  return fetchApi<SubmitterOptionsData>(`/v1/submitters/options${query}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -78,7 +78,7 @@ export async function fetchAdministrativeAreas(
     limit: params.limit,
   });
 
-  return fetchApi<AdministrativeAreasData>(`/api/v1/administrative-areas${query}`, {
+  return fetchApi<AdministrativeAreasData>(`/v1/administrative-areas${query}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -99,7 +99,7 @@ export async function fetchAdministrativeAreaAncestors(
 
   const encodedPath = encodeURIComponent(areaIdOrPath);
   return fetchApi<AdministrativeAreaAncestorsData>(
-    `/api/v1/administrative-areas/${encodedPath}/ancestors`,
+    `/v1/administrative-areas/${encodedPath}/ancestors`,
     {
       method: 'GET',
       signal: options.signal,
@@ -123,7 +123,7 @@ export async function fetchGrievanceOptions(
     department: params.department,
   });
 
-  return fetchApi<GrievanceOptionsData>(`/api/v1/grievances/options${query}`, {
+  return fetchApi<GrievanceOptionsData>(`/v1/grievances/options${query}`, {
     method: 'GET',
     signal: options.signal,
   });

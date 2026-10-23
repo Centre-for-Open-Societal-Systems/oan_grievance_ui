@@ -5,7 +5,7 @@ import { GET } from './route';
 
 function get(cookies: Record<string, string>) {
   const cookie = Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join('; ');
-  return GET(new NextRequest('http://localhost:3000/api/proxy/api/v1/auth/me', { headers: { cookie } }), {
+  return GET(new NextRequest('http://localhost:3000/api/proxy/v1/auth/me', { headers: { cookie } }), {
     params: Promise.resolve({ path: ['api', 'v1', 'auth', 'me'] }),
   });
 }
@@ -17,7 +17,7 @@ const withToken = (token: string) => iamSessionCookies(STAFF_OPTION, token);
 
 describe('/api/proxy with an IAM session', () => {
   beforeEach(() => {
-    process.env.AUTH_API_BASE_URL = 'http://auth.internal';
+    process.env.AUTH_API_BASE_URL = 'http://auth.internal/api';
     vi.stubGlobal('fetch', fetchMock);
   });
 

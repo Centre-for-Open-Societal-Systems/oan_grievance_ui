@@ -114,7 +114,7 @@ describe('grievanceService', () => {
     const result = await grievanceService.listGrievances({ page: 1, page_size: 20 });
 
     expect(result).toEqual(listPayload);
-    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances?page=1&page_size=20');
+    expect(calledUrl()).toContain('/api/proxy/v1/grievances?page=1&page_size=20');
   });
 
   it('sends multi-select filters as comma-separated values', async () => {
@@ -165,7 +165,7 @@ describe('grievanceService', () => {
     const result = await grievanceService.getSummary();
 
     expect(result).toEqual(summaryPayload);
-    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/summary');
+    expect(calledUrl()).toContain('/api/proxy/v1/grievances/summary');
     expect(calledOptions().method).toBe('GET');
   });
 
@@ -180,7 +180,7 @@ describe('grievanceService', () => {
 
     expect(result).toEqual(timelinePayload);
     const url = decodeURIComponent(calledUrl());
-    expect(url).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/timeline');
+    expect(url).toContain('/api/proxy/v1/grievances/SOMA-JIG-INP-09905/timeline');
     expect(url).toContain('is_internal=true');
     expect(url).toContain('limit=10');
     expect(url).toContain('cursor=2026-04-12T10:00:00Z');
@@ -191,7 +191,7 @@ describe('grievanceService', () => {
 
     await grievanceService.postMessage('SOMA-JIG-INP-09905', 'Payment proof submitted.');
 
-    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/message');
+    expect(calledUrl()).toContain('/api/proxy/v1/grievances/SOMA-JIG-INP-09905/message');
     const options = calledOptions();
     expect(options.method).toBe('POST');
     const body = JSON.parse(options.body as string);
@@ -205,7 +205,7 @@ describe('grievanceService', () => {
 
     await grievanceService.addNote('SOMA-JIG-INP-09905', 'Internal verification complete.', true);
 
-    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/message');
+    expect(calledUrl()).toContain('/api/proxy/v1/grievances/SOMA-JIG-INP-09905/message');
     const options = calledOptions();
     expect(options.method).toBe('POST');
     const body = JSON.parse(options.body as string);
@@ -222,7 +222,7 @@ describe('grievanceService', () => {
       reason: 'Issue resolved on site',
     });
 
-    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/action');
+    expect(calledUrl()).toContain('/api/proxy/v1/grievances/SOMA-JIG-INP-09905/action');
     const options = calledOptions();
     expect(options.method).toBe('POST');
     const body = JSON.parse(options.body as string);
@@ -274,7 +274,7 @@ describe('grievanceService', () => {
     });
 
     expect(result).toEqual(changeResponse);
-    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/reassign');
+    expect(calledUrl()).toContain('/api/proxy/v1/grievances/SOMA-JIG-INP-09905/reassign');
     const options = calledOptions();
     expect(options.method).toBe('POST');
     const body = JSON.parse(options.body as string);
@@ -307,7 +307,7 @@ describe('grievanceService', () => {
     });
 
     expect(result).toEqual(deferResponse);
-    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/defer-sla');
+    expect(calledUrl()).toContain('/api/proxy/v1/grievances/SOMA-JIG-INP-09905/defer-sla');
     const options = calledOptions();
     expect(options.method).toBe('POST');
     const body = JSON.parse(options.body as string);
@@ -333,7 +333,7 @@ describe('grievanceService', () => {
     });
 
     expect(result).toEqual(crPayload);
-    expect(calledUrl()).toContain('/api/proxy/api/v1/grievances/SOMA-JIG-INP-09905/change-requests');
+    expect(calledUrl()).toContain('/api/proxy/v1/grievances/SOMA-JIG-INP-09905/change-requests');
     const options = calledOptions();
     expect(options.method).toBe('POST');
   });
@@ -343,7 +343,7 @@ describe('grievanceService', () => {
 
     const list = await grievanceService.getChangeRequests({ scope: 'pending_with_me', status: 'Pending' });
     expect(list.items).toHaveLength(1);
-    expect(calledUrl()).toContain('/api/proxy/api/v1/change-requests?status=Pending&scope=pending_with_me');
+    expect(calledUrl()).toContain('/api/proxy/v1/change-requests?status=Pending&scope=pending_with_me');
 
     mockJsonResponse({ ticket_number: 'T-1', status: 'In Progress', change_request: { name: 'CR-0001', status: 'Approved' } });
     const decided = await grievanceService.decideChangeRequest('CR-0001', {
@@ -352,7 +352,7 @@ describe('grievanceService', () => {
     });
     expect(decided.change_request.status).toBe('Approved');
     expect(decided.status).toBe('In Progress');
-    expect(calledUrl()).toContain('/api/proxy/api/v1/change-requests/CR-0001/decide');
+    expect(calledUrl()).toContain('/api/proxy/v1/change-requests/CR-0001/decide');
   });
 });
 

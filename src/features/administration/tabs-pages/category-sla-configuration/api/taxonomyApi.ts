@@ -34,7 +34,7 @@ export function fetchServiceCategories(
   params: ServiceCategoryListParams = {},
   options: RequestOptions = {}
 ): Promise<ServiceCategoryListData> {
-  return fetchApi<ServiceCategoryListData>(`/api/v1/service-categories${query(params)}`, {
+  return fetchApi<ServiceCategoryListData>(`/v1/service-categories${query(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -42,7 +42,7 @@ export function fetchServiceCategories(
 
 /** Corresponding REST endpoint: POST /api/v1/service-categories */
 export function createServiceCategory(payload: CreateServiceCategoryPayload): Promise<ServiceCategoryData> {
-  return fetchApi<ServiceCategoryData>('/api/v1/service-categories', {
+  return fetchApi<ServiceCategoryData>('/v1/service-categories', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -58,7 +58,7 @@ export function updateServiceCategory(
   category: string,
   payload: UpdateServiceCategoryPayload
 ): Promise<ServiceCategoryData> {
-  return fetchApi<ServiceCategoryData>(`/api/v1/service-categories/${encodeURIComponent(category)}`, {
+  return fetchApi<ServiceCategoryData>(`/v1/service-categories/${encodeURIComponent(category)}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
@@ -71,7 +71,7 @@ export function updateServiceCategory(
  * Corresponding REST endpoint: DELETE /api/v1/service-categories/:category
  */
 export function deactivateServiceCategory(category: string): Promise<ServiceCategoryData> {
-  return fetchApi<ServiceCategoryData>(`/api/v1/service-categories/${encodeURIComponent(category)}`, {
+  return fetchApi<ServiceCategoryData>(`/v1/service-categories/${encodeURIComponent(category)}`, {
     method: 'DELETE',
   });
 }
@@ -81,7 +81,7 @@ export function fetchGrievanceTypes(
   params: GrievanceTypeListParams = {},
   options: RequestOptions = {}
 ): Promise<GrievanceTypeListData> {
-  return fetchApi<GrievanceTypeListData>(`/api/v1/grievance-types${query(params)}`, {
+  return fetchApi<GrievanceTypeListData>(`/v1/grievance-types${query(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -89,7 +89,7 @@ export function fetchGrievanceTypes(
 
 /** Corresponding REST endpoint: POST /api/v1/grievance-types */
 export function createGrievanceType(payload: CreateGrievanceTypePayload): Promise<GrievanceTypeData> {
-  return fetchApi<GrievanceTypeData>('/api/v1/grievance-types', {
+  return fetchApi<GrievanceTypeData>('/v1/grievance-types', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -100,7 +100,7 @@ export function updateGrievanceType(
   grievanceType: string,
   payload: UpdateGrievanceTypePayload
 ): Promise<GrievanceTypeData> {
-  return fetchApi<GrievanceTypeData>(`/api/v1/grievance-types/${encodeURIComponent(grievanceType)}`, {
+  return fetchApi<GrievanceTypeData>(`/v1/grievance-types/${encodeURIComponent(grievanceType)}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
@@ -108,7 +108,7 @@ export function updateGrievanceType(
 
 /** Corresponding REST endpoint: DELETE /api/v1/grievance-types/:grievance_type */
 export function deactivateGrievanceType(grievanceType: string): Promise<GrievanceTypeData> {
-  return fetchApi<GrievanceTypeData>(`/api/v1/grievance-types/${encodeURIComponent(grievanceType)}`, {
+  return fetchApi<GrievanceTypeData>(`/v1/grievance-types/${encodeURIComponent(grievanceType)}`, {
     method: 'DELETE',
   });
 }

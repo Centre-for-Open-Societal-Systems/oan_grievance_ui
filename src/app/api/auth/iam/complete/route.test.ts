@@ -15,7 +15,7 @@ const me = (roles: string[]) =>
 
 describe('GET /api/auth/iam/complete', () => {
   beforeEach(() => {
-    process.env.AUTH_API_BASE_URL = 'http://auth.internal';
+    process.env.AUTH_API_BASE_URL = 'http://auth.internal/api';
     vi.stubGlobal('fetch', fetchMock);
   });
 
