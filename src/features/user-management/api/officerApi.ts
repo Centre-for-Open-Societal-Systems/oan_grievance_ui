@@ -6,6 +6,7 @@ import type {
   ListOfficersParams,
   ListOfficerStatisticsParams,
   ListOfficerStatusCountsParams,
+  OfficerCandidateData,
   OfficerData,
   OfficerListData,
   OfficerStatisticsListData,
@@ -51,6 +52,22 @@ export async function fetchOfficers(
  */
 export async function fetchOfficer(officerId: string, options: RequestOptions = {}): Promise<OfficerData> {
   return fetchApi<OfficerData>(`/api/v1/officers/${encodeURIComponent(officerId)}`, {
+    method: 'GET',
+    signal: options.signal,
+  });
+}
+
+/**
+ * Logins that hold the officer role (`role: 'Reviewer'` for the review role) but are on no
+ * desk yet, so an admin can place one instead of typing an email. `q` matches name or email.
+ *
+ * Corresponding REST endpoint: GET /api/v1/officers/candidates
+ */
+export async function fetchOfficerCandidates(
+  params: { role?: 'Officer' | 'Reviewer'; q?: string } = {},
+  options: RequestOptions = {}
+): Promise<OfficerCandidateData> {
+  return fetchApi<OfficerCandidateData>(`/api/v1/officers/candidates${buildQuery(params)}`, {
     method: 'GET',
     signal: options.signal,
   });

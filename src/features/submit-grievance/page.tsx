@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { fetchAdministrativeAreaAncestors } from "@/features/metadata/api/metadataApi";
 import { selectUser } from "@/features/auth/store/authSlice";
 import {
   selectServiceCategoryOptions,
@@ -113,6 +114,29 @@ export default function SubmitGrievancePage() {
   const [zone, setZone] = useState<AreaRef | null>(null);
   const [woreda, setWoreda] = useState<AreaRef | null>(null);
   const [kebele, setKebele] = useState<AreaRef | null>(null);
+  // Pre-fills the location from the account's own area (set from the identity
+  // provider's address at sign-in), once — never over a choice already made.
+  const profileArea = user?.administrative_area;
+  const prefilledArea = useRef<string | null>(null);
+  useEffect(() => {
+    if (!profileArea || prefilledArea.current === profileArea) return;
+    prefilledArea.current = profileArea;
+    fetchAdministrativeAreaAncestors(profileArea)
+      .then(({ current, breadcrumbs }) => {
+        const chain = [...breadcrumbs, ...(current ? [current] : [])];
+        const refFor = (level: string): AreaRef | null => {
+          const node = chain.find((n) => n.level_name === level);
+          return node ? { id: node.area_id, name: node.area_name, pathCode: node.path_code ?? "" } : null;
+        };
+        setRegion((prev) => prev ?? refFor("Region"));
+        setZone((prev) => prev ?? refFor("Zone"));
+        setWoreda((prev) => prev ?? refFor("Woreda"));
+        setKebele((prev) => prev ?? refFor("Kebele"));
+      })
+      .catch(() => {
+        // Best-effort: the dropdowns simply stay empty.
+      });
+  }, [profileArea]);
   const [description, setDescription] = useState("");
   const [desiredOutcome, setDesiredOutcome] = useState("");
   const [serviceProvider, setServiceProvider] = useState<ServiceProviderRef | null>(null);
@@ -187,6 +211,12 @@ export default function SubmitGrievancePage() {
     resetFields();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // A farmer signed in through the identity provider cannot edit what it supplied — only when it
+  // did supply a value, so an empty field stays fillable. The Fayda ID is left editable.
+  const providerOwnedFields = user?.id_source
+    ? (["fullName", "phoneNumber"] as const).filter((key) => identityValues[key]?.trim())
+    : undefined;
 
   const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
   const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
@@ -267,6 +297,7 @@ export default function SubmitGrievancePage() {
             identityValues={identityValues}
             setIdentityValue={setIdentityValue}
             submitterTypeLocked={isSubmitterTypeLocked(user)}
+            readOnlyFields={providerOwnedFields}
             profileSubmitterType={user?.submitter_type || user?.type}
             profileSubmissionChannel={user?.submission_channel}
           />

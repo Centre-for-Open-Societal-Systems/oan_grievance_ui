@@ -229,7 +229,6 @@ export default function CategorySlaConfigurationPage() {
             {canManage && isAdding && (
                 <AddCategoryModal
                     takenCodes={categories.map((c) => c.code)}
-                    departments={grievanceOptions?.departments ?? []}
                     onCreate={async (payload) => {
                         await createServiceCategory(payload);
                         setNotice(t('categoryCreatedNotice', { name: payload.category_name }));

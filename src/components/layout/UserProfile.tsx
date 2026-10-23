@@ -33,7 +33,7 @@ export function UserProfile() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    if (!(await performLogout(dispatch, user?.email ?? null))) router.push('/login');
+    if (!(await performLogout(dispatch, user?.email ?? null)).redirected) router.push('/login');
   };
 
   useEffect(() => {

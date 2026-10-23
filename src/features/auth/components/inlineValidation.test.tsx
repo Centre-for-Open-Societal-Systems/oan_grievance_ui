@@ -52,23 +52,57 @@ async function completeAccountStep() {
   await screen.findByText('Almost done!');
 }
 
-describe('LoginForm after a staff sign-in with no access here', () => {
+const LOCAL = { key: 'local', label: 'Email and password', iconUrl: null };
+const STAFF = { key: 'staff', label: 'Sign in as staff', iconUrl: null };
+const AGENT = { key: 'agent', label: 'Sign in as agent', iconUrl: null };
+
+function renderLoginWith(providers: React.ComponentProps<typeof LoginForm>['providers']) {
+  return render(
+    <Provider store={makeStore()}>
+      <NextIntlClientProvider locale="en" messages={en}>
+        <LoginForm providers={providers} />
+      </NextIntlClientProvider>
+    </Provider>
+  );
+}
+
+describe('LoginForm login options', () => {
+  it('shows the password form and one button per IAM option, in order', () => {
+    renderLoginWith([LOCAL, STAFF, AGENT]);
+    expect(screen.getByLabelText(/^Email/)).toBeInTheDocument();
+    const labels = screen.getAllByRole('button', { name: /^Sign in as/ }).map((b) => b.textContent);
+    expect(labels).toEqual(['Sign in as staff', 'Sign in as agent']);
+  });
+
+  it('shows no password form without a local option', () => {
+    renderLoginWith([STAFF]);
+    expect(screen.queryByLabelText(/^Email/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in as staff' })).toBeInTheDocument();
+  });
+
+  it('says so when no option is configured', () => {
+    renderLoginWith([]);
+    expect(screen.getByText('No sign-in method is configured. Contact an administrator.')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Email/)).not.toBeInTheDocument();
+  });
+
+  it('falls back to the password form alone when the options could not be listed', () => {
+    renderLoginWith(null);
+    expect(screen.getByLabelText(/^Email/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Sign in as/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('LoginForm after an IAM sign-in with no access here', () => {
   beforeEach(() => {
-    window.history.replaceState(null, '', '/login?reason=staff_no_access');
+    window.history.replaceState(null, '', '/login?reason=no_access');
   });
 
   afterEach(() => {
     window.history.replaceState(null, '', '/');
   });
 
-  const renderLogin = () =>
-    render(
-      <Provider store={makeStore()}>
-        <NextIntlClientProvider locale="en" messages={en}>
-          <LoginForm staffSignInEnabled />
-        </NextIntlClientProvider>
-      </Provider>
-    );
+  const renderLogin = () => renderLoginWith([LOCAL, STAFF]);
 
   it('offers to end the single sign-on session, and says so when it cannot', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true, redirectTo: null })));
@@ -80,12 +114,27 @@ describe('LoginForm after a staff sign-in with no access here', () => {
     expect(
       await screen.findByText('Could not sign you out of the staff account. Sign out from the registry, then try again.')
     ).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST', body: JSON.stringify({ returnTo: '/login' }) }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }));
     expect(screen.queryByRole('button', { name: 'Sign out and use a different account' })).not.toBeInTheDocument();
   });
 
+  it('clears the message when the identity provider was signed out server-side', async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ success: true, redirectTo: null, providerLoggedOut: true })));
+    renderLogin();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out and use a different account' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Sign out and use a different account' })).not.toBeInTheDocument()
+    );
+    expect(screen.queryByText(/Could not sign you out/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/has no access/)).not.toBeInTheDocument();
+  });
+
   it('does not offer it for other sign-in failures', () => {
-    window.history.replaceState(null, '', '/login?reason=staff_failed');
+    window.history.replaceState(null, '', '/login?reason=login_failed');
     renderLogin();
     expect(screen.queryByRole('button', { name: 'Sign out and use a different account' })).not.toBeInTheDocument();
   });
@@ -100,7 +149,7 @@ describe('LoginForm inline validation', () => {
     render(
       <Provider store={makeStore()}>
         <NextIntlClientProvider locale="en" messages={en}>
-          <LoginForm staffSignInEnabled={false} />
+          <LoginForm providers={null} />
         </NextIntlClientProvider>
       </Provider>
     );

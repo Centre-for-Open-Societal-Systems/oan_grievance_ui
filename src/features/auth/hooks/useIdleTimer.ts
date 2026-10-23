@@ -32,7 +32,7 @@ export interface IdleTimerState {
  * user before that happens and to end the session gracefully instead of
  * their next click just bouncing them to `/login` with no explanation.
  *
- * Inert for a staff (IAM) session: its idle timeout is Keycloak's, and
+ * Inert for an IAM session: its idle timeout is the identity provider's, and
  * signing it out here would end the user's whole SSO session, the
  * registry's included. It stays inert until `/api/auth/me` says the session
  * is a local one — if that lookup fails, the server-side check still ends
@@ -65,7 +65,7 @@ export function useIdleTimer(): IdleTimerState {
       const currentUrl = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '';
       const returnParam = currentUrl && !currentUrl.startsWith('/login') ? `&returnUrl=${encodeURIComponent(currentUrl)}` : '';
       const loginUrl = `/login?reason=idle${returnParam}`;
-      if (!(await performLogout(dispatch, userEmail, loginUrl))) router.push(loginUrl);
+      if (!(await performLogout(dispatch, userEmail)).redirected) router.push(loginUrl);
     })();
   }, [dispatch, router, userEmail]);
 

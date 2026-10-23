@@ -1,5 +1,5 @@
-import { expireIamCookies } from '@/lib/iamSession';
 import { clearActivityCookie, touchActivityCookie } from '@/lib/idleSession';
+import { encodeLoginOption, LOGIN_OPTION_COOKIE, type LoginOption } from '@/lib/loginOption';
 import { NextResponse } from 'next/server';
 
 // Single source of truth for the session cookies. Every route that opens,
@@ -68,6 +68,29 @@ export function setSessionCookies(
   // Every fresh session cookie write resets the idle clock, whether it's a
   // login or a silent refresh — both are proof the session is genuinely live.
   touchActivityCookie(response);
+  // At most one session kind at a time: a local session replaces any IAM
+  // login option the browser recorded.
+  clearLoginOptionCookie(response);
+}
+
+// `lax`, unlike the cookies above: it is set before the browser leaves for the
+// identity provider and must be sent back with the redirect chain that ends
+// at `/api/auth/iam/complete`, which starts cross-site. It holds no
+// credential — IAM's own cookies do — only which option's cookies to read.
+const loginOptionCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+};
+
+/** Records the IAM login option the browser's session belongs to (see `loginOption.ts`). */
+export function setLoginOptionCookie(response: NextResponse, option: LoginOption): void {
+  response.cookies.set(LOGIN_OPTION_COOKIE, encodeLoginOption(option), loginOptionCookieOptions);
+}
+
+export function clearLoginOptionCookie(response: NextResponse): void {
+  response.cookies.set(LOGIN_OPTION_COOKIE, '', { ...loginOptionCookieOptions, maxAge: 0 });
 }
 
 interface CookieReader {
@@ -81,7 +104,7 @@ export function readRememberMe(request: CookieReader): boolean {
 
 /**
  * Expires this app's own session cookies (a local password session) and
- * nothing else. Used when a staff session replaces whatever local one the
+ * nothing else. Used when an IAM session replaces whatever local one the
  * browser still held. Options must match the ones used to set them.
  */
 export function clearLocalSessionCookies(response: NextResponse): void {
@@ -92,21 +115,22 @@ export function clearLocalSessionCookies(response: NextResponse): void {
 }
 
 /**
- * Expires every session cookie, of either kind: this app's own, the idle
- * clock, and the IAM staff-session cookies (see `iamSession.ts`). A session
- * that ends here — idle kick, failed refresh, logout — ends whichever kind it
- * was, without each caller having to know which.
+ * Expires every session cookie this app owns, of either kind: its own local
+ * session, the idle clock, and the IAM login option. IAM's cookies live on
+ * IAM's parent domain and are cleared by the `Set-Cookie` headers IAM sends
+ * back through oan_auth_service on logout or a refused refresh — the caller
+ * relays those after this.
  */
 export function clearSessionCookies(response: NextResponse): void {
   clearLocalSessionCookies(response);
-  expireIamCookies(response);
+  clearLoginOptionCookie(response);
   clearActivityCookie(response);
 }
 
 /**
  * Ends a session this app idled out. Only a local session idles out here (see
  * `isSessionIdleExpired`), so only its cookies and the idle clock go. IAM's
- * cookies stay: that single sign-on session is shared with the other apps on
+ * cookies and the login option stay: that single sign-on session is shared with the other apps on
  * the domain and is not this app's to end on its own idle clock — clearing
  * them would sign the user out of the registry too.
  */
