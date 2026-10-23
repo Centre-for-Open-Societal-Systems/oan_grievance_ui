@@ -116,6 +116,39 @@ describe('mapAnalyticsCharts', () => {
     expect(kpis?.map((kpi) => kpi.tone)).toEqual(['bad', 'bad', 'neutral', 'neutral']);
   });
 
+  it('shows a change that rounds to nothing as no change, not as a coloured win or loss', () => {
+    const { kpis } = mapAnalyticsCharts({
+      ...noCharts,
+      grvPerformanceKpis: [
+        { metric: 'avg_resolution_time', value: 9, unit: 'days', delta: -0.04 },
+        { metric: 'resolution_rate', value: 30, unit: 'percent', delta: 0.04 },
+        { metric: 'escalation_rate', value: 10, unit: 'percent', delta: 0.06 },
+        { metric: 'satisfaction', value: 50, unit: 'percent' },
+      ],
+    });
+
+    expect(kpis?.map((kpi) => [kpi.delta, kpi.tone])).toEqual([
+      [0, 'neutral'],
+      [0, 'neutral'],
+      [0.1, 'bad'],
+      [null, 'neutral'],
+    ]);
+    expect(Object.is(kpis?.[0]?.delta, -0)).toBe(false);
+  });
+
+  it('keeps the unit the service sends, and falls back to the metric’s usual one only when it sends none', () => {
+    const { kpis } = mapAnalyticsCharts({
+      ...noCharts,
+      grvPerformanceKpis: [
+        { metric: 'avg_resolution_time', value: 9, unit: 'days' },
+        { metric: 'resolution_rate', value: 30, unit: ' ' },
+        { metric: 'satisfaction', value: 4.2, unit: 'rating' },
+      ],
+    });
+
+    expect(kpis?.map((kpi) => kpi.unit)).toEqual(['days', 'percent', 'percent', 'rating']);
+  });
+
   it('hides the comparison of a card that has no value, and fills in a card the service left out', () => {
     const { kpis } = mapAnalyticsCharts({
       ...noCharts,

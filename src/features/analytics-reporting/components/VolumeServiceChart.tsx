@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactElement } from "react";
 import {
   BarChart,
   Bar,
@@ -13,21 +13,33 @@ import {
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { useTranslations } from "next-intl";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import type { CategoryResolutionStat } from "../types";
+import {
+  ANIMATION_MS,
+  AXIS_TICK,
+  CHART_CARD,
+  CHART_CARD_HEADER,
+  CHART_CARD_TITLE,
+  CHART_COLORS,
+  CHART_MIN_HEIGHT,
+  TOOLTIP_BOX,
+  TOOLTIP_TITLE,
+} from "./chartTheme";
 
 interface ChartRow extends CategoryResolutionStat {
   /** The label on the axis: the category, or its "uncategorised" stand-in. */
-  name: string;
+  readonly name: string;
 }
 
 type Translate = ReturnType<typeof useTranslations<"analytics">>;
 
-function renderTooltip({ active, payload, label }: TooltipContentProps, t: Translate) {
+function renderTooltip({ active, payload, label }: TooltipContentProps, t: Translate): ReactElement | null {
   if (!active || !payload || payload.length === 0) return null;
   const row = payload[0]?.payload as ChartRow | undefined;
   return (
-    <div className="bg-white p-3 border border-[#F1F3F4] rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] min-w-[140px] z-50">
-      <p className="text-gray-900 font-semibold text-[13px] mb-2 pb-2 border-b border-[#F1F3F4]">{label}</p>
+    <div className={TOOLTIP_BOX}>
+      <p className={TOOLTIP_TITLE}>{label}</p>
       <div className="flex flex-col gap-2">
         {payload.map((entry, index) => (
           <div key={index} className="flex items-center justify-between gap-6">
@@ -49,8 +61,13 @@ function renderTooltip({ active, payload, label }: TooltipContentProps, t: Trans
   );
 }
 
-export function VolumeServiceChart({ data }: { data: CategoryResolutionStat[] }) {
+interface VolumeServiceChartProps {
+  readonly data: readonly CategoryResolutionStat[];
+}
+
+export function VolumeServiceChart({ data }: VolumeServiceChartProps): ReactElement {
   const t = useTranslations("analytics");
+  const reducedMotion = usePrefersReducedMotion();
 
   const rows = useMemo<ChartRow[]>(
     () => data.map((row) => ({ ...row, name: row.category ?? t("uncategorised") })),
@@ -58,39 +75,49 @@ export function VolumeServiceChart({ data }: { data: CategoryResolutionStat[] })
   );
 
   return (
-    <div className="bg-white rounded-xl shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] border border-[#F1F3F4] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col h-full">
-      <div className="px-6 py-5 border-b border-[#E5E7EB]">
-        <h3 className="text-[16px] font-bold text-gray-900 tracking-tight">{t("categoryVolume")}</h3>
+    <div className={CHART_CARD}>
+      <div className={CHART_CARD_HEADER}>
+        <h3 className={CHART_CARD_TITLE}>{t("categoryVolume")}</h3>
       </div>
-      <div className="p-6 pt-5 flex-1 w-full min-h-[380px]">
+      <div className={`p-6 pt-5 flex-1 w-full ${CHART_MIN_HEIGHT}`}>
         {rows.length === 0 ? (
           <p className="text-sm text-gray-500">{t("noData")}</p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={rows} margin={{ top: 5, right: 30, left: -20, bottom: 20 }} barGap={2}>
-              <CartesianGrid vertical={true} horizontal={true} stroke="#F1F3F4" strokeDasharray="0" />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }}
-                dy={15}
-              />
+              <CartesianGrid vertical={true} horizontal={true} stroke={CHART_COLORS.grid} strokeDasharray="0" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={AXIS_TICK} dy={15} />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }}
+                tick={AXIS_TICK}
                 allowDecimals={false}
                 domain={[0, 'auto']}
                 dx={-10}
               />
-              <Tooltip content={(props) => renderTooltip(props, t)}cursor={{ fill: '#f8fafc' }} />
+              <Tooltip content={(props) => renderTooltip(props, t)} cursor={{ fill: CHART_COLORS.cursorFill }} />
               <Legend
                 iconType="circle"
-                wrapperStyle={{ bottom: '-10px', fontSize: '13px', fontWeight: 500, color: '#6B7280' }}
+                wrapperStyle={{ bottom: '-10px', fontSize: '13px', fontWeight: 500, color: CHART_COLORS.axisText }}
               />
-              <Bar dataKey="filed" name={t("filed")} fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={14} animationDuration={1200} />
-              <Bar dataKey="resolved" name={t("resolved")} fill="#10b981" radius={[4, 4, 0, 0]} barSize={14} animationDuration={1200} />
+              <Bar
+                dataKey="filed"
+                name={t("filed")}
+                fill={CHART_COLORS.received}
+                radius={[4, 4, 0, 0]}
+                barSize={14}
+                isAnimationActive={!reducedMotion}
+                animationDuration={ANIMATION_MS.bars}
+              />
+              <Bar
+                dataKey="resolved"
+                name={t("resolved")}
+                fill={CHART_COLORS.resolved}
+                radius={[4, 4, 0, 0]}
+                barSize={14}
+                isAnimationActive={!reducedMotion}
+                animationDuration={ANIMATION_MS.bars}
+              />
             </BarChart>
           </ResponsiveContainer>
         )}

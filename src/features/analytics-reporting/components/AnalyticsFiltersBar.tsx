@@ -1,19 +1,19 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type ReactElement } from "react";
 import { useTranslations } from "next-intl";
 import { NO_FILTERS, type AnalyticsFilterOptions, type AnalyticsFilters, type FilterOption } from "../types";
 import { CARD_WHITE } from "./cardStyles";
 
 interface FilterSelectProps {
-  label: string;
-  allLabel: string;
-  options: FilterOption[];
-  value: string;
-  onChange: (value: string) => void;
+  readonly label: string;
+  readonly allLabel: string;
+  readonly options: readonly FilterOption[];
+  readonly value: string;
+  readonly onChange: (value: string) => void;
 }
 
-function FilterSelect({ label, allLabel, options, value, onChange }: FilterSelectProps) {
+function FilterSelect({ label, allLabel, options, value, onChange }: FilterSelectProps): ReactElement {
   const id = useId();
   // A value that is no longer on offer is still shown, so the select never claims "all" while a filter is in force.
   const offered = options.some((option) => option.value === value) || value === "" ? options : [...options, { value, label: value }];
@@ -41,21 +41,30 @@ function FilterSelect({ label, allLabel, options, value, onChange }: FilterSelec
 }
 
 interface AnalyticsFiltersBarProps {
-  options: AnalyticsFilterOptions;
-  filters: AnalyticsFilters;
-  onChange: (filters: AnalyticsFilters) => void;
+  readonly options: AnalyticsFilterOptions;
+  readonly filters: AnalyticsFilters;
+  readonly onChange: (filters: AnalyticsFilters) => void;
 }
 
-/** Narrows every chart to one region, service category or department. A control whose list could not be loaded is left out. */
-export function AnalyticsFiltersBar({ options, filters, onChange }: AnalyticsFiltersBarProps) {
+/**
+ * Narrows every chart to one region, service category or department. A control whose list could
+ * not be loaded is left out, and when that was a failure (not just a list the service lacks) the
+ * bar says so, so a missing control is not mistaken for a feature that does not exist.
+ */
+export function AnalyticsFiltersBar({ options, filters, onChange }: AnalyticsFiltersBarProps): ReactElement | null {
   const t = useTranslations("analytics.filters");
-  const { regions, categories, departments } = options;
+  const { regions, categories, departments, failed } = options;
   const anySet = filters.region !== "" || filters.serviceCategory !== "" || filters.assignedDept !== "";
 
-  if (!regions?.length && !categories?.length && !departments?.length && !anySet) return null;
+  if (!regions?.length && !categories?.length && !departments?.length && !anySet && !failed) return null;
 
   return (
     <div role="group" aria-label={t("title")} className={`${CARD_WHITE} p-4 flex flex-wrap items-end gap-4`}>
+      {failed && (
+        <p role="status" className="basis-full text-xs text-amber-700">
+          {t("unavailable")}
+        </p>
+      )}
       {regions && regions.length > 0 && (
         <FilterSelect
           label={t("region")}

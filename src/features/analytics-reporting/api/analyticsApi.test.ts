@@ -207,6 +207,29 @@ describe('filters', () => {
     expect(options.categories).toEqual([{ value: 'Inputs', label: 'Inputs' }]);
   });
 
+  it('says so when a list fails for a reason worth showing, but not when the service just lacks it', async () => {
+    const respond = (departments: number, categories: number) =>
+      vi.fn().mockImplementation(async (input: string) => {
+        const id = new URL(String(input)).searchParams.get('charts') as string;
+        if (id === 'grvFilterDepartments' && departments !== 200) {
+          return new Response('{}', { status: departments, headers: { 'Content-Type': 'application/json' } });
+        }
+        if (id === 'grvFilterCategories' && categories !== 200) {
+          return new Response('{}', { status: categories, headers: { 'Content-Type': 'application/json' } });
+        }
+        return okResponse({ status: 'success', data: { [id]: [] } });
+      });
+
+    global.fetch = respond(404, 200) as unknown as typeof fetch;
+    expect((await fetchFilterOptions({ includeDepartments: true })).failed).toBe(false);
+
+    global.fetch = respond(200, 500) as unknown as typeof fetch;
+    const failed = await fetchFilterOptions({ includeDepartments: true });
+    expect(failed.failed).toBe(true);
+    expect(failed.categories).toBeNull();
+    expect(failed.regions).toEqual([]);
+  });
+
   it('asks for the department list only for an admin', async () => {
     const fetchMock = vi.fn().mockImplementation(async (input: string) => {
       const id = new URL(String(input)).searchParams.get('charts') as string;
@@ -240,17 +263,16 @@ describe('filters', () => {
 describe('parseAsOf', () => {
   it('is the oldest chart refresh, since the page is only as fresh as its stalest chart', () => {
     expect(
-      parseAsOf({
-        meta: { as_of: { a: '2026-10-22T10:15:00+03:00', b: '2026-10-22T09:45:00+03:00', c: null, d: 'soon' } },
-      })
+      parseAsOf({ as_of: { a: '2026-10-22T10:15:00+03:00', b: '2026-10-22T09:45:00+03:00', c: null, d: 'soon' } })
     ).toBe('2026-10-22T09:45:00+03:00');
   });
 
   it('is null when the service sent no refresh time', () => {
     expect(parseAsOf({})).toBeNull();
-    expect(parseAsOf({ meta: { as_of: {} } })).toBeNull();
-    expect(parseAsOf({ meta: { as_of: [] } })).toBeNull();
+    expect(parseAsOf({ as_of: {} })).toBeNull();
+    expect(parseAsOf({ as_of: [] })).toBeNull();
     expect(parseAsOf(null)).toBeNull();
+    expect(parseAsOf(undefined)).toBeNull();
   });
 });
 

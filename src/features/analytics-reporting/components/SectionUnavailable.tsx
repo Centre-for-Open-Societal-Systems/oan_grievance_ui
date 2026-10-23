@@ -1,15 +1,16 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 import { CARD_WHITE } from "./cardStyles";
 
 interface SectionUnavailableProps {
-  onRetry: () => void;
-  className?: string;
+  readonly onRetry: () => void;
+  readonly className?: string;
 }
 
 /** Stands in for one section whose chart could not be built — never an empty chart or zeros. */
-export function SectionUnavailable({ onRetry, className = "" }: SectionUnavailableProps) {
+export function SectionUnavailable({ onRetry, className = "" }: SectionUnavailableProps): ReactElement {
   const t = useTranslations("analytics");
 
   return (

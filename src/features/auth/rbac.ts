@@ -232,6 +232,17 @@ export function isOfficerOrAdmin(roles: string[]): boolean {
 }
 
 /**
+ * True for a Grievance Admin only — the role that sees every desk, rather than the
+ * caller's own (Analytics & Reporting offers the department filter to it alone). Like
+ * the rest of this file it reads the unverified JWT claim to decide what to *show*; the
+ * service still decides what each caller may *get* and ignores admin-only parameters
+ * from anyone else.
+ */
+export function isAdmin(roles: string[]): boolean {
+  return effectiveRoles(roles).some((role) => role === ROLES.ADMIN);
+}
+
+/**
  * True for a Grievance Review Officer. Used to hide/disable the create, edit, and
  * password-reset controls on screens it can otherwise view (User Management,
  * Administration) — it can reach those routes (`ROUTE_ROLES` above) but PR #47

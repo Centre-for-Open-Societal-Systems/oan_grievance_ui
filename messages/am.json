@@ -606,7 +606,8 @@
       "allRegions": "ሁሉም ክልሎች",
       "allCategories": "ሁሉም ምድቦች",
       "allDepartments": "ሁሉም ክፍሎች",
-      "clear": "ማጣሪያዎችን አጽዳ"
+      "clear": "ማጣሪያዎችን አጽዳ",
+      "unavailable": "አንዳንድ ማጣሪያዎችን መጫን አልተቻለም።"
     },
     "loading": "ትንተናውን በመጫን ላይ…",
     "loadFailed": "ትንተናውን መጫን አልተቻለም።",
@@ -624,6 +625,7 @@
       "unavailableValue": "—",
       "deltaDays": "ከባለፈው ወር {delta} ቀናት",
       "deltaPercent": "ከባለፈው ወር {delta}%",
+      "deltaOther": "ከባለፈው ወር {delta} {unit}",
       "basedOn": "{count, plural, one {በ# ምላሽ ላይ የተመሠረተ} other {በ# ምላሾች ላይ የተመሠረተ}}"
     },
     "weeklyTrend": "ሳምንታዊ የቅሬታ ማቅረብ እና የመፍታት ንጽጽር",

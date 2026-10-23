@@ -606,7 +606,8 @@
       "allRegions": "All regions",
       "allCategories": "All categories",
       "allDepartments": "All departments",
-      "clear": "Clear filters"
+      "clear": "Clear filters",
+      "unavailable": "Some filters could not be loaded."
     },
     "loading": "Loading analytics…",
     "loadFailed": "Could not load the analytics.",
@@ -624,6 +625,7 @@
       "unavailableValue": "—",
       "deltaDays": "{delta} days vs last month",
       "deltaPercent": "{delta}% vs last month",
+      "deltaOther": "{delta} {unit} vs last month",
       "basedOn": "{count, plural, one {Based on # response} other {Based on # responses}}"
     },
     "weeklyTrend": "Weekly Submission vs Resolution",

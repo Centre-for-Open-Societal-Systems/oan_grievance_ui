@@ -1,12 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactElement } from "react";
 import { useFormatter, useTranslations } from "next-intl";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import type { RegionResolutionStat } from "../types";
+import { CHART_CARD, CHART_CARD_HEADER, CHART_CARD_TITLE, CHART_COLORS, CHART_MIN_HEIGHT } from "./chartTheme";
 
-export function ResolutionRegionChart({ data }: { data: RegionResolutionStat[] }) {
+/** The vertical guides and the scale under the bars, as percentages of the track. */
+const SCALE_STOPS = [0, 25, 50, 75, 100] as const;
+
+interface ResolutionRegionChartProps {
+  readonly data: readonly RegionResolutionStat[];
+}
+
+export function ResolutionRegionChart({ data }: ResolutionRegionChartProps): ReactElement {
   const t = useTranslations("analytics");
   const format = useFormatter();
+  const reducedMotion = usePrefersReducedMotion();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -14,12 +24,14 @@ export function ResolutionRegionChart({ data }: { data: RegionResolutionStat[] }
     return () => clearTimeout(timer);
   }, []);
 
-  const percent = (value: number) => `${format.number(value, { maximumFractionDigits: 1 })}%`;
+  const percent = (value: number): string => `${format.number(value, { maximumFractionDigits: 1 })}%`;
+  // The bars grow in from nothing, unless the viewer asked for less motion: then they start at their size.
+  const drawn = mounted || reducedMotion;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md flex flex-col border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
-      <div className="px-6 py-5 border-b border-[#E5E7EB] flex items-center justify-between gap-3">
-        <h3 className="text-[16px] font-bold text-gray-900 tracking-tight">{t("regionResolution")}</h3>
+    <div className={CHART_CARD}>
+      <div className={`${CHART_CARD_HEADER} flex items-center justify-between gap-3`}>
+        <h3 className={CHART_CARD_TITLE}>{t("regionResolution")}</h3>
         {/* The service gives every case to date, whatever month is picked. */}
         <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600">
           {t("allTime")}
@@ -28,15 +40,13 @@ export function ResolutionRegionChart({ data }: { data: RegionResolutionStat[] }
       {data.length === 0 ? (
         <p className="p-6 text-sm text-gray-500">{t("noData")}</p>
       ) : (
-        <div className="p-6 pt-5 flex-1 flex flex-col relative min-h-[380px]">
+        <div className={`p-6 pt-5 flex-1 flex flex-col relative ${CHART_MIN_HEIGHT}`}>
           {/* Table Grid Background */}
           <div aria-hidden="true" className="absolute left-6 right-6 top-5 bottom-10 pointer-events-none">
             <div className="w-full h-full relative">
-              <div className="absolute top-0 bottom-0 left-[0%] border-l border-[#F1F3F4]"></div>
-              <div className="absolute top-0 bottom-0 left-[25%] border-l border-[#F1F3F4]"></div>
-              <div className="absolute top-0 bottom-0 left-[50%] border-l border-[#F1F3F4]"></div>
-              <div className="absolute top-0 bottom-0 left-[75%] border-l border-[#F1F3F4]"></div>
-              <div className="absolute top-0 bottom-0 left-[100%] border-l border-[#F1F3F4]"></div>
+              {SCALE_STOPS.map((stop) => (
+                <div key={stop} className="absolute top-0 bottom-0 border-l border-[#F1F3F4]" style={{ left: `${stop}%` }} />
+              ))}
             </div>
           </div>
 
@@ -54,19 +64,19 @@ export function ResolutionRegionChart({ data }: { data: RegionResolutionStat[] }
                   aria-valuemax={100}
                   aria-valuenow={item.rate}
                   aria-valuetext={t("regionTooltip", { resolved: item.resolved, total: item.total })}
-                  className="w-full h-[8px] bg-[#f8fafc] rounded-full overflow-hidden relative z-10"
+                  className="w-full h-2 bg-[#f8fafc] rounded-full overflow-hidden relative z-10"
                 >
                   <div
-                    className="h-full bg-[#10b981] rounded-full transition-all duration-1000 ease-out group-hover:brightness-110"
-                    style={{ width: mounted ? `${item.rate}%` : '0%' }}
+                    className="h-full rounded-full transition-[width] duration-1000 ease-out motion-reduce:transition-none group-hover:brightness-110"
+                    style={{ width: drawn ? `${item.rate}%` : "0%", backgroundColor: CHART_COLORS.resolved }}
                   ></div>
                 </div>
 
                 {/* Tooltip */}
-                <div aria-hidden="true" className="absolute left-1/2 -translate-x-1/2 -top-1 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-50 transform group-hover:-translate-y-1">
+                <div aria-hidden="true" className="absolute left-1/2 -translate-x-1/2 -top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 motion-reduce:transition-none pointer-events-none z-50">
                   <div className="bg-white p-2.5 border border-[#F1F3F4] rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center gap-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full shadow-sm bg-[#10b981]" />
+                      <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: CHART_COLORS.resolved }} />
                       <span className="text-gray-600 text-[13px] font-medium">{item.name}</span>
                     </div>
                     <span className="text-gray-900 font-bold text-[13px]">
@@ -79,12 +89,18 @@ export function ResolutionRegionChart({ data }: { data: RegionResolutionStat[] }
           </ul>
 
           {/* X-axis labels for bar chart */}
-          <div aria-hidden="true" className="relative pt-3 h-[24px] z-10 w-full mt-1">
-            <span className="absolute left-[0%] text-[11px] font-semibold text-[#6B7280]">0%</span>
-            <span className="absolute left-[25%] -translate-x-1/2 text-[11px] font-semibold text-[#6B7280]">25%</span>
-            <span className="absolute left-[50%] -translate-x-1/2 text-[11px] font-semibold text-[#6B7280]">50%</span>
-            <span className="absolute left-[75%] -translate-x-1/2 text-[11px] font-semibold text-[#6B7280]">75%</span>
-            <span className="absolute left-[100%] -translate-x-full text-[11px] font-semibold text-[#6B7280]">100%</span>
+          <div aria-hidden="true" className="relative pt-3 h-6 z-10 w-full mt-1">
+            {SCALE_STOPS.map((stop) => (
+              <span
+                key={stop}
+                className={`absolute text-[11px] font-semibold text-[#6B7280] ${
+                  stop === 0 ? "" : stop === 100 ? "-translate-x-full" : "-translate-x-1/2"
+                }`}
+                style={{ left: `${stop}%` }}
+              >
+                {stop}%
+              </span>
+            ))}
           </div>
         </div>
       )}

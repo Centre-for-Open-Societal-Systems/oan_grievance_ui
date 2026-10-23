@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { fetchApi } from '@/lib/api';
+import { fetchApi, fetchApiWithMeta } from '@/lib/api';
 import {
   ANALYTICS_CHART_SCHEMAS,
   FILTER_OPTION_SCHEMAS,
@@ -57,9 +57,8 @@ export function parseAnalyticsCharts(raw: unknown): AnalyticsCharts {
  * charts, since the page is only as fresh as its stalest chart. Null when the
  * service sent none that is a date.
  */
-export function parseAsOf(raw: unknown): string | null {
-  const meta = (raw as { meta?: { as_of?: unknown } } | null)?.meta;
-  const asOf = meta?.as_of;
+export function parseAsOf(meta: unknown): string | null {
+  const asOf = (meta as { as_of?: unknown } | null | undefined)?.as_of;
   if (!asOf || typeof asOf !== 'object' || Array.isArray(asOf)) return null;
 
   let oldest: { time: number; iso: string } | null = null;
@@ -120,13 +119,11 @@ function chartsQuery(ids: string[], options: AnalyticsRequestOptions): string {
 }
 
 async function requestCharts(ids: AnalyticsChartId[], options: AnalyticsRequestOptions): Promise<AnalyticsResponse> {
-  const raw = await fetchApi<unknown>(
-    `/api/v1/charts?${chartsQuery(ids, options)}`,
-    { method: 'GET', signal: options.signal },
-    undefined,
-    { includeMeta: true }
-  );
-  return { charts: parseAnalyticsCharts(raw), asOf: parseAsOf(raw) };
+  const { data, meta } = await fetchApiWithMeta<unknown>(`/api/v1/charts?${chartsQuery(ids, options)}`, {
+    method: 'GET',
+    signal: options.signal,
+  });
+  return { charts: parseAnalyticsCharts(data), asOf: parseAsOf(meta) };
 }
 
 /**
@@ -146,16 +143,24 @@ export async function fetchAnalyticsCharts(options: AnalyticsRequestOptions = {}
   }
 }
 
+/** One option list. `failed` is a list that should have loaded but did not; one the service simply does not offer is not. */
+interface LoadedOptions<Id extends FilterOptionChartId> {
+  rows: z.infer<(typeof FILTER_OPTION_SCHEMAS)[Id]> | null;
+  failed: boolean;
+}
+
 /**
- * One option list, or null when it could not be read. Each list is its own
- * request: the service answers 404 to the whole call when it does not know one
- * chart id (a list it lacks, or the department list for anyone but an admin),
- * and one missing list must not take the others' controls with it.
+ * One option list. Each list is its own request: the service answers 404 to the
+ * whole call when it does not know one chart id (a list it lacks, or the
+ * department list for anyone but an admin), and one missing list must not take
+ * the others' controls with it. A 404 is "not offered", which is quiet; a
+ * network, server, session or shape failure is `failed`, so the page can say
+ * that a control is missing rather than leave the user to wonder.
  */
 async function loadOptions<Id extends FilterOptionChartId>(
   id: Id,
   signal: AbortSignal | undefined
-): Promise<z.infer<(typeof FILTER_OPTION_SCHEMAS)[Id]> | null> {
+): Promise<LoadedOptions<Id>> {
   try {
     const raw = await fetchApi<Record<string, unknown> | null>(`/api/v1/charts?charts=${id}`, {
       method: 'GET',
@@ -163,15 +168,18 @@ async function loadOptions<Id extends FilterOptionChartId>(
     });
     const rows = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw[id] : undefined;
     const parsed = FILTER_OPTION_SCHEMAS[id].safeParse(rows);
-    return parsed.success ? (parsed.data as z.infer<(typeof FILTER_OPTION_SCHEMAS)[Id]>) : null;
-  } catch {
-    return null;
+    return parsed.success
+      ? { rows: parsed.data as z.infer<(typeof FILTER_OPTION_SCHEMAS)[Id]>, failed: false }
+      : { rows: null, failed: true };
+  } catch (err) {
+    return { rows: null, failed: (err as { status?: unknown })?.status !== 404 };
   }
 }
 
 /**
  * What the filters can be set to. A list that cannot be read is null, and its
- * control is left out. The department list is for an admin only.
+ * control is left out; `failed` says whether that was an error worth telling the
+ * user about. The department list is for an admin only.
  */
 export async function fetchFilterOptions(
   options: { includeDepartments: boolean; signal?: AbortSignal }
@@ -183,8 +191,11 @@ export async function fetchFilterOptions(
   ]);
 
   return {
-    regions: regions?.map((row) => ({ value: row.region_code, label: row.region_name?.trim() || row.region_code })) ?? null,
-    categories: categories?.map((row) => ({ value: row.category, label: row.category })) ?? null,
-    departments: departments?.map((row) => ({ value: row.department, label: row.department })) ?? null,
+    regions:
+      regions.rows?.map((row) => ({ value: row.region_code, label: row.region_name?.trim() || row.region_code })) ??
+      null,
+    categories: categories.rows?.map((row) => ({ value: row.category, label: row.category })) ?? null,
+    departments: departments?.rows?.map((row) => ({ value: row.department, label: row.department })) ?? null,
+    failed: regions.failed || categories.failed || (departments?.failed ?? false),
   };
 }

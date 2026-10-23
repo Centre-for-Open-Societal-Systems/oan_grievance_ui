@@ -1,18 +1,18 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type ReactElement } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { isSelectableMonth } from "../utils/months";
 import { CARD_HOVER, CARD_WHITE } from "./cardStyles";
 
 interface TopHeaderProps {
-  /** `YYYY-MM`. */
-  month: string;
+  /** `YYYY-MM`, or "" until the browser has said which month it is. */
+  readonly month: string;
   /** Latest month that can be picked (`YYYY-MM`) — the service refuses a future one. */
-  maxMonth: string;
-  onMonthChange: (month: string) => void;
+  readonly maxMonth: string;
+  readonly onMonthChange: (month: string) => void;
   /** ISO timestamp the data was last refreshed, once there is data. */
-  asOf?: string | null;
+  readonly asOf?: string | null;
 }
 
 /** `2026-04` → a date in that month, safe from time-zone shifts. */
@@ -21,7 +21,7 @@ function monthStart(month: string): Date | null {
   return match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)) : null;
 }
 
-export function TopHeader({ month, maxMonth, onMonthChange, asOf = null }: TopHeaderProps) {
+export function TopHeader({ month, maxMonth, onMonthChange, asOf = null }: TopHeaderProps): ReactElement {
   const t = useTranslations("analytics");
   const format = useFormatter();
   const inputId = useId();
@@ -33,10 +33,20 @@ export function TopHeader({ month, maxMonth, onMonthChange, asOf = null }: TopHe
     <div className={`${CARD_WHITE} ${CARD_HOVER} p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`}>
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-        <p className="text-gray-500 text-sm mt-2">{t("subtitle", { month: monthName })}</p>
+        {month && <p className="text-gray-500 text-sm mt-2">{t("subtitle", { month: monthName })}</p>}
         {refreshed && (
           <p className="text-gray-400 text-xs mt-1">
-            {t("dataAsOf", { time: format.dateTime(refreshed, { dateStyle: "medium", timeStyle: "short" }) })}
+            {/* The viewer's own time zone, named, so "12:46 PM" is not mistaken for the server's. */}
+            {t("dataAsOf", {
+              time: format.dateTime(refreshed, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                timeZoneName: "short",
+              }),
+            })}
           </p>
         )}
       </div>

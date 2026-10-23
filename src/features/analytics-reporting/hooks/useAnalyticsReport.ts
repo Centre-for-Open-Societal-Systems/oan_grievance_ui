@@ -50,6 +50,8 @@ export function useAnalyticsReport(
   const requestKey = JSON.stringify([month, region, serviceCategory, assignedDept, reloadToken]);
 
   useEffect(() => {
+    // No month yet: the page is waiting for the browser to say which month it is. Nothing to ask for.
+    if (!month) return;
     const controller = new AbortController();
 
     fetchAnalyticsCharts({ month, filters: { region, serviceCategory, assignedDept }, signal: controller.signal })

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { fetchFilterOptions } from '../api/analyticsApi';
 import type { AnalyticsFilterOptions } from '../types';
 
-const NONE: AnalyticsFilterOptions = { regions: null, categories: null, departments: null };
+const NONE: AnalyticsFilterOptions = { regions: null, categories: null, departments: null, failed: false };
 
 /**
  * What the filters can be set to. A request that fails leaves every control out
@@ -21,7 +21,7 @@ export function useAnalyticsFilterOptions(includeDepartments: boolean): Analytic
         if (!controller.signal.aborted) setOptions(loaded);
       })
       .catch(() => {
-        // The controls stay out; there is nothing to tell the user that they could act on.
+        // Every list failure is already folded into `failed`; only an abort rejects, and that is ignored.
       });
 
     return () => controller.abort();

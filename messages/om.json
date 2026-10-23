@@ -606,7 +606,8 @@
       "allRegions": "Naannoowwan hundaa",
       "allCategories": "Ramaddiiwwan hundaa",
       "allDepartments": "Kutaawwan hundaa",
-      "clear": "Calleewwan haqi"
+      "clear": "Calleewwan haqi",
+      "unavailable": "Calleewwan tokko tokko fe’uun hin danda’amne."
     },
     "loading": "Xiinxala fe’aa jira…",
     "loadFailed": "Xiinxala fe’uun hin danda’amne.",
@@ -624,6 +625,7 @@
       "unavailableValue": "—",
       "deltaDays": "Guyyaa {delta} ji’a darbe irraa",
       "deltaPercent": "{delta}% ji’a darbe irraa",
+      "deltaOther": "{delta} {unit} ji’a darbe irraa",
       "basedOn": "{count, plural, one {Deebii # irratti hundaa’e} other {Deebii # irratti hundaa’e}}"
     },
     "weeklyTrend": "Dhiyeessuu fi Furuu Komii Torbaanii",

@@ -11,7 +11,8 @@ export interface PerformanceKpi {
   metric: PerformanceMetric;
   /** Null when the month has nothing to measure: shown as a dash. */
   value: number | null;
-  unit: 'days' | 'percent';
+  /** `days` and `percent` are known; any other unit the service sends is shown as it came. */
+  unit: string;
   /** Null when there is nothing to compare with, or the metric has no comparison. */
   delta: number | null;
   tone: DeltaTone;
@@ -80,6 +81,8 @@ export interface AnalyticsFilterOptions {
   categories: FilterOption[] | null;
   /** Admin only. */
   departments: FilterOption[] | null;
+  /** A list failed to load for a reason worth telling the user (not merely "the service has no such list"). */
+  failed: boolean;
 }
 
 /** What the page draws. A chart that is unavailable is `null` — never zeros, which would read as "no cases". */

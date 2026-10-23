@@ -31,12 +31,23 @@ const IMPROVES_WHEN: Record<PerformanceMetric, 'down' | 'up' | null> = {
   satisfaction: null,
 };
 
-const UNITS: Record<PerformanceMetric, PerformanceKpi['unit']> = {
+/** What each metric is measured in when the service does not say. */
+const DEFAULT_UNITS: Record<PerformanceMetric, string> = {
   avg_resolution_time: 'days',
   resolution_rate: 'percent',
   escalation_rate: 'percent',
   satisfaction: 'percent',
 };
+
+/**
+ * A change to the one decimal the cards show. Rounding comes before the tone is judged:
+ * 0.04 reads as "0", which is no change, not a small win or loss to colour.
+ */
+function roundDelta(delta: number | null): number | null {
+  if (delta === null) return null;
+  const rounded = Math.round(delta * 10) / 10;
+  return rounded === 0 ? 0 : rounded; // folds -0 into 0
+}
 
 function toneOf(metric: PerformanceMetric, delta: number | null): DeltaTone {
   const improves = IMPROVES_WHEN[metric];
@@ -51,11 +62,13 @@ function mapKpis(rows: PerformanceKpiRow[] | null): PerformanceKpi[] | null {
     const row = byMetric.get(metric);
     // A value that is missing hides its comparison too: "+4% vs last month" over a dash makes no sense.
     const value = row?.value ?? null;
-    const delta = value === null ? null : (row?.delta ?? null);
+    const delta = value === null ? null : roundDelta(row?.delta ?? null);
     return {
       metric,
       value,
-      unit: UNITS[metric],
+      // The unit the service sent wins: a metric it reports on another scale (a 1-5 rating, say) must
+      // not be shown as a percentage because this table says so.
+      unit: row?.unit?.trim() || DEFAULT_UNITS[metric],
       delta,
       tone: toneOf(metric, delta),
       basis: row?.basis ?? null,
