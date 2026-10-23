@@ -100,7 +100,7 @@ export async function POST(request: Request) {
 
   try {
     await callBackendAuth<{ user: string; roles: string[] }>(
-      '/api/v1/auth/register',
+      '/v1/auth/register',
       {
         email,
         password,

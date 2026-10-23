@@ -196,7 +196,7 @@ export async function uploadAttachments(params: {
   form.append('grievance', params.grievance);
 
   const rawResult = await fetchApi<UploadAttachmentResult | UploadAttachmentResult[]>(
-    `api/v1/grievances/${encodeURIComponent(params.grievance)}/attachments`,
+    `v1/grievances/${encodeURIComponent(params.grievance)}/attachments`,
     { method: 'POST', body: form },
     UPLOAD_TIMEOUT_MS
   );
@@ -206,17 +206,17 @@ export async function uploadAttachments(params: {
 
 /** GET /api/v1/grievances/<grievance>/attachments — every attachment on a case, including pending/infected ones. */
 export async function getAttachments(grievance: string): Promise<AttachmentRow[]> {
-  return fetchApi<AttachmentRow[]>(`api/v1/grievances/${grievance}/attachments`, { method: 'GET' });
+  return fetchApi<AttachmentRow[]>(`v1/grievances/${grievance}/attachments`, { method: 'GET' });
 }
 
 /** GET /api/v1/attachments/<attachment>/download — only succeeds once the attachment has scanned Clean. */
 export async function getAttachmentDownloadInfo(attachment: string): Promise<AttachmentDownloadInfo> {
-  return fetchApi<AttachmentDownloadInfo>(`api/v1/attachments/${attachment}/download`, { method: 'GET' });
+  return fetchApi<AttachmentDownloadInfo>(`v1/attachments/${attachment}/download`, { method: 'GET' });
 }
 
 /** DELETE /api/v1/attachments/<attachment> — only while the case is still open. */
 export async function deleteAttachment(attachment: string): Promise<void> {
-  await fetchApi(`api/v1/attachments/${attachment}`, { method: 'DELETE' });
+  await fetchApi(`v1/attachments/${attachment}`, { method: 'DELETE' });
 }
 
 /**
@@ -225,7 +225,7 @@ export async function deleteAttachment(attachment: string): Promise<void> {
  */
 export function getAttachmentViewUrl(attachment: string, download = false): string {
   const enc = encodeURIComponent(attachment);
-  return `/api/proxy/api/v1/attachments/${enc}/view${download ? '?download=1' : ''}`;
+  return `/api/proxy/v1/attachments/${enc}/view${download ? '?download=1' : ''}`;
 }
 
 /**

@@ -44,12 +44,12 @@ export function parseDashboardCharts(raw: unknown): DashboardCharts {
  * The dashboard's charts in one round trip. An officer gets counts for their own
  * desks; an admin gets everything.
  *
- * Corresponding REST endpoint: GET /api/v1/charts?charts=...
+ * Corresponding REST endpoint: GET /v1/charts?charts=...
  */
 export async function fetchDashboardCharts(
   options: DashboardRequestOptions = {}
 ): Promise<DashboardCharts> {
-  const raw = await fetchApi<unknown>(`/api/v1/charts?charts=${DASHBOARD_CHART_IDS.join(',')}${regionQuery(options.region)}`, {
+  const raw = await fetchApi<unknown>(`/v1/charts?charts=${DASHBOARD_CHART_IDS.join(',')}${regionQuery(options.region)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -61,12 +61,12 @@ export async function fetchDashboardCharts(
  * read. Always unfiltered, so picking a region on the dashboard does not shrink the list it is
  * picked from. Throws when the chart is unavailable or in a shape this app does not know.
  *
- * Corresponding REST endpoint: GET /api/v1/charts?charts=grvByAdminLevel
+ * Corresponding REST endpoint: GET /v1/charts?charts=grvByAdminLevel
  */
 export async function fetchAdminLevelChart(
   options: Pick<DashboardRequestOptions, 'signal'> = {}
 ): Promise<AdminLevelRow[]> {
-  const raw = await fetchApi<unknown>(`/api/v1/charts?charts=${ADMIN_LEVEL_CHART_ID}`, {
+  const raw = await fetchApi<unknown>(`/v1/charts?charts=${ADMIN_LEVEL_CHART_ID}`, {
     method: 'GET',
     signal: options.signal,
   });

@@ -86,7 +86,7 @@ export async function fetchGrievances(
   params: GrievanceListQueryParams = {},
   options: RequestOptions = {}
 ): Promise<GrievanceListData> {
-  return fetchApi<GrievanceListData>(`/api/v1/grievances${buildListQuery(params)}`, {
+  return fetchApi<GrievanceListData>(`/v1/grievances${buildListQuery(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -101,7 +101,7 @@ export async function fetchGrievances(
 export async function fetchGrievanceSummary(
   options: RequestOptions = {}
 ): Promise<GrievanceSummaryData> {
-  return fetchApi<GrievanceSummaryData>('/api/v1/grievances/summary', {
+  return fetchApi<GrievanceSummaryData>('/v1/grievances/summary', {
     method: 'GET',
     signal: options.signal,
   });
@@ -119,7 +119,7 @@ export async function fetchGrievanceTimeline(
   options: RequestOptions = {}
 ): Promise<GrievanceTimelineData> {
   return fetchApi<GrievanceTimelineData>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/timeline${buildTimelineQuery(params)}`,
+    `/v1/grievances/${encodeURIComponent(ticketNumber)}/timeline${buildTimelineQuery(params)}`,
     {
       method: 'GET',
       signal: options.signal,
@@ -148,7 +148,7 @@ export async function postGrievanceMessage(
     options.clientMessageId ||
     (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined);
   return fetchApi<GrievanceActionResult>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/message`,
+    `/v1/grievances/${encodeURIComponent(ticketNumber)}/message`,
     {
       method: 'POST',
       body: JSON.stringify({
@@ -174,7 +174,7 @@ export async function fetchResponseTemplates(
 ): Promise<ResponseTemplatesData> {
   const query = new URLSearchParams({ action }).toString();
   return fetchApi<ResponseTemplatesData>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/response-templates?${query}`,
+    `/v1/grievances/${encodeURIComponent(ticketNumber)}/response-templates?${query}`,
     { method: 'GET', signal: options.signal }
   );
 }
@@ -207,7 +207,7 @@ export async function executeGrievanceAction(
   options: RequestOptions = {}
 ): Promise<GrievanceActionResult> {
   return fetchApi<GrievanceActionResult>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/action`,
+    `/v1/grievances/${encodeURIComponent(ticketNumber)}/action`,
     {
       method: 'POST',
       // The request model forbids unknown fields, so only the spec's
@@ -243,7 +243,7 @@ export async function reassignGrievance(
   options: RequestOptions = {}
 ): Promise<GrievanceChangeResponseData> {
   return fetchApi<GrievanceChangeResponseData>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/reassign`,
+    `/v1/grievances/${encodeURIComponent(ticketNumber)}/reassign`,
     {
       method: 'POST',
       body: JSON.stringify({
@@ -271,7 +271,7 @@ export async function deferGrievanceSLA(
   options: RequestOptions = {}
 ): Promise<GrievanceChangeResponseData> {
   return fetchApi<GrievanceChangeResponseData>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/defer-sla`,
+    `/v1/grievances/${encodeURIComponent(ticketNumber)}/defer-sla`,
     {
       method: 'POST',
       body: JSON.stringify({
@@ -295,7 +295,7 @@ export async function raiseChangeRequest(
   options: RequestOptions = {}
 ): Promise<ChangeRequestData> {
   return fetchApi<ChangeRequestData>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/change-requests`,
+    `/v1/grievances/${encodeURIComponent(ticketNumber)}/change-requests`,
     {
       method: 'POST',
       body: JSON.stringify({
@@ -323,7 +323,7 @@ export async function fetchChangeRequests(
   if (params.limit !== undefined) searchParams.set('limit', String(params.limit));
   const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
 
-  return fetchApi<ChangeRequestListData>(`/api/v1/change-requests${query}`, {
+  return fetchApi<ChangeRequestListData>(`/v1/change-requests${query}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -339,7 +339,7 @@ export async function fetchChangeRequest(
   options: RequestOptions = {}
 ): Promise<ChangeRequestData> {
   return fetchApi<ChangeRequestData>(
-    `/api/v1/change-requests/${encodeURIComponent(name)}`,
+    `/v1/change-requests/${encodeURIComponent(name)}`,
     {
       method: 'GET',
       signal: options.signal,
@@ -360,7 +360,7 @@ export async function decideChangeRequest(
   options: RequestOptions = {}
 ): Promise<GrievanceChangeResponseData> {
   return fetchApi<GrievanceChangeResponseData>(
-    `/api/v1/change-requests/${encodeURIComponent(name)}/decide`,
+    `/v1/change-requests/${encodeURIComponent(name)}/decide`,
     {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -383,7 +383,7 @@ export async function decideGrievanceAnonymity(
   options: RequestOptions = {}
 ): Promise<GrievanceActionResult> {
   return fetchApi<GrievanceActionResult>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/anonymity-decision`,
+    `/v1/grievances/${encodeURIComponent(ticketNumber)}/anonymity-decision`,
     {
       method: 'POST',
       body: JSON.stringify({

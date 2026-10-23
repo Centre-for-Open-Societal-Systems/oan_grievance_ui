@@ -120,7 +120,7 @@ export function toRegistrationPayload(kind: OrganisationKind, values: Organisati
 /** The signed-in user's organisation, or null if they have not registered one (404). */
 export async function getMyOrganisation(): Promise<Organisation | null> {
   try {
-    return parseOrganisation(await fetchApi('/api/v1/orgs/me', { method: 'GET' }));
+    return parseOrganisation(await fetchApi('/v1/orgs/me', { method: 'GET' }));
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;
     throw error;
@@ -133,7 +133,7 @@ export async function getMyOrganisation(): Promise<Organisation | null> {
  * which case the registration still went through.
  */
 export async function registerOrganisation(payload: OrganisationRegistrationPayload): Promise<Organisation | null> {
-  return parseOrganisation(await fetchApi('/api/v1/orgs', { method: 'POST', body: JSON.stringify(payload) }));
+  return parseOrganisation(await fetchApi('/v1/orgs', { method: 'POST', body: JSON.stringify(payload) }));
 }
 
 /**

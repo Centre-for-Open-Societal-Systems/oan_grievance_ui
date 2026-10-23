@@ -7,7 +7,7 @@ describe('callBackendAuth', () => {
   const originalEnvUrl = process.env.AUTH_API_BASE_URL;
 
   beforeEach(() => {
-    process.env.AUTH_API_BASE_URL = 'http://auth.test';
+    process.env.AUTH_API_BASE_URL = 'http://auth.test/api';
   });
 
   afterEach(() => {
@@ -39,7 +39,7 @@ describe('callBackendAuth', () => {
       message: 'Logged in successfully',
     });
 
-    const result = await callBackendAuth<TokenPair>('/api/v1/auth/login', { usr: 'test', pwd: 'pass' }, '127.0.0.1');
+    const result = await callBackendAuth<TokenPair>('/v1/auth/login', { usr: 'test', pwd: 'pass' }, '127.0.0.1');
     expect(result).toEqual(expectedTokenPair);
   });
 
@@ -53,7 +53,7 @@ describe('callBackendAuth', () => {
 
     mockResponse(200, flatData);
 
-    const result = await callBackendAuth<TokenPair>('/api/v1/auth/login', { usr: 'test', pwd: 'pass' }, '127.0.0.1');
+    const result = await callBackendAuth<TokenPair>('/v1/auth/login', { usr: 'test', pwd: 'pass' }, '127.0.0.1');
     expect(result).toEqual(flatData);
   });
 
@@ -64,11 +64,11 @@ describe('callBackendAuth', () => {
     });
 
     await expect(
-      callBackendAuth('/api/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1')
+      callBackendAuth('/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1')
     ).rejects.toThrow(BackendAuthError);
 
     try {
-      await callBackendAuth('/api/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1');
+      await callBackendAuth('/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1');
     } catch (err) {
       const error = err as BackendAuthError;
       expect(error.message).toBe('Temporary password must be changed before login');
@@ -85,7 +85,7 @@ describe('callBackendAuth', () => {
     });
 
     await expect(
-      callBackendAuth('/api/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1')
+      callBackendAuth('/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1')
     ).rejects.toThrow('Account disabled');
   });
 
@@ -93,7 +93,7 @@ describe('callBackendAuth', () => {
     mockResponse(500, {});
 
     try {
-      await callBackendAuth('/api/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1');
+      await callBackendAuth('/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1');
       expect.unreachable('Should have thrown');
     } catch (err) {
       const error = err as BackendAuthError;
@@ -113,17 +113,17 @@ describe('callBackendAuth', () => {
     } as unknown as Response);
 
     await expect(
-      callBackendAuth('/api/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1')
+      callBackendAuth('/v1/auth/login', { usr: 'test', pwd: 'pass' }, '10.0.0.1')
     ).rejects.toThrow('Request failed with status 502');
   });
 
   it('sends proper headers including X-Forwarded-For and Content-Type', async () => {
     mockResponse(200, { success: true });
 
-    await callBackendAuth('/api/v1/auth/logout', { refresh_token: 'rt-123' }, '192.168.1.50');
+    await callBackendAuth('/v1/auth/logout', { refresh_token: 'rt-123' }, '192.168.1.50');
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/v1/auth/logout'),
+      expect.stringContaining('/v1/auth/logout'),
       expect.objectContaining({
         method: 'POST',
         headers: {

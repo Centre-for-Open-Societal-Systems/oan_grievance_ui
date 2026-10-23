@@ -17,7 +17,7 @@ function logout(cookies: Record<string, string>) {
 
 describe('POST /api/auth/logout with an IAM session', () => {
   beforeEach(() => {
-    process.env.AUTH_API_BASE_URL = 'http://auth.internal';
+    process.env.AUTH_API_BASE_URL = 'http://auth.internal/api';
     vi.stubGlobal('fetch', fetchMock);
   });
 

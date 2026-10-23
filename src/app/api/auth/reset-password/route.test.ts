@@ -37,7 +37,7 @@ describe('POST /api/auth/reset-password', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
     expect(callBackendAuth).toHaveBeenCalledWith(
-      '/api/v1/auth/reset-password',
+      '/v1/auth/reset-password',
       { key: 'key-ok', new_password: STRONG_PASSWORD },
       expect.any(String)
     );

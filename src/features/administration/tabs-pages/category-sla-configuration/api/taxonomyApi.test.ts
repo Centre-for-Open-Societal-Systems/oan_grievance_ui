@@ -35,7 +35,7 @@ describe('taxonomyApi', () => {
     await fetchServiceCategories({ page_size: 100, search: undefined, is_active: false });
     const { url, method } = lastCall(fetchMock);
     expect(method).toBe('GET');
-    expect(url).toContain('/api/proxy/api/v1/service-categories?page_size=100&is_active=false');
+    expect(url).toContain('/api/proxy/v1/service-categories?page_size=100&is_active=false');
   });
 
   it('creates, updates and deactivates a category by name, encoded', async () => {
@@ -46,7 +46,7 @@ describe('taxonomyApi', () => {
 
     await updateServiceCategory('Roads & Bridges', { is_default: true });
     expect(lastCall(fetchMock)).toMatchObject({ method: 'PATCH', body: { is_default: true } });
-    expect(lastCall(fetchMock).url).toContain('/api/v1/service-categories/Roads%20%26%20Bridges');
+    expect(lastCall(fetchMock).url).toContain('/v1/service-categories/Roads%20%26%20Bridges');
 
     await deactivateServiceCategory('007');
     expect(lastCall(fetchMock)).toMatchObject({ method: 'DELETE' });
@@ -55,7 +55,7 @@ describe('taxonomyApi', () => {
   it('lists, creates, updates and deactivates grievance types', async () => {
     const fetchMock = mockFetch({ grievance_types: [], pagination: {} });
     await fetchGrievanceTypes({ service_category: 'Roads', page_size: 100 });
-    expect(lastCall(fetchMock).url).toContain('/api/v1/grievance-types?service_category=Roads&page_size=100');
+    expect(lastCall(fetchMock).url).toContain('/v1/grievance-types?service_category=Roads&page_size=100');
 
     await createGrievanceType({ service_category: 'Roads', type_name: 'Potholes' });
     expect(lastCall(fetchMock)).toMatchObject({
@@ -65,7 +65,7 @@ describe('taxonomyApi', () => {
 
     await updateGrievanceType('GTYPE-1', { is_active: true });
     expect(lastCall(fetchMock)).toMatchObject({ method: 'PATCH', body: { is_active: true } });
-    expect(lastCall(fetchMock).url).toContain('/api/v1/grievance-types/GTYPE-1');
+    expect(lastCall(fetchMock).url).toContain('/v1/grievance-types/GTYPE-1');
 
     await deactivateGrievanceType('GTYPE-1');
     expect(lastCall(fetchMock)).toMatchObject({ method: 'DELETE' });

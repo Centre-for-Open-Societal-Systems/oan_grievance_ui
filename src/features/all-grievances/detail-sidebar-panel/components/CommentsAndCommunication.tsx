@@ -325,7 +325,7 @@ export function CommentsAndCommunication({
                                     e.stopPropagation();
                                     const attId = att.name || att.id;
                                     if (attId) {
-                                      const viewUrl = `/api/proxy/api/v1/attachments/${encodeURIComponent(attId)}/view`;
+                                      const viewUrl = `/api/proxy/v1/attachments/${encodeURIComponent(attId)}/view`;
                                       window.open(viewUrl, '_blank', 'noopener,noreferrer');
                                     } else if (att.file_url) {
                                       const proxyUrl = att.file_url.startsWith('/api/proxy')

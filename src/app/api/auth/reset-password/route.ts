@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await callBackendAuth('/api/v1/auth/reset-password', { key, new_password: newPassword }, clientIp);
+    await callBackendAuth('/v1/auth/reset-password', { key, new_password: newPassword }, clientIp);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof BackendAuthError) {

@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
   try {
     const pair = await callBackendAuth<TokenPair>(
-      '/api/v1/auth/login',
+      '/v1/auth/login',
       { usr, pwd, remember_me: rememberMe },
       clientIp
     );

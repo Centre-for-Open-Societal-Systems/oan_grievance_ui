@@ -31,7 +31,7 @@ describe('responseTemplatesApi', () => {
     await fetchResponseTemplates({ page_size: 100, service_category: 'Inputs', department: undefined });
     const { url, method } = lastCall(fetchMock);
     expect(method).toBe('GET');
-    expect(url).toContain('/api/proxy/api/v1/response-templates?page_size=100&service_category=Inputs');
+    expect(url).toContain('/api/proxy/v1/response-templates?page_size=100&service_category=Inputs');
   });
 
   it('creates, updates and retires by template code', async () => {
@@ -39,11 +39,11 @@ describe('responseTemplatesApi', () => {
 
     await createResponseTemplate({ title: 'T', action: 'Resolved', body: 'B' });
     expect(lastCall(fetchMock)).toMatchObject({ method: 'POST', body: { title: 'T', action: 'Resolved', body: 'B' } });
-    expect(lastCall(fetchMock).url).toMatch(/\/api\/v1\/response-templates$/);
+    expect(lastCall(fetchMock).url).toMatch(/\/v1\/response-templates$/);
 
     await updateResponseTemplate('TPL 1', { department: null });
     expect(lastCall(fetchMock)).toMatchObject({ method: 'PATCH', body: { department: null } });
-    expect(lastCall(fetchMock).url).toContain('/api/v1/response-templates/TPL%201');
+    expect(lastCall(fetchMock).url).toContain('/v1/response-templates/TPL%201');
 
     await retireResponseTemplate('TPL 1');
     expect(lastCall(fetchMock)).toMatchObject({ method: 'DELETE' });

@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
   try {
     await callBackendAuth(
-      '/api/v1/auth/password/initial',
+      '/v1/auth/password/initial',
       { usr, current_password: currentPassword, new_password: newPassword },
       clientIp
     );
