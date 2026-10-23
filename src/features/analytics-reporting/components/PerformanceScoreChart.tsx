@@ -104,7 +104,7 @@ export function PerformanceScoreChart({ data }: PerformanceScoreChartProps): Rea
         </div>
 
         {/* The same scores as text: it is what a screen reader gets, and it says "no data" where the radar can only draw a point. */}
-        <ul className="flex flex-col gap-2 min-w-[200px]">
+        <ul className="flex flex-col gap-2 min-w-50">
           {rows.map((row) => (
             <li key={row.axis} className="flex items-baseline justify-between gap-6 text-[13px]">
               <span className="font-medium text-gray-600">{row.label}</span>

@@ -34,13 +34,13 @@ export const CHART_CARD_TITLE = "text-[16px] font-bold text-gray-900 tracking-ti
 
 /** The floating box a chart shows on hover. */
 export const TOOLTIP_BOX =
-  "bg-white p-3 border border-[#F1F3F4] rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] min-w-[140px] z-50";
+  "bg-white p-3 border border-[#F1F3F4] rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] min-w-35 z-50";
 export const TOOLTIP_TITLE = "text-gray-900 font-semibold text-[13px] mb-2 pb-2 border-b border-[#F1F3F4]";
 
 /** Room a chart is given. */
-export const CHART_MIN_HEIGHT = "min-h-[380px]";
-export const CHART_HEIGHT = "h-[380px]";
-export const SKELETON_KPI_HEIGHT = "h-[130px]";
-export const SKELETON_CHART_HEIGHT = "h-[460px]";
+export const CHART_MIN_HEIGHT = "min-h-95";
+export const CHART_HEIGHT = "h-95";
+export const SKELETON_KPI_HEIGHT = "h-32.5";
+export const SKELETON_CHART_HEIGHT = "h-115";
 
 export const AXIS_TICK = { fontSize: 11, fill: CHART_COLORS.axisText, fontWeight: 500 } as const;

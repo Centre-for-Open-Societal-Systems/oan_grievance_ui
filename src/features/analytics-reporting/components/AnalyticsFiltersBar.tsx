@@ -19,7 +19,7 @@ function FilterSelect({ label, allLabel, options, value, onChange }: FilterSelec
   const offered = options.some((option) => option.value === value) || value === "" ? options : [...options, { value, label: value }];
 
   return (
-    <div className="flex flex-col gap-1 min-w-[180px]">
+    <div className="flex flex-col gap-1 min-w-45">
       <label htmlFor={id} className="text-xs font-semibold text-gray-600">
         {label}
       </label>

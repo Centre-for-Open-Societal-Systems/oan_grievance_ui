@@ -37,7 +37,7 @@ export function KPICard({
         <p className="text-[15px] font-medium text-[#6B7280] mt-1.5">{title}</p>
       </div>
       <div
-        className="w-[80px] h-[80px] rounded-[18px] flex items-center justify-center shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+        className="w-20 h-20 rounded-[18px] flex items-center justify-center shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
         style={{ backgroundColor: iconBgColor }}
       >
         <Icon
