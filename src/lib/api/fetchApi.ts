@@ -154,12 +154,13 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
  * Accepts absolute proxy path (e.g. `/api/v1/submitters/options`) or relative path.
  * `timeoutMs` overrides the default 15s — a `FormData` file upload can
  * legitimately take longer than a JSON call on a slow connection.
+ * Used through `fetchApi` (the data) or `fetchApiWithMeta` (the data and the envelope's `meta`).
  */
-export async function fetchApi<T = unknown>(
+async function requestEnvelope<T>(
   path: string,
-  options: RequestInit = {},
-  timeoutMs?: number
-): Promise<T> {
+  options: RequestInit,
+  timeoutMs: number | undefined
+): Promise<{ data: T; meta: unknown }> {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   const proxyPath = cleanPath.startsWith('api/proxy/') ? cleanPath : `api/proxy/${cleanPath}`;
   const url = new URL(proxyPath, BASE_URL);
@@ -226,7 +227,7 @@ export async function fetchApi<T = unknown>(
     const isAbort = (error as { name?: string } | null)?.name === 'AbortError' || error === abortReason;
     if (options.signal?.aborted && isAbort) throw error;
     if (!response.ok) throw new ApiError(genericMessageForStatus(response.status), null, response.status);
-    return null as T;
+    return { data: null as T, meta: undefined };
   }
 
   if (!response.ok) {
@@ -272,9 +273,27 @@ export async function fetchApi<T = unknown>(
       extra.message = responseData.message;
     }
     if (Object.keys(extra).length > 0) {
-      return { ...unwrapped, ...extra } as T;
+      return { data: { ...unwrapped, ...extra } as T, meta: responseData?.meta };
     }
   }
 
-  return unwrapped as T;
+  return { data: unwrapped as T, meta: responseData?.meta };
+}
+
+/**
+ * Same call as `fetchApi`, with the envelope's `meta` (e.g. when each chart of
+ * `GET /api/v1/charts` was refreshed) returned beside the data rather than
+ * spliced into it, where it could collide with a key the data has itself.
+ */
+export async function fetchApiWithMeta<T = unknown>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs?: number
+): Promise<{ data: T; meta: unknown }> {
+  return requestEnvelope<T>(path, options, timeoutMs);
+}
+
+/** The data of the call, exactly as every caller has always had it. */
+export async function fetchApi<T = unknown>(path: string, options: RequestInit = {}, timeoutMs?: number): Promise<T> {
+  return (await requestEnvelope<T>(path, options, timeoutMs)).data;
 }

@@ -19,6 +19,7 @@ export function Header() {
   // this PR's i18n setup and still need their own translation pass (see
   // messages/README.md).
   const tNoAccess = useTranslations("noAccess");
+  const tAnalytics = useTranslations("analytics");
 
   const getPageTitle = (path: string) => {
     if (path === "/") return "Dashboard";
@@ -28,7 +29,7 @@ export function Header() {
       return seesAll ? "All Grievances" : "My Grievances";
     }
     if (path.startsWith("/submit-grievance")) return "Submit Grievance";
-    if (path.startsWith("/analytics-reporting")) return "Analytics & Reporting";
+    if (path.startsWith("/analytics-reporting")) return tAnalytics("title");
     if (path.startsWith("/user-management")) return "User Management";
     if (path.startsWith("/no-access")) return tNoAccess("pageTitle");
     return "Dashboard";

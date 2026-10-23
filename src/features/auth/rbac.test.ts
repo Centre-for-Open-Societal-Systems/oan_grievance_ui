@@ -5,6 +5,7 @@ import {
   canViewAllGrievances,
   homeRouteForRoles,
   homeRouteForUser,
+  isAdmin,
   isOfficerOrAdmin,
   isProtectedRoute,
   isPublicRoute,
@@ -184,6 +185,18 @@ describe('isOfficerOrAdmin', () => {
     expect(isOfficerOrAdmin([ROLES.REVIEW_OFFICER])).toBe(false);
     expect(isOfficerOrAdmin([])).toBe(false);
     expect(isOfficerOrAdmin(['Some Future Role'])).toBe(false);
+  });
+});
+
+describe('isAdmin', () => {
+  it('is true for Admin only, not for Officer, Review Officer, Submitter, or empty/unknown roles', () => {
+    expect(isAdmin([ROLES.ADMIN])).toBe(true);
+    expect(isAdmin([ROLES.SUBMITTER, ROLES.ADMIN])).toBe(true);
+    expect(isAdmin([ROLES.OFFICER])).toBe(false);
+    expect(isAdmin([ROLES.REVIEW_OFFICER])).toBe(false);
+    expect(isAdmin([ROLES.SUBMITTER])).toBe(false);
+    expect(isAdmin([])).toBe(false);
+    expect(isAdmin(['Some Future Role'])).toBe(false);
   });
 });
 
