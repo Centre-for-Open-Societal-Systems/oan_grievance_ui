@@ -7,6 +7,7 @@ import { selectUser } from "@/features/auth/store/authSlice";
 import { useAppSelector } from "@/store/hooks";
 import { useAnalyticsFilterOptions } from "./hooks/useAnalyticsFilterOptions";
 import { useAnalyticsReport } from "./hooks/useAnalyticsReport";
+import { currentMonth } from "./utils/months";
 import { NO_FILTERS, type AnalyticsFilters, type AnalyticsReport } from "./types";
 import { AnalyticsFiltersBar } from "./components/AnalyticsFiltersBar";
 import { AnalyticsSkeleton } from "./components/AnalyticsSkeleton";
@@ -19,12 +20,6 @@ import { SectionUnavailable } from "./components/SectionUnavailable";
 import { TopHeader } from "./components/TopHeader";
 import { VolumeServiceChart } from "./components/VolumeServiceChart";
 import { WeeklySubmissionChart } from "./components/WeeklySubmissionChart";
-
-/** The current month as `YYYY-MM`, in the viewer's time zone — the service refuses a future month. */
-function currentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
 
 interface SectionsProps {
   report: AnalyticsReport;
@@ -80,12 +75,14 @@ function AnalyticsFailed({ forbidden, onRetry }: { forbidden: boolean; onRetry: 
 
 /**
  * Performance metrics from GET /api/v1/charts (the Dashboard's endpoint, other
- * charts). The month picker drives the KPI cards; the weekly trend, region and
- * category charts use the service's own windows.
+ * charts). The month picker drives the KPI cards and radar (`month`) and the weekly
+ * trend and category charts (`from`/`to`); the region chart is an all-time snapshot.
+ * The filters narrow all of them.
  */
 export function AnalyticsReportingPage() {
   const locale = useLocale();
-  const [maxMonth] = useState(currentMonth);
+  // Read on every render, not frozen: a tab left open across a month boundary can then pick the new month.
+  const maxMonth = currentMonth();
   const [month, setMonth] = useState(maxMonth);
   const [filters, setFilters] = useState<AnalyticsFilters>(NO_FILTERS);
   // Only an admin can narrow by department: the service answers 404 for that list to anyone else.

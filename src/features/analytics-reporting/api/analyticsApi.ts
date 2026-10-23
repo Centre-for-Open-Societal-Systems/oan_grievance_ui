@@ -1,3 +1,4 @@
+import type { z } from 'zod';
 import { fetchApi } from '@/lib/api';
 import {
   ANALYTICS_CHART_SCHEMAS,
@@ -7,6 +8,7 @@ import {
   type FilterOptionChartId,
 } from '../schemas';
 import type { AnalyticsFilterOptions, AnalyticsFilters } from '../types';
+import { currentMonth } from '../utils/months';
 
 export const ANALYTICS_CHART_IDS = Object.keys(ANALYTICS_CHART_SCHEMAS) as AnalyticsChartId[];
 
@@ -95,11 +97,18 @@ export function monthRange(month: string, today = new Date()): { from: string; t
 function chartsQuery(ids: string[], options: AnalyticsRequestOptions): string {
   const params = new URLSearchParams({ charts: ids.join(',') });
   if (options.month) {
-    params.set('month', options.month);
     const range = monthRange(options.month);
-    if (range) {
-      params.set('from', range.from);
-      params.set('to', range.to);
+    if (options.month === currentMonth()) {
+      // The current month is the service's own default for `month` and `to` (today). Leaving them out
+      // keeps the service's clock in charge, so a viewer whose time zone is ahead of it is never
+      // refused for asking about a month that has not begun there. `from` is still the 1st.
+      if (range) params.set('from', range.from);
+    } else {
+      params.set('month', options.month);
+      if (range) {
+        params.set('from', range.from);
+        params.set('to', range.to);
+      }
     }
   }
   const { region, serviceCategory, assignedDept } = options.filters ?? {};
@@ -111,10 +120,12 @@ function chartsQuery(ids: string[], options: AnalyticsRequestOptions): string {
 }
 
 async function requestCharts(ids: AnalyticsChartId[], options: AnalyticsRequestOptions): Promise<AnalyticsResponse> {
-  const raw = await fetchApi<unknown>(`/api/v1/charts?${chartsQuery(ids, options)}`, {
-    method: 'GET',
-    signal: options.signal,
-  });
+  const raw = await fetchApi<unknown>(
+    `/api/v1/charts?${chartsQuery(ids, options)}`,
+    { method: 'GET', signal: options.signal },
+    undefined,
+    { includeMeta: true }
+  );
   return { charts: parseAnalyticsCharts(raw), asOf: parseAsOf(raw) };
 }
 
@@ -136,34 +147,44 @@ export async function fetchAnalyticsCharts(options: AnalyticsRequestOptions = {}
 }
 
 /**
- * What the filters can be set to. Each list is parsed on its own, so one that
- * fails leaves its control out instead of breaking the others. The department
- * list is for an admin only: the service answers 404 to anyone else, and that
- * would fail the whole request.
+ * One option list, or null when it could not be read. Each list is its own
+ * request: the service answers 404 to the whole call when it does not know one
+ * chart id (a list it lacks, or the department list for anyone but an admin),
+ * and one missing list must not take the others' controls with it.
+ */
+async function loadOptions<Id extends FilterOptionChartId>(
+  id: Id,
+  signal: AbortSignal | undefined
+): Promise<z.infer<(typeof FILTER_OPTION_SCHEMAS)[Id]> | null> {
+  try {
+    const raw = await fetchApi<Record<string, unknown> | null>(`/api/v1/charts?charts=${id}`, {
+      method: 'GET',
+      signal,
+    });
+    const rows = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw[id] : undefined;
+    const parsed = FILTER_OPTION_SCHEMAS[id].safeParse(rows);
+    return parsed.success ? (parsed.data as z.infer<(typeof FILTER_OPTION_SCHEMAS)[Id]>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What the filters can be set to. A list that cannot be read is null, and its
+ * control is left out. The department list is for an admin only.
  */
 export async function fetchFilterOptions(
   options: { includeDepartments: boolean; signal?: AbortSignal }
 ): Promise<AnalyticsFilterOptions> {
-  const ids: FilterOptionChartId[] = ['grvFilterRegions', 'grvFilterCategories'];
-  if (options.includeDepartments) ids.push('grvFilterDepartments');
-
-  const raw = await fetchApi<Record<string, unknown> | null>(`/api/v1/charts?charts=${ids.join(',')}`, {
-    method: 'GET',
-    signal: options.signal,
-  });
-  const body = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
-
-  const regions = FILTER_OPTION_SCHEMAS.grvFilterRegions.safeParse(body.grvFilterRegions);
-  const categories = FILTER_OPTION_SCHEMAS.grvFilterCategories.safeParse(body.grvFilterCategories);
-  const departments = FILTER_OPTION_SCHEMAS.grvFilterDepartments.safeParse(body.grvFilterDepartments);
+  const [regions, categories, departments] = await Promise.all([
+    loadOptions('grvFilterRegions', options.signal),
+    loadOptions('grvFilterCategories', options.signal),
+    options.includeDepartments ? loadOptions('grvFilterDepartments', options.signal) : null,
+  ]);
 
   return {
-    regions: regions.success
-      ? regions.data.map((row) => ({ value: row.region_code, label: row.region_name?.trim() || row.region_code }))
-      : null,
-    categories: categories.success ? categories.data.map((row) => ({ value: row.category, label: row.category })) : null,
-    departments: departments.success
-      ? departments.data.map((row) => ({ value: row.department, label: row.department }))
-      : null,
+    regions: regions?.map((row) => ({ value: row.region_code, label: row.region_name?.trim() || row.region_code })) ?? null,
+    categories: categories?.map((row) => ({ value: row.category, label: row.category })) ?? null,
+    departments: departments?.map((row) => ({ value: row.department, label: row.department })) ?? null,
   };
 }

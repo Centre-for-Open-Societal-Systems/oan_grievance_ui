@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { currentMonth } from '../utils/months';
 import {
   fetchAnalyticsCharts,
   fetchFilterOptions,
@@ -162,48 +163,80 @@ describe('filters', () => {
     expect(retried.searchParams.get('region')).toBe('ET14');
   });
 
-  it('reads each option list on its own, naming a region by its name or else its code', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      okResponse({
-        status: 'success',
-        data: {
-          grvFilterRegions: [
-            { region_code: 'ET14', region_name: 'Addis Ababa', grievances: 5 },
-            { region_code: 'ET99', region_name: null, grievances: 1 },
-          ],
-          grvFilterCategories: [{ category: 'Inputs' }],
-        },
-      })
-    );
+  it('reads each option list with its own request, naming a region by its name or else its code', async () => {
+    const lists: Record<string, unknown> = {
+      grvFilterRegions: [
+        { region_code: 'ET14', region_name: 'Addis Ababa', grievances: 5 },
+        { region_code: 'ET99', region_name: null, grievances: 1 },
+      ],
+      grvFilterCategories: [{ category: 'Inputs', grievances: 3 }],
+    };
+    const fetchMock = vi.fn().mockImplementation(async (input: string) => {
+      const id = new URL(String(input)).searchParams.get('charts') ?? '';
+      return okResponse({ status: 'success', data: { [id]: lists[id] } });
+    });
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const options = await fetchFilterOptions({ includeDepartments: false });
 
-    const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
-    expect(url.searchParams.get('charts')).toBe('grvFilterRegions,grvFilterCategories');
+    const asked = fetchMock.mock.calls.map(([url]) => new URL(String(url)).searchParams.get('charts'));
+    expect(asked.sort()).toEqual(['grvFilterCategories', 'grvFilterRegions']);
     expect(options.regions).toEqual([
       { value: 'ET14', label: 'Addis Ababa' },
       { value: 'ET99', label: 'ET99' },
     ]);
-    expect(options.categories).toBeNull();
+    expect(options.categories).toEqual([{ value: 'Inputs', label: 'Inputs' }]);
     expect(options.departments).toBeNull();
   });
 
-  it('asks for the department list only for an admin', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      okResponse({ status: 'success', data: { grvFilterDepartments: [{ department: 'Extension', grievances: 3 }] } })
-    );
+  it('keeps the other lists when one is refused (e.g. an unknown chart id answers 404)', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (input: string) => {
+      const id = new URL(String(input)).searchParams.get('charts');
+      if (id === 'grvFilterDepartments') {
+        return new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } });
+      }
+      const rows = id === 'grvFilterRegions' ? [{ region_code: 'ET14', grievances: 5 }] : [{ category: 'Inputs', grievances: 3 }];
+      return okResponse({ status: 'success', data: { [id as string]: rows } });
+    });
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const options = await fetchFilterOptions({ includeDepartments: true });
 
-    expect(new URL(String(fetchMock.mock.calls[0]?.[0])).searchParams.get('charts')).toBe(
-      'grvFilterRegions,grvFilterCategories,grvFilterDepartments'
-    );
+    expect(options.departments).toBeNull();
+    expect(options.regions).toEqual([{ value: 'ET14', label: 'ET14' }]);
+    expect(options.categories).toEqual([{ value: 'Inputs', label: 'Inputs' }]);
+  });
+
+  it('asks for the department list only for an admin', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (input: string) => {
+      const id = new URL(String(input)).searchParams.get('charts') as string;
+      const rows = id === 'grvFilterDepartments' ? [{ department: 'Extension', grievances: 3 }] : [];
+      return okResponse({ status: 'success', data: { [id]: rows } });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const options = await fetchFilterOptions({ includeDepartments: true });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(options.departments).toEqual([{ value: 'Extension', label: 'Extension' }]);
+
+    fetchMock.mockClear();
+    await fetchFilterOptions({ includeDepartments: false });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves month and to to the service for the current month, so its own clock decides', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse({ status: 'success', data: {} }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await fetchAnalyticsCharts({ month: currentMonth() });
+
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(url.searchParams.has('month')).toBe(false);
+    expect(url.searchParams.has('to')).toBe(false);
+    expect(url.searchParams.get('from')).toBe(`${currentMonth()}-01`);
   });
 });
-
 describe('parseAsOf', () => {
   it('is the oldest chart refresh, since the page is only as fresh as its stalest chart', () => {
     expect(

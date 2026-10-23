@@ -158,7 +158,8 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
 export async function fetchApi<T = unknown>(
   path: string,
   options: RequestInit = {},
-  timeoutMs?: number
+  timeoutMs?: number,
+  { includeMeta = false }: { includeMeta?: boolean } = {}
 ): Promise<T> {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   const proxyPath = cleanPath.startsWith('api/proxy/') ? cleanPath : `api/proxy/${cleanPath}`;
@@ -271,9 +272,14 @@ export async function fetchApi<T = unknown>(
     if (!('message' in unwrapped) && typeof responseData?.message === 'string') {
       extra.message = responseData.message;
     }
-    // `GET /api/v1/charts` keeps when each chart was refreshed (`meta.as_of`) beside `data`. Only a
-    // `meta` object is merged in, and never over a key the data has itself.
-    if (!('meta' in unwrapped) && responseData?.meta && typeof responseData.meta === 'object') {
+    // `GET /api/v1/charts` keeps when each chart was refreshed (`meta.as_of`) beside `data`. A caller
+    // that wants it asks with `includeMeta`; every other caller's data is left exactly as it was.
+    if (
+      includeMeta &&
+      !('meta' in unwrapped) &&
+      responseData?.meta &&
+      typeof responseData.meta === 'object'
+    ) {
       extra.meta = responseData.meta;
     }
     if (Object.keys(extra).length > 0) {

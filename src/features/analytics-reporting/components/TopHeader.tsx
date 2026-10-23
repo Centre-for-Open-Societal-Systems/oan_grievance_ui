@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { useFormatter, useTranslations } from "next-intl";
+import { isSelectableMonth } from "../utils/months";
 import { CARD_HOVER, CARD_WHITE } from "./cardStyles";
 
 interface TopHeaderProps {
@@ -50,8 +51,10 @@ export function TopHeader({ month, maxMonth, onMonthChange, asOf = null }: TopHe
           max={maxMonth}
           required
           onChange={(event) => {
-            // Clearing the field gives "": keep the month on screen rather than ask the service for none.
-            if (event.target.value) onMonthChange(event.target.value);
+            // Clearing the field gives "", and a browser without a month picker (Firefox desktop) lets
+            // "2026-1" or a future month through `max`: keep the month on screen rather than ask the
+            // service for one it refuses, which would fail the whole page on a keystroke.
+            if (isSelectableMonth(event.target.value, maxMonth)) onMonthChange(event.target.value);
           }}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         />
