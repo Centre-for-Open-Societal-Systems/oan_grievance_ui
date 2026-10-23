@@ -31,7 +31,7 @@ describe('notificationTemplatesApi', () => {
     await fetchNotificationTemplates({ page_size: 100, channel: 'Email', recipient_type: undefined });
     const { url, method } = lastCall(fetchMock);
     expect(method).toBe('GET');
-    expect(url).toContain('/api/proxy/api/v1/notification-templates?page_size=100&channel=Email');
+    expect(url).toContain('/api/proxy/v1/notification-templates?page_size=100&channel=Email');
   });
 
   it('gets a single template by name', async () => {
@@ -39,7 +39,7 @@ describe('notificationTemplatesApi', () => {
     await getNotificationTemplate('Grievance: Test');
     const { url, method } = lastCall(fetchMock);
     expect(method).toBe('GET');
-    expect(url).toContain('/api/proxy/api/v1/notification-templates/Grievance%3A%20Test');
+    expect(url).toContain('/api/proxy/v1/notification-templates/Grievance%3A%20Test');
   });
 
   it('updates a template via PATCH', async () => {
@@ -47,7 +47,7 @@ describe('notificationTemplatesApi', () => {
     await updateNotificationTemplate('Grievance: Test', { enabled: true, subject: 'New Subject' });
     const { url, method, body } = lastCall(fetchMock);
     expect(method).toBe('PATCH');
-    expect(url).toContain('/api/proxy/api/v1/notification-templates/Grievance%3A%20Test');
+    expect(url).toContain('/api/proxy/v1/notification-templates/Grievance%3A%20Test');
     expect(body).toEqual({ enabled: true, subject: 'New Subject' });
   });
 
@@ -67,7 +67,7 @@ describe('notificationTemplatesApi', () => {
     const result = await fetchNotificationPlaceholders();
     const { url, method } = lastCall(fetchMock);
     expect(method).toBe('GET');
-    expect(url).toContain('/api/proxy/api/v1/notification-templates/placeholders');
+    expect(url).toContain('/api/proxy/v1/notification-templates/placeholders');
     expect(result.placeholders).toHaveLength(1);
     expect(result.placeholders?.[0]?.key).toBe('{ticket_number}');
   });

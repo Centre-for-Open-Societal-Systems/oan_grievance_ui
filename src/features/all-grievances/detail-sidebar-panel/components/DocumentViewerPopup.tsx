@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useTranslations } from "next-intl";
 import { X, Download, FileText, Loader2 } from "lucide-react";
 import {
-  getAttachmentDownloadInfo,
   fetchAttachmentBlobUrl,
   SCAN_STATUS,
   type AttachmentRow,
@@ -97,11 +96,10 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
     setIsDownloading(true);
     setDownloadError(null);
     try {
-      const info = await getAttachmentDownloadInfo(attachment.name);
-      const blobUrl = await fetchAttachmentBlobUrl(info.file_url);
+      const blobUrl = await fetchAttachmentBlobUrl(attachment.name, true);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = info.file_name;
+      link.download = attachment.file_name;
       document.body.appendChild(link);
       link.click();
       link.remove();

@@ -31,7 +31,7 @@ describe('slaSettingsApi', () => {
 
     await fetchGlobalSlaPolicy();
     expect(lastCall(fetchMock)).toMatchObject({ method: 'GET' });
-    expect(lastCall(fetchMock).url).toMatch(/\/api\/proxy\/api\/v1\/sla-policy$/);
+    expect(lastCall(fetchMock).url).toMatch(/\/api\/proxy\/v1\/sla-policy$/);
 
     await updateGlobalSlaPolicy({ auto_escalation_threshold: 80, requires_supervisor_approval: false });
     expect(lastCall(fetchMock)).toMatchObject({
@@ -43,13 +43,13 @@ describe('slaSettingsApi', () => {
   it('lists SLA configurations, leaving out unset filters', async () => {
     const fetchMock = mockFetch({ sla_configurations: [], pagination: {} });
     await fetchSlaConfigurations({ page_size: 100, service_category: undefined, department: 'markets' });
-    expect(lastCall(fetchMock).url).toContain('/api/v1/sla-configurations?page_size=100&department=markets');
+    expect(lastCall(fetchMock).url).toContain('/v1/sla-configurations?page_size=100&department=markets');
   });
 
   it('updates one configuration by its id, encoded', async () => {
     const fetchMock = mockFetch({ sla_configuration: {} });
     await updateSlaConfiguration('SLA CFG/1', { sla_days: 7, notify_on_breach: false });
     expect(lastCall(fetchMock)).toMatchObject({ method: 'PATCH', body: { sla_days: 7, notify_on_breach: false } });
-    expect(lastCall(fetchMock).url).toContain('/api/v1/sla-configurations/SLA%20CFG%2F1');
+    expect(lastCall(fetchMock).url).toContain('/v1/sla-configurations/SLA%20CFG%2F1');
   });
 });

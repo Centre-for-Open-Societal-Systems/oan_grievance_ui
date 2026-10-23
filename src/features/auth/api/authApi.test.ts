@@ -120,10 +120,10 @@ describe('authApi - getMe()', () => {
           typ: 'access',
         },
         first_name: 'Abebe',
-        full_name: 'Abebe Bikila',
         last_name: 'Bikila',
         login_email: 'abebe.farmer.344012394@example.com',
-        mobile_no: '+251934401239',
+        country_code: '+251',
+        phone_number: '934401239',
         profiles: {
           grievance: {
             administrative_area: 'kebele-ET140108101008',
@@ -160,7 +160,7 @@ describe('authApi - getMe()', () => {
     // Verify proxy URL was called
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const calledUrl = (global.fetch as any).mock.calls[0][0]; // eslint-disable-line @typescript-eslint/no-explicit-any
-    expect(calledUrl).toContain('/api/proxy/api/v1/auth/me');
+    expect(calledUrl).toContain('/api/proxy/v1/auth/me');
 
     // Verify needed fields are present
     expect(user.full_name).toBe('Abebe Bikila');
@@ -190,10 +190,8 @@ describe('authApi - getMe()', () => {
     data: {
       country_code: '+251',
       first_name: 'Test',
-      full_name: 'Test NGO',
       last_name: 'NGO',
       login_email: 'test_ngo@gmail.com',
-      mobile_no: '+251987654312',
       phone_number: '987654312',
       profiles: {
         grievance: {

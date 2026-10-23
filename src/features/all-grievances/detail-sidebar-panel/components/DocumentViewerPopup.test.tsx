@@ -4,12 +4,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentRow } from '@/lib/attachments';
 
-const getAttachmentDownloadInfo = vi.fn<(attachment: string) => Promise<{ file_name: string; file_url: string }>>();
-const fetchAttachmentBlobUrl = vi.fn<(fileUrl: string) => Promise<string>>();
+const fetchAttachmentBlobUrl = vi.fn<(attachment: string, download?: boolean) => Promise<string>>();
 vi.mock('@/lib/attachments', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/attachments')>()),
-  getAttachmentDownloadInfo: (...args: [string]) => getAttachmentDownloadInfo(...args),
-  fetchAttachmentBlobUrl: (...args: [string]) => fetchAttachmentBlobUrl(...args),
+  fetchAttachmentBlobUrl: (...args: [string, boolean?]) => fetchAttachmentBlobUrl(...args),
 }));
 
 // Real backend gap still open (see attachmentDisplay.tsx) — but the download
@@ -54,7 +52,6 @@ const CLEAN_ROW: AttachmentRow = {
 
 describe('DocumentViewerPopup — Download (with the disabled flag off)', () => {
   beforeEach(() => {
-    getAttachmentDownloadInfo.mockReset();
     fetchAttachmentBlobUrl.mockReset();
   });
 
@@ -71,7 +68,6 @@ describe('DocumentViewerPopup — Download (with the disabled flag off)', () => 
   });
 
   it('is enabled for a Clean attachment and downloads the real file', async () => {
-    getAttachmentDownloadInfo.mockResolvedValue({ file_name: 'id-card.pdf', file_url: '/private/files/id-card.pdf' });
     fetchAttachmentBlobUrl.mockResolvedValue('blob:mock-url');
 
     renderIntl(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
@@ -80,12 +76,11 @@ describe('DocumentViewerPopup — Download (with the disabled flag off)', () => 
     expect(button).toBeEnabled();
     fireEvent.click(button);
 
-    await waitFor(() => expect(getAttachmentDownloadInfo).toHaveBeenCalledWith('ATT-0001'));
-    expect(fetchAttachmentBlobUrl).toHaveBeenCalledWith('/private/files/id-card.pdf');
+    await waitFor(() => expect(fetchAttachmentBlobUrl).toHaveBeenCalledWith('ATT-0001', true));
   });
 
   it('shows an error message, not just a console log, when the download fails', async () => {
-    getAttachmentDownloadInfo.mockRejectedValue(new Error('boom'));
+    fetchAttachmentBlobUrl.mockRejectedValue(new Error('boom'));
 
     renderIntl(<DocumentViewerPopup attachment={CLEAN_ROW} onClose={vi.fn()} />);
 

@@ -48,10 +48,6 @@ export function ReviewReassignmentPopup({
     }
   };
 
-  const changeItem = request.changes?.find((c) => c.fieldname === 'department');
-  const oldDepartment = changeItem?.old_value || 'Unknown';
-  const newDepartment = changeItem?.new_value || 'Unknown';
-
   const requestedAt = formatDate(request.requested_at) || 'N/A';
   const officerRole = t('officerRole');
 
@@ -107,17 +103,22 @@ export function ReviewReassignmentPopup({
             <div className="text-[11px] text-gray-400">{t('submittedAt', { date: requestedAt })}</div>
           </div>
 
-          {/* Department Change */}
+          {/* Requested change */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-gray-700">{t('requestedChange')}</label>
             <div className="w-full border border-gray-200 rounded-lg p-3 py-2.5 flex flex-col gap-2 text-sm text-gray-700 bg-gray-50">
-              <div className="flex items-center gap-3">
-                <span className="font-medium text-gray-500 w-24">{t('department')}:</span>
-                <span className="line-through text-gray-400">{oldDepartment}</span>
-                <span className="text-gray-400">→</span>
-                <span className="font-semibold text-gray-900">{newDepartment}</span>
-              </div>
-              
+              {request.changes?.some(c => c.fieldname === 'service_category') && (
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-gray-500 w-24">{t('category')}:</span>
+                  <span className="line-through text-gray-400">
+                    {request.changes.find(c => c.fieldname === 'service_category')?.old_value || '—'}
+                  </span>
+                  <span className="text-gray-400">→</span>
+                  <span className="font-semibold text-gray-900">
+                    {request.changes.find(c => c.fieldname === 'service_category')?.new_value || '—'}
+                  </span>
+                </div>
+              )}
               {request.changes?.some(c => c.fieldname === 'assigned_to' || c.fieldname === 'target_officer') && (
                 <div className="flex items-center gap-3">
                   <span className="font-medium text-gray-500 w-24">{t('officer')}:</span>

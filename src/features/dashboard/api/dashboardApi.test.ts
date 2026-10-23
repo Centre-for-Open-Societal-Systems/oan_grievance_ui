@@ -29,7 +29,7 @@ describe('fetchDashboardCharts', () => {
 
     const [calledUrl, calledInit] = fetchMock.mock.calls[0] ?? [];
     const url = new URL(String(calledUrl));
-    expect(url.pathname).toBe('/api/proxy/api/v1/charts');
+    expect(url.pathname).toBe('/api/proxy/v1/charts');
     expect(url.searchParams.get('charts')).toBe(
       'grvKpis,grvStatusDistribution,grvByCategory,grvMonthlyTrend'
     );

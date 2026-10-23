@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await callBackendAuth('/api/v1/auth/forgot-password', { usr }, clientIp);
+    await callBackendAuth('/v1/auth/forgot-password', { usr }, clientIp);
   } catch (error) {
     if (!(error instanceof BackendAuthError)) {
       // The service itself is unreachable — true whatever address was typed,

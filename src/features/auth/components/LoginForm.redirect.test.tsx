@@ -35,7 +35,7 @@ async function signInAs(user: { email: string; roles: string[]; type?: string; o
   render(
     <Provider store={makeStore()}>
       <NextIntlClientProvider locale="en" messages={en}>
-        <LoginForm staffSignInEnabled={false} />
+        <LoginForm providers={null} />
       </NextIntlClientProvider>
     </Provider>
   );

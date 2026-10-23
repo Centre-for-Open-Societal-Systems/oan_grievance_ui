@@ -36,7 +36,7 @@ export function parseDashboardCharts(raw: unknown): DashboardCharts {
 export async function fetchDashboardCharts(
   options: DashboardRequestOptions = {}
 ): Promise<DashboardCharts> {
-  const raw = await fetchApi<unknown>(`/api/v1/charts?charts=${DASHBOARD_CHART_IDS.join(',')}`, {
+  const raw = await fetchApi<unknown>(`/v1/charts?charts=${DASHBOARD_CHART_IDS.join(',')}`, {
     method: 'GET',
     signal: options.signal,
   });

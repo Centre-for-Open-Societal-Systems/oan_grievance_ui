@@ -18,7 +18,7 @@ describe('fetchApi error messages', () => {
 
   const messageOf = async () => {
     try {
-      await fetchApi('api/v1/anything');
+      await fetchApi('v1/anything');
     } catch (error) {
       return (error as Error).message;
     }
@@ -75,7 +75,7 @@ describe('fetchApi pagination merging', () => {
       pagination: { page: 1, page_size: 20, total_count: 0, total_pages: 1, has_next: false, has_prev: false },
     });
 
-    const result = await fetchApi<{ officers: unknown[]; pagination: { total_count: number } }>('api/v1/officers');
+    const result = await fetchApi<{ officers: unknown[]; pagination: { total_count: number } }>('v1/officers');
     expect(result.pagination.total_count).toBe(0);
   });
 
@@ -86,7 +86,7 @@ describe('fetchApi pagination merging', () => {
       pagination: { total_count: 999 },
     });
 
-    const result = await fetchApi<{ items: unknown[]; pagination: { total_count: number } }>('api/v1/grievances');
+    const result = await fetchApi<{ items: unknown[]; pagination: { total_count: number } }>('v1/grievances');
     expect(result.pagination.total_count).toBe(11);
   });
 
@@ -97,7 +97,7 @@ describe('fetchApi pagination merging', () => {
       data: { officer: { name: 'verify.officer@example.et' } },
     });
 
-    const result = await fetchApi<{ officer: { name: string }; message?: string }>('api/v1/officers');
+    const result = await fetchApi<{ officer: { name: string }; message?: string }>('v1/officers');
     expect(result.message).toContain('existing password is unchanged');
   });
 });

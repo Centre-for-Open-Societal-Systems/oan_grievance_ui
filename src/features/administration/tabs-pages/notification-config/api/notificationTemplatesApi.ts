@@ -33,7 +33,7 @@ export function fetchNotificationTemplates(
   params: NotificationTemplateListParams = {},
   options: RequestOptions = {}
 ): Promise<NotificationTemplateListData> {
-  return fetchApi<NotificationTemplateListData>(`/api/v1/notification-templates${query(params)}`, {
+  return fetchApi<NotificationTemplateListData>(`/v1/notification-templates${query(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -48,7 +48,7 @@ export function getNotificationTemplate(
   template: string,
   options: RequestOptions = {}
 ): Promise<NotificationTemplateData> {
-  return fetchApi<NotificationTemplateData>(`/api/v1/notification-templates/${encodeURIComponent(template)}`, {
+  return fetchApi<NotificationTemplateData>(`/v1/notification-templates/${encodeURIComponent(template)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -63,7 +63,7 @@ export function updateNotificationTemplate(
   template: string,
   payload: UpdateNotificationTemplatePayload
 ): Promise<NotificationTemplateData> {
-  return fetchApi<NotificationTemplateData>(`/api/v1/notification-templates/${encodeURIComponent(template)}`, {
+  return fetchApi<NotificationTemplateData>(`/v1/notification-templates/${encodeURIComponent(template)}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
@@ -77,7 +77,7 @@ export function updateNotificationTemplate(
 export function fetchNotificationPlaceholders(
   options: RequestOptions = {}
 ): Promise<PlaceholdersResponseData> {
-  return fetchApi<PlaceholdersResponseData>('/api/v1/notification-templates/placeholders', {
+  return fetchApi<PlaceholdersResponseData>('/v1/notification-templates/placeholders', {
     method: 'GET',
     signal: options.signal,
   });
@@ -92,7 +92,7 @@ export function fetchNotificationTemplateOptions(
   options: RequestOptions = {}
 ): Promise<import('../components/types').NotificationTemplateOptionsData> {
   return fetchApi<import('../components/types').NotificationTemplateOptionsData>(
-    '/api/v1/notification-templates/options',
+    '/v1/notification-templates/options',
     {
       method: 'GET',
       signal: options.signal,

@@ -23,7 +23,6 @@ export interface ResponseTemplateFormModalProps {
   /** The template being edited; absent when adding one. */
   template?: ResponseTemplate | null;
   actions: SelectOption[];
-  departments: SelectOption[];
   serviceCategories: SelectOption[];
   onCreate: (payload: CreateResponseTemplatePayload) => Promise<unknown>;
   onUpdate: (template: string, payload: UpdateResponseTemplatePayload) => Promise<unknown>;
@@ -45,7 +44,6 @@ const getInputClass = (hasError?: boolean) =>
 export function ResponseTemplateFormModal({
   template,
   actions,
-  departments,
   serviceCategories,
   onCreate,
   onUpdate,
@@ -70,7 +68,8 @@ export function ResponseTemplateFormModal({
   const code = template?.template ?? '';
   const [title, setTitle] = useState(template?.title ?? '');
   const [action, setAction] = useState(template?.action ?? '');
-  const [department, setDepartment] = useState(template?.department ?? '');
+  // Not editable here: an existing template keeps its scope.
+  const department = template?.department ?? '';
   const [serviceCategory, setServiceCategory] = useState(template?.service_category ?? '');
   const [actionTaken, setActionTaken] = useState(initialParts.action_taken);
   const [resolutionSummary, setResolutionSummary] = useState(initialParts.resolution_summary);
@@ -247,16 +246,6 @@ export function ResponseTemplateFormModal({
                 >
                   <option value="">{t('selectAction')}</option>
                   {withCurrent(actions, action).map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              )}
-            </Field>
-            <Field label={t('department')}>
-              {(id) => (
-                <select id={id} value={department} onChange={(e) => setDepartment(e.target.value)} className={getInputClass()}>
-                  <option value="">{t('allDepartments')}</option>
-                  {withCurrent(departments, department).map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>

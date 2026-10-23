@@ -44,7 +44,7 @@ describe('POST /api/auth/set-initial-password', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
     expect(callBackendAuth).toHaveBeenCalledWith(
-      '/api/v1/auth/password/initial',
+      '/v1/auth/password/initial',
       { usr: 'officer@example.com', current_password: 'Welcome2026', new_password: STRONG_PASSWORD },
       expect.any(String)
     );

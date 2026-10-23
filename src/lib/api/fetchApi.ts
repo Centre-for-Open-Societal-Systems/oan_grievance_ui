@@ -151,7 +151,7 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
 
 /**
  * Standardized API client for all backend communication via `/api/proxy/*`.
- * Accepts absolute proxy path (e.g. `/api/v1/submitters/options`) or relative path.
+ * Accepts absolute proxy path (e.g. `/v1/submitters/options`) or relative path.
  * `timeoutMs` overrides the default 15s — a `FormData` file upload can
  * legitimately take longer than a JSON call on a slow connection.
  */

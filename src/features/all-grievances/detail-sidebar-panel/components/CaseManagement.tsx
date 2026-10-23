@@ -29,10 +29,10 @@ export function CaseManagement({
 }: CaseManagementProps) {
   const activeTicket = ticketNumber || timelineData?.ticket_number || '';
   const optionsData = useAppSelector((state) => state.metadata?.grievanceOptions);
-  const departmentSelectId = useId();
+  const categorySelectId = useId();
   const officerSelectId = useId();
 
-  const [department, setDepartment] = useState<string>('');
+  const [category, setCategory] = useState<string>('');
   const [targetOfficer, setTargetOfficer] = useState<string>('');
   const [reassignReason, setReassignReason] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -41,7 +41,7 @@ export function CaseManagement({
     null
   );
 
-  const initialDepartment = timelineData?.assignment?.department || '';
+  const initialCategory = timelineData?.service_category || '';
   const initialOfficer = timelineData?.assignment?.assigned_to || '';
   const activeReassignment = timelineData?.assignment?.active_reassignment_request;
   const user = useAppSelector((state) => state.auth?.user);
@@ -51,20 +51,20 @@ export function CaseManagement({
   const resolvedIsTerminal =
     propIsTerminal ?? isTerminalStatus(currentStatus, optionsData?.statuses);
 
-  // Re-sync only when the ticket or its server-side department actually
+  // Re-sync only when the ticket or its server-side category actually
   // changes. Keying on the whole timelineData object reset the form on every
   // timeline refetch (status change, comment, the refetch after a reassign),
   // wiping a half-typed justification.
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
-    setDepartment(initialDepartment);
+    setCategory(initialCategory);
     setTargetOfficer(initialOfficer);
     setReassignReason('');
-  }, [activeTicket, initialDepartment, initialOfficer]);
+  }, [activeTicket, initialCategory, initialOfficer]);
 
-  const handleDepartmentChange = (val: string) => {
-    setDepartment(val);
-    if (val !== initialDepartment) {
+  const handleCategoryChange = (val: string) => {
+    setCategory(val);
+    if (val !== initialCategory) {
       setTargetOfficer('');
     } else {
       setTargetOfficer(initialOfficer);
@@ -72,13 +72,13 @@ export function CaseManagement({
   };
 
   const { data: deptOptions, isLoading: isLoadingOfficers } = useGrievanceOptions(
-    { department },
-    { skip: !department }
+    { service_category: category },
+    { skip: !category }
   );
 
-  const departmentOptions = useMemo(() => {
-    return (optionsData?.departments ?? [])
-      .map((d) => d.department_name)
+  const categoryOptions = useMemo(() => {
+    return (optionsData?.service_categories ?? [])
+      .map((c) => c.category_name)
       .filter(Boolean)
       .map((name) => ({ value: name, label: name }));
   }, [optionsData]);
@@ -93,7 +93,7 @@ export function CaseManagement({
   if (!canManageCase && !isApprover && !resolvedIsTerminal) return null;
 
   const isReassignment =
-    (department && department !== initialDepartment) || (targetOfficer !== initialOfficer);
+    (category && category !== initialCategory) || (targetOfficer !== initialOfficer);
 
   const handleSave = async () => {
     if (!onReassign || !activeTicket) return;
@@ -103,7 +103,7 @@ export function CaseManagement({
     try {
       if (isReassignment) {
         const result = (await onReassign({
-          target_department: department,
+          target_category: category && category !== initialCategory ? category : undefined,
           target_officer: targetOfficer || undefined,
           reason: reassignReason.trim() || undefined,
         })) as GrievanceChangeResponseData | undefined;
@@ -111,16 +111,16 @@ export function CaseManagement({
         const isPending = result?.change_request?.status === 'Pending';
         const msg = isPending
           ? 'Reassignment request submitted (pending supervisor approval)'
-          : `Case reassigned to ${department}`;
+          : `Case reassigned to ${category}`;
 
         setFeedback({ type: 'success', message: msg });
         setReassignReason('');
         // A pending request leaves the server department unchanged, so the
         // effect above won't fire — reset the dropdown here instead of
         // leaving the form armed to resubmit the same request.
-        if (isPending) setDepartment(initialDepartment);
+        if (isPending) setCategory(initialCategory);
       } else {
-        setFeedback({ type: 'success', message: 'No department changes to save' });
+        setFeedback({ type: 'success', message: 'No changes to save' });
       }
       setTimeout(() => setFeedback(null), 4000);
     } catch (err) {
@@ -165,7 +165,7 @@ export function CaseManagement({
               Reassignment Pending
             </div>
             <p className="text-xs text-blue-700">
-              A request to reassign to {activeReassignment.changes?.find(c => c.fieldname === 'department')?.new_value || 'another department'} is pending.
+              A request to reassign to {activeReassignment.changes?.find(c => c.fieldname === 'service_category')?.new_value || 'another category'} is pending.
             </p>
             <button
               onClick={() => setShowViewPopup(true)}
@@ -179,9 +179,9 @@ export function CaseManagement({
         {resolvedIsTerminal ? (
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <span className="text-[13px] font-semibold text-[#1B362D]">Department</span>
+              <span className="text-[13px] font-semibold text-[#1B362D]">Category</span>
               <div className="w-full border border-gray-200 bg-gray-50/80 rounded-lg px-3 py-2.5 text-sm text-gray-900 font-medium">
-                {initialDepartment || 'None'}
+                {initialCategory || 'None'}
               </div>
             </div>
 
@@ -199,15 +199,15 @@ export function CaseManagement({
         ) : canManageCase ? (
           <>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor={departmentSelectId} className="text-[13px] font-semibold text-[#1B362D]">
-                Department
+              <label htmlFor={categorySelectId} className="text-[13px] font-semibold text-[#1B362D]">
+                Category
               </label>
               <AnimatedSelect
-                id={departmentSelectId}
-                placeholder="Select Department"
-                value={department}
-                onChange={handleDepartmentChange}
-                options={departmentOptions}
+                id={categorySelectId}
+                placeholder="Select Category"
+                value={category}
+                onChange={handleCategoryChange}
+                options={categoryOptions}
               />
             </div>
 
@@ -221,11 +221,11 @@ export function CaseManagement({
                 value={targetOfficer}
                 onChange={setTargetOfficer}
                 options={officerOptions}
-                disabled={isLoadingOfficers || !department}
+                disabled={isLoadingOfficers || !category}
               />
             </div>
 
-            {/* Reason for Reassignment (visible when department is modified) */}
+            {/* Reason for Reassignment (visible when category is modified) */}
             {isReassignment && (
               <div className="flex flex-col gap-1.5 p-3 bg-amber-50/70 border border-amber-200 rounded-lg">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
@@ -239,7 +239,7 @@ export function CaseManagement({
                   rows={2}
                   value={reassignReason}
                   onChange={(e) => setReassignReason(e.target.value)}
-                  placeholder="Provide justification for routing to this department..."
+                  placeholder="Provide justification for routing to this category..."
                   className="w-full mt-1 border border-amber-200 rounded-md p-2 text-xs text-gray-800 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
                 />
               </div>

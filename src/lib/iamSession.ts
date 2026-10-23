@@ -1,84 +1,111 @@
-import { env } from '@/lib/env';
-import { decodeIamAccessToken, type AccessTokenClaims } from '@/lib/jwt';
+import { isExpired, peekToken } from '@/lib/jwt';
 import { logger } from '@/lib/logger';
+import {
+  decodeLoginOption,
+  IAM_COOKIES,
+  iamCookieName,
+  LOGIN_OPTION_COOKIE,
+  type LoginOption,
+} from '@/lib/loginOption';
+import { BackendAuthError, requestBackendAuth } from '@/lib/oanAuthBackend';
 import type { NextResponse } from 'next/server';
+import { z } from 'zod';
 
-// "Sign in as staff": the session behind it belongs to the OpenG2P IAM
-// service, not to oan_auth_service. IAM runs the Keycloak login, then sets its
-// own cookies on the shared parent domain — the access token, the Keycloak
-// session id that points at the refresh token IAM keeps in Redis, and a CSRF
-// token. This app never copies them into its own `auth_token`/`refresh_token`:
-// refreshing has to hand IAM its session-id cookie anyway, so a copy could
-// only drift.
+// IAM login options ("Sign in as staff", agent, beneficiary, …): sessions that
+// belong to an OpenG2P IAM service, reached only through oan_auth_service. IAM
+// runs the identity provider login and sets its own cookies on the shared
+// parent domain — the access token, the ID token and the session id that
+// points at the refresh token IAM keeps. This app never copies them into its
+// own `auth_token`/`refresh_token`.
 //
-// The browser never talks to IAM. It only ever sees this app's own
-// `/api/auth/*` routes, which call IAM server-to-server through this module —
-// the same masking the OpenG2P registry hub does with its `/api/login`,
-// `/api/me` and `/api/logout`. This is the only file that knows IAM's paths
-// and cookie names; IAM's own error bodies are logged here, never returned.
-
-/** Base names; IAM may prefix them (`*_AUTH_COOKIE_PREFIX`), see `iamCookieName`. */
-export const IAM_COOKIES = {
-  accessToken: 'X-Access-Token',
-  idToken: 'X-ID-Token',
-  sessionId: 'X-Session-Id',
-  csrf: 'X-CSRF-Token',
-} as const;
-
-const HTTP_TIMEOUT_MS = 10_000;
-
-type IamConfig = NonNullable<typeof env.IAM>;
-
-/** IAM's config, or null when staff sign-in is off or misconfigured (logged, never thrown into a request). */
-export function iamConfig(): IamConfig | null {
-  try {
-    return env.IAM;
-  } catch (error) {
-    logger.error('Staff sign-in is misconfigured:', error);
-    return null;
-  }
-}
-
-export function iamCookieName(base: string, config: IamConfig): string {
-  return `${config.cookiePrefix}${base}`;
-}
+// This app knows no IAM URL, provider id, application or cookie prefix:
+// oan_auth_service lists the options (`/iam/providers`), starts their logins
+// (`/iam/login`), answers which option a token came through and the user's
+// roles (`/me`), and refreshes and ends their sessions (`/refresh`,
+// `/logout` with `access_token`), relaying IAM's `Set-Cookie` headers. The
+// option a browser is using is kept in the `login_option` cookie
+// (`loginOption.ts`). Tokens go to the backend as `Authorization: Bearer`;
+// browser cookies are forwarded only to refresh and logout, and only the
+// active option's.
 
 interface CookieReader {
   cookies: { get(name: string): { value: string } | undefined };
 }
 
-export interface IamSession {
-  accessToken: string | undefined;
-  sessionId: string | undefined;
-  /** Only sent to IAM's logout, which passes it to the identity provider as `id_token_hint`. */
-  idToken?: string | undefined;
-  /** Decoded, not verified — routing and display only. IAM and the backend verify. */
-  claims: AccessTokenClaims | null;
+interface CookieLister extends CookieReader {
+  cookies: CookieReader['cookies'] & { getAll(): { name: string; value: string }[] };
 }
 
-/** The IAM session the request carries, or null when it carries none (or staff sign-in is off). */
-export function readIamSession(request: CookieReader): IamSession | null {
-  const config = iamConfig();
-  if (!config) return null;
+export function readLoginOption(request: CookieReader): LoginOption | null {
+  return decodeLoginOption(request.cookies.get(LOGIN_OPTION_COOKIE)?.value);
+}
 
-  const accessToken = request.cookies.get(iamCookieName(IAM_COOKIES.accessToken, config))?.value || undefined;
-  const sessionId = request.cookies.get(iamCookieName(IAM_COOKIES.sessionId, config))?.value || undefined;
+export interface IamSession {
+  option: LoginOption;
+  accessToken: string | undefined;
+  sessionId: string | undefined;
+  idToken: string | undefined;
+  /** Decoded, not verified — the subject and expiry only. The backend verifies. */
+  token: { sub: string; exp: number } | null;
+}
+
+/** The session of the browser's login option, or null when it has none (or no option is recorded). */
+export function readIamSession(request: CookieReader): IamSession | null {
+  const option = readLoginOption(request);
+  if (!option) return null;
+
+  const read = (base: string) => request.cookies.get(iamCookieName(base, option))?.value || undefined;
+  const accessToken = read(IAM_COOKIES.accessToken);
+  const sessionId = read(IAM_COOKIES.sessionId);
   if (!accessToken && !sessionId) return null;
 
   return {
+    option,
     accessToken,
     sessionId,
-    idToken: request.cookies.get(iamCookieName(IAM_COOKIES.idToken, config))?.value || undefined,
-    claims: accessToken ? decodeIamAccessToken(accessToken, config.application) : null,
+    idToken: read(IAM_COOKIES.idToken),
+    token: accessToken ? peekToken(accessToken) : null,
   };
 }
 
 /**
- * IAM refreshes only an *expired* access token, and only when it can find the
- * session behind it — so both cookies must be present for a refresh to work.
+ * Whether the browser dropped the access-token cookie for being too large
+ * (over about 4 KB, from many roles or large custom claims) while keeping the
+ * ID token IAM set alongside it — a plain failure would hide the cause.
  */
+export function isAccessTokenDropped(request: CookieReader, option: LoginOption): boolean {
+  return (
+    !request.cookies.get(iamCookieName(IAM_COOKIES.accessToken, option))?.value &&
+    !!request.cookies.get(iamCookieName(IAM_COOKIES.idToken, option))?.value
+  );
+}
+
+/**
+ * Whether the IAM session is one for this app. A single sign-on session
+ * reaches every app on the shared domain, including users provisioned only
+ * for another one (a registry-only operator); only a user `/auth/me` gave a
+ * role here counts as signed in, for the account the roles were looked up for.
+ * Anyone else is a guest to this app, while their session stays untouched for
+ * the apps it is for.
+ */
+export function hasAppAccess(session: IamSession): boolean {
+  return !!session.option.roles?.length && !!session.token && session.token.sub === session.option.sub;
+}
+
+/** IAM refreshes from its session cookie, and oan_auth_service routes the call by the (expired) access token. */
 export function canRefreshIamSession(session: IamSession): boolean {
   return !!session.accessToken && !!session.sessionId;
+}
+
+/** The option's IAM cookies as a `Cookie` header: what refresh and logout forward, and nothing else. */
+function iamCookieHeader(option: LoginOption, request: CookieReader): string {
+  return Object.values(IAM_COOKIES)
+    .map((base) => iamCookieName(base, option))
+    .flatMap((name) => {
+      const value = request.cookies.get(name)?.value;
+      return value ? [`${name}=${value}`] : [];
+    })
+    .join('; ');
 }
 
 // --- Relaying IAM's Set-Cookie headers -------------------------------------
@@ -128,8 +155,8 @@ function parseSetCookie(header: string): ParsedCookie | null {
 /**
  * Re-emits IAM's cookies on `response` exactly as IAM set them (same domain,
  * path and flags), so the browser stores the cookies IAM itself would have.
- * Call after any `clearSessionCookies` on the same response: cookies are
- * keyed by name, so the later write wins.
+ * Call after any cookie clearing on the same response: cookies are keyed by
+ * name, so the later write wins.
  */
 export function applyIamCookies(response: NextResponse, setCookies: string[]): void {
   for (const header of setCookies) {
@@ -138,20 +165,23 @@ export function applyIamCookies(response: NextResponse, setCookies: string[]): v
   }
 }
 
-/** Expires IAM's cookies without calling IAM — for the idle kick and every other local session end. */
-export function expireIamCookies(response: NextResponse): void {
-  const config = iamConfig();
-  if (!config) return;
-  for (const base of Object.values(IAM_COOKIES)) {
-    response.cookies.set(iamCookieName(base, config), '', {
-      path: '/',
-      domain: config.cookieDomain,
-      maxAge: 0,
-    });
+/**
+ * Expires every IAM session cookie the browser sent, whatever its option prefix. For a logout
+ * where IAM sent no clearing headers of its own (it could not be reached, or no longer knew the
+ * session): left in place, `adoptIamSession` would take the same session up again on the next
+ * page load. Host-only, like the cookies `applyIamCookies` could not clear either — a cookie IAM
+ * set on a parent domain is cleared only by IAM's own `Set-Cookie`.
+ */
+export function expireIamCookies(response: NextResponse, request: CookieLister): void {
+  const bases = Object.values(IAM_COOKIES);
+  for (const { name } of request.cookies.getAll()) {
+    if (bases.some((base) => name.endsWith(base))) {
+      response.cookies.set(name, '', { path: '/', maxAge: 0 });
+    }
   }
 }
 
-/** The value IAM gave a cookie in `setCookies`, ignoring its own clear-before-set (`Max-Age=0`) writes. */
+/** The value a cookie is given in `setCookies`, ignoring clear-before-set (`Max-Age=0`) writes. */
 function cookieValueFrom(setCookies: string[], name: string): string | undefined {
   let found: string | undefined;
   for (const header of setCookies) {
@@ -161,175 +191,314 @@ function cookieValueFrom(setCookies: string[], name: string): string | undefined
   return found;
 }
 
-// --- Calls to IAM -----------------------------------------------------------
+// --- Calls to oan_auth_service ---------------------------------------------
 
-function iamCookieHeader(session: IamSession, config: IamConfig): string {
-  const pairs: string[] = [];
-  if (session.accessToken) pairs.push(`${iamCookieName(IAM_COOKIES.accessToken, config)}=${session.accessToken}`);
-  if (session.sessionId) pairs.push(`${iamCookieName(IAM_COOKIES.sessionId, config)}=${session.sessionId}`);
-  if (session.idToken) pairs.push(`${iamCookieName(IAM_COOKIES.idToken, config)}=${session.idToken}`);
-  return pairs.join('; ');
+function isUnavailable(error: unknown): boolean {
+  // A network failure, or the backend saying IAM is unreachable: the session
+  // may well be fine, so nobody is signed out over it.
+  return !(error instanceof BackendAuthError) || error.status >= 500;
 }
 
-async function callIam(path: string, init: RequestInit, clientIp: string): Promise<Response> {
-  const config = iamConfig();
-  if (!config) throw new Error('Staff sign-in is not configured');
-  const headers = new Headers(init.headers);
-  headers.set('Accept', 'application/json');
-  headers.set('X-Forwarded-For', clientIp);
-  return fetch(`${config.baseUrl}${path}`, {
-    ...init,
-    headers,
-    redirect: 'manual',
-    signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
-  });
-}
+const loginStartSchema = z.object({ redirect_url: z.string(), iam: z.string().min(1), cookie_prefix: z.string() });
 
-/**
- * Opens a login transaction at IAM and returns the identity provider's
- * authorize URL to send the browser to, or null if IAM refused.
- *
- * `returnUrl` is where IAM sends the browser after the callback. IAM does not
- * check it against any allow-list, so the caller must build it itself, as an
- * absolute URL back to this app.
- */
-export async function startIamLogin(returnUrl: string, clientIp: string): Promise<string | null> {
-  const config = iamConfig();
-  if (!config) return null;
+export type IamLoginStart =
+  | { ok: true; redirectUrl: string; option: LoginOption }
+  | { ok: false; reason: 'not_offered' | 'failed' | 'unavailable' };
 
-  const query = new URLSearchParams({ id: config.loginProviderId, redirect_uri: returnUrl });
+function isAllowedRedirect(value: string): boolean {
   try {
-    const response = await callIam(`/auth/start_authentication_transaction?${query}`, { method: 'POST' }, clientIp);
-    const data = (await response.json().catch(() => null)) as { redirectUrl?: unknown } | null;
-    if (!response.ok || typeof data?.redirectUrl !== 'string') {
-      logger.security(`IAM refused to start a login (status ${response.status})`);
-      return null;
-    }
-    const redirectUrl = new URL(data.redirectUrl);
-    if (redirectUrl.protocol !== 'https:' && redirectUrl.protocol !== 'http:') return null;
-    return redirectUrl.toString();
-  } catch (error) {
-    logger.error('IAM login start failed:', error);
-    return null;
+    const url = new URL(value);
+    return url.protocol === 'https:' || (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname));
+  } catch {
+    return false;
   }
 }
 
 /**
- * Hands the identity provider's callback (`?code&state…`) to IAM, which
- * exchanges the code and answers with its session cookies and a redirect to
- * the `returnUrl` given to `startIamLogin`. Returns both, or null when IAM
- * did not open a session (bad or replayed `state`, provider-side error).
+ * Starts login option `key` and returns the identity provider URL to send the
+ * browser to. `returnUrl` must be absolute and on one of the option's
+ * `return_origins` in oan_auth_service — the only open-redirect guard, since
+ * IAM redirects to it unchecked.
  */
-export async function forwardIamCallback(
-  search: string,
+export async function startIamLogin(key: string, returnUrl: string, clientIp: string): Promise<IamLoginStart> {
+  try {
+    const { data } = await requestBackendAuth<unknown>(
+      '/v1/auth/iam/login',
+      { body: { key, return_url: returnUrl } },
+      clientIp
+    );
+    const parsed = loginStartSchema.safeParse(data);
+    if (!parsed.success || !isAllowedRedirect(parsed.data.redirect_url)) {
+      logger.security(`IAM login start for "${key}" answered an unusable redirect`);
+      return { ok: false, reason: 'failed' };
+    }
+    return {
+      ok: true,
+      redirectUrl: parsed.data.redirect_url,
+      option: { key: parsed.data.iam, cookie_prefix: parsed.data.cookie_prefix },
+    };
+  } catch (error) {
+    if (error instanceof BackendAuthError && error.status === 400) {
+      // Unknown or disabled key, or this app's origin missing from the
+      // option's `return_origins`: a configuration error, not the user's.
+      logger.security(`IAM login option "${key}" refused: ${error.message}`);
+      return { ok: false, reason: 'not_offered' };
+    }
+    if (error instanceof BackendAuthError && error.status === 502) return { ok: false, reason: 'failed' };
+    logger.error(`IAM login start for "${key}" failed:`, error);
+    return { ok: false, reason: 'unavailable' };
+  }
+}
+
+const meSchema = z.object({
+  user: z.string().min(1),
+  login_email: z.string().nullish(),
+  roles: z.array(z.string()),
+  login_option: z.string().min(1),
+  cookie_prefix: z.string().nullish(),
+});
+
+export type IamUserLookup =
+  | { status: 'ok'; option: LoginOption }
+  | { status: 'unauthorized' }
+  | { status: 'unavailable' };
+
+/**
+ * Asks oan_auth_service who `accessToken` belongs to. This runs the full token
+ * check, creates the user on first sign-in, and answers the login option the
+ * token came through plus the user's roles in this app — never decoded from
+ * the token, which may carry none (eSignet) and never shows the backend's
+ * default roles. A token of this app's own (`local`) is not an IAM session.
+ */
+export async function lookupIamUser(accessToken: string, clientIp: string): Promise<IamUserLookup> {
+  const token = peekToken(accessToken);
+  try {
+    const { data } = await requestBackendAuth<unknown>(
+      '/v1/auth/me',
+      { method: 'GET', headers: { Authorization: `Bearer ${accessToken}` } },
+      clientIp
+    );
+    const parsed = meSchema.safeParse(data);
+    if (!parsed.success || !token || parsed.data.login_option === 'local' || parsed.data.cookie_prefix == null) {
+      return { status: 'unauthorized' };
+    }
+    return {
+      status: 'ok',
+      option: {
+        key: parsed.data.login_option,
+        cookie_prefix: parsed.data.cookie_prefix,
+        sub: token.sub,
+        user: parsed.data.login_email || parsed.data.user,
+        roles: parsed.data.roles,
+      },
+    };
+  } catch (error) {
+    if (isUnavailable(error)) {
+      logger.error('IAM user lookup failed:', error);
+      return { status: 'unavailable' };
+    }
+    return { status: 'unauthorized' };
+  }
+}
+
+export type IamRefresh =
+  | { status: 'ok'; accessToken: string; refreshed: boolean; setCookies: string[] }
+  | { status: 'ended'; setCookies: string[] }
+  | { status: 'unavailable' };
+
+/**
+ * Has the option's IAM refresh the session, through oan_auth_service: the
+ * current (possibly expired) access token goes in the body, where its issuer
+ * picks the IAM, and the option's IAM cookies are forwarded, since IAM
+ * refreshes from its session cookie. IAM's new cookies come back for the
+ * caller to relay. A token that was still valid comes back unchanged
+ * (`refreshed: false`).
+ */
+async function refreshIamToken(
+  option: LoginOption,
+  accessToken: string,
+  request: CookieReader,
   clientIp: string
-): Promise<{ setCookies: string[]; location: string | null; accessToken: string } | null> {
-  const config = iamConfig();
-  if (!config) return null;
-
+): Promise<IamRefresh> {
   try {
-    const response = await callIam(`/auth/callback${search}`, { method: 'GET' }, clientIp);
-    const setCookies = response.headers.getSetCookie();
-    const accessToken = cookieValueFrom(setCookies, iamCookieName(IAM_COOKIES.accessToken, config));
-    if (response.status < 300 || response.status >= 400 || !accessToken) {
-      logger.security(`IAM callback did not open a session (status ${response.status})`);
-      return null;
-    }
-    return { setCookies, location: response.headers.get('location'), accessToken };
+    const { data, setCookies } = await requestBackendAuth<{ refreshed?: unknown }>(
+      '/v1/auth/refresh',
+      { body: { access_token: accessToken }, headers: { Cookie: iamCookieHeader(option, request) } },
+      clientIp
+    );
+    const renewed = cookieValueFrom(setCookies, iamCookieName(IAM_COOKIES.accessToken, option));
+    return { status: 'ok', accessToken: renewed ?? accessToken, refreshed: !!renewed && data?.refreshed !== false, setCookies };
   } catch (error) {
-    logger.error('IAM callback failed:', error);
-    return null;
+    if (isUnavailable(error)) {
+      logger.error('IAM refresh failed:', error);
+      return { status: 'unavailable' };
+    }
+    logger.security(`IAM refused to refresh a session (status ${(error as BackendAuthError).status})`);
+    return { status: 'ended', setCookies: (error as BackendAuthError).setCookies };
   }
 }
 
-export interface RenewedIamSession {
+export type RenewedIamSession =
+  | { status: 'ok'; accessToken: string; refreshed: boolean; option: LoginOption; setCookies: string[] }
+  | { status: 'ended'; setCookies: string[] }
+  | { status: 'unavailable' };
+
+/**
+ * Renews the session's access token. After a real refresh the user is looked
+ * up again, so roles stay as fresh as a local session's (re-read on every
+ * token rotation); if that lookup is unavailable the roles already known are
+ * kept.
+ */
+export async function renewIamSession(
+  session: IamSession,
+  request: CookieReader,
+  clientIp: string
+): Promise<RenewedIamSession> {
+  if (!canRefreshIamSession(session)) return { status: 'ended', setCookies: [] };
+
+  const result = await refreshIamToken(session.option, session.accessToken!, request, clientIp);
+  if (result.status !== 'ok') return result;
+  if (!result.refreshed) return { ...result, option: session.option };
+
+  const lookup = await lookupIamUser(result.accessToken, clientIp);
+  if (lookup.status === 'unauthorized') return { status: 'ended', setCookies: result.setCookies };
+  const option = lookup.status === 'ok' ? lookup.option : { ...session.option, sub: peekToken(result.accessToken)?.sub };
+  return { ...result, option };
+}
+
+/**
+ * Picks up an IAM session this app did not start: the user signed in through
+ * another OpenG2P app and arrives with IAM cookies but no `login_option` for
+ * them. Each IAM access cookie found (at most three) is looked up by itself as
+ * a Bearer token — refreshed first when expired — so the backend never has to
+ * guess between two options' cookies.
+ *
+ * Returns the option to record — with no roles when the user has none here, so
+ * the lookup is not repeated on every page load — plus the token it looked up
+ * and any IAM cookies a refresh set. Null when there is nothing to adopt or the backend could not
+ * answer.
+ */
+export interface AdoptedIamSession {
+  option: LoginOption;
   accessToken: string;
-  claims: AccessTokenClaims | null;
   setCookies: string[];
 }
 
-/**
- * Asks IAM for a fresh access token. IAM has no refresh endpoint of its own:
- * its auth middleware refreshes an expired token on any authenticated route
- * and returns the new cookies, so this calls the cheapest one
- * (`get_user_profile`, a GET, so no CSRF token is needed).
- *
- * Returns null when IAM ended the session (refresh token expired or revoked).
- * A token that had not expired yet comes back unchanged.
- */
-export async function refreshIamSession(session: IamSession, clientIp: string): Promise<RenewedIamSession | null> {
-  const config = iamConfig();
-  if (!config || !canRefreshIamSession(session)) return null;
+export async function adoptIamSession(request: CookieLister, clientIp: string): Promise<AdoptedIamSession | null> {
+  const candidates = request.cookies
+    .getAll()
+    .filter(({ name, value }) => value && name.endsWith(IAM_COOKIES.accessToken))
+    .slice(0, 3);
 
-  try {
-    const response = await callIam(
-      '/auth/get_user_profile',
-      { method: 'GET', headers: { Cookie: iamCookieHeader(session, config) } },
-      clientIp
-    );
-    if (!response.ok) {
-      logger.security(`IAM refused to refresh a session (status ${response.status})`);
-      return null;
+  for (const { name, value } of candidates) {
+    const prefix = name.slice(0, -IAM_COOKIES.accessToken.length);
+    let accessToken = value;
+    let setCookies: string[] = [];
+
+    const token = peekToken(accessToken);
+    if (!token) continue;
+    if (isExpired(token)) {
+      const refreshed = await refreshIamToken({ key: '', cookie_prefix: prefix }, accessToken, request, clientIp);
+      if (refreshed.status !== 'ok') continue;
+      accessToken = refreshed.accessToken;
+      setCookies = refreshed.setCookies;
     }
-    const setCookies = response.headers.getSetCookie();
-    const accessToken =
-      cookieValueFrom(setCookies, iamCookieName(IAM_COOKIES.accessToken, config)) ?? session.accessToken!;
-    return { accessToken, claims: decodeIamAccessToken(accessToken, config.application), setCookies };
-  } catch (error) {
-    logger.error('IAM refresh failed:', error);
-    return null;
+
+    const lookup = await lookupIamUser(accessToken, clientIp);
+    if (lookup.status === 'ok' && lookup.option.cookie_prefix === prefix) {
+      return { option: lookup.option, accessToken, setCookies };
+    }
   }
+  return null;
 }
 
 /**
- * Ends the session at IAM (it deletes the refresh token it holds in Redis)
- * and returns IAM's cookie-clearing headers plus the identity provider's
- * logout URL, for the browser to visit so the provider's own SSO session
- * ends too.
- *
- * IAM answers its logout with a redirect to that URL, built from the
- * provider's discovery document — so no identity-provider detail is
- * configured here. The redirect is not followed server-side (the provider's
- * session lives in the browser's cookies, not ours). Its
- * `post_logout_redirect_uri` is IAM's one fixed portal URL; it is replaced
- * with `afterLogoutUrl`, which the provider client must allow as a redirect.
- *
- * Best effort: on any failure the session is still ended here, just not at
- * the provider — `providerLogoutUrl` is null and the caller lands locally.
+ * Whether the request carries an IAM access cookie that its `login_option`
+ * does not account for: none recorded, one recorded before the user was looked
+ * up (a login abandoned at the identity provider), or one looked up for an
+ * account that has since been replaced by another sign-in.
  */
-export async function revokeIamSession(
-  session: IamSession,
-  afterLogoutUrl: string,
-  clientIp: string
-): Promise<{ setCookies: string[]; providerLogoutUrl: string | null }> {
-  const config = iamConfig();
-  if (!config || !session.accessToken) return { setCookies: [], providerLogoutUrl: null };
+export function needsIamAdoption(request: CookieLister): boolean {
+  const hasAccessCookie = request.cookies
+    .getAll()
+    .some(({ name, value }) => value && name.endsWith(IAM_COOKIES.accessToken));
+  if (!hasAccessCookie) return false;
+
+  const session = readIamSession(request);
+  return !session?.token || !session.option.sub || session.token.sub !== session.option.sub;
+}
+
+export interface IamLogout {
+  setCookies: string[];
+  /** The identity provider session was ended server-to-server. */
+  providerLoggedOut: boolean;
+  /** Otherwise, the provider logout URL for the browser to visit so it ends too. */
+  logoutUrl: string | null;
+}
+
+/**
+ * Ends the session at IAM, through oan_auth_service, which also ends the
+ * identity provider's session server-to-server when it can. Best effort: on
+ * any failure the session is still ended here, just not upstream.
+ */
+export async function revokeIamSession(session: IamSession, request: CookieReader, clientIp: string): Promise<IamLogout> {
+  const none: IamLogout = { setCookies: [], providerLoggedOut: false, logoutUrl: null };
+  if (!session.accessToken) return none;
 
   try {
-    const response = await callIam(
-      '/auth/logout',
-      { method: 'GET', headers: { Cookie: iamCookieHeader(session, config) } },
+    const { data, setCookies } = await requestBackendAuth<{ provider_logout?: unknown; logout_url?: unknown }>(
+      '/v1/auth/logout',
+      { body: { access_token: session.accessToken }, headers: { Cookie: iamCookieHeader(session.option, request) } },
       clientIp
     );
-    if (response.status >= 400) logger.security(`IAM logout answered ${response.status}`);
-    return {
-      setCookies: response.headers.getSetCookie(),
-      providerLogoutUrl: providerLogoutUrl(response.headers.get('location'), afterLogoutUrl),
-    };
+    const logoutUrl = typeof data?.logout_url === 'string' && isAllowedRedirect(data.logout_url) ? data.logout_url : null;
+    return { setCookies, providerLoggedOut: data?.provider_logout === true, logoutUrl };
   } catch (error) {
     logger.error('IAM logout failed:', error);
-    return { setCookies: [], providerLogoutUrl: null };
+    return none;
   }
 }
 
-function providerLogoutUrl(location: string | null, afterLogoutUrl: string): string | null {
-  if (!location) return null;
+// --- The login page's options ----------------------------------------------
+
+const providersSchema = z.object({
+  providers: z.array(z.object({ key: z.string().min(1), label: z.string(), icon_url: z.string().nullish() })),
+});
+
+export interface LoginProvider {
+  key: string;
+  label: string;
+  iconUrl: string | null;
+}
+
+const PROVIDERS_TTL_MS = 60_000;
+let providersCache: { at: number; providers: LoginProvider[] } | null = null;
+
+/**
+ * The enabled login options, in display order, from oan_auth_service: `local`
+ * is this app's own email/password form, any other key an IAM option started
+ * through `/api/auth/iam/login`. Cached for a minute per process. Null when
+ * the backend could not answer.
+ */
+export async function fetchLoginProviders(clientIp: string): Promise<LoginProvider[] | null> {
+  if (providersCache && Date.now() - providersCache.at < PROVIDERS_TTL_MS) return providersCache.providers;
   try {
-    const url = new URL(location);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-    url.searchParams.set('post_logout_redirect_uri', afterLogoutUrl);
-    return url.toString();
-  } catch {
+    const { data } = await requestBackendAuth<unknown>('/v1/auth/iam/providers', { method: 'GET' }, clientIp);
+    const parsed = providersSchema.safeParse(data);
+    if (!parsed.success) {
+      logger.error('Login options answered in an unknown shape');
+      return null;
+    }
+    const providers = parsed.data.providers.map((p) => ({ key: p.key, label: p.label, iconUrl: p.icon_url || null }));
+    providersCache = { at: Date.now(), providers };
+    return providers;
+  } catch (error) {
+    logger.error('Login options could not be loaded:', error);
     return null;
   }
+}
+
+/** Test hook: forgets the cached login options. */
+export function resetLoginProvidersCache(): void {
+  providersCache = null;
 }

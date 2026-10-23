@@ -524,7 +524,7 @@
     "requestedChange": "Requested Change",
     "currentDeadline": "Current Deadline",
     "requestedExtension": "Requested Extension",
-    "department": "Department",
+    "category": "Category",
     "officer": "Officer",
     "unassigned": "Unassigned",
     "requestedBy": "Requested By",
@@ -594,10 +594,23 @@
     }
   },
   "login": {
+    "backToRoles": "ሌላ ሚና ይምረጡ",
+    "welcomeTitle": "ወደ ፖርታሉ እንኳን በደህና መጡ",
+    "welcomeSubtitle": "የቅሬታ አያያዝ ፖርታልን ለመድረስ ሚናዎን ይምረጡ።",
+    "nextStep": "ቀጣይ ደረጃ",
+    "roleFarmerTitle": "አርሶ አደር አመልካች",
+    "roleFarmerDesc": "የግብርና ቅሬታዎችዎን ያቅርቡ እና ይከታተሉ",
+    "roleOrgTitle": "የድርጅት መግቢያ",
+    "roleOrgDesc": "ለNGOዎች፣ ለኅብረት ሥራ ማኅበራት እና ለFPOዎች ቅሬታዎችን ያቅርቡ እና ይከታተሉ",
+    "roleAgentTitle": "የልማት ጣቢያ ሠራተኛ",
+    "roleAgentDesc": "አርሶ አደሮችን ያግዙ እና ከመስክ ቅሬታዎችን ያቅርቡ",
+    "roleStaffTitle": "የሠራተኞች መግቢያ",
+    "roleStaffDesc": "የቅሬታ ጉዳዮችን ይመድቡ፣ ይመረምሩ እና ይፍቱ",
     "switchAccount": "ይውጡና ሌላ መለያ ይጠቀሙ",
     "switchingAccount": "በመውጣት ላይ…",
     "switchAccountHint": "እዚህ መዳረሻ በሌለው የሠራተኛ መለያ ገብተዋል። መውጣት ከመዝገቡ እና ከሌሎች OpenG2P መተግበሪያዎችም ያስወጣዎታል።",
-    "switchAccountFailed": "ከሠራተኛ መለያው ማስወጣት አልተቻለም። ከመዝገቡ ይውጡና እንደገና ይሞክሩ።"
+    "switchAccountFailed": "ከሠራተኛ መለያው ማስወጣት አልተቻለም። ከመዝገቡ ይውጡና እንደገና ይሞክሩ።",
+    "noSignInMethod": "ምንም የመግቢያ ዘዴ አልተዋቀረም። አስተዳዳሪን ያነጋግሩ።"
   },
   "attachmentViewer": {
     "loadingPreview": "ቅድመ እይታ በመጫን ላይ",
