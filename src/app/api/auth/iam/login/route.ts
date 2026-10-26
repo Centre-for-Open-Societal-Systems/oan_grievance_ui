@@ -47,8 +47,12 @@ export async function GET(request: NextRequest) {
   // so it must be absolute (a bare path would resolve against IAM's own host),
   // and its origin must be in the option's `return_origins` in
   // oan_auth_service. The page to land on rides along as `returnUrl`,
-  // sanitised here and again on arrival.
-  const landing = new URL('/api/auth/iam/complete', request.url);
+  // sanitised here and again on arrival. Built from the Host the browser sent,
+  // not `request.url`, which behind a proxy carries the bind address
+  // (`0.0.0.0:3000`); a forged Host fails the `return_origins` check.
+  const host = request.headers.get('host') ?? request.nextUrl.host;
+  const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
+  const landing = new URL('/api/auth/iam/complete', `${proto}://${host}`);
   const returnPath = safeReturnPath(request.nextUrl.searchParams.get('returnUrl'));
   if (returnPath) landing.searchParams.set('returnUrl', returnPath);
 
