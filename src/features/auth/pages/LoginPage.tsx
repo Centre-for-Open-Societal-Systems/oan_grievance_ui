@@ -1,12 +1,13 @@
 'use client';
 
 import { PortalShell } from '@/components/auth/PortalShell';
-import { LoginForm } from '@/features/auth/components/LoginForm';
+import type { LoginOptionButton } from '@/features/auth/components/LoginForm';
+import { RoleChooser } from '@/features/auth/components/RoleChooser';
 
-export default function LoginPage({ staffSignInEnabled }: { staffSignInEnabled: boolean }) {
+export default function LoginPage({ providers }: { providers?: LoginOptionButton[] | null } = {}) {
   return (
     <PortalShell badge="Grievance Portal">
-      <LoginForm staffSignInEnabled={staffSignInEnabled} />
+      <RoleChooser providers={providers} />
     </PortalShell>
   );
 }

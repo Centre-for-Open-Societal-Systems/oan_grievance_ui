@@ -420,7 +420,8 @@ export interface DeferSLAPayload {
 }
 
 export interface ReassignGrievancePayload {
-  target_department: string;
+  target_department?: string | null;
+  target_category?: string | null;
   target_officer?: string | null;
   reason?: string | null;
   sla_treatment?: 'Continue' | 'Reset' | string;

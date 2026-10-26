@@ -11,7 +11,7 @@ const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
  * `value` as a same-origin path (`/x?y#z`), or null if it would lead off-site.
  * For every redirect target that came from a query string or body — the
  * login form's `returnUrl`, the logout `returnTo`, and the post-login path
- * IAM hands back after staff sign-in, which IAM itself never validates.
+ * IAM hands back after an IAM sign-in, which IAM itself never validates.
  *
  * Decided by parsing it as a browser would, not by matching the string:
  * `//host`, `/\host`, `/\t/host` and the like all resolve to another origin,

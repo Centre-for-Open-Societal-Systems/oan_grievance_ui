@@ -46,7 +46,6 @@ export function OfficerCard({ officer, onEdit, canEdit = true }: OfficerCardProp
             )}
           </div>
           <p className="text-sm text-gray-700 font-medium truncate">{officer.roleTitle}</p>
-          <p className="text-xs text-gray-500 truncate">{officer.department}</p>
         </div>
       </div>
 

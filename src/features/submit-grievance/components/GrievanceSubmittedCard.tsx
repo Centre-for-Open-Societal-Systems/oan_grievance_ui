@@ -102,7 +102,7 @@ export function GrievanceSubmittedCard({
           </p>
         </div>
 
-        {(result.status || respondBy || result.assigned_department) && (
+        {(result.status || respondBy) && (
           <dl className="mb-5 grid gap-x-8 gap-y-1 text-sm text-gray-600 animate-slide-up delay-400 sm:grid-cols-[auto_auto]">
             {result.status && (
               <>
@@ -119,14 +119,6 @@ export function GrievanceSubmittedCard({
                 </dt>
                 <dd className="text-left font-medium text-gray-900">
                   {respondBy}
-                </dd>
-              </>
-            )}
-            {result.assigned_department && (
-              <>
-                <dt className="font-semibold text-gray-500">Assigned to</dt>
-                <dd className="text-left font-medium text-gray-900">
-                  {result.assigned_department}
                 </dd>
               </>
             )}

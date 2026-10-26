@@ -76,16 +76,10 @@ export default function ResponseTemplatesPage() {
         { value: 'Submit Response', label: 'Submit Response' },
     ], []);
 
-    const departments = useMemo<SelectOption[]>(
-        () => (grievanceOptions?.departments ?? []).map((d) => ({ value: d.department_id, label: d.department_name })),
-        [grievanceOptions]
-    );
     const serviceCategories = useMemo<SelectOption[]>(
         () => (grievanceOptions?.service_categories ?? []).map((c) => ({ value: c.category_name, label: c.category_name })),
         [grievanceOptions]
     );
-    const departmentName = (id: string | null | undefined) =>
-        id ? departments.find((d) => d.value === id)?.label ?? id : null;
 
     const filteredTemplates = useMemo(() => {
         const search = searchTerm.trim().toLowerCase();
@@ -192,7 +186,6 @@ export default function ResponseTemplatesPage() {
                                 <ResponseTemplateRow
                                     key={template.template}
                                     template={template}
-                                    departmentName={departmentName(template.department)}
                                     isLast={index === filteredTemplates.length - 1}
                                     isBusy={busyTemplate === template.template}
                                     canManage={canManage}
@@ -210,7 +203,6 @@ export default function ResponseTemplatesPage() {
                 <ResponseTemplateFormModal
                     template={form === 'new' ? null : form}
                     actions={actions}
-                    departments={departments}
                     serviceCategories={serviceCategories}
                     onCreate={handleCreate}
                     onUpdate={handleUpdate}

@@ -10,8 +10,6 @@ export const DEFAULT_PLACEHOLDERS: PlaceholderItem[] = [
     { key: '{service_category}', field: 'service_category', label: 'Category', description: 'Primary service category name', example: 'Input Subsidies' },
     { key: '{grievance_type}', field: 'grievance_type', label: 'Type', description: 'Specific issue classification', example: 'Delayed Distribution' },
     { key: '{status}', field: 'status', label: 'Status', description: 'Current lifecycle status (e.g. In Progress, Resolved)', example: 'In Progress' },
-    { key: '{assigned_dept}', field: 'assigned_dept', label: 'Department', description: 'Department assigned to resolve the grievance', example: 'Agricultural Inputs Directorate' },
-    { key: '{department}', field: 'assigned_dept', label: 'Department (Alias)', description: 'Friendly alias for assigned department', example: 'Agricultural Inputs Directorate' },
     { key: '{assigned_to}', field: 'assigned_to', label: 'Assigned Officer', description: 'User identifier or email of assigned officer', example: 'officer@example.gov.et' },
     { key: '{sla_due_date}', field: 'sla_due_date', label: 'SLA Deadline', description: 'Calculated resolution SLA deadline timestamp', example: '2026-04-15 17:00:00' },
     { key: '{state_deadline}', field: 'state_deadline', label: 'Stage Deadline', description: 'Target deadline for current workflow stage', example: '2026-04-10 17:00:00' },

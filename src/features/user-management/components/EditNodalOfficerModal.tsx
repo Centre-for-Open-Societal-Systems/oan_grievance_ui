@@ -8,7 +8,7 @@ import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/Fi
 import { PhoneField } from '@/components/ui/PhoneField';
 import { useCopyFeedback } from '@/components/ui/useCopyFeedback';
 import { useModalA11y } from '@/components/ui/useModalA11y';
-import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, selectDepartmentOptions, useAreas } from '@/features/metadata';
+import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, useAreas } from '@/features/metadata';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
 import { generateRandomPassword } from '@/lib/validation/password';
@@ -21,13 +21,12 @@ import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
 import { useWiredCategoryOptions } from '../hooks/useWiredCategoryOptions';
 import type { OfficerBackendStatus, OfficerLevel, OfficerRole } from '../types';
 
-type FormField = 'fullName' | 'phoneNumber' | 'designation' | 'department' | 'serviceCategories';
+type FormField = 'fullName' | 'phoneNumber' | 'designation' | 'serviceCategories';
 
 const FIELD_IDS: Record<FormField, string> = {
   fullName: 'edit-officer-full-name',
   phoneNumber: 'edit-officer-phone',
   designation: 'edit-officer-designation',
-  department: 'edit-officer-department',
   serviceCategories: 'edit-officer-categories',
 };
 
@@ -59,10 +58,7 @@ interface EditNodalOfficerModalProps {
  */
 export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, tabLabel, onSaved }: EditNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
-  // The backend only lets an L3 department head omit the department; a Reviewer and L1/L2 officers need one.
-  const departmentRequired = isReviewer || level !== 'L3';
   const dispatch = useAppDispatch();
-  const departmentOptions = useAppSelector(selectDepartmentOptions);
   const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const { areas: regionAreas } = useAreas({ level: 'Region' });
   const { options: supervisorOptions } = useL2OfficerOptions(isOpen && level === 'L1');
@@ -83,7 +79,8 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
   // saving it back as if it were a real designation would fabricate one on an officer who
   // never had one.
   const [designation, setDesignation] = useState(officer?.designation ?? '');
-  const [department, setDepartment] = useState(officer?.department ?? '');
+  // Not editable here: kept as the officer's own, so the category list matches their desks.
+  const department = officer?.department ?? '';
   const [serviceCategories, setServiceCategories] = useState<string[]>(officer?.tags ?? []);
   const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
   const allCategoryOptions = useAppSelector(selectCategoryFilterOptions);
@@ -122,8 +119,6 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
         return validateOptionalLocalPhone(phoneNumber, countryCode);
       case 'designation':
         return null;
-      case 'department':
-        return departmentRequired && !department.trim() ? 'Select a department.' : null;
       case 'serviceCategories':
         return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
@@ -177,7 +172,6 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
       await updateOfficer(officer.id, {
         full_name: fullName,
         ...(isReviewer ? {} : { designation: designation.trim() || null }),
-        department: department.trim() || null,
         phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : null,
         region: region || null,
         status: status as OfficerBackendStatus,
@@ -293,28 +287,6 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
               )}
 
               <div className="flex flex-col gap-2">
-                <label htmlFor={FIELD_IDS.department} className="text-sm font-bold text-gray-900">
-                  Department{departmentRequired && <span className="text-red-500"> *</span>}
-                </label>
-                <AnimatedSelect
-                  options={departmentOptions.map((o) => o.label)}
-                  value={department}
-                  onChange={(value) => {
-                    setDepartment(value);
-                    setError('department', null);
-                    // The category list is department-specific — a category picked for the old
-                    // department may not even have a desk under the new one.
-                    if (value) {
-                      setServiceCategories([]);
-                      setError('serviceCategories', null);
-                    }
-                  }}
-                  placeholder="Select Department"
-                />
-                {fieldError('department')}
-              </div>
-
-              <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-gray-900">Region</label>
                 <AnimatedSelect
                   options={regionAreas.map((area) => ({ value: area.area_id, label: area.area_name }))}
@@ -364,9 +336,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
                   <span className="text-sm text-gray-400">Loading categories…</span>
                 ) : categoryList.length === 0 ? (
                   <span className="text-sm text-gray-400">
-                    {!department
-                      ? 'No service categories available. Create a category first.'
-                      : 'No service category is routed to this department yet.'}
+                    No service categories available. Create a category first.
                   </span>
                 ) : (
                   categoryList.map((option) => (

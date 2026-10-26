@@ -524,7 +524,7 @@
     "requestedChange": "Requested Change",
     "currentDeadline": "Current Deadline",
     "requestedExtension": "Requested Extension",
-    "department": "Department",
+    "category": "Category",
     "officer": "Officer",
     "unassigned": "Unassigned",
     "requestedBy": "Requested By",
@@ -656,10 +656,23 @@
     "resolvedBreached": "{count} SLA booda furaman"
   },
   "login": {
+    "backToRoles": "Gahee biraa filadhu",
+    "welcomeTitle": "Gara Poortaaliitti Baga Nagaan Dhuftan",
+    "welcomeSubtitle": "Poortaalii bulchiinsa komii fayyadamuuf gahee keessan filadhaa.",
+    "nextStep": "Tarkaanfii Itti Aanu",
+    "roleFarmerTitle": "Iyyataa Qonnaan Bulaa",
+    "roleFarmerDesc": "Komiilee qonnaa keessan galchaatii hordofaa",
+    "roleOrgTitle": "Seensa Dhaabbataa",
+    "roleOrgDesc": "NGOwwan, waldaalee hojii gamtaa fi FPOwwaniif komii galchaatii hordofaa",
+    "roleAgentTitle": "Hojjataa Misoomaa",
+    "roleAgentDesc": "Qonnaan bultoota gargaaraa fi dirree irraa komii galchaa",
+    "roleStaffTitle": "Seensa Hojjattootaa",
+    "roleStaffDesc": "Dhimmoota komii qulqulleessaa, qoradhaa fi furmaata kennaa",
     "switchAccount": "Ba'iitii herrega biraa fayyadami",
     "switchingAccount": "Ba'aa jira…",
     "switchAccountHint": "Herrega hojjetaa asitti hayyama hin qabneen seenteetta. Ba'uun galmee fi appiliikeeshinii OpenG2P biroo irraas si baasa.",
-    "switchAccountFailed": "Herrega hojjetaa irraa si baasuun hin danda'amne. Galmee irraa ba'iitii irra deebi'ii yaali."
+    "switchAccountFailed": "Herrega hojjetaa irraa si baasuun hin danda'amne. Galmee irraa ba'iitii irra deebi'ii yaali.",
+    "noSignInMethod": "Malli seensaa tokkollee hin qindoofne. Bulchaa quunnamaa."
   },
   "attachmentViewer": {
     "loadingPreview": "Dursee ilaaluun fe'aa jira",

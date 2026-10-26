@@ -12,7 +12,7 @@ import type { SIFormProps } from "./SI-types";
 // markup — and a validation rule or a11y fix lands in one place.
 
 /** What each field needs from the form that renders it. */
-export type SIFieldContext = Pick<SIFormProps, "values" | "setValue" | "errors" | "onFieldBlur">;
+export type SIFieldContext = Pick<SIFormProps, "values" | "setValue" | "errors" | "onFieldBlur" | "readOnlyFields">;
 
 /** The DOM id for a field, which is also where "focus the first invalid field" looks. */
 export function siFieldId(name: string): string {
@@ -81,6 +81,7 @@ export function SITextField({
   setValue,
   errors,
   onFieldBlur,
+  readOnlyFields,
   name,
   label,
   required,
@@ -92,11 +93,13 @@ export function SITextField({
 }: FieldProps & { type?: "text" | "email"; maxLength?: number }) {
   const id = siFieldId(name);
   const error = errors?.[name];
+  const readOnly = !!readOnlyFields?.includes(name);
   return (
     <FieldShell name={name} label={label} required={required} error={error} hint={hint} className={className}>
       <input
         id={id}
         type={type}
+        readOnly={readOnly}
         autoComplete="off"
         maxLength={maxLength}
         value={values[name] || ""}
@@ -105,7 +108,7 @@ export function SITextField({
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorIdFor(id) : hint ? hintIdFor(id) : undefined}
         placeholder={placeholder}
-        className={`${INPUT_CLASS} ${INVALID_INPUT_STYLES}`}
+        className={`${INPUT_CLASS} ${INVALID_INPUT_STYLES} ${readOnly ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`}
       />
     </FieldShell>
   );
@@ -170,6 +173,7 @@ export function SIPhoneFormField({
   setValue,
   errors,
   onFieldBlur,
+  readOnlyFields,
   name = "phoneNumber",
   label,
   required,
@@ -188,6 +192,7 @@ export function SIPhoneFormField({
         setPhoneNumber={(value) => setValue(name, value)}
         onBlur={() => onFieldBlur?.(name)}
         invalid={!!error}
+        disabled={!!readOnlyFields?.includes(name)}
         describedBy={error ? errorIdFor(id) : undefined}
         {...(placeholder ? { placeholder } : {})}
       />

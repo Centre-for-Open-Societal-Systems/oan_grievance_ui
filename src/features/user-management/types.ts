@@ -74,6 +74,20 @@ export interface OfficerListPagination {
   has_prev: boolean;
 }
 
+/** A login that holds the officer role but sits on no desk yet — who `POST /officers` can place. */
+export interface OfficerCandidate {
+  name: string;
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  /** Signs in through an identity provider, which owns their roles. */
+  delegated: boolean;
+}
+
+export interface OfficerCandidateData {
+  candidates: OfficerCandidate[];
+}
+
 export interface OfficerListData {
   officers: OfficerRecord[];
   pagination: OfficerListPagination;

@@ -19,8 +19,6 @@ export interface DepartmentChoice {
 export interface AddCategoryModalProps {
   /** Ticket codes already in use, so the generated one avoids them. */
   takenCodes: readonly string[];
-  /** Departments the category's first desk can open in (the options endpoint's `departments`). */
-  departments?: readonly DepartmentChoice[];
   /** Creates the category along with its SLA configuration. */
   onCreate: (payload: CreateServiceCategoryPayload) => Promise<unknown>;
   onClose: () => void;
@@ -61,13 +59,12 @@ function Toggle({ label, stateLabel, checked, onChange }: ToggleProps) {
  * Generates a 3-character ticket code from the name and establishes
  * the category and its resolution SLA atomically.
  */
-export function AddCategoryModal({ takenCodes, departments = [], onCreate, onClose }: AddCategoryModalProps) {
+export function AddCategoryModal({ takenCodes, onCreate, onClose }: AddCategoryModalProps) {
   const t = useTranslations('admin.taxonomy');
   const nameRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [slaDays, setSlaDays] = useState('');
-  const [department, setDepartment] = useState('');
   const [autoEscalate, setAutoEscalate] = useState(true);
   const [notifyOnBreach, setNotifyOnBreach] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -116,7 +113,6 @@ export function AddCategoryModal({ takenCodes, departments = [], onCreate, onClo
         sla_days: parseInt(parsed.data.slaDays, 10),
         auto_escalate: autoEscalate,
         notify_on_breach: notifyOnBreach,
-        ...(department ? { department } : {}),
       });
       onClose();
     } catch (err) {
@@ -174,27 +170,6 @@ export function AddCategoryModal({ takenCodes, departments = [], onCreate, onClo
               />
             )}
           </Field>
-
-          <div className="sm:col-span-2">
-            <Field label={t('department')} hint={t('departmentHint')}>
-              {(id, describedBy) => (
-                <select
-                  id={id}
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  aria-describedby={describedBy}
-                  className={inputClass(false)}
-                >
-                  <option value="">{t('departmentNone')}</option>
-                  {departments.map((d) => (
-                    <option key={d.department_id} value={d.department_id}>
-                      {d.department_name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Field>
-          </div>
 
           <div className="flex flex-wrap gap-x-10 gap-y-4 sm:col-span-2">
             <Toggle

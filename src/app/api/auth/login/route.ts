@@ -7,6 +7,20 @@ import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } f
 import { setSessionCookies } from '@/lib/session';
 import { NextResponse } from 'next/server';
 
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const key =
+    url.searchParams.get('key') ??
+    url.searchParams.get('role') ??
+    url.searchParams.get('type') ??
+    url.searchParams.get('portal');
+  if (key) {
+    url.pathname = '/api/auth/iam/login';
+    return NextResponse.redirect(url, 303);
+  }
+  return NextResponse.json({ message: 'Missing key parameter' }, { status: 400 });
+}
+
 export async function POST(request: Request) {
   const csrfError = checkCsrf(request);
   if (csrfError) return csrfError;

@@ -58,7 +58,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const renewed = await renewSession(request, session, clientIp);
-    if (!renewed) return endSession(AUTH_MESSAGES.sessionExpired);
+    // IAM unreachable: keep the session and let the client retry later.
+    if (renewed.status === 'unavailable') {
+      return NextResponse.json({ message: AUTH_MESSAGES.signInUnavailable }, { status: 503 });
+    }
+    if (renewed.status === 'ended') {
+      const ended = endSession(AUTH_MESSAGES.sessionExpired);
+      renewed.apply(ended);
+      return ended;
+    }
 
     const nextResponse = NextResponse.json({ success: true });
     renewed.apply(nextResponse);

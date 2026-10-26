@@ -245,20 +245,18 @@ describe('Submitted screen', () => {
     expect(screen.getByText('B-001-0001-0')).toBeInTheDocument();
   });
 
-  it('shows the status, the date a response is expected by, and who it was assigned to', () => {
+  it('shows the status, and the date a response is expected by', () => {
     render(
       <GrievanceSubmittedCard
         result={{
           ticket_number: 'B-001-0001-0',
           status: 'Submitted',
           sla_due_date: '2026-10-05 12:00:00',
-          assigned_department: 'Agriculture Office',
         }}
       />
     );
     expect(screen.getByText('Submitted')).toBeInTheDocument();
     expect(screen.getByText('5 Oct 2026')).toBeInTheDocument();
-    expect(screen.getByText('Agriculture Office')).toBeInTheDocument();
   });
 
   it('leaves out details the backend did not return, rather than showing blanks', () => {
