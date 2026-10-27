@@ -93,7 +93,7 @@ function DashboardFailed({ forbidden, onRetry }: { forbidden: boolean; onRetry: 
         {!forbidden && (
           <>
             {" "}
-            <button type="button" onClick={onRetry} className="underline font-semibold">
+            <button type="button" onClick={onRetry} className="underline font-semibold rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
               {t("retry")}
             </button>
           </>

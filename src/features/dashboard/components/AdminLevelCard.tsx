@@ -63,13 +63,18 @@ export function AdminLevelCard({ levels, selectedRegion, onSelectRegion }: Admin
   const { federal, regions, woredas } = levels.statistics;
   const region = regions.find((r) => r.code === selectedRegion) ?? null;
   // Narrowed to the picked region's woredas, else every woreda the caller reads (the service ranks them).
-  const inScope = region ? woredas.filter((w) => w.regionCode === region.code) : woredas;
+  const inScope = selectedRegion ? woredas.filter((w) => w.regionCode === selectedRegion) : woredas;
   const shownWoredas = inScope.slice(0, LIST_LIMIT);
   const hiddenWoredas = inScope.length - shownWoredas.length;
   const shownRegions = regions.slice(0, LIST_LIMIT);
   const hiddenRegions = regions.length - shownRegions.length;
   const regionMax = Math.max(1, ...regions.map((r) => r.value));
   const woredaMax = Math.max(1, ...inScope.map((w) => w.value));
+  // A picked region can drop out of the list (all its cases resolved); it must still be clearable.
+  const regionName = region?.name ?? selectedRegion;
+  let woredaHeading = t("woredas");
+  if (selectedRegion) woredaHeading = t("woredasIn", { region: regionName ?? selectedRegion });
+  else if (regions.length > 0) woredaHeading = t("topWoredas");
   const isEmpty = !federal && regions.length === 0 && woredas.length === 0;
 
   return (
@@ -115,10 +120,10 @@ export function AdminLevelCard({ levels, selectedRegion, onSelectRegion }: Admin
           </div>
         )}
 
-        {(shownWoredas.length > 0 || region) && (
+        {(shownWoredas.length > 0 || selectedRegion) && (
           <div>
             <h4 className="text-sm font-semibold text-gray-700 mb-3">
-              {region ? t("woredasIn", { region: region.name }) : regions.length > 0 ? t("topWoredas") : t("woredas")}
+              {woredaHeading}
             </h4>
             {shownWoredas.length === 0 ? (
               <p className="text-sm text-gray-500">{t("noWoredas")}</p>
@@ -136,10 +141,10 @@ export function AdminLevelCard({ levels, selectedRegion, onSelectRegion }: Admin
         )}
       </div>
 
-      {region && (
+      {selectedRegion && (
         <div className="px-6 py-3 border-t border-gray-200 flex flex-wrap items-center gap-3 text-sm">
-          <span role="status">{t("filteredBy", { region: region.name })}</span>
-          <button type="button" onClick={() => onSelectRegion(null)} className="font-semibold underline">
+          <span role="status">{t("filteredBy", { region: regionName ?? selectedRegion })}</span>
+          <button type="button" onClick={() => onSelectRegion(null)} className="font-semibold underline rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
             {t("clear")}
           </button>
         </div>

@@ -26,6 +26,8 @@ export function DashboardSkeleton({ recentGrievances }: { recentGrievances: Reac
         <div className={`${BLOCK} h-[400px]`} />
       </div>
 
+      <div aria-hidden="true" className={`${BLOCK} h-[280px]`} />
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div aria-hidden="true" className={`${BLOCK} h-[320px]`} />
         {recentGrievances}
