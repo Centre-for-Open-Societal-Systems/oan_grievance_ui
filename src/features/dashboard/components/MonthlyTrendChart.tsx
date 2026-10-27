@@ -16,7 +16,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
   const t = useTranslations("dashboard.overview");
 
   return (
-    <div className="lg:col-span-2 bg-white rounded-2xl flex flex-col h-[400px] border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl">
+    <div className="bg-white rounded-2xl flex flex-col h-[400px] border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl">
       <div className="px-6 py-5 border-b border-gray-200">
         <h3 className="text-[16px] font-semibold text-[#111827] tracking-tight">{t("monthlyTrend")}</h3>
       </div>

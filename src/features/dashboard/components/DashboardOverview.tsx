@@ -67,8 +67,8 @@ function DashboardSections({
     <>
       {kpis ? <KpiCards data={kpis} /> : unavailable("h-[140px]")}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {monthlyTrend ? <MonthlyTrendChart data={monthlyTrend} /> : unavailable("h-[400px] lg:col-span-2")}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {monthlyTrend ? <MonthlyTrendChart data={monthlyTrend} /> : unavailable("h-[400px]")}
         {statusDistribution ? <StatusDistributionChart data={statusDistribution} /> : unavailable("h-[400px]")}
       </div>
 
