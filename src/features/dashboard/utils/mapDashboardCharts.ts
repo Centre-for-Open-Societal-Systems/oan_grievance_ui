@@ -155,13 +155,17 @@ export function mapDashboardCharts(charts: DashboardCharts, locale = 'en'): Dash
 }
 
 function mapAreas(rows: AdminLevelRow[], level: 'region' | 'woreda'): AdminAreaStat[] {
-  const areas = rows.filter((row) => row.level === level && row.code && row.count > 0);
-  return areas.map((row) => ({
-    code: row.code as string,
-    name: row.name?.trim() || (row.code as string),
-    value: row.count,
-    regionCode: row.region_code,
-  }));
+  const areas: AdminAreaStat[] = [];
+  for (const row of rows) {
+    if (row.level !== level || !row.code || row.count <= 0) continue;
+    areas.push({
+      code: row.code,
+      name: row.name?.trim() || row.code,
+      value: row.count,
+      regionCode: row.region_code,
+    });
+  }
+  return areas;
 }
 
 /**

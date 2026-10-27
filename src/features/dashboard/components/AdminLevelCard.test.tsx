@@ -126,4 +126,13 @@ describe('AdminLevelCard', () => {
 
     expect(screen.getByRole('heading', { name: amMessages.dashboard.overview.levels.title })).toBeTruthy();
   });
+
+  it("keeps a picked region clearable when it is no longer in the list", () => {
+    const onSelect = renderCard(ready(STATISTICS), "ET99");
+
+    expect(screen.getAllByText(/ET99/).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Bishoftu")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show all regions" }));
+    expect(onSelect).toHaveBeenCalledWith(null);
+  });
 });
