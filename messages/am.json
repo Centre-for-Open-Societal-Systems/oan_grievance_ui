@@ -590,7 +590,23 @@
         "rejected": "ውድቅ የተደረገ"
       },
       "noStatuses": "በሁኔታ የሚታይ ቅሬታ እስካሁን የለም።",
-      "escalatedCaption": "በSLA ጥሰት የሚቀሰቀስ"
+      "escalatedCaption": "በSLA ጥሰት የሚቀሰቀስ",
+      "levels": {
+        "title": "ቅሬታዎች በአስተዳደራዊ ደረጃ",
+        "loading": "በአስተዳደራዊ ደረጃ የተቆጠሩ ቅሬታዎችን በመጫን ላይ…",
+        "forbidden": "በአስተዳደራዊ ደረጃ የተቆጠሩ ቅሬታዎችን የማየት ፈቃድ የለዎትም።",
+        "federal": "ፌዴራል",
+        "regions": "ክልሎች",
+        "woredas": "ወረዳዎች",
+        "woredasIn": "በ{region} ያሉ ወረዳዎች",
+        "topWoredas": "ከፍተኛ ቅሬታ ያላቸው ወረዳዎች",
+        "more": "{count, plural, one {+# ተጨማሪ} other {+# ተጨማሪ}}",
+        "selectHint": "ዳሽቦርዱን ለማጥበብ ክልል ይምረጡ።",
+        "noWoredas": "በዚህ ክልል በማንኛውም ወረዳ እስካሁን ቅሬታ የለም።",
+        "noData": "ለአካባቢዎ የሚቆጠር ቅሬታ እስካሁን የለም።",
+        "filteredBy": "ዳሽቦርዱ ለ{region} እየታየ ነው።",
+        "clear": "ሁሉንም ክልሎች አሳይ"
+      }
     }
   },
   "analytics": {

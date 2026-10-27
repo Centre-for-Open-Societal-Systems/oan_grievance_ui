@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useAdminLevels, type UseAdminLevelsResult } from "../hooks/useAdminLevels";
 import {
   useDashboardStatistics,
   type DashboardState,
 } from "../hooks/useDashboardStatistics";
 import type { DashboardStatistics } from "../types";
+import { AdminLevelCard } from "./AdminLevelCard";
 import { CARD_WHITE } from "./cardStyles";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { EscalationBanner, type EscalationBannerProps } from "./EscalationBanner";
@@ -41,10 +43,21 @@ interface SectionsProps {
   recentGrievances: ReactNode;
   isRefreshing: boolean;
   onRetry: () => void;
+  levels: UseAdminLevelsResult;
+  region: string | null;
+  onSelectRegion: (code: string | null) => void;
 }
 
 /** The statistics that loaded. A chart that did not stands in as an unavailable section, in the same place. */
-function DashboardSections({ statistics, recentGrievances, isRefreshing, onRetry }: SectionsProps) {
+function DashboardSections({
+  statistics,
+  recentGrievances,
+  isRefreshing,
+  onRetry,
+  levels,
+  region,
+  onSelectRegion,
+}: SectionsProps) {
   const { kpis, monthlyTrend, statusDistribution, serviceCategories } = statistics;
   const unavailable = (className = "") => (
     <SectionUnavailable onRetry={onRetry} isRetrying={isRefreshing} className={className} />
@@ -58,6 +71,8 @@ function DashboardSections({ statistics, recentGrievances, isRefreshing, onRetry
         {monthlyTrend ? <MonthlyTrendChart data={monthlyTrend} /> : unavailable("h-[400px] lg:col-span-2")}
         {statusDistribution ? <StatusDistributionChart data={statusDistribution} /> : unavailable("h-[400px]")}
       </div>
+
+      <AdminLevelCard levels={levels} selectedRegion={region} onSelectRegion={onSelectRegion} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {serviceCategories ? <ServiceCategoryChart data={serviceCategories} /> : unavailable("h-[320px]")}
@@ -94,14 +109,18 @@ function DashboardFailed({ forbidden, onRetry }: { forbidden: boolean; onRetry: 
  */
 export function DashboardOverview({ recentGrievances }: DashboardOverviewProps) {
   const locale = useLocale();
-  const state = useDashboardStatistics(locale);
+  const [region, setRegion] = useState<string | null>(null);
+  const state = useDashboardStatistics(locale, region);
+  const levels = useAdminLevels();
   const bodyRef = useRef<HTMLDivElement>(null);
   const banner = escalationBannerFor(state);
 
   // The Retry button of a failed page is replaced by the loading state; move focus to
   // the body (which stays mounted) so a keyboard user is not dropped back on <body>.
+  // The failed page hides the level card, so a picked region could not be cleared: retry for all of them.
   const retryFromFailure = () => {
     bodyRef.current?.focus();
+    setRegion(null);
     state.retry();
   };
 
@@ -119,6 +138,9 @@ export function DashboardOverview({ recentGrievances }: DashboardOverviewProps) 
             recentGrievances={recentGrievances}
             isRefreshing={state.isRefreshing}
             onRetry={state.retry}
+            levels={levels}
+            region={region}
+            onSelectRegion={setRegion}
           />
         )}
         {state.status === "loading" && <DashboardSkeleton recentGrievances={recentGrievances} />}

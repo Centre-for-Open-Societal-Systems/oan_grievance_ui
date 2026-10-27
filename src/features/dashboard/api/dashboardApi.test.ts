@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchDashboardCharts, parseDashboardCharts } from './dashboardApi';
+import {
+  fetchAdminLevelChart,
+  fetchDashboardCharts,
+  parseAdminLevelChart,
+  parseDashboardCharts,
+} from './dashboardApi';
 
 describe('fetchDashboardCharts', () => {
   const originalFetch = global.fetch;
@@ -89,5 +94,60 @@ describe('parseDashboardCharts', () => {
     expect(() => parseDashboardCharts(null)).toThrow();
     expect(() => parseDashboardCharts([])).toThrow();
     expect(() => parseDashboardCharts('ok')).toThrow();
+  });
+});
+
+describe('fetchDashboardCharts with a region', () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('sends the region filter, encoded, alongside the charts', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: 'success', data: {} }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await fetchDashboardCharts({ region: 'ET04' });
+
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(url.searchParams.get('region')).toBe('ET04');
+  });
+});
+
+describe('administrative-level chart', () => {
+  const rows = [
+    { level: 'federal', code: 'ET', name: 'Ethiopia', region_code: null, count: 9 },
+    { level: 'region', code: 'ET04', name: 'Oromia', region_code: 'ET04', count: 6 },
+  ];
+
+  it('is requested on its own so a service without it cannot fail the other charts', async () => {
+    const originalFetch = global.fetch;
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: 'success', data: { grvByAdminLevel: rows } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await fetchAdminLevelChart();
+    global.fetch = originalFetch;
+
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(url.searchParams.get('charts')).toBe('grvByAdminLevel');
+    expect(url.searchParams.has('region')).toBe(false);
+    expect(result).toEqual(rows);
+  });
+
+  it('accepts an empty list but refuses a missing, null or malformed chart', () => {
+    expect(parseAdminLevelChart({ grvByAdminLevel: [] })).toEqual([]);
+    expect(() => parseAdminLevelChart({ grvByAdminLevel: null })).toThrow();
+    expect(() => parseAdminLevelChart({})).toThrow();
+    expect(() => parseAdminLevelChart({ grvByAdminLevel: [{ level: 'region', count: -1 }] })).toThrow();
   });
 });

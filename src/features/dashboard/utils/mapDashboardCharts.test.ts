@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMonthKey, mapDashboardCharts, SERVICE_CATEGORY_LIMIT } from './mapDashboardCharts';
+import { formatMonthKey, mapAdminLevels, mapDashboardCharts, SERVICE_CATEGORY_LIMIT } from './mapDashboardCharts';
 import type { DashboardCharts } from '../types';
 
 const NO_CHARTS: DashboardCharts = {
@@ -179,5 +179,38 @@ describe('formatMonthKey', () => {
 
   it('falls back to the key for a locale Intl rejects', () => {
     expect(formatMonthKey('2026-01', 'not a locale')).toBe('2026-01');
+  });
+});
+
+describe('mapAdminLevels', () => {
+  it('splits the rows into the federal total, regions and woredas, keeping the service order', () => {
+    const stats = mapAdminLevels([
+      { level: 'federal', code: 'ET', name: 'Ethiopia', region_code: null, count: 10 },
+      { level: 'region', code: 'ET04', name: 'Oromia', region_code: 'ET04', count: 6 },
+      { level: 'region', code: 'ET03', name: 'Amhara', region_code: 'ET03', count: 3 },
+      { level: 'woreda', code: 'ET0401', name: 'Bishoftu', region_code: 'ET04', count: 4 },
+    ]);
+
+    expect(stats.federal).toEqual({ name: 'Ethiopia', value: 10 });
+    expect(stats.regions.map((r) => r.code)).toEqual(['ET04', 'ET03']);
+    expect(stats.woredas).toEqual([{ code: 'ET0401', name: 'Bishoftu', value: 4, regionCode: 'ET04' }]);
+  });
+
+  it('leaves a level the caller may not read empty rather than zero', () => {
+    const stats = mapAdminLevels([{ level: 'woreda', code: 'W1', name: null, region_code: null, count: 2 }]);
+
+    expect(stats.federal).toBeNull();
+    expect(stats.regions).toEqual([]);
+    expect(stats.woredas[0]?.name).toBe('W1');
+  });
+
+  it('skips a level it does not know, a row with no code and an empty area', () => {
+    const stats = mapAdminLevels([
+      { level: 'zone', code: 'Z1', name: 'Zone', region_code: null, count: 5 },
+      { level: 'region', code: null, name: 'No code', region_code: null, count: 5 },
+      { level: 'region', code: 'ET04', name: 'Oromia', region_code: 'ET04', count: 0 },
+    ]);
+
+    expect(stats).toEqual({ federal: null, regions: [], woredas: [] });
   });
 });

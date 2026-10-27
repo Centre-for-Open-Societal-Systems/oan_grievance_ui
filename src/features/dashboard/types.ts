@@ -1,4 +1,11 @@
-export type { DashboardCharts, KpiRow, StatusRow, CategoryRow, MonthlyTrendRow } from './schemas';
+export type {
+  AdminLevelRow,
+  DashboardCharts,
+  KpiRow,
+  StatusRow,
+  CategoryRow,
+  MonthlyTrendRow,
+} from './schemas';
 
 export type KpiMetric = 'total' | 'awaiting_action' | 'resolved' | 'escalated';
 
@@ -54,4 +61,26 @@ export interface DashboardStatistics {
   serviceCategories: ServiceCategoryStat[] | null;
   /** Open escalated cases — drives the banner. Null when unknown. */
   escalated: number | null;
+}
+
+/** A region or woreda in the administrative-level card. */
+export interface AdminAreaStat {
+  /** The area's code, unique within its level. */
+  code: string;
+  /** Falls back to the code when the service sent no name. */
+  name: string;
+  value: number;
+  /** The region it belongs to (its own code, for a region). */
+  regionCode: string | null;
+}
+
+/**
+ * What the administrative-level card draws. Each part is empty when the caller may not read
+ * that level (a woreda officer reads no region or federal row), which is different from the
+ * whole chart being unavailable.
+ */
+export interface AdminLevelStatistics {
+  federal: { name: string | null; value: number } | null;
+  regions: AdminAreaStat[];
+  woredas: AdminAreaStat[];
 }

@@ -590,7 +590,23 @@
         "rejected": "Rejected"
       },
       "noStatuses": "No grievances to show by status yet.",
-      "escalatedCaption": "Triggered by SLA breach"
+      "escalatedCaption": "Triggered by SLA breach",
+      "levels": {
+        "title": "Grievances by Administrative Level",
+        "loading": "Loading counts by administrative level…",
+        "forbidden": "You do not have access to the counts by administrative level.",
+        "federal": "Federal",
+        "regions": "Regions",
+        "woredas": "Woredas",
+        "woredasIn": "Woredas in {region}",
+        "topWoredas": "Top woredas",
+        "more": "{count, plural, one {+# more} other {+# more}}",
+        "selectHint": "Select a region to narrow the dashboard to it.",
+        "noWoredas": "No grievances in any woreda of this region yet.",
+        "noData": "No grievances to count for your area yet.",
+        "filteredBy": "Showing the dashboard for {region}.",
+        "clear": "Show all regions"
+      }
     }
   },
   "analytics": {

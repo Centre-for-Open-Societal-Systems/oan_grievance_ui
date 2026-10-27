@@ -11,6 +11,9 @@ import type { DashboardCharts } from '../types';
 vi.mock('../hooks/useDashboardStatistics', () => ({
   useDashboardStatistics: vi.fn(),
 }));
+vi.mock('../hooks/useAdminLevels', () => ({
+  useAdminLevels: () => ({ status: 'ready', isRefreshing: false, retry: () => {}, statistics: { federal: null, regions: [], woredas: [] } }),
+}));
 vi.mock('./MonthlyTrendChart', () => ({ MonthlyTrendChart: () => <div>monthly chart</div> }));
 vi.mock('./StatusDistributionChart', () => ({ StatusDistributionChart: () => <div>status chart</div> }));
 

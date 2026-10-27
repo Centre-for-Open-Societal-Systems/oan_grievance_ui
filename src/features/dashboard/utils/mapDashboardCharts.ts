@@ -1,4 +1,7 @@
 import type {
+  AdminAreaStat,
+  AdminLevelRow,
+  AdminLevelStatistics,
   CategoryRow,
   DashboardCharts,
   DashboardStatistics,
@@ -148,5 +151,29 @@ export function mapDashboardCharts(charts: DashboardCharts, locale = 'en'): Dash
     statusDistribution: mapStatusDistribution(charts.grvStatusDistribution),
     serviceCategories: mapServiceCategories(charts.grvByCategory),
     escalated: kpis?.find((card) => card.metric === 'escalated')?.value ?? null,
+  };
+}
+
+function mapAreas(rows: AdminLevelRow[], level: 'region' | 'woreda'): AdminAreaStat[] {
+  const areas = rows.filter((row) => row.level === level && row.code && row.count > 0);
+  return areas.map((row) => ({
+    code: row.code as string,
+    name: row.name?.trim() || (row.code as string),
+    value: row.count,
+    regionCode: row.region_code,
+  }));
+}
+
+/**
+ * The administrative-level card from its rows. The service already ranks regions and woredas
+ * by count and leaves out empty ones, and sends only the levels the caller may read; a level
+ * that is absent maps to an empty part, not to zeros.
+ */
+export function mapAdminLevels(rows: AdminLevelRow[]): AdminLevelStatistics {
+  const federal = rows.find((row) => row.level === 'federal');
+  return {
+    federal: federal ? { name: federal.name?.trim() || null, value: federal.count } : null,
+    regions: mapAreas(rows, 'region'),
+    woredas: mapAreas(rows, 'woreda'),
   };
 }

@@ -32,6 +32,7 @@ NGO and FPO representatives register through the ordinary `/register` flow — t
 
 - `api/dashboardApi.ts` parses each chart with its own Zod schema; a chart that is `null`, missing or in an unknown shape becomes `null`, never zeros. If every chart is `null` the page shows its error state.
 - `utils/mapDashboardCharts.ts` turns the parsed charts into what the components draw. `null` means "unavailable" and renders as a retryable section, which is different from an empty list.
+- Administrative-level drill-down: `grvByAdminLevel` (federal total, ranked regions and woredas; the service sends only the levels the caller may read) is requested on its own by `hooks/useAdminLevels.ts`, because the service answers 404 to a whole call naming a chart it does not know. `components/AdminLevelCard.tsx` renders it; picking a region sends `region=<code>` to the four statistics charts (`useDashboardStatistics(locale, region)`) and lists that region's woredas. There is no `woreda` filter on the service, so woredas show counts only. Copy is under `dashboard.overview.levels.*`.
 - Recent Grievances (`src/app/(dashboard)/dashboard/components/`) reads the All Grievances list on its own, so it still renders when the statistics fail.
 - All copy is in `messages/*.json` under `dashboard.*`; `messages.test.ts` fails if a locale is missing a key. Backend status labels are translated when known and shown as sent otherwise.
 

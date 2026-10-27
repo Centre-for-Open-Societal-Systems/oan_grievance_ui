@@ -590,7 +590,23 @@
         "rejected": "Didame"
       },
       "noStatuses": "Komiin haalaan agarsiisuu ammaaf hin jiru.",
-      "escalatedCaption": "Cabsa SLAn kakaafame"
+      "escalatedCaption": "Cabsa SLAn kakaafame",
+      "levels": {
+        "title": "Komiiwwan sadarkaa bulchiinsaatiin",
+        "loading": "Lakkoofsa komii sadarkaa bulchiinsaatiin fe’aa jira…",
+        "forbidden": "Lakkoofsa komii sadarkaa bulchiinsaatiin ilaaluuf hayyama hin qabdan.",
+        "federal": "Federaalaa",
+        "regions": "Naannoowwan",
+        "woredas": "Aanaalee",
+        "woredasIn": "Aanaalee {region} keessa jiran",
+        "topWoredas": "Aanaalee komii olaanaa qaban",
+        "more": "{count, plural, one {+# kan biraa} other {+# kan biraa}}",
+        "selectHint": "Daashboordii dhiphisuuf naannoo filadhaa.",
+        "noWoredas": "Aanaa naannoo kanaa keessatti komiin ammaaf hin jiru.",
+        "noData": "Naannoo keessaniif komiin lakkaa’amu ammaaf hin jiru.",
+        "filteredBy": "Daashboordiin {region}f mul’ataa jira.",
+        "clear": "Naannoowwan hunda agarsiisi"
+      }
     }
   },
   "analytics": {
