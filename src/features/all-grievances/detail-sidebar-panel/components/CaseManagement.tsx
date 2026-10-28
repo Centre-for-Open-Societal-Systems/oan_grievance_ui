@@ -9,6 +9,8 @@ import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
 import { ReviewReassignmentPopup } from './ReviewReassignmentPopup';
 import type { GrievanceChangeResponseData, GrievanceTimelineData, ReassignGrievancePayload } from '../../types';
 import { isTerminalStatus } from '../../utils/mapGrievance';
+import { CharacterCounter } from '@/components/ui/CharacterCounter';
+import { REASON_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 interface CaseManagementProps {
   canManageCase: boolean;
@@ -230,18 +232,22 @@ export function CaseManagement({
               <div className="flex flex-col gap-1.5 p-3 bg-amber-50/70 border border-amber-200 rounded-lg">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
                   <RefreshCw className="h-3.5 w-3.5 text-amber-700" />
-                  <span>Reassignment Justification</span>
+                  <span id="reassign-justification-label">Reassignment Justification</span>
                 </div>
                 <p className="text-[11px] text-amber-700 leading-tight">
                   Junior officer reassignment requests will be routed to your supervisor for review.
                 </p>
                 <textarea
                   rows={2}
+                  aria-labelledby="reassign-justification-label"
                   value={reassignReason}
+                  maxLength={REASON_MAX_LENGTH}
+                  aria-describedby="reassign-reason-count"
                   onChange={(e) => setReassignReason(e.target.value)}
                   placeholder="Provide justification for routing to this category..."
                   className="w-full mt-1 border border-amber-200 rounded-md p-2 text-xs text-gray-800 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
                 />
+                <CharacterCounter id="reassign-reason-count" count={reassignReason.length} max={REASON_MAX_LENGTH} className="text-right" />
               </div>
             )}
 

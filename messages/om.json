@@ -217,7 +217,9 @@
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
-      "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}"
+      "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}",
+      "fileWrongType": "Hin maxxanfamne: {names}. Faayiloonni PDF, JPG, PNG yookaan MP3 qofa fudhatama.",
+      "fileTooLarge": "Hin maxxanfamne: {names}. Faayiliin tokkoon tokkoon isaa hanga {max}MB ta'uu danda'a."
     },
     "serviceProvider": {
       "placeholder": "Suuqii galtee, hawaasa daldalaa, baankii ykn gabaa barbaadi (yoo jiraate)",
@@ -255,6 +257,14 @@
     "markAllRead": "Hunda akka dubbifameetti mallatteessi",
     "empty": "Beeksisni hin jiru.",
     "loadError": "Beeksisoota fe'uu hin dandeenye."
+  },
+  "caseExport": {
+    "title": "Ergi",
+    "menuLabel": "Dhimma kana ergi",
+    "pdf": "Akka PDF buusi",
+    "csv": "Akka CSV buusi",
+    "exporting": "Faayilii qopheessaa jira…",
+    "failed": "Erguun hin milkoofne. Maaloo irra deebi'ii yaali."
   },
   "caseActions": {
     "submitterTitle": "Deebii koo",
@@ -700,5 +710,10 @@
   },
   "grievanceList": {
     "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi..."
+  },
+  "validation": {
+    "characterCount": "{count} / {max}",
+    "tooLong": "Arfii {max} ykn isaa gadi ta'uu qaba.",
+    "charactersRemaining": "{count, plural, one {Arfii # hafe} other {Arfiiwwan # hafan}}"
   }
 }

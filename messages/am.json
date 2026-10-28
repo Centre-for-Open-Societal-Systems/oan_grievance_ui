@@ -217,7 +217,9 @@
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",
-      "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች"
+      "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች",
+      "fileWrongType": "አልተያያዘም፦ {names}። PDF፣ JPG፣ PNG ወይም MP3 ፋይሎች ብቻ ተቀባይነት አላቸው።",
+      "fileTooLarge": "አልተያያዘም፦ {names}። እያንዳንዱ ፋይል እስከ {max}MB ሊሆን ይችላል።"
     },
     "serviceProvider": {
       "placeholder": "የግብዓት መደብር፣ ኅብረት ሥራ ማኅበር፣ ባንክ ወይም ገበያ ይፈልጉ (ካለ)",
@@ -255,6 +257,14 @@
     "markAllRead": "ሁሉንም እንደተነበበ ምልክት አድርግ",
     "empty": "ምንም ማሳወቂያ የለም።",
     "loadError": "ማሳወቂያዎችን መጫን አልተቻለም።"
+  },
+  "caseExport": {
+    "title": "ላክ",
+    "menuLabel": "ይህን ጉዳይ ላክ",
+    "pdf": "እንደ PDF አውርድ",
+    "csv": "እንደ CSV አውርድ",
+    "exporting": "ፋይሉን በማዘጋጀት ላይ…",
+    "failed": "ወደ ውጭ መላኩ አልተሳካም። እባክዎ እንደገና ይሞክሩ።"
   },
   "caseActions": {
     "submitterTitle": "የእኔ ምላሽ",
@@ -700,5 +710,10 @@
   },
   "grievanceList": {
     "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ..."
+  },
+  "validation": {
+    "characterCount": "{count} / {max}",
+    "tooLong": "ከ{max} ቁምፊዎች መብለጥ የለበትም።",
+    "charactersRemaining": "{count, plural, one {# ቁምፊ ቀርቷል} other {# ቁምፊዎች ቀርተዋል}}"
   }
 }

@@ -19,13 +19,14 @@ import {
   Loader2,
   CheckCircle2,
 } from 'lucide-react';
+import { CharacterCounter } from '@/components/ui/CharacterCounter';
+import { ACTION_TAKEN_MAX_LENGTH, RESPONSE_TEXT_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 interface DropdownOption {
   value: string;
   label: string;
 }
 
-const ACTION_TAKEN_MAX = 500;
 const ACTION_TAKEN_REQUIRED = new Set(['Resolve', 'Partially Resolve', 'Resolved']);
 
 const AnimatedDropdown = ({
@@ -199,8 +200,8 @@ export function ResponseForm({
     if (!selected) return;
     const parts = selected.reason_parts ?? splitResponseParts(selected.reason);
     setTemplate(value);
-    setActionTaken((parts.action_taken || '').slice(0, ACTION_TAKEN_MAX));
-    setResolutionSummary(parts.resolution_summary || selected.reason);
+    setActionTaken((parts.action_taken || '').slice(0, ACTION_TAKEN_MAX_LENGTH));
+    setResolutionSummary((parts.resolution_summary || selected.reason).slice(0, RESPONSE_TEXT_MAX_LENGTH));
   };
 
   const getErrorMessage = (err: unknown, fallback: string) =>
@@ -364,30 +365,36 @@ export function ResponseForm({
               />
             </div>
             <div className="z-10 relative">
-              <label className="block text-sm font-bold text-gray-700 mb-1.5">
-                Action Taken{requiresActionTaken && <span className="text-red-500"> *</span>}{' '}
-                <span className="text-gray-400 font-normal">({actionTaken.length}/{ACTION_TAKEN_MAX})</span>
+              <label htmlFor="response-action-taken" className="block text-sm font-bold text-gray-700 mb-1.5">
+                Action Taken{requiresActionTaken && <span className="text-red-500"> *</span>}
               </label>
               <textarea
+                id="response-action-taken"
                 rows={3}
-                maxLength={ACTION_TAKEN_MAX}
+                maxLength={ACTION_TAKEN_MAX_LENGTH}
+                aria-describedby="response-action-taken-count"
                 value={actionTaken}
                 onChange={(e) => setActionTaken(e.target.value)}
                 placeholder="Describe the specific action taken by the department..."
                 className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white resize-none"
               ></textarea>
+              <CharacterCounter id="response-action-taken-count" count={actionTaken.length} max={ACTION_TAKEN_MAX_LENGTH} className="mt-1 text-right" />
             </div>
             <div className="z-10 relative">
-              <label className="block text-sm font-bold text-gray-700 mb-1.5">
+              <label htmlFor="response-summary" className="block text-sm font-bold text-gray-700 mb-1.5">
                 Resolution Summary <span className="text-red-500">*</span>
               </label>
               <textarea
+                id="response-summary"
                 rows={3}
                 value={resolutionSummary}
+                maxLength={RESPONSE_TEXT_MAX_LENGTH}
+                aria-describedby="response-summary-count"
                 onChange={(e) => setResolutionSummary(e.target.value)}
                 placeholder="Summarize the outcome for the submitter..."
                 className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white resize-none"
               ></textarea>
+              <CharacterCounter id="response-summary-count" count={resolutionSummary.length} max={RESPONSE_TEXT_MAX_LENGTH} className="mt-1 text-right" />
             </div>
             {onUploadFiles && (
               <SupportingDocumentsField
@@ -401,17 +408,21 @@ export function ResponseForm({
               />
             )}
             <div className="z-10 relative">
-              <label className="block text-sm font-bold text-[#203628] mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="response-internal-notes" className="block text-sm font-bold text-[#203628] mb-1.5 flex items-center gap-1.5">
                 <EyeOff className="h-4 w-4 text-gray-500" /> Internal Notes{' '}
                 <span className="text-gray-400 font-normal">(not visible to submitter)</span>
               </label>
               <textarea
+                id="response-internal-notes"
                 rows={3}
                 value={internalNotesResponse}
+                maxLength={RESPONSE_TEXT_MAX_LENGTH}
+                aria-describedby="response-internal-count"
                 onChange={(e) => setInternalNotesResponse(e.target.value)}
                 placeholder="Process gaps, follow-up actions, escalation reasons..."
                 className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-[#fff] resize-none"
               ></textarea>
+              <CharacterCounter id="response-internal-count" count={internalNotesResponse.length} max={RESPONSE_TEXT_MAX_LENGTH} className="mt-1 text-right" />
             </div>
 
             <div className="flex justify-end pt-2">
@@ -432,18 +443,22 @@ export function ResponseForm({
           </>
         ) : (
           <div className="flex flex-col flex-1">
-            <label className="block text-sm font-bold text-[#203628] mb-1.5 flex items-center gap-1.5">
+            <label htmlFor="internal-note" className="block text-sm font-bold text-[#203628] mb-1.5 flex items-center gap-1.5">
               <EyeOff className="h-4 w-4 text-gray-500" />
               <span>Internal Notes</span>
               <span className="text-gray-400 font-normal">(not visible to submitter)</span>
             </label>
             <textarea
+              id="internal-note"
               rows={4}
               value={internalNoteTab}
+              maxLength={RESPONSE_TEXT_MAX_LENGTH}
+              aria-describedby="internal-note-count"
               onChange={(e) => setInternalNoteTab(e.target.value)}
               placeholder="Add an internal case note visible only to officers..."
               className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#EFA771] focus:ring-1 focus:ring-[#EFA771] bg-[#fff] resize-none"
             ></textarea>
+            <CharacterCounter id="internal-note-count" count={internalNoteTab.length} max={RESPONSE_TEXT_MAX_LENGTH} className="mt-1 text-right" />
 
             <div className="flex justify-end pt-4">
               <button
