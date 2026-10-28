@@ -154,12 +154,12 @@ export interface CreateOfficerPayload {
   full_name: string;
   email: string;
   /**
-   * Required. At least 8 characters with a letter and a number (weaker than a self-chosen
+   * Optional. At least 8 characters with a letter and a number (weaker than a self-chosen
    * password — see `validateTemporaryPassword`). Applied only when `email` is a brand-new
    * login; an email that already has one keeps its existing password, reported back in the
    * create response's `message`, not in the returned officer record.
    */
-  temporary_password: string;
+  temporary_password?: string | null;
   department?: string | null;
   service_categories: string[];
   /** Optional when `role` is `'Officer'`; rejected (400) for a Reviewer. */
