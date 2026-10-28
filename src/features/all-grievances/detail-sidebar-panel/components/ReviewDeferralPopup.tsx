@@ -146,10 +146,11 @@ export function ReviewDeferralPopup({
           {/* Comments */}
           {!readOnly && (
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-gray-700">
+              <label htmlFor="review-deferral-comments" className="text-sm font-bold text-gray-700">
                 {t('yourComments')} <span className="text-gray-400 font-normal">{t('requiredRejecting')}</span>
               </label>
               <textarea
+                id="review-deferral-comments"
                 rows={3}
                 value={comments}
                 maxLength={REASON_MAX_LENGTH}

@@ -19,6 +19,8 @@ export const PASSWORD_MAX_LENGTH = 128;
 export const TEMPORARY_PASSWORD_MAX_LENGTH = 128;
 export const EMAIL_MAX_LENGTH = 254;
 export const FULL_NAME_MAX_LENGTH = DATA_FIELD_MAX_LENGTH;
+/** oan_grievance_service: an organisation's registration number is 3-60 characters. */
+export const REGISTRATION_NUMBER_MAX_LENGTH = 60;
 
 // --- Product limits ----------------------------------------------------------
 
@@ -28,5 +30,7 @@ export const DESCRIPTION_MAX_LENGTH = 5000;
 export const DESIRED_OUTCOME_MAX_LENGTH = 1000;
 /** A reason typed against a case: deferral, reassignment, or a review decision. */
 export const REASON_MAX_LENGTH = 1000;
+/** A department response's "action taken", and the same field of a response template. */
+export const ACTION_TAKEN_MAX_LENGTH = 500;
 /** A response, internal note or template body written by staff. */
 export const RESPONSE_TEXT_MAX_LENGTH = 2000;

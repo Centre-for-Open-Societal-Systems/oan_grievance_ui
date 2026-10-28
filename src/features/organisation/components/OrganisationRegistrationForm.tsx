@@ -20,6 +20,7 @@ import {
 } from '../api/organisationApi';
 import { ORGANISATION_CONFIG } from '../config';
 import {
+  MEMBER_COUNT_MAX_DIGITS,
   ORGANISATION_FIELDS,
   POSTAL_CODE_MAX_LENGTH,
   TEXT_MAX_LENGTH,
@@ -31,7 +32,7 @@ import {
   type OrganisationValues,
 } from '../lib/validation';
 import { backendMessageOf, knownFailureOf } from '../lib/errors';
-import { EMAIL_MAX_LENGTH } from '@/lib/validation/lengthLimits';
+import { EMAIL_MAX_LENGTH, REGISTRATION_NUMBER_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 export interface OrganisationRegistrationFormProps {
   kind: OrganisationKind;
@@ -236,7 +237,7 @@ export function OrganisationRegistrationForm({
           label={t('fields.taxId.label')}
           placeholder={t('fields.taxId.placeholder')}
           hint={t('fields.taxId.hint')}
-          maxLength={60}
+          maxLength={REGISTRATION_NUMBER_MAX_LENGTH}
           required
         />
         <SITextField
@@ -253,7 +254,7 @@ export function OrganisationRegistrationForm({
             name="memberCount"
             label={t('fields.memberCount.label')}
             placeholder={t('fields.memberCount.placeholder')}
-            maxLength={9}
+            maxLength={MEMBER_COUNT_MAX_DIGITS}
           />
         )}
       </Section>

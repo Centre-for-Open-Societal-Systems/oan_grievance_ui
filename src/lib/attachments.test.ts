@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_ATTACHMENT_BYTES, screenAttachments, WIZARD_ATTACHMENT_MIME_TYPES } from './attachments';
+import { effectiveMimeType, MAX_ATTACHMENT_BYTES, screenAttachments, WIZARD_ATTACHMENT_MIME_TYPES } from './attachments';
 
 const file = (name: string, type: string, size = 1024) => new File([new Uint8Array(size)], name, { type });
 
@@ -32,5 +32,33 @@ describe('screenAttachments', () => {
     const result = screenAttachments([both]);
     expect(result.wrongType).toEqual([both]);
     expect(result.tooLarge).toEqual([]);
+  });
+
+  it.each(['audio/mp3', 'audio/x-mp3', 'audio/mpeg3', 'AUDIO/MPEG'])('accepts an MP3 that the browser reports as %s', (type) => {
+    const mp3 = file('voice.mp3', type);
+    expect(screenAttachments([mp3], WIZARD_ATTACHMENT_MIME_TYPES).accepted).toEqual([mp3]);
+  });
+
+  it('falls back to the extension only when the browser reports no type', () => {
+    const untyped = file('Voice.MP3', '');
+    expect(screenAttachments([untyped], WIZARD_ATTACHMENT_MIME_TYPES).accepted).toEqual([untyped]);
+    expect(screenAttachments([file('scan.PDF', '')]).accepted).toHaveLength(1);
+  });
+
+  it('refuses an untyped file with an unknown or missing extension', () => {
+    const noType = [file('payload.exe', ''), file('noextension', '')];
+    expect(screenAttachments(noType, WIZARD_ATTACHMENT_MIME_TYPES).wrongType).toEqual(noType);
+  });
+
+  it('does not let the extension override a declared type', () => {
+    const disguised = file('photo.mp3', 'application/x-msdownload');
+    expect(screenAttachments([disguised], WIZARD_ATTACHMENT_MIME_TYPES).wrongType).toEqual([disguised]);
+  });
+});
+
+describe('effectiveMimeType', () => {
+  it('normalises the MP3 aliases and lower-cases the declared type', () => {
+    expect(effectiveMimeType(file('a.mp3', 'audio/x-mp3'))).toBe('audio/mpeg');
+    expect(effectiveMimeType(file('a.png', 'IMAGE/PNG'))).toBe('image/png');
   });
 });

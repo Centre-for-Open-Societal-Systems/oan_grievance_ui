@@ -258,6 +258,14 @@
     "empty": "Beeksisni hin jiru.",
     "loadError": "Beeksisoota fe'uu hin dandeenye."
   },
+  "caseExport": {
+    "title": "Ergi",
+    "menuLabel": "Dhimma kana ergi",
+    "pdf": "Akka PDF buusi",
+    "csv": "Akka CSV buusi",
+    "exporting": "Faayilii qopheessaa jira…",
+    "failed": "Erguun hin milkoofne. Maaloo irra deebi'ii yaali."
+  },
   "caseActions": {
     "submitterTitle": "Deebii koo",
     "chooseAction": "Tarkaanfii filadhaa",
@@ -705,6 +713,7 @@
   },
   "validation": {
     "characterCount": "{count} / {max}",
-    "tooLong": "Arfii {max} ykn isaa gadi ta'uu qaba."
+    "tooLong": "Arfii {max} ykn isaa gadi ta'uu qaba.",
+    "charactersRemaining": "{count, plural, one {Arfii # hafe} other {Arfiiwwan # hafan}}"
   }
 }

@@ -59,6 +59,37 @@ export const ACCEPTED_ATTACHMENT_EXTENSIONS = '.pdf,.jpg,.jpeg,.png';
  */
 export const WIZARD_ATTACHMENT_MIME_TYPES: readonly string[] = [...ACCEPTED_ATTACHMENT_MIME_TYPES, 'audio/mpeg'];
 
+/** The wizard's file picker `accept` list: the document types above plus MP3 for voice notes. */
+export const WIZARD_ATTACHMENT_EXTENSIONS = '.jpg,.jpeg,.png,.pdf,.mp3';
+
+// Browsers and operating systems report MP3 under several names, or none at all.
+const MIME_ALIASES: Record<string, string> = {
+  'audio/mp3': 'audio/mpeg',
+  'audio/x-mp3': 'audio/mpeg',
+  'audio/mpeg3': 'audio/mpeg',
+  'audio/x-mpeg-3': 'audio/mpeg',
+};
+const MIME_BY_EXTENSION: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.mp3': 'audio/mpeg',
+};
+
+/**
+ * The type to screen a picked file by. The declared type is used as reported,
+ * except for the known MP3 aliases; only a file with no declared type falls back
+ * to its extension. The backend sniffs the real type from the bytes either way,
+ * so this only has to avoid refusing a file the backend would accept.
+ */
+export function effectiveMimeType(file: File): string {
+  const declared = file.type.toLowerCase();
+  if (declared) return MIME_ALIASES[declared] ?? declared;
+  const dot = file.name.lastIndexOf('.');
+  return dot >= 0 ? (MIME_BY_EXTENSION[file.name.slice(dot).toLowerCase()] ?? '') : '';
+}
+
 export interface ScreenedAttachments {
   accepted: File[];
   wrongType: File[];
@@ -76,7 +107,7 @@ export function screenAttachments(
 ): ScreenedAttachments {
   const result: ScreenedAttachments = { accepted: [], wrongType: [], tooLarge: [] };
   for (const file of files) {
-    if (!allowedMimeTypes.includes(file.type)) result.wrongType.push(file);
+    if (!allowedMimeTypes.includes(effectiveMimeType(file))) result.wrongType.push(file);
     else if (file.size > MAX_ATTACHMENT_BYTES) result.tooLarge.push(file);
     else result.accepted.push(file);
   }

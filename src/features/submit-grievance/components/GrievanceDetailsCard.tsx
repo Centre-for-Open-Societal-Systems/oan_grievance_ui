@@ -25,6 +25,7 @@ import {
   MAX_ATTACHMENTS_PER_CASE,
   MAX_ATTACHMENT_BYTES,
   screenAttachments,
+  WIZARD_ATTACHMENT_EXTENSIONS,
   WIZARD_ATTACHMENT_MIME_TYPES,
   type WizardAttachment,
 } from "@/lib/attachments";
@@ -593,7 +594,7 @@ export function GrievanceDetailsCard({
               })}
               hint={t("documentsHint", { max: MAX_ATTACHMENTS_PER_CASE })}
               inputLabel={tDocs("label")}
-              accept=".jpg,.jpeg,.png,.pdf,.mp3"
+              accept={WIZARD_ATTACHMENT_EXTENSIONS}
               disabled={attachments.length >= MAX_ATTACHMENTS_PER_CASE}
               onFiles={handleFiles}
             >

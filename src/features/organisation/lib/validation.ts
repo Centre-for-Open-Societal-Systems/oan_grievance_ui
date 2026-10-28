@@ -1,4 +1,5 @@
 import { EMAIL_MAX_LENGTH, EMAIL_PATTERN } from '@/lib/validation/fieldRules';
+import { DATA_FIELD_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 import { isEthiopianDialCode, isValidLocalPhoneForCountry } from '@/lib/validation/phone';
 
 // Rules for the organisation onboarding form. Pure functions returning *what is
@@ -47,10 +48,12 @@ export type OrganisationProblem =
 export type OrganisationProblems = Partial<Record<OrganisationField, OrganisationProblem>>;
 
 /** Frappe's Data fieldtype default — what a name or address line can hold. */
-export const TEXT_MAX_LENGTH = 140;
+export const TEXT_MAX_LENGTH = DATA_FIELD_MAX_LENGTH;
 export const WEBSITE_MAX_LENGTH = 255;
 /** The backend's ceiling for a Cooperative / FPO's member count (`MEMBERS_MAX` in oan_grievance_service). */
 export const MEMBER_COUNT_MAX = 100_000_000;
+/** How many digits the member-count input needs to hold `MEMBER_COUNT_MAX`. */
+export const MEMBER_COUNT_MAX_DIGITS = String(MEMBER_COUNT_MAX).length;
 
 /** Fields the reference design marks required, plus the authorised representative. */
 const REQUIRED_FIELDS: readonly OrganisationField[] = [

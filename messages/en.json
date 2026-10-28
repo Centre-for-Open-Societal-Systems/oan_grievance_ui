@@ -258,6 +258,14 @@
     "empty": "You have no notifications.",
     "loadError": "Could not load notifications."
   },
+  "caseExport": {
+    "title": "Export",
+    "menuLabel": "Export this case",
+    "pdf": "Download as PDF",
+    "csv": "Download as CSV",
+    "exporting": "Preparing the file…",
+    "failed": "The export could not be completed. Please try again."
+  },
   "caseActions": {
     "submitterTitle": "My response",
     "chooseAction": "Choose an action",
@@ -705,6 +713,7 @@
   },
   "validation": {
     "characterCount": "{count} / {max}",
-    "tooLong": "Must be {max} characters or fewer."
+    "tooLong": "Must be {max} characters or fewer.",
+    "charactersRemaining": "{count, plural, one {# character remaining} other {# characters remaining}}"
   }
 }

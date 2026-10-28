@@ -258,6 +258,14 @@
     "empty": "ምንም ማሳወቂያ የለም።",
     "loadError": "ማሳወቂያዎችን መጫን አልተቻለም።"
   },
+  "caseExport": {
+    "title": "ላክ",
+    "menuLabel": "ይህን ጉዳይ ላክ",
+    "pdf": "እንደ PDF አውርድ",
+    "csv": "እንደ CSV አውርድ",
+    "exporting": "ፋይሉን በማዘጋጀት ላይ…",
+    "failed": "ወደ ውጭ መላኩ አልተሳካም። እባክዎ እንደገና ይሞክሩ።"
+  },
   "caseActions": {
     "submitterTitle": "የእኔ ምላሽ",
     "chooseAction": "እርምጃ ይምረጡ",
@@ -705,6 +713,7 @@
   },
   "validation": {
     "characterCount": "{count} / {max}",
-    "tooLong": "ከ{max} ቁምፊዎች መብለጥ የለበትም።"
+    "tooLong": "ከ{max} ቁምፊዎች መብለጥ የለበትም።",
+    "charactersRemaining": "{count, plural, one {# ቁምፊ ቀርቷል} other {# ቁምፊዎች ቀርተዋል}}"
   }
 }

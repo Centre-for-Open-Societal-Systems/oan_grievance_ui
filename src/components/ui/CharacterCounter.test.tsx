@@ -8,10 +8,10 @@ import { CharacterCounter } from './CharacterCounter';
 
 afterEach(cleanup);
 
-function renderCounter(count: number, max = 100) {
+function renderCounter(count: number, max = 100, className?: string) {
   render(
     <NextIntlClientProvider locale="en" messages={messages}>
-      <CharacterCounter id="counter" count={count} max={max} />
+      <CharacterCounter id="counter" count={count} max={max} className={className} />
     </NextIntlClientProvider>
   );
   return screen.getByText(`${count} / ${max}`);
@@ -22,13 +22,40 @@ describe('CharacterCounter', () => {
     expect(renderCounter(12)).toHaveAttribute('id', 'counter');
   });
 
-  it('stays quiet for screen readers while there is plenty of room', () => {
-    expect(renderCounter(50)).toHaveAttribute('aria-live', 'off');
+  it('never makes the visible count a live region, so typing is not narrated', () => {
+    expect(renderCounter(50)).not.toHaveAttribute('aria-live');
   });
 
-  it('announces politely once within 10% of the limit', () => {
+  it('keeps an empty status region mounted while there is plenty of room', () => {
+    renderCounter(50);
+    const status = screen.getByRole('status');
+    expect(status).toHaveAttribute('aria-atomic', 'true');
+    expect(status).toBeEmptyDOMElement();
+  });
+
+  it('says how many characters remain once within 10% of the limit', () => {
     const counter = renderCounter(90);
-    expect(counter).toHaveAttribute('aria-live', 'polite');
     expect(counter).toHaveClass('text-amber-600');
+    expect(screen.getByRole('status')).toHaveTextContent('10 characters remaining');
+  });
+
+  it('uses the singular for the last character', () => {
+    renderCounter(99);
+    expect(screen.getByRole('status')).toHaveTextContent('1 character remaining');
+  });
+
+  it('is at the limit, with nothing remaining, when count equals max', () => {
+    const counter = renderCounter(100);
+    expect(counter).toHaveClass('text-amber-600');
+    expect(screen.getByRole('status')).toHaveTextContent('0 characters remaining');
+  });
+
+  it('never reports a negative remainder when the count is over the limit', () => {
+    renderCounter(120);
+    expect(screen.getByRole('status')).toHaveTextContent('0 characters remaining');
+  });
+
+  it('adds the caller className alongside its own', () => {
+    expect(renderCounter(10, 100, 'text-right mt-1')).toHaveClass('text-right', 'mt-1', 'tabular-nums');
   });
 });

@@ -232,13 +232,14 @@ export function CaseManagement({
               <div className="flex flex-col gap-1.5 p-3 bg-amber-50/70 border border-amber-200 rounded-lg">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
                   <RefreshCw className="h-3.5 w-3.5 text-amber-700" />
-                  <span>Reassignment Justification</span>
+                  <span id="reassign-justification-label">Reassignment Justification</span>
                 </div>
                 <p className="text-[11px] text-amber-700 leading-tight">
                   Junior officer reassignment requests will be routed to your supervisor for review.
                 </p>
                 <textarea
                   rows={2}
+                  aria-labelledby="reassign-justification-label"
                   value={reassignReason}
                   maxLength={REASON_MAX_LENGTH}
                   aria-describedby="reassign-reason-count"

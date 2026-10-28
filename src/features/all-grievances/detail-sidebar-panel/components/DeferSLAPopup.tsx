@@ -116,8 +116,9 @@ export function DeferSLAPopup({ onDefer, onClose, onSuccess }: DeferSLAPopupProp
 
           {/* Reason */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-bold text-gray-700">Reason for Deferral * <span className="text-gray-400 font-normal">(min. 20 characters)</span></label>
+            <label htmlFor="defer-reason" className="text-sm font-bold text-gray-700">Reason for Deferral * <span className="text-gray-400 font-normal">(min. 20 characters)</span></label>
             <textarea
+              id="defer-reason"
               rows={3}
               value={reason}
               maxLength={REASON_MAX_LENGTH}

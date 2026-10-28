@@ -14,7 +14,7 @@ import {
   type UpdateResponseTemplatePayload,
 } from './types';
 import { CharacterCounter } from '@/components/ui/CharacterCounter';
-import { DATA_FIELD_MAX_LENGTH, RESPONSE_TEXT_MAX_LENGTH } from '@/lib/validation/lengthLimits';
+import { ACTION_TAKEN_MAX_LENGTH, DATA_FIELD_MAX_LENGTH, RESPONSE_TEXT_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 export interface SelectOption {
   value: string;
@@ -290,16 +290,16 @@ export function ResponseTemplateFormModal({
                 ref={actionTakenRef}
                 rows={4}
                 value={actionTaken}
-                maxLength={RESPONSE_TEXT_MAX_LENGTH}
+                maxLength={ACTION_TAKEN_MAX_LENGTH}
                 onChange={(e) => {
                   setActionTaken(e.target.value);
                   if (fieldErrors.actionTaken) setFieldErrors((p) => ({ ...p, actionTaken: undefined }));
                 }}
-                aria-describedby={describedBy ?? variablesId}
+                aria-describedby={`${describedBy ?? variablesId} template-action-taken-count`}
                 aria-invalid={!!fieldErrors.actionTaken}
                 className={`${getInputClass(!!fieldErrors.actionTaken)} resize-y`}
               />
-              <CharacterCounter id="template-action-taken-count" count={actionTaken.length} max={RESPONSE_TEXT_MAX_LENGTH} className="mt-1 text-right" />
+              <CharacterCounter id="template-action-taken-count" count={actionTaken.length} max={ACTION_TAKEN_MAX_LENGTH} className="mt-1 text-right" />
               </>
             )}
           </Field>
@@ -316,7 +316,7 @@ export function ResponseTemplateFormModal({
                   setResolutionSummary(e.target.value);
                   if (fieldErrors.resolutionSummary) setFieldErrors((p) => ({ ...p, resolutionSummary: undefined }));
                 }}
-                aria-describedby={describedBy ?? variablesId}
+                aria-describedby={`${describedBy ?? variablesId} template-summary-count`}
                 aria-invalid={!!fieldErrors.resolutionSummary}
                 className={`${getInputClass(!!fieldErrors.resolutionSummary)} resize-y`}
               />
