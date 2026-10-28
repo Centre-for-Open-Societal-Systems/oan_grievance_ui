@@ -1,3 +1,5 @@
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from './lengthLimits';
+
 export interface PasswordRule {
   /** Shown in the checklist under a password field. */
   label: string;
@@ -7,9 +9,9 @@ export interface PasswordRule {
 
 export const PASSWORD_RULES: ReadonlyArray<PasswordRule> = [
   {
-    label: 'At least 8 characters',
-    message: 'Password must be between 8 and 64 characters long.',
-    test: (value) => value.length >= 8 && value.length <= 64,
+    label: `At least ${PASSWORD_MIN_LENGTH} characters`,
+    message: `Password must be between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters long.`,
+    test: (value) => value.length >= PASSWORD_MIN_LENGTH && value.length <= PASSWORD_MAX_LENGTH,
   },
   {
     label: 'A letter',

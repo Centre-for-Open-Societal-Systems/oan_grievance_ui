@@ -21,6 +21,9 @@ import {
 import { ORGANISATION_CONFIG } from '../config';
 import {
   ORGANISATION_FIELDS,
+  POSTAL_CODE_MAX_LENGTH,
+  TEXT_MAX_LENGTH,
+  WEBSITE_MAX_LENGTH,
   validateOrganisation,
   validateOrganisationField,
   type OrganisationField,
@@ -28,6 +31,7 @@ import {
   type OrganisationValues,
 } from '../lib/validation';
 import { backendMessageOf, knownFailureOf } from '../lib/errors';
+import { EMAIL_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 export interface OrganisationRegistrationFormProps {
   kind: OrganisationKind;
@@ -204,6 +208,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="legalName"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.legalName.label')}
           placeholder={t('fields.legalName.placeholder')}
           required
@@ -212,6 +217,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="brandName"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.brandName.label')}
           placeholder={t('fields.brandName.placeholder')}
           hint={t('fields.brandName.hint')}
@@ -236,6 +242,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="representativeName"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.representativeName.label')}
           placeholder={t('fields.representativeName.placeholder')}
           required
@@ -255,6 +262,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="streetAddress"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.streetAddress.label')}
           placeholder={t('fields.streetAddress.placeholder')}
           required
@@ -263,18 +271,21 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="kebele"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.kebele.label')}
           placeholder={t('fields.kebele.placeholder')}
         />
         <SITextField
           {...field}
           name="woreda"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.woreda.label')}
           placeholder={t('fields.woreda.placeholder')}
         />
         <SITextField
           {...field}
           name="zone"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.zone.label')}
           placeholder={t('fields.zone.placeholder')}
           required
@@ -282,6 +293,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="region"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.region.label')}
           placeholder={t('fields.region.placeholder')}
           required
@@ -289,6 +301,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="country"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.country.label')}
           placeholder={t('fields.country.placeholder')}
           required
@@ -296,6 +309,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="postalCode"
+          maxLength={POSTAL_CODE_MAX_LENGTH}
           label={t('fields.postalCode.label')}
           placeholder={t('fields.postalCode.placeholder')}
           required
@@ -303,6 +317,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="website"
+          maxLength={WEBSITE_MAX_LENGTH}
           label={t('fields.website.label')}
           placeholder={t('fields.website.placeholder')}
           hint={t('fields.website.hint')}
@@ -313,6 +328,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="email"
+          maxLength={EMAIL_MAX_LENGTH}
           type="email"
           label={t('fields.email.label')}
           placeholder={t('fields.email.placeholder')}

@@ -5,6 +5,8 @@ import { RefreshCw, X, CheckCircle2, AlertTriangle, AlertCircle, XCircle } from 
 import { useTranslations } from 'next-intl';
 import type { ChangeRequestData } from '../../types';
 import { formatDate } from '../../utils/mapGrievance';
+import { CharacterCounter } from '@/components/ui/CharacterCounter';
+import { REASON_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 interface ReviewReassignmentPopupProps {
   request: ChangeRequestData;
@@ -157,11 +159,16 @@ export function ReviewReassignmentPopup({
             <textarea
               rows={3}
               value={comments}
+              maxLength={REASON_MAX_LENGTH}
+              aria-describedby="review-reassignment-comments-count"
               onChange={(e) => setComments(e.target.value)}
               placeholder="e.g. Approved, reassignment is appropriate. Or, if rejecting: explain why it should stay in the current department..."
               className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white resize-none"
             />
-            <div className="text-[11px] text-gray-400">{t('optionalApproving')}</div>
+            <div className="flex items-start justify-between gap-2">
+                <div className="text-[11px] text-gray-400">{t('optionalApproving')}</div>
+                <CharacterCounter id="review-reassignment-comments-count" count={comments.length} max={REASON_MAX_LENGTH} />
+              </div>
           </div>
 
           {/* Warning */}

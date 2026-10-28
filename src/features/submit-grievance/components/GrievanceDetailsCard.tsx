@@ -6,7 +6,9 @@ import { FileText, Info, ArrowRight, ArrowLeft, Eye, Trash2, X, Loader2, AlertTr
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { FileDropzone, FileRow } from "@/components/ui/FileDropzone";
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from "@/components/ui/FieldError";
+import { CharacterCounter } from "@/components/ui/CharacterCounter";
 import { MIN_DESCRIPTION_LENGTH } from "@/lib/validation/fieldRules";
+import { DESCRIPTION_MAX_LENGTH, DESIRED_OUTCOME_MAX_LENGTH } from "@/lib/validation/lengthLimits";
 import { focusFirstError, useFieldErrors, type FieldErrors } from "@/lib/validation/useFieldErrors";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -21,6 +23,9 @@ import {
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import {
   MAX_ATTACHMENTS_PER_CASE,
+  MAX_ATTACHMENT_BYTES,
+  screenAttachments,
+  WIZARD_ATTACHMENT_MIME_TYPES,
   type WizardAttachment,
 } from "@/lib/attachments";
 import { VoiceRecorder } from "./VoiceRecorder";
@@ -205,8 +210,21 @@ export function GrievanceDetailsCard({
     onNext();
   };
 
-  const handleFiles = (files: File[]) => {
-    if (files.length === 0) return;
+  const handleFiles = (picked: File[]) => {
+    if (picked.length === 0) return;
+
+    // The backend refuses a file by type or size only after the ticket exists, so refuse it here, by name.
+    const { accepted: files, wrongType, tooLarge } = screenAttachments(picked, WIZARD_ATTACHMENT_MIME_TYPES);
+    const rejectedNotes = [
+      wrongType.length > 0 ? t("fileWrongType", { names: wrongType.map((f) => f.name).join(", ") }) : null,
+      tooLarge.length > 0
+        ? t("fileTooLarge", { names: tooLarge.map((f) => f.name).join(", "), max: MAX_ATTACHMENT_BYTES / (1024 * 1024) })
+        : null,
+    ].filter(Boolean);
+    if (files.length === 0) {
+      setError(rejectedNotes.join(" "));
+      return;
+    }
 
     // The backend caps a case at MAX_ATTACHMENTS_PER_CASE total — trim a
     // bulk selection that would blow past it rather than sending it and
@@ -217,11 +235,11 @@ export function GrievanceDetailsCard({
       return;
     }
     const filesToStage = files.slice(0, remainingSlots);
-    setError(
+    const slotNote =
       files.length > filesToStage.length
         ? `Only ${remainingSlots} more file(s) could be added (max ${MAX_ATTACHMENTS_PER_CASE} per grievance) — the rest were skipped.`
-        : null
-    );
+        : null;
+    setError([...rejectedNotes, slotNote].filter(Boolean).join(" ") || null);
 
     setAttachments((prev) => [
       ...prev,
@@ -517,11 +535,22 @@ export function GrievanceDetailsCard({
                 }}
                 onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
                 aria-invalid={fieldErrors.errors.description ? true : undefined}
-                aria-describedby={fieldErrors.errors.description ? errorIdFor("grievance-description") : undefined}
+                maxLength={DESCRIPTION_MAX_LENGTH}
+                aria-describedby={
+                  [fieldErrors.errors.description ? errorIdFor("grievance-description") : null, "grievance-description-count"]
+                    .filter(Boolean)
+                    .join(" ")
+                }
                 placeholder="Describe the issue clearly — what happened, when, where, and who was involved. Include dates, amounts, and reference numbers where available."
                 className={`w-full bg-white border border-gray-300 text-gray-900 py-3 pl-4 pr-14 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
               />
             </VoiceRecorder>
+            <CharacterCounter
+              id="grievance-description-count"
+              count={description.length}
+              max={DESCRIPTION_MAX_LENGTH}
+              className="mt-1 text-right"
+            />
             {fieldErrors.errors.description && (
               <FieldError id={errorIdFor("grievance-description")}>{fieldErrors.errors.description}</FieldError>
             )}
@@ -537,8 +566,16 @@ export function GrievanceDetailsCard({
               rows={3}
               value={desiredOutcome}
               onChange={(e) => setDesiredOutcome(e.target.value)}
+              maxLength={DESIRED_OUTCOME_MAX_LENGTH}
+              aria-describedby="grievance-desired-outcome-count"
               placeholder="What is the expected resolution for this grievance?"
               className="w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y"
+            />
+            <CharacterCounter
+              id="grievance-desired-outcome-count"
+              count={desiredOutcome.length}
+              max={DESIRED_OUTCOME_MAX_LENGTH}
+              className="mt-1 text-right"
             />
           </div>
 

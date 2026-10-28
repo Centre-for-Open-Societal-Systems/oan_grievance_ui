@@ -9,6 +9,8 @@ import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
 import { ReviewReassignmentPopup } from './ReviewReassignmentPopup';
 import type { GrievanceChangeResponseData, GrievanceTimelineData, ReassignGrievancePayload } from '../../types';
 import { isTerminalStatus } from '../../utils/mapGrievance';
+import { CharacterCounter } from '@/components/ui/CharacterCounter';
+import { REASON_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 interface CaseManagementProps {
   canManageCase: boolean;
@@ -238,10 +240,13 @@ export function CaseManagement({
                 <textarea
                   rows={2}
                   value={reassignReason}
+                  maxLength={REASON_MAX_LENGTH}
+                  aria-describedby="reassign-reason-count"
                   onChange={(e) => setReassignReason(e.target.value)}
                   placeholder="Provide justification for routing to this category..."
                   className="w-full mt-1 border border-amber-200 rounded-md p-2 text-xs text-gray-800 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
                 />
+                <CharacterCounter id="reassign-reason-count" count={reassignReason.length} max={REASON_MAX_LENGTH} className="text-right" />
               </div>
             )}
 

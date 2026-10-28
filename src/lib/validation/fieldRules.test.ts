@@ -137,7 +137,7 @@ describe('validateOptionalLocalPhone', () => {
 describe('password rules', () => {
   it('validateNewPassword reports the first unmet rule, or asks for one when blank', () => {
     expect(validateNewPassword('')).toBe('Enter a password.');
-    expect(validateNewPassword('short1!')).toBe('Password must be between 8 and 64 characters long.');
+    expect(validateNewPassword('short1!')).toBe('Password must be between 8 and 128 characters long.');
     expect(validateNewPassword('abcdefgh1')).toBe('Password must contain at least 1 special character.');
     expect(validateNewPassword('Str0ng!Passw0rd')).toBeNull();
   });

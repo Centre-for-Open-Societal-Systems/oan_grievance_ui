@@ -217,7 +217,9 @@
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",
-      "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች"
+      "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች",
+      "fileWrongType": "አልተያያዘም፦ {names}። PDF፣ JPG፣ PNG ወይም MP3 ፋይሎች ብቻ ተቀባይነት አላቸው።",
+      "fileTooLarge": "አልተያያዘም፦ {names}። እያንዳንዱ ፋይል እስከ {max}MB ሊሆን ይችላል።"
     },
     "serviceProvider": {
       "placeholder": "የግብዓት መደብር፣ ኅብረት ሥራ ማኅበር፣ ባንክ ወይም ገበያ ይፈልጉ (ካለ)",
@@ -700,5 +702,9 @@
   },
   "grievanceList": {
     "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ..."
+  },
+  "validation": {
+    "characterCount": "{count} / {max}",
+    "tooLong": "ከ{max} ቁምፊዎች መብለጥ የለበትም።"
   }
 }

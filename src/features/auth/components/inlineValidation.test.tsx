@@ -248,7 +248,7 @@ describe('Register — account step', () => {
 
     fireEvent.change(password, { target: { value: 'short' } });
     fireEvent.blur(password);
-    expect(screen.getByText('Password must be between 8 and 64 characters long.')).toBeInTheDocument();
+    expect(screen.getByText('Password must be between 8 and 128 characters long.')).toBeInTheDocument();
   });
 
   it('creates no account on this step — that happens at the end of the profile step', async () => {

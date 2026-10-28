@@ -54,6 +54,36 @@ export const ACCEPTED_ATTACHMENT_MIME_TYPES = [
 export const ACCEPTED_ATTACHMENT_EXTENSIONS = '.pdf,.jpg,.jpeg,.png';
 
 /**
+ * What the backend's `ALLOWED_MIME_TYPES` accepts for a case's own evidence: the
+ * three above plus MP3, which is how a voice note travels (grievance_attachment.py).
+ */
+export const WIZARD_ATTACHMENT_MIME_TYPES: readonly string[] = [...ACCEPTED_ATTACHMENT_MIME_TYPES, 'audio/mpeg'];
+
+export interface ScreenedAttachments {
+  accepted: File[];
+  wrongType: File[];
+  tooLarge: File[];
+}
+
+/**
+ * Splits picked files by the backend's own per-file rules (type allow-list, 10MB),
+ * so a file it would refuse is caught when picked rather than after the ticket
+ * exists. A file of the wrong type is reported as that even if it is also too big.
+ */
+export function screenAttachments(
+  files: File[],
+  allowedMimeTypes: readonly string[] = ACCEPTED_ATTACHMENT_MIME_TYPES
+): ScreenedAttachments {
+  const result: ScreenedAttachments = { accepted: [], wrongType: [], tooLarge: [] };
+  for (const file of files) {
+    if (!allowedMimeTypes.includes(file.type)) result.wrongType.push(file);
+    else if (file.size > MAX_ATTACHMENT_BYTES) result.tooLarge.push(file);
+    else result.accepted.push(file);
+  }
+  return result;
+}
+
+/**
  * One row in the submission wizard's attachment list — a file picked in this
  * session and held in memory. Nothing reaches the backend until the
  * grievance is filed; `ReviewAndSubmitCard` uploads the staged files to the

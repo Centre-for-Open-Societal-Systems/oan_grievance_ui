@@ -5,6 +5,8 @@ import { CalendarClock, X, CheckCircle2, AlertTriangle, AlertCircle, XCircle } f
 import { useTranslations } from 'next-intl';
 import type { ChangeRequestData, GrievanceTimelineData } from '../../types';
 import { formatDate } from '../../utils/mapGrievance';
+import { CharacterCounter } from '@/components/ui/CharacterCounter';
+import { REASON_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 interface ReviewDeferralPopupProps {
   request: ChangeRequestData;
@@ -150,11 +152,16 @@ export function ReviewDeferralPopup({
               <textarea
                 rows={3}
                 value={comments}
+                maxLength={REASON_MAX_LENGTH}
+                aria-describedby="review-deferral-comments-count"
                 onChange={(e) => setComments(e.target.value)}
                 placeholder="e.g. Approved given the lab dependency — please attach results once received. Or, if rejecting: explain what the officer should do instead..."
                 className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white resize-none"
               />
-              <div className="text-[11px] text-gray-400">{t('optionalApproving')}</div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="text-[11px] text-gray-400">{t('optionalApproving')}</div>
+                <CharacterCounter id="review-deferral-comments-count" count={comments.length} max={REASON_MAX_LENGTH} />
+              </div>
             </div>
           )}
 

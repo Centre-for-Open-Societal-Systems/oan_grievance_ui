@@ -90,6 +90,7 @@ const TEXT_FIELDS: readonly OrganisationField[] = [
  */
 export const TAX_ID_PATTERN = /^(?=.{3,60}$)[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*$/;
 
+export const POSTAL_CODE_MAX_LENGTH = 10;
 /** 3-10 letters/digits, with single spaces or hyphens between — Ethiopia's own codes are 4 digits, other countries' vary. */
 export const POSTAL_CODE_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9]|[ -](?=[A-Za-z0-9])){1,8}[A-Za-z0-9]$/;
 

@@ -217,7 +217,9 @@
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
-      "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}"
+      "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}",
+      "fileWrongType": "Hin maxxanfamne: {names}. Faayiloonni PDF, JPG, PNG yookaan MP3 qofa fudhatama.",
+      "fileTooLarge": "Hin maxxanfamne: {names}. Faayiliin tokkoon tokkoon isaa hanga {max}MB ta'uu danda'a."
     },
     "serviceProvider": {
       "placeholder": "Suuqii galtee, hawaasa daldalaa, baankii ykn gabaa barbaadi (yoo jiraate)",
@@ -700,5 +702,9 @@
   },
   "grievanceList": {
     "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi..."
+  },
+  "validation": {
+    "characterCount": "{count} / {max}",
+    "tooLong": "Arfii {max} ykn isaa gadi ta'uu qaba."
   }
 }

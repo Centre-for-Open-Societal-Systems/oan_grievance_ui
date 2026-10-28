@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import messages from '../../../../../messages/en.json';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -53,7 +55,11 @@ function renderWithStore(ui: React.ReactElement, categories = mockCategories) {
     },
   });
   // `wrapper` (not wrapping `ui` inline) so a test's rerender() keeps the Provider.
-  return render(ui, { wrapper: ({ children }) => <Provider store={store}>{children}</Provider> });
+  return render(ui, { wrapper: ({ children }) => (
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <Provider store={store}>{children}</Provider>
+      </NextIntlClientProvider>
+    ) });
 }
 
 describe('CaseManagement', () => {

@@ -12,6 +12,7 @@ import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { organisationKindOf } from '@/lib/organisationKind';
 import { safeReturnPath } from '@/lib/returnPath';
 import { validateEmail, validateLoginPassword } from '@/lib/validation/fieldRules';
+import { EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 import { focusFirstError, useFieldErrors, type FieldErrors } from '@/lib/validation/useFieldErrors';
 import { useAppDispatch } from '@/store/hooks';
 import { ArrowRight, Eye, EyeOff, Lock, LogOut, ShieldCheck, User } from 'lucide-react';
@@ -269,6 +270,7 @@ export function LoginForm({
                     id="login-email"
                     type="email"
                     autoComplete="off"
+                    maxLength={EMAIL_MAX_LENGTH}
                     value={email}
                     onChange={(e) => changeField('email', e.target.value, setEmail)}
                     onBlur={() => fieldErrors.setError('email', validateEmail(email))}
@@ -295,6 +297,7 @@ export function LoginForm({
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="off"
+                    maxLength={PASSWORD_MAX_LENGTH}
                     value={password}
                     onChange={(e) => changeField('password', e.target.value, setPassword)}
                     onBlur={() => fieldErrors.setError('password', validateLoginPassword(password))}
