@@ -254,6 +254,17 @@ export function isReviewOfficer(roles: string[]): boolean {
 }
 
 /**
+ * True for a role holding the Grievance `export` permission (the ticket export on the case
+ * view): Submitter, Assisted Submitter, Officer and Admin. The Review Officer is read-only
+ * oversight and is refused by the backend, and a role not listed here gets no button. The
+ * backend still re-checks, so this only hides a button that would 403.
+ */
+export function canExportCase(roles: string[]): boolean {
+  const allowed: string[] = [ROLES.SUBMITTER, ROLES.ASSISTED_SUBMITTER, ROLES.OFFICER, ROLES.ADMIN];
+  return effectiveRoles(roles).some((role) => allowed.includes(role));
+}
+
+/**
  * True for anyone who sees every filed case rather than only their own — Officer, Admin,
  * or Review Officer. Deliberately a different question from `isOfficerOrAdmin`: that one
  * gates whether the viewer can *act* on a case, this one only decides whether the

@@ -15,7 +15,7 @@ import type { Grievance } from '../types';
 import { isTerminalStatus } from '../utils/mapGrievance';
 import { useAppSelector } from '@/store/hooks';
 import { uploadAttachments } from '@/lib/attachments';
-import { isOfficerOrAdmin } from '@/features/auth/rbac';
+import { canExportCase, isOfficerOrAdmin } from '@/features/auth/rbac';
 
 export function GrievanceDetailSidebar({
   ticketNumber,
@@ -97,6 +97,7 @@ export function GrievanceDetailSidebar({
           timelineData={timelineData}
           grievance={grievance}
           onClose={onClose}
+          canExport={canExportCase(userRoles)}
           isFullscreen={isFullscreen}
           onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
         />

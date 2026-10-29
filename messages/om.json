@@ -264,7 +264,9 @@
     "pdf": "Akka PDF buusi",
     "csv": "Akka CSV buusi",
     "exporting": "Faayilii qopheessaa jira…",
-    "failed": "Erguun hin milkoofne. Maaloo irra deebi'ii yaali."
+    "failed": "Erguun hin milkoofne. Maaloo irra deebi'ii yaali.",
+    "notFound": "Dhimmi kun hin argamne, kanaaf ergamuu hin danda'u.",
+    "forbidden": "Dhimma kana ergachuuf hayyama hin qabdu."
   },
   "caseActions": {
     "submitterTitle": "Deebii koo",

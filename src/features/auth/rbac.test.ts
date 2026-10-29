@@ -217,3 +217,21 @@ describe('canViewAllGrievances', () => {
     expect(canViewAllGrievances([ROLES.REVIEW_OFFICER])).not.toBe(isOfficerOrAdmin([ROLES.REVIEW_OFFICER]));
   });
 });
+
+describe('canExportCase', () => {
+  it('allows every role but the Review Officer', async () => {
+    const { canExportCase, ROLES } = await import('./rbac');
+    expect(canExportCase([ROLES.OFFICER])).toBe(true);
+    expect(canExportCase([ROLES.SUBMITTER])).toBe(true);
+    expect(canExportCase([])).toBe(true);
+    expect(canExportCase([ROLES.REVIEW_OFFICER])).toBe(false);
+    expect(canExportCase([ROLES.REVIEW_OFFICER, ROLES.OFFICER])).toBe(true);
+  });
+});
+
+describe('canExportCase with an unrecognised role', () => {
+  it('shows no button for a role that does not hold the permission', async () => {
+    const { canExportCase } = await import('./rbac');
+    expect(canExportCase(['Some Future Auditor'])).toBe(false);
+  });
+});
