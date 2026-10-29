@@ -79,6 +79,48 @@ describe('ExportMenu', () => {
     expect(screen.getByRole('button', { name: 'Export this case' })).toHaveFocus();
   });
 
+  it('keeps focus on the trigger and names it by its visible text while exporting', async () => {
+    exportGrievance.mockImplementation(() => new Promise(() => {}));
+    renderMenu();
+
+    open();
+    fireEvent.click(screen.getByRole('button', { name: 'Download as PDF' }));
+
+    const busy = await screen.findByRole('button', { name: 'Preparing the file…' });
+    expect(busy).toHaveFocus();
+    expect(busy).toHaveAttribute('aria-disabled', 'true');
+    expect(busy).not.toBeDisabled();
+
+    // A second click while busy neither opens the menu nor starts another export.
+    fireEvent.click(busy);
+    expect(screen.queryByRole('button', { name: 'Download as CSV' })).not.toBeInTheDocument();
+    expect(exportGrievance).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes when focus moves to another control, but not on a click inside', () => {
+    renderMenu();
+    open();
+    const pdf = screen.getByRole('button', { name: 'Download as PDF' });
+
+    fireEvent.blur(screen.getByRole('button', { name: 'Export this case' }), { relatedTarget: null });
+    expect(pdf).toBeInTheDocument();
+
+    fireEvent.blur(pdf, { relatedTarget: document.body.appendChild(document.createElement('button')) });
+    expect(screen.queryByRole('button', { name: 'Download as PDF' })).not.toBeInTheDocument();
+  });
+
+  it('closes on a press outside, and when the case changes', () => {
+    const { rerenderWith } = renderMenu();
+    open();
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('button', { name: 'Download as PDF' })).not.toBeInTheDocument();
+
+    open();
+    expect(screen.getByRole('button', { name: 'Download as PDF' })).toBeInTheDocument();
+    rerenderWith('3-001-003B-0');
+    expect(screen.queryByRole('button', { name: 'Download as PDF' })).not.toBeInTheDocument();
+  });
+
   it('shows translated copy for a missing case', async () => {
     exportGrievance.mockRejectedValue(new ApiError('Not found', null, 404));
     renderMenu();

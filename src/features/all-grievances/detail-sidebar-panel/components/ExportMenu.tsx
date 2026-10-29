@@ -12,7 +12,7 @@ import {
 } from "../../api/grievanceApi";
 
 export interface ExportMenuProps {
-  ticketNumber: string;
+  readonly ticketNumber: string;
 }
 
 /** Long enough for the browser to start reading the blob before its URL is released. */
@@ -46,12 +46,13 @@ export function ExportMenu({ ticketNumber }: ExportMenuProps) {
       abortRef.current = null;
       setIsExporting(false);
       setErrorKey(null);
+      setIsOpen(false);
     };
   }, [ticketNumber]);
 
   useEffect(() => {
     if (!isOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
+    const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -60,10 +61,10 @@ export function ExportMenu({ ticketNumber }: ExportMenuProps) {
         triggerRef.current?.focus();
       }
     };
-    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [isOpen]);
@@ -103,18 +104,30 @@ export function ExportMenu({ ticketNumber }: ExportMenuProps) {
   };
 
   return (
-    <div ref={rootRef} className="relative">
+    <div
+      ref={rootRef}
+      className="relative"
+      onBlur={(event) => {
+        // Only a move to another element counts: Safari and Firefox on Mac do not focus a clicked
+        // button, so a null target is a click inside, and outside clicks are handled by pointerdown.
+        const next = event.relatedTarget as Node | null;
+        if (next && !rootRef.current?.contains(next)) setIsOpen(false);
+      }}
+    >
       <button
         ref={triggerRef}
         type="button"
         onClick={() => {
+          // aria-disabled, not disabled: a disabled button drops the focus it holds.
+          if (isExporting) return;
           setErrorKey(null);
           setIsOpen((open) => !open);
         }}
-        disabled={isExporting}
+        aria-disabled={isExporting}
         aria-expanded={isOpen}
-        aria-label={t("menuLabel")}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-gray-300/50"
+        // While exporting the visible text is the name (WCAG 2.5.3 Label in Name).
+        aria-label={isExporting ? undefined : t("menuLabel")}
+        className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors aria-disabled:opacity-60 aria-disabled:cursor-wait focus:outline-none focus:ring-2 focus:ring-gray-300/50"
       >
         {isExporting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
         {isExporting ? t("exporting") : t("title")}
@@ -127,7 +140,7 @@ export function ExportMenu({ ticketNumber }: ExportMenuProps) {
       )}
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10">
+        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 overflow-hidden z-10">
           <button
             type="button"
             onClick={() => handleExport("pdf")}
