@@ -1,6 +1,7 @@
 "use client";
 
 import { X, Maximize, Minimize } from 'lucide-react';
+import { ExportMenu } from './ExportMenu';
 import type { Grievance, GrievanceTimelineData } from '../../types';
 
 interface SidebarHeaderProps {
@@ -8,11 +9,13 @@ interface SidebarHeaderProps {
   timelineData?: GrievanceTimelineData | null;
   grievance?: Grievance | null;
   onClose: () => void;
+  /** Whether the viewer holds the export permission; the backend re-checks. */
+  canExport?: boolean;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
 }
 
-export function SidebarHeader({ ticketNumber, timelineData, grievance, onClose, isFullscreen, onToggleFullscreen }: SidebarHeaderProps) {
+export function SidebarHeader({ ticketNumber, timelineData, grievance, onClose, canExport = false, isFullscreen, onToggleFullscreen }: SidebarHeaderProps) {
   const displayTicket =
     timelineData?.ticket_number_display ||
     timelineData?.ticket_number ||
@@ -56,6 +59,7 @@ export function SidebarHeader({ ticketNumber, timelineData, grievance, onClose, 
         <h2 className="text-2xl font-bold text-gray-900 leading-tight line-clamp-2">{title}</h2>
       </div>
       <div className="flex items-center gap-2">
+        {canExport && <ExportMenu ticketNumber={ticketNumber || displayTicket} />}
         {onToggleFullscreen && (
           <button
             type="button"

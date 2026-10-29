@@ -1,4 +1,4 @@
-import { fetchApi } from '@/lib/api';
+import { fetchApi, fetchApiBlob } from '@/lib/api';
 import type {
   ChangeRequestData,
   ChangeRequestListData,
@@ -393,6 +393,34 @@ export async function decideGrievanceAnonymity(
       signal: options.signal,
     }
   );
+}
+
+export type GrievanceExportFormat = 'pdf' | 'csv';
+/** The languages the form's own wording exists in; what people wrote on the case stays as written. */
+export type GrievanceExportLang = 'en' | 'am';
+
+/**
+ * Downloads one grievance and its timeline as the SOW Annexure complaint form.
+ * The backend answers with the file itself. The proxy does not relay its `Content-Disposition`,
+ * so the name is rebuilt here the same way: `grievance-<ticket>[-am].<format>`.
+ *
+ * Corresponding REST endpoint: GET /api/v1/grievances/:ticket_number/export
+ */
+export async function exportGrievance(
+  ticketNumber: string,
+  format: GrievanceExportFormat,
+  lang: GrievanceExportLang,
+  options: RequestOptions = {}
+): Promise<{ blob: Blob; fileName: string }> {
+  const blob = await fetchApiBlob(
+    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/export?format=${format}&lang=${lang}`,
+    { method: 'GET', signal: options.signal },
+    60000
+  );
+  return {
+    blob,
+    fileName: `grievance-${ticketNumber.replace(/[^\w.-]/g, '-')}${lang === 'am' ? '-am' : ''}.${format}`,
+  };
 }
 
 /** Service object matching the OAN A2C enterprise standard */

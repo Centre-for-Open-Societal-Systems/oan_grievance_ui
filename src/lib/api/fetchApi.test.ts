@@ -143,3 +143,42 @@ describe('fetchApi utilities', () => {
     });
   });
 });
+
+describe('fetchApiBlob', () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  const reply = (status: number, contentType: string, body: BodyInit | null) => {
+    global.fetch = vi.fn().mockResolvedValue(new Response(body, { status, headers: { 'content-type': contentType } }));
+  };
+
+  it('returns the file', async () => {
+    const { fetchApiBlob } = await import('./fetchApi');
+    reply(200, 'application/pdf', 'pdf-bytes');
+    const blob = await fetchApiBlob('api/v1/grievances/X/export');
+    expect(await blob.text()).toBe('pdf-bytes');
+  });
+
+  it('refuses a 200 that is an error page instead of the file', async () => {
+    const { fetchApiBlob } = await import('./fetchApi');
+    reply(200, 'text/html; charset=utf-8', '<html>gateway</html>');
+    await expect(fetchApiBlob('api/v1/grievances/X/export')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('surfaces the envelope message on a 400', async () => {
+    const { fetchApiBlob } = await import('./fetchApi');
+    reply(400, 'application/json', JSON.stringify({ message: 'Case too large to export.' }));
+    await expect(fetchApiBlob('api/v1/grievances/X/export')).rejects.toMatchObject({
+      message: 'Case too large to export.',
+      status: 400,
+    });
+  });
+
+  it('throws the sentinel for a 403', async () => {
+    const { fetchApiBlob } = await import('./fetchApi');
+    reply(403, 'application/json', '{}');
+    await expect(fetchApiBlob('api/v1/grievances/X/export')).rejects.toThrow('FORBIDDEN');
+  });
+});

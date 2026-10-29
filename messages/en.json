@@ -264,7 +264,9 @@
     "pdf": "Download as PDF",
     "csv": "Download as CSV",
     "exporting": "Preparing the file…",
-    "failed": "The export could not be completed. Please try again."
+    "failed": "The export could not be completed. Please try again.",
+    "notFound": "This case could not be found, so it cannot be exported.",
+    "forbidden": "You do not have permission to export this case."
   },
   "caseActions": {
     "submitterTitle": "My response",
