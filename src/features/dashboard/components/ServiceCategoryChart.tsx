@@ -1,0 +1,54 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
+import type { ServiceCategoryStat } from "../types";
+
+export function ServiceCategoryChart({ data }: { data: ServiceCategoryStat[] }) {
+  const t = useTranslations("dashboard.overview");
+  const format = useFormatter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // Add a small delay for a staggered/smooth entrance animation
+    const timer = setTimeout(() => setMounted(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const labelOf = (cat: ServiceCategoryStat): string => {
+    switch (cat.kind) {
+      case "uncategorised":
+        return t("uncategorised");
+      case "remainder":
+        return t("otherCategories", { count: cat.categories ?? 0 });
+      case "category":
+        return cat.name;
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl flex flex-col border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl rounded-xl">
+      <div className="px-6 py-5 border-b border-gray-200">
+        <h3 className="text-[16px] font-semibold text-[#111827] tracking-tight">{t("byServiceCategory")}</h3>
+      </div>
+
+      <div className="p-6 space-y-[18px] flex-1">
+        {data.length === 0 && <p className="text-sm text-gray-500">{t("noCategories")}</p>}
+        {data.map((cat) => (
+          <div key={cat.key} className="flex flex-col gap-2">
+            <div className="flex justify-between text-[14px] font-semibold text-[#0D1117]">
+              <span>{labelOf(cat)}</span>
+              <span>{format.number(cat.value)}</span>
+            </div>
+            <div className="w-full bg-[#f3f4f6] rounded-full h-[6px] overflow-hidden">
+              <div
+                className={`h-full rounded-full ${cat.color} transition-all duration-1000 ease-out`}
+                style={{ width: mounted ? `${(cat.value / cat.max) * 100}%` : '0%' }}
+              ></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

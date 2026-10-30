@@ -1,0 +1,122 @@
+import { describe, expect, it } from "vitest";
+import { buildSubmitFields, resolveContactEmail, resolveContactMobile, resolveSubmitterName } from "./submitPayload";
+
+describe("resolveSubmitterName", () => {
+  it("prefers the type-specific identity field over the account's own profile", () => {
+    expect(
+      resolveSubmitterName({
+        submitterType: "individual",
+        identityValues: { fullName: "Abebe Bikila" },
+        userFullName: "Someone Else",
+      })
+    ).toBe("Abebe Bikila");
+  });
+
+  it("reads representativeName for both Cooperative and NGO, officeName for Woreda/Kebele, farmerName for Development Agent", () => {
+    expect(resolveSubmitterName({ identityValues: { representativeName: "Rep Name" } })).toBe("Rep Name");
+    expect(resolveSubmitterName({ identityValues: { officeName: "Office Name" } })).toBe("Office Name");
+    expect(
+      resolveSubmitterName({ submitterType: "development_agent", identityValues: { farmerName: "Farmer Name" } })
+    ).toBe("Farmer Name");
+  });
+
+  it("falls back to the signed-in account's own profile for a self-submitting type", () => {
+    expect(
+      resolveSubmitterName({ submitterType: "individual", identityValues: {}, userFullName: "Account Holder" })
+    ).toBe("Account Holder");
+  });
+
+  it("never falls back to the agent's own profile for a Development Agent — the farmer is the submitter of record, not the agent", () => {
+    expect(
+      resolveSubmitterName({
+        submitterType: "development_agent",
+        identityValues: {}, // farmerName not yet typed — not yet typed
+        userFullName: "The Signed-In Agent",
+      })
+    ).toBe("");
+  });
+});
+
+describe("resolveContactMobile / resolveContactEmail", () => {
+  it("never fall back to the agent's own phone/email for a Development Agent", () => {
+    expect(
+      resolveContactMobile({ submitterType: "development_agent", identityValues: {}, userMobile: "0911000000" })
+    ).toBe("");
+    expect(resolveContactEmail({ submitterType: "development_agent", identityValues: {}, userEmail: "agent@example.com" })).toBe(
+      ""
+    );
+  });
+
+  it("do fall back to the account's own phone/email for a self-submitting type", () => {
+    expect(resolveContactMobile({ submitterType: "individual", identityValues: {}, userMobile: "0911000000" })).toBe(
+      "+251911000000"
+    );
+    expect(resolveContactEmail({ submitterType: "individual", identityValues: {}, userEmail: "me@example.com" })).toBe(
+      "me@example.com"
+    );
+  });
+});
+
+describe("buildSubmitFields", () => {
+  it("sends every optional field as an empty string, not omitted, so a cleared value can't resurface from an earlier save", () => {
+    const payload = buildSubmitFields({ clientSubmissionUuid: "uuid-1", identityValues: {} });
+    expect(payload).toEqual({
+      client_submission_uuid: "uuid-1",
+      submission_channel: "",
+      submitter_type: "",
+      submitter_name: "",
+      contact_mobile: "",
+      country_code: "+251",
+      phone_number: "",
+      contact_email: "",
+      administrative_area: undefined,
+      administrative_unit: "",
+      service_category: "",
+      grievance_type: "",
+      associated_service_provider: "",
+      description: "",
+      desired_outcome: "",
+    });
+  });
+
+  it("omits administrative_area (rather than sending it empty) when it hasn't resolved yet", () => {
+    const payload = buildSubmitFields({ clientSubmissionUuid: "uuid-1", identityValues: {} });
+    expect(payload.administrative_area).toBeUndefined();
+    expect("administrative_area" in payload).toBe(true); // present as a key, just undefined — JSON.stringify drops it
+  });
+});
+
+describe('description with a voice recording', () => {
+  const load = () => import('./submitPayload');
+  const base = { clientSubmissionUuid: 'u', identityValues: {} };
+
+  it('sends the standard line when only a recording describes the case', async () => {
+    const { buildSubmitFields, VOICE_NOTE_DESCRIPTION } = await load();
+    expect(buildSubmitFields({ ...base, description: '  ', hasVoiceNote: true }).description).toBe(VOICE_NOTE_DESCRIPTION);
+    expect(VOICE_NOTE_DESCRIPTION.length).toBeGreaterThanOrEqual(20);
+  });
+
+  it('leaves the description empty without a recording (the backend then asks for one)', async () => {
+    const { buildSubmitFields } = await load();
+    expect(buildSubmitFields({ ...base, description: '  ' }).description).toBe('');
+  });
+
+  it('keeps a typed note that is long enough, exactly as typed', async () => {
+    const { resolveDescription } = await load();
+    const typed = 'The fertilizer never reached our kebele store.';
+    expect(resolveDescription(typed, true)).toBe(typed);
+  });
+
+  it('keeps a typed note that is too short for the backend and adds the standard line, so the case is not refused', async () => {
+    const { resolveDescription, VOICE_NOTE_DESCRIPTION } = await load();
+    const result = resolveDescription('please help', true);
+    expect(result).toBe(`please help - ${VOICE_NOTE_DESCRIPTION}`);
+    expect(result.length).toBeGreaterThanOrEqual(20);
+  });
+
+  it('never alters the text when there is no recording', async () => {
+    const { resolveDescription } = await load();
+    expect(resolveDescription('  short  ', false)).toBe('short');
+    expect(resolveDescription(undefined, undefined)).toBe('');
+  });
+});

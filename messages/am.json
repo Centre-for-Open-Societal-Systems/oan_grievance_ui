@@ -1,0 +1,721 @@
+{
+  "noAccess": {
+    "pageTitle": "መዳረሻ የለም",
+    "heading": "እስካሁን ምንም መዳረሻ አልተመደበም",
+    "body": "የእርስዎ መለያ በቅሬታ መድረክ ውስጥ የታወቀ ሚና አልተመደበለትም። ሚና እንዲመደብልዎ አስተዳዳሪዎን ያነጋግሩ።"
+  },
+  "register": {
+    "profile": {
+      "title": "ሊጨርሱ ትንሽ ቀርቷል!",
+      "subtitle": "አንድ ተጨማሪ ነገር — ቅሬታዎችን እንዴት እንደሚያቀርቡ ይንገሩን፣ ስለዚህ በኋላ እንደገና አንጠይቅም።",
+      "submitterTypeLabel": "የአቅራቢ ዓይነት",
+      "submitterTypePlaceholder": "የአቅራቢ ዓይነት ይምረጡ",
+      "continue": "ቀጥል",
+      "consentNotice": "ከላይ ያለው የፋይዳ መታወቂያ ቅሬታው ሲገመገም ማንነትዎን ያረጋግጣል። በነባሪነት በስክሪኑ ላይ የተደበቀ ሲሆን፣ ለቀጣዩ ጊዜ ቅሬታ ለማቅረብ አስቀድሞ ለመሙላት በመለያዎ ላይ ይቀመጣል።",
+      "consentCheckboxLabel": "ብሔራዊ መታወቂያ ቁጥሬን ለማንነት ማረጋገጫ ለመስጠት እስማማለሁ።",
+      "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
+      "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
+      "fieldRequired": "ይህ መስክ ያስፈልጋል።",
+      "organisationNotice": "ከገቡ በኋላ የድርጅትዎን ዝርዝሮች — ስም፣ የምዝገባ ቁጥር፣ ስልጣን የተሰጠው ተወካይ፣ አድራሻ እና የመገናኛ መረጃ — እንጠይቅዎታለን።",
+      "faydaAlreadyRegistered": "ይህ የፋይዳ መታወቂያ አስቀድሞ በሌላ መለያ ተመዝግቧል።",
+      "identityAlreadyRegistered": "እነዚህ ዝርዝሮች አስቀድመው በሌላ መለያ ተመዝግበዋል።"
+    },
+    "success": {
+      "title": "መለያ ተፈጥሯል!",
+      "body": "የእርስዎ መለያ በተሳካ ሁኔታ ተፈጥሯል። አሁን በኢሜይልዎ እና የይለፍ ቃልዎ መግባት ይችላሉ።",
+      "organisationBody": "የእርስዎ መለያ በተሳካ ሁኔታ ተፈጥሯል። ድርጅትዎን ለመመዝገብ ይግቡ።",
+      "proceedToLogin": "ወደ መግቢያ ይቀጥሉ"
+    }
+  },
+  "organisation": {
+    "header": {
+      "completeRegistration": "ምዝገባን ያጠናቅቁ",
+      "registered": "ድርጅት"
+    },
+    "loading": "ድርጅትዎ በመጫን ላይ…",
+    "intro": {
+      "eyebrow": "የድርጅት ምዝገባ።",
+      "heading": {
+        "ngo": "መንግሥታዊ ያልሆነ ድርጅትዎን ይመዝግቡ",
+        "fpo": "የአምራች ድርጅትዎን ይመዝግቡ"
+      },
+      "body": "ድርጅትዎን በOAN የቅሬታ አውታረ መረብ ላይ ለማረጋገጥ ጥቂት ዝርዝሮች። የKYC ሰነዶች ከምዝገባ በኋላ ይሰበሰባሉ።"
+    },
+    "sections": {
+      "organisation": "ድርጅት",
+      "address": "የተመዘገበ አድራሻ",
+      "contact": "የመገናኛ ዝርዝሮች"
+    },
+    "fields": {
+      "legalName": {
+        "label": "የድርጅት ስም",
+        "placeholder": "የድርጅት ስም ያስገቡ"
+      },
+      "brandName": {
+        "label": "የንግድ ምልክት / የማሳያ ስም",
+        "placeholder": "ከሕጋዊ ስሙ የተለየ ከሆነ ያስገቡ",
+        "hint": "ከሕጋዊ ስሙ የተለየ ከሆነ"
+      },
+      "entityType": {
+        "label": "የተቋም ዓይነት",
+        "placeholder": "የተቋም ዓይነት ይምረጡ"
+      },
+      "taxId": {
+        "label": "የምዝገባ ቁጥር",
+        "placeholder": "የምዝገባ ቁጥር ያስገቡ",
+        "hint": "ለድርጅትዎ የተሰጠ የምዝገባ ወይም የፈቃድ ቁጥር"
+      },
+      "representativeName": {
+        "label": "ስልጣን የተሰጠው ተወካይ",
+        "placeholder": "የተወካዩን ሙሉ ስም ያስገቡ"
+      },
+      "memberCount": {
+        "label": "የተጎዱ አባላት ብዛት",
+        "placeholder": "የተጎዱ አባላትን ብዛት ያስገቡ"
+      },
+      "streetAddress": {
+        "label": "የመንገድ አድራሻ",
+        "placeholder": "የመንገድ አድራሻ ያስገቡ"
+      },
+      "kebele": {
+        "label": "ቀበሌ / መንደር",
+        "placeholder": "ቀበሌ / መንደር ያስገቡ"
+      },
+      "woreda": {
+        "label": "ወረዳ",
+        "placeholder": "ወረዳ ያስገቡ"
+      },
+      "zone": {
+        "label": "ዞን",
+        "placeholder": "ዞን ያስገቡ"
+      },
+      "region": {
+        "label": "ክልል",
+        "placeholder": "ክልል ያስገቡ"
+      },
+      "country": {
+        "label": "አገር",
+        "placeholder": "አገር ያስገቡ"
+      },
+      "postalCode": {
+        "label": "የፖስታ ኮድ",
+        "placeholder": "የፖስታ ኮድ ያስገቡ"
+      },
+      "website": {
+        "label": "ድር ጣቢያ",
+        "placeholder": "ድር ጣቢያ ያስገቡ",
+        "hint": "ድር ጣቢያዎ - እንደ አውታረ መረብ አድራሻዎ ያገለግላል - በኋላ ሊጨመር ይችላል"
+      },
+      "email": {
+        "label": "የሥራ ኢሜይል",
+        "placeholder": "ኢሜይል አድራሻ ያስገቡ",
+        "hint": "የሥራ ኢሜይልዎን ይጠቀሙ — የምዝገባ ሂደት ዝመናዎችን ወደዚህ እንልካለን"
+      },
+      "phone": {
+        "label": "ስልክ",
+        "placeholder": "ስልክ ቁጥር ያስገቡ"
+      }
+    },
+    "entityTypes": {
+      "localNgo": "የሀገር ውስጥ መንግሥታዊ ያልሆነ ድርጅት",
+      "internationalNgo": "ዓለም አቀፍ መንግሥታዊ ያልሆነ ድርጅት",
+      "cbo": "በማኅበረሰብ ላይ የተመሠረተ ድርጅት",
+      "cso": "የሲቪል ማኅበረሰብ ድርጅት",
+      "fpo": "የአርሶ አደር አምራቾች ድርጅት",
+      "primaryCooperative": "የመጀመሪያ ደረጃ ኅብረት ሥራ ማኅበር",
+      "cooperativeUnion": "የኅብረት ሥራ ማኅበራት ዩኒየን",
+      "cooperativeFederation": "የኅብረት ሥራ ማኅበራት ፌዴሬሽን"
+    },
+    "consent": "ይህንን ድርጅት ለመመዝገብ ሥልጣን እንዳለኝ አረጋግጣለሁ፣ እንዲሁም <policy>የOAN የግላዊነት ፖሊሲን</policy> እስማማለሁ። በአውታረ መረቡ ላይ መሳተፍ <agreement>የOAN የአውታረ መረብ ተሳትፎ ስምምነት</agreement> ተገዥ እንደሆነ ተረድቻለሁ፤ ሥራ ከመጀመሬ በፊት ገምግሜ እቀበለዋለሁ።",
+    "actions": {
+      "back": "ተመለስ",
+      "backToSignIn": "ወደ መግቢያ ተመለስ",
+      "register": "ድርጅት ይመዝግቡ",
+      "retry": "እንደገና ይሞክሩ",
+      "continueToSubmit": "ወደ ቅሬታ ማቅረቢያ ይቀጥሉ"
+    },
+    "metadata": {
+      "ngo": "የNGO ምዝገባ | የቅሬታ አስተዳደር ዳሽቦርድ",
+      "fpo": "የአምራች ድርጅት ምዝገባ | የቅሬታ አስተዳደር ዳሽቦርድ"
+    },
+    "errors": {
+      "required": "ይህ መስክ ያስፈልጋል።",
+      "tooLong": "ከ{max} ቁምፊዎች ያልበለጠ ይጠቀሙ።",
+      "entityType": "ከተዘረዘሩት የተቋም ዓይነቶች አንዱን ይምረጡ።",
+      "taxId": "ከ3 እስከ 60 ፊደላት ወይም ቁጥሮች ይጠቀሙ፤ በመካከላቸው ሰረዝ ወይም ሰያፍ መስመር ሊኖር ይችላል።",
+      "memberCount": "ሙሉ ቁጥር ያስገቡ፣ ለምሳሌ 120።",
+      "postalCode": "ትክክለኛ የፖስታ ኮድ ያስገቡ፣ ለምሳሌ 1000።",
+      "registrationNumberTaken": "በዚህ የምዝገባ ቁጥር የተመዘገበ ድርጅት አስቀድሞ አለ።",
+      "website": "ትክክለኛ የድር ጣቢያ አድራሻ ያስገቡ፣ ለምሳሌ www.example.org።",
+      "email": "ትክክለኛ ኢሜይል አድራሻ ያስገቡ፣ ለምሳሌ name@example.com።",
+      "phoneEthiopia": "ትክክለኛ የኢትዮጵያ ሞባይል ቁጥር ያስገቡ፣ ለምሳሌ 0911234567 ወይም 911234567 (በ09፣ 07፣ 9 ወይም 7 ይጀምራል)።",
+      "phone": "ለተመረጠው አገር ትክክለኛ ስልክ ቁጥር ያስገቡ።",
+      "generic": "ይህን ማጠናቀቅ አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "forbidden": "መለያዎ ድርጅት እንዲመዘግብ አልተፈቀደለትም።",
+      "connection": "አገልጋዩን ማግኘት አልተቻለም። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።",
+      "session": "የእርስዎ ክፍለ ጊዜ አብቅቷል። እባክዎ እንደገና ይግቡ።",
+      "profileRefresh": "ድርጅትዎ ተመዝግቧል፤ ነገር ግን መገለጫዎን ማደስ አልተቻለም። ቅሬታ ከማቅረብዎ በፊት እባክዎ እንደገና ይሞክሩ።"
+    },
+    "status": {
+      "details": {
+        "legalName": "የድርጅት ስም",
+        "brandName": "የንግድ ምልክት / የማሳያ ስም",
+        "entityType": "የተቋም ዓይነት",
+        "registrationNumber": "የምዝገባ ቁጥር",
+        "reason": "ከአስተዳዳሪው የተሰጠ ማስታወሻ",
+        "status": "ሁኔታ"
+      },
+      "inReview": {
+        "badge": "በግምገማ ላይ",
+        "title": "ድርጅትዎ ተመዝግቧል፤ በግምገማ ላይ ነው",
+        "body": "ድርጅትዎ ሥራ ከመጀመሩ በፊት የመድረኩ አስተዳዳሪ ይገመግመዋል። ሲጸድቅ እናሳውቅዎታለን።"
+      },
+      "active": {
+        "badge": "ንቁ",
+        "title": "ድርጅትዎ ንቁ ነው",
+        "body": "ድርጅትዎ በአውታረ መረቡ ላይ ጸድቋል። አሁን ቅሬታዎችን ማቅረብ እና መከታተል ይችላሉ።",
+        "submit": "ቅሬታ ያቅርቡ",
+        "track": "ቅሬታዎችን ይከታተሉ"
+      },
+      "suspended": {
+        "badge": "ታግዷል",
+        "title": "ድርጅትዎ ታግዷል",
+        "body": "የድርጅትዎ መዳረሻ ታግዷል። እባክዎ የመድረኩን አስተዳዳሪ ያነጋግሩ።"
+      }
+    }
+  },
+  "submitGrievance": {
+    "organisation": {
+      "inReviewTitle": "ድርጅትዎ ማረጋገጫ በመጠበቅ ላይ ነው",
+      "inReviewBody": "{name} አሁንም በግምገማ ላይ ነው። ቅሬታዎን አሁን ማዘጋጀት እና ማስቀመጥ ይችላሉ፤ ነገር ግን ማቅረብ የሚቻለው አስተዳዳሪ ድርጅትዎን ካረጋገጠ በኋላ ብቻ ነው።",
+      "suspendedTitle": "ድርጅትዎ ታግዷል",
+      "suspendedBody": "{name} ታግዷል፤ ስለዚህ ለእሱ ቅሬታ ማቅረብ አይቻልም። እባክዎ የመድረኩን አስተዳዳሪ ያነጋግሩ።",
+      "reason": "ከአስተዳዳሪው የተሰጠ ማስታወሻ፦ {reason}",
+      "submitBlocked": "ድርጅትዎ እስኪረጋገጥ ድረስ ማቅረብ አይችሉም። ዝርዝሮችዎን እንደ ረቂቅ ማስቀመጥ ይችላሉ።",
+      "unregisteredTitle": "መጀመሪያ ድርጅትዎን ይመዝግቡ",
+      "unregisteredBody": "መለያዎ ገና ላልተመዘገበ ድርጅት ነው። ቅሬታዎን አሁን ማዘጋጀት እና ማስቀመጥ ይችላሉ፤ ነገር ግን ማቅረብ የሚቻለው ድርጅትዎ ከተመዘገበና ከተረጋገጠ በኋላ ብቻ ነው።",
+      "unregisteredAction": "ድርጅትዎን ይመዝግቡ",
+      "unregisteredSubmitBlocked": "ድርጅትዎ እስኪመዘገብና እስኪረጋገጥ ድረስ ማቅረብ አይችሉም። ዝርዝሮችዎን እንደ ረቂቅ ማስቀመጥ ይችላሉ።"
+    },
+    "reviewStep": {
+      "submit": "ቅሬታ ያቅርቡ",
+      "submitting": "በማቅረብ ላይ…",
+      "anonymousLabel": "ማንነቴ ሳይታወቅ አስገባ — ስሜንና የመገኛ መረጃዬን ይህን ቅሬታ ከሚያስተናግዱ ኃላፊዎች ደብቅ።",
+      "canRequestMoreInfoLabel": "ኃላፊዎች ስለዚህ ቅሬታ ተጨማሪ መረጃ ለማግኘት ሊያነጋግሩኝ ይችላሉ።",
+      "canRequestMoreInfoWarning": "የመገኛ መረጃዎ አይቀመጥም። ኃላፊዎች ሊያገኙዎት አይችሉም፣ ስለዚህ ጉዳይም ማሳወቂያ አይደርስዎትም።",
+      "voiceDescription": "የድምፅ ቅጂ ተያይዟል"
+    },
+    "identityStep": {
+      "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
+      "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
+      "fieldRequired": "ይህ መስክ ያስፈልጋል።",
+      "channelsLoadFailed": "የማቅረቢያ መንገዶችን መጫን አልተቻለም።",
+      "channelsEmpty": "በአሁኑ ጊዜ ምንም የማቅረቢያ መንገድ የለም።",
+      "retry": "እንደገና ይሞክሩ"
+    },
+    "detailsStep": {
+      "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
+      "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
+      "fieldRequired": "ይህ መስክ ያስፈልጋል።",
+      "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች",
+      "fileWrongType": "አልተያያዘም፦ {names}። PDF፣ JPG፣ PNG ወይም MP3 ፋይሎች ብቻ ተቀባይነት አላቸው።",
+      "fileTooLarge": "አልተያያዘም፦ {names}። እያንዳንዱ ፋይል እስከ {max}MB ሊሆን ይችላል።"
+    },
+    "serviceProvider": {
+      "placeholder": "የግብዓት መደብር፣ ኅብረት ሥራ ማኅበር፣ ባንክ ወይም ገበያ ይፈልጉ (ካለ)",
+      "listLabel": "አገልግሎት ሰጪዎች",
+      "clear": "አገልግሎት ሰጪውን አጽዳ",
+      "searching": "በመፈለግ ላይ…",
+      "loadError": "አገልግሎት ሰጪዎችን መጫን አልተቻለም። እንደገና ይሞክሩ፣ ወይም ይህን ባዶ ትተው አገልግሎት ሰጪውን ከታች ይግለጹ።",
+      "noMatch": "የሚዛመድ አገልግሎት ሰጪ የለም። ይህን ባዶ ትተው አገልግሎት ሰጪውን በመግለጫው ውስጥ ይግለጹ።"
+    },
+    "voice": {
+      "hint": "ከመጻፍ ይልቅ በራስዎ ቃላት ይናገሩ። ኃላፊዎች ቅጂውን አዳምጠው ወደ ትክክለኛው ክፍል ያስተላልፉታል።",
+      "record": "ቅዳ",
+      "recordAgain": "እንደገና ቅዳ",
+      "stop": "ቀረጻን አቁም",
+      "recording": "በመቅዳት ላይ {time} / {max}",
+      "processing": "ቅጂውን በማዘጋጀት ላይ…",
+      "playbackLabel": "የድምፅ ቅጂዎ",
+      "remove": "የድምፅ ቅጂውን አስወግድ",
+      "permissionDenied": "የማይክሮፎን መዳረሻ ታግዷል። በአሳሽዎ ቅንብር ውስጥ ፈቅደው እንደገና ይሞክሩ።",
+      "processingFailed": "ቅጂውን ማዘጋጀት አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "unsupported": "ይህ አሳሽ የድምፅ ቀረጻን አይደግፍም።",
+      "noMicrophone": "ማይክሮፎን አልተገኘም። ማይክሮፎን ያገናኙና እንደገና ይሞክሩ።",
+      "startFailed": "ቀረጻውን መጀመር አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "starting": "ማይክሮፎን በማዘጋጀት ላይ…",
+      "attachmentLimit": "በአንድ ቅሬታ እስከ {max} ፋይሎች ማያያዝ ይችላሉ። ከመቅዳትዎ በፊት አንዱን ያስወግዱ።"
+    }
+  },
+  "commentsAndCommunication": {
+    "messageCount": "{count, plural, one {# መልእክት} other {# መልእክቶች}} በዚህ ክር ውስጥ"
+  },
+  "notifications": {
+    "label": "ማሳወቂያዎች",
+    "unreadLabel": "ማሳወቂያዎች፣ {count} አዲስ",
+    "title": "ማሳወቂያዎች",
+    "markAllRead": "ሁሉንም እንደተነበበ ምልክት አድርግ",
+    "empty": "ምንም ማሳወቂያ የለም።",
+    "loadError": "ማሳወቂያዎችን መጫን አልተቻለም።"
+  },
+  "caseExport": {
+    "title": "ላክ",
+    "menuLabel": "ይህን ጉዳይ ላክ",
+    "pdf": "እንደ PDF አውርድ",
+    "csv": "እንደ CSV አውርድ",
+    "exporting": "ፋይሉን በማዘጋጀት ላይ…",
+    "failed": "ወደ ውጭ መላኩ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
+    "notFound": "ይህ ጉዳይ አልተገኘም፤ ስለዚህ ሊላክ አይችልም።",
+    "forbidden": "ይህን ጉዳይ ለመላክ ፈቃድ የለዎትም።"
+  },
+  "caseActions": {
+    "submitterTitle": "የእኔ ምላሽ",
+    "chooseAction": "እርምጃ ይምረጡ",
+    "nothingToDo": "አሁን ከእርስዎ የሚጠበቅ እርምጃ የለም። ቅሬታዎ ሲለወጥ እናሳውቅዎታለን።",
+    "reasonLabel": "ምክንያት",
+    "reasonHelp": "ቅሬታዎን የሚይዙ ኃላፊዎች ይህንን ያያሉ።",
+    "ratingLabel": "በዚህ መፍትሄ ምን ያህል ረክተዋል?",
+    "ratingOption": "ከ5 ኮከቦች {value}",
+    "submitting": "በመላክ ላይ…",
+    "success": "\"{action}\" ተከናውኗል።",
+    "failed": "እርምጃው ሊጠናቀቅ አልቻለም። እባክዎ እንደገና ይሞክሩ።",
+    "hints": {
+      "submitterReply": "ከገባ በኋላ ቅሬታዎ ወደ \"በሂደት ላይ\" ይመለሳል።",
+      "reopen": "አልተፈታም? ምን እንደቀረ ለኃላፊው ይንገሩ፣ ጉዳዩም እንደገና ይከፈታል።",
+      "closeCase": "መፍትሄውን ያረጋግጡ እና ቅሬታዎ እንዴት እንደተያዘ ደረጃ ይስጡ። ይህ ጉዳዩን ይዘጋል።",
+      "generic": "ለዚህ እርምጃ ምክንያት ይስጡ።"
+    },
+    "reasonPlaceholder": "ለኃላፊው ምክንያቱን ይንገሩ…",
+    "detailsLabel": "ተጨማሪ ዝርዝሮች",
+    "detailsPlaceholder": "ኃላፊው የጠየቀውን መረጃ ይግለጹ ወይም ያቅርቡ…",
+    "minLength": "ቢያንስ {min} ቁምፊዎች።",
+    "reasonTooShort": "ቢያንስ {min} ቁምፊዎች መሆን አለበት (አሁን {count})።",
+    "ratingRequired": "እባክዎ ደረጃ ይምረጡ።",
+    "charCounterMin": "{count}/{min} ቢያንስ",
+    "charCounter": "{count} ቁምፊዎች",
+    "submitReply": "ተጨማሪ መረጃ አስገባ",
+    "commentsLabel": "አስተያየቶች",
+    "commentsPlaceholder": "ስለ ተሞክሮዎ የበለጠ ይንገሩን…",
+    "optional": "(አማራጭ)",
+    "confirmClose": "አረጋግጥ እና ቅሬታውን ዝጋ",
+    "reopenLink": "አልረኩም? ይህን ቅሬታ እንደገና ይክፈቱ",
+    "backToClose": "ረክተዋል? በምትኩ ይህን ቅሬታ ይዝጉ"
+  },
+  "responseForm": {
+    "responseSubmitted": "ምላሽ \"{type}\" ተልኳል።",
+    "selectAction": "እርምጃ ይምረጡ",
+    "loadingActions": "እርምጃዎች በመጫን ላይ ናቸው…",
+    "noActions": "ምንም የሚገኙ እርምጃዎች የሉም",
+    "selectTemplate": "የምላሽ አብነት ይምረጡ",
+    "selectActionFirst": "መጀመሪያ እርምጃ ይምረጡ",
+    "loadingTemplates": "አብነቶች በመጫን ላይ ናቸው…",
+    "noTemplates": "ምንም የሚገኙ አብነቶች የሉም",
+    "caseTerminalTitle": "ጉዳይ {status}",
+    "caseTerminalMessage": "ይህ ቅሬታ {status} ነው። ተጨማሪ ምላሾችን ማስገባት አይቻልም።"
+  },
+  "admin": {
+    "responseTemplates": {
+      "searchPlaceholder": "የምላሽ አብነቶችን ይፈልጉ…",
+      "serviceCategory": "የአገልግሎት ምድብ",
+      "allCategories": "ሁሉም ምድቦች",
+      "allDepartments": "ሁሉም መምሪያዎች",
+      "addButton": "+ አብነት ያክሉ",
+      "banner": "ኃላፊዎች እነዚህን አብነቶች በመምሪያ ምላሽ ቅጽ ውስጥ ይመርጣሉ። የጉዳይ ዝርዝሮችን ለመሙላት እንደ {exampleA} ወይም {exampleB} ያሉ ተለዋዋጮችን ይጠቀሙ።",
+      "loading": "አብነቶች በመጫን ላይ…",
+      "loadFailed": "የምላሽ አብነቶችን መጫን አልተቻለም።",
+      "retry": "እንደገና ይሞክሩ",
+      "empty": "የሚዛመድ የምላሽ አብነት የለም።",
+      "retired": "ጡረታ የወጣ",
+      "used": "ጥቅም ላይ የዋለ",
+      "usedTimes": "{count, plural, one {# ጊዜ ጥቅም ላይ ውሏል} other {# ጊዜ ጥቅም ላይ ውሏል}}",
+      "actionTaken": "የተወሰደ እርምጃ",
+      "resolutionSummary": "የመፍትሄ ማጠቃለያ",
+      "edit": "አብነት ያርትዑ",
+      "retire": "ጡረታ አውጣ",
+      "reactivate": "እንደገና አግብር",
+      "retireConfirm": "\"{title}\" ጡረታ ይውጣ? ኃላፊዎች ከእንግዲህ አይቀርብላቸውም። የአጠቃቀም ታሪኩ ይቀመጣል፣ በኋላም እንደገና ማግበር ይችላሉ።",
+      "saveFailed": "ለውጡ ሊቀመጥ አልቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "addTitle": "የምላሽ አብነት ያክሉ",
+      "editTitle": "የምላሽ አብነት ያርትዑ",
+      "close": "ዝጋ",
+      "code": "የአብነት ኮድ",
+      "codeFixed": "ኮዱ አብነቱን ይለያል፣ ሊቀየር አይችልም።",
+      "titleLabel": "ርዕስ",
+      "titleRequired": "ርዕስ ያስፈልጋል",
+      "action": "እርምጃ",
+      "selectAction": "እርምጃ ይምረጡ",
+      "actionRequired": "እባክዎ እርምጃ ይምረጡ",
+      "actionTakenRequired": "ለዚህ እርምጃ የተወሰደው እርምጃ ያስፈልጋል",
+      "resolutionSummaryRequired": "የመፍትሄ ማጠቃለያ ያስፈልጋል",
+      "department": "መምሪያ",
+      "active": "ንቁ",
+      "variablesHint": "የሚገኙ ተለዋዋጮች:",
+      "cancel": "ይቅር",
+      "save": "ለውጦችን አስቀምጥ",
+      "add": "አብነት ያክሉ"
+    },
+    "categoryAssignments": {
+      "searchPlaceholder": "የምድብ ምደባዎችን ይፈልጉ…",
+      "allDepartments": "ሁሉም መምሪያዎች",
+      "addButton": "+ ምደባ ያክሉ",
+      "loading": "የምድብ ምደባዎች በመጫን ላይ…",
+      "loadFailed": "የምድብ ምደባዎችን መጫን አልተቻለም።",
+      "retry": "እንደገና ይሞክሩ",
+      "empty": "የሚዛመድ የምድብ ምደባ የለም።",
+      "inactive": "ቦዘተ",
+      "l1Officer": "L1 ኃላፊ",
+      "l2Officer": "L2 ኃላፊ",
+      "sla": "SLA",
+      "slaDays": "{count, plural, one {# ቀን} other {# ቀናት}}",
+      "autoEscalateOn": "ራስ-አመራር ነቅቷል",
+      "autoEscalateOff": "ራስ-አመራር ጠፍቷል",
+      "edit": "አርትዕ",
+      "deactivate": "አሰናክል",
+      "reactivate": "እንደገና አግብር",
+      "saveFailed": "ለውጡ ሊቀመጥ አልቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "addTitle": "የምድብ ምደባ ያክሉ",
+      "editTitle": "የምድብ ምደባ ያርትዑ",
+      "category": "የአገልግሎት ምድብ",
+      "selectCategory": "የአገልግሎት ምድብ ይምረጡ",
+      "categoryFixed": "ምድቡ ከተፈጠረ በኋላ አይቀየርም።",
+      "categoryRequired": "የአገልግሎት ምድብ ይምረጡ።",
+      "department": "መምሪያ",
+      "selectDepartment": "መምሪያ ይምረጡ",
+      "departmentRequired": "መምሪያ ይምረጡ።",
+      "selectOfficer": "ኃላፊ ይምረጡ",
+      "selectDepartmentFirst": "መጀመሪያ መምሪያ ይምረጡ",
+      "l1Required": "L1 ኃላፊ ይምረጡ።",
+      "none": "ምንም",
+      "slaDaysLabel": "የ SLA ቀናት",
+      "slaDaysPlaceholder": "የ SLA ቀናትን ያስገቡ",
+      "slaRequired": "ትክክለኛ የ SLA ቀናት ቁጥር ያስገቡ።",
+      "autoEscalateLabel": "ራስ-አመራር",
+      "cancel": "ይቅር",
+      "save": "ለውጦችን አስቀምጥ",
+      "add": "ምደባ ያክሉ"
+    },
+    "taxonomy": {
+      "addCategoryButton": "+ ምድብ ያክሉ",
+      "loading": "ምድቦች በመጫን ላይ…",
+      "loadFailed": "የአገልግሎት ምድቦችን መጫን አልተቻለም።",
+      "retry": "እንደገና ይሞክሩ",
+      "empty": "ምንም የአገልግሎት ምድብ አልተገኘም።",
+      "saveFailed": "ለውጡን ማስቀመጥ አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "close": "ዝጋ",
+      "cancel": "ሰርዝ",
+      "inactive": "ንቁ ያልሆነ",
+      "addCategoryTitle": "የአገልግሎት ምድብ ያክሉ",
+      "categoryName": "የምድብ ስም",
+      "nameRequired": "ስም ያስፈልጋል",
+      "nameTooLong": "ስሙ ከ140 ቁምፊዎች መብለጥ የለበትም",
+      "active": "ንቁ",
+      "categoryCreatedTypeFailed": "ምድቡ ተፈጥሯል፣ ነገር ግን የቅሬታ ዓይነቱ አልተፈጠረም፦ {reason} ዓይነቱን ብቻ እንደገና ለመሞከር ያክሉ የሚለውን እንደገና ይጫኑ።",
+      "authError": "ክፍለ ጊዜዎ አልቋል። እባክዎ እንደገና ይግቡ።",
+      "forbiddenError": "መለያዎ ይህን ለውጥ እንዲያደርግ አልተፈቀደለትም።",
+      "connectionError": "አገልጋዩን ማግኘት አልተቻለም። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።",
+      "grievanceTypeLabel": "የቅሬታ ዓይነት",
+      "grievanceTypePlaceholder": "የቅሬታ ዓይነት ያስገቡ",
+      "categoryNamePlaceholder": "የምድብ ስም ያስገቡ",
+      "typeRequired": "የቅሬታ ዓይነት ያስፈልጋል",
+      "slaDays": "የSLA ቀናት",
+      "slaDaysPlaceholder": "የSLA ቀናትን ያስገቡ",
+      "slaDaysInvalid": "የSLA ቀናት 1 ወይም ከዚያ በላይ ሙሉ ቁጥር መሆን አለባቸው",
+      "slaNotSaved": "የSLA ቅንብሮች እስካሁን አይቀመጡም።",
+      "autoEscalate": "በራስ-ሰር አሳድግ",
+      "saveShort": "አስቀምጥ",
+      "noCodeAvailable": "ለዚህ ስም የቲኬት ኮድ የለም። ሌላ ስም ይሞክሩ።",
+      "slaSaved": "SLA ተቀምጧል።",
+      "noDepartment": "ምንም መምሪያ አልተመደበም",
+      "categoryCreatedNotice": "\"{name}\" ከSLA ውቅሩ ጋር በተሳካ ሁኔታ ተፈጥሯል።",
+      "dismiss": "ዝጋ",
+      "serviceCategory": "የአገልግሎት ምድብ",
+      "autoEscalateOnBreach": "ጥሰት ሲከሰት በራስ-ሰር አሳድግ",
+      "notifyOnEscalation": "ሲያድግ አሳውቅ",
+      "enabled": "ነቅቷል",
+      "disabled": "ጠፍቷል",
+      "breachNotificationHint": "የ EC-016 SLA ጥሰት ማሳወቂያን ያስነሳል",
+      "saveSla": "SLA አስቀምጥ",
+      "milestonePreview": "የ SLA ምዕራፍ ቅድመ-እይታ",
+      "milestoneSubmit": "አስገባ",
+      "milestoneReminder": "50% አስታዋሽ",
+      "milestoneUrgent": "80% አስቸኳይ",
+      "milestoneDeadline": "የመጨረሻ ቀን",
+      "grievanceTypesHeading": "የቅሬታ ዓይነቶች",
+      "noGrievanceTypes": "በዚህ ምድብ ውስጥ እስካሁን ንቁ የቅሬታ ዓይነት የለም።",
+      "addGrievanceTypeLabel": "የቅሬታ ዓይነት ያክሉ",
+      "addType": "ያክሉ",
+      "deactivate": "አቦዝን",
+      "deactivateTypeLabel": "{name}ን አቦዝን",
+      "deactivateTypeConfirm": "ይህ ዓይነት መቅረቡ ይቁም? ያሉት ቅሬታዎች ይይዙታል።",
+      "deactivateCategory": "ምድቡን አቦዝን",
+      "deactivateCategoryConfirm": "ይህ ምድብ መቅረቡ ይቁም? ያሉት ቅሬታዎች ይይዙታል።",
+      "categoryDeactivatedNotice": "\"{name}\" ተቦዝኗል።",
+      "categoryRenameQueued": "SLA ተቀምጧል። ምድቡ ወደ \"{name}\" እየተቀየረ ነው — አዲሱ ስም ለውጡ ሲጠናቀቅ ይታያል።",
+      "categoryRenamePending": "ወደ \"{name}\" እየተቀየረ ነው…",
+      "department": "ክፍል",
+      "departmentHint": "አማራጭ። የዚህን ምድብ ዴስክ ባለ ክፍል ውስጥ ይከፍታል፤ ኃላፊዎች በኋላ ይጨመራሉ።",
+      "departmentNone": "ገና ክፍል የለም"
+    },
+    "slaPolicy": {
+      "loading": "ፖሊሲ በመጫን ላይ…",
+      "loadFailed": "አጠቃላይ የSLA ፖሊሲን መጫን አልተቻለም።",
+      "saved": "አጠቃላይ የSLA ፖሊሲ ተቀምጧል።",
+      "saveFailed": "ፖሊሲውን ማስቀመጥ አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+      "deferralDaysInvalid": "ከፍተኛው የማራዘሚያ ጊዜ 1 ወይም ከዚያ በላይ ሙሉ የቀናት ቁጥር መሆን አለበት።",
+      "thresholdInvalid": "ገደቡ ከ1 እስከ 100 ያለ ሙሉ በመቶ መሆን አለበት።",
+      "authError": "ክፍለ ጊዜዎ አልቋል። እባክዎ እንደገና ይግቡ።",
+      "forbiddenError": "መለያዎ የ SLA ፖሊሲን እንዲቀይር አልተፈቀደለትም።",
+      "connectionError": "አገልጋዩን ማግኘት አልተቻለም። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።",
+      "title": "አጠቃላይ የ SLA ፖሊሲ",
+      "description": "በሁሉም የቅሬታ ምድቦች ላይ የሚተገበሩ ነባሪ ቅንብሮች፣ ካልተሻሻሉ በስተቀር።",
+      "maxDeferralLabel": "ከፍተኛ የ SLA ማዘግያ (ቀናት)",
+      "maxDeferralHint": "አንድ የማዘግያ ጥያቄ ወደ SLA ሰዓት ቆጣሪ ሊጨምር የሚችለው ከፍተኛ የቀናት ብዛት።",
+      "thresholdLabel": "በራስ-ሰር የማሳደግ ገደብ (%)",
+      "thresholdHint": "SLA በዚህ መቶኛ ሲበላ ያሳድጉ (100% = በመጨረሻው ቀን)።",
+      "deferralPolicyLabel": "የማዘግያ ማጽደቅ ፖሊሲ",
+      "l2ApprovalLabel": "የ L2 ከፍተኛ ኃላፊ ማጽደቅ ይጠየቃል",
+      "l1SelfApproveLabel": "L1 ኃላፊ በራሱ ያጽድቅ (አይመከርም)",
+      "saveButton": "አጠቃላይ ፖሊሲን አስቀምጥ"
+    },
+    "notifications": {
+      "banner": "ኤፍኤስዲ አባሪ ሐ — የማሳወቂያ ማትሪክስ እና ደንቦች። የተፈቀዱ ተለዋዋጮች: '{ticket_number}', '{service_category}', '{grievance_type}', '{assigned_dept}', '{status}', እና ሌሎችም።",
+      "total": "ጠቅላላ",
+      "active": "ንቁ",
+      "disabled": "ቦዝኗል",
+      "sms": "ኤስኤምኤስ",
+      "email": "ኢሜይል",
+      "searchPlaceholder": "በክስተት፣ ቀስቃሽ፣ ርዕስ ወይም አካል ይፈልጉ…",
+      "allChannels": "ሁሉም ቻናሎች",
+      "allStatus": "ሁሉም ሁኔታዎች",
+      "allRecipients": "ሁሉም ተቀባዮች",
+      "refreshTooltip": "አብነቶችን አድስ",
+      "loading": "የማሳወቂያ አብነቶች በመጫን ላይ…",
+      "loadFailed": "የማሳወቂያ አብነቶችን መጫን አልተቻለም።",
+      "tryAgain": "እንደገና ይሞክሩ",
+      "noTemplatesFound": "ከማጣሪያዎችዎ ጋር የሚዛመድ የማሳወቂያ አብነት አልተገኘም።",
+      "paginationWarning": "ከ {total} አብነቶች ውስጥ {count} እየታዩ ነው። አንዳንድ አብነቶች በዚህ ገጽ ላይ ላይታዩ ይችላሉ።",
+      "previous": "ቀዳሚ",
+      "next": "ቀጣይ",
+      "pageOf": "ገጽ {page} ከ {total}",
+      "trigger": "ቀስቃሽ",
+      "to": "ለ",
+      "variables": "ተለዋዋጮች",
+      "condition": "ሁኔታ",
+      "enableRule": "ደንብ አግብር",
+      "disableRule": "ደንብ አቦዝን",
+      "editTemplate": "የማሳወቂያ አብነት ያርትዑ",
+      "closeEditor": "አርታዒ ዝጋ",
+      "emailSubject": "የኢሜይል ርዕስ",
+      "insert": "አስገባ:",
+      "insertSubject": "{token} በርዕስ ውስጥ አስገባ",
+      "channel": "ቻናል",
+      "recipient": "ተቀባይ",
+      "templateBody": "የአብነት አካል",
+      "clickToInsert": "ለማስገባት መለያውን ጠቅ ያድርጉ:",
+      "bodyPlaceholder": "የአብነት አካል እዚህ ያስገቡ…",
+      "cancel": "ይቅር",
+      "saveTemplate": "አብነት አስቀምጥ",
+      "saving": "በማስቀመጥ ላይ…",
+      "failedUpdateStatus": "ሁኔታን ማዘመን አልተቻለም",
+      "failedSaveTemplate": "አብነት ማስቀመጥ አልተቻለም"
+    }
+  },
+  "supportingDocuments": {
+    "label": "ደጋፊ ሰነዶች",
+    "prompt": "<strong>ለመስቀል ይጫኑ</strong> ወይም ጎትተው ይጣሉ",
+    "hint": "PDF፣ JPG ወይም PNG እያንዳንዱ እስከ 10MB",
+    "rejected": "አንዳንድ ፋይሎች ተዘለዋል። እስከ 10MB የሆኑ PDF፣ JPG ወይም PNG ፋይሎች ብቻ ሊያያዙ ይችላሉ።",
+    "remove": "{name}ን አስወግድ",
+    "uploadFailed": "ሰነዶቹ ሊሰቀሉ ስላልቻሉ ምላሹ አልተላከም። እባክዎ እንደገና ይሞክሩ።"
+  },
+  "reviewPopups": {
+    "reassignmentTitle": "Review Reassignment",
+    "deferralTitle": "Review Deferral",
+    "reviewingRequestFrom": "Reviewing request from {role}",
+    "requestedByRole": "Requested by {role}",
+    "requestedChange": "Requested Change",
+    "currentDeadline": "Current Deadline",
+    "requestedExtension": "Requested Extension",
+    "category": "Category",
+    "officer": "Officer",
+    "unassigned": "Unassigned",
+    "requestedBy": "Requested By",
+    "justification": "Justification",
+    "noJustification": "No justification provided.",
+    "submittedAt": "Submitted {date}",
+    "yourComments": "Your Comments",
+    "requiredRejecting": "(required if rejecting, min. 20 characters)",
+    "optionalApproving": "Optional when approving.",
+    "auditWarning": "Your decision is logged in the audit trail. The officer will be notified immediately.",
+    "reject": "Reject",
+    "approve": "Approve",
+    "failedSubmit": "Failed to submit decision",
+    "officerRole": "Grievance Officer"
+  },
+  "dashboard": {
+    "recentGrievances": {
+      "title": "የቅርብ ጊዜ ቅሬታዎች",
+      "viewAll": "ሁሉንም ይመልከቱ",
+      "loading": "የቅርብ ጊዜ ቅሬታዎች በመጫን ላይ…",
+      "loadFailed": "የቅርብ ጊዜ ቅሬታዎችን መጫን አልተቻለም።",
+      "retry": "እንደገና ይሞክሩ",
+      "empty": "እስካሁን ምንም ቅሬታ የለም።"
+    },
+    "overview": {
+      "loading": "የዳሽቦርድ ስታቲስቲክስ በመጫን ላይ…",
+      "loadFailed": "የዳሽቦርድ ስታቲስቲክስን መጫን አልተቻለም።",
+      "forbidden": "የዳሽቦርድ ስታቲስቲክስን የማየት ፈቃድ የለዎትም።",
+      "retry": "እንደገና ይሞክሩ",
+      "viewAll": "ሁሉንም ይመልከቱ",
+      "escalatedBanner": "{count, plural, one {<strong># ወደ ከፍተኛ ደረጃ የተሸጋገረ ቅሬታ</strong> አስቸኳይ የከፍተኛ ባለሙያ ትኩረት ይፈልጋል።} other {<strong># ወደ ከፍተኛ ደረጃ የተሸጋገሩ ቅሬታዎች</strong> አስቸኳይ የከፍተኛ ባለሙያ ትኩረት ይፈልጋሉ።}}",
+      "retrying": "እንደገና በመሞከር ላይ…",
+      "sectionUnavailable": "ይህን ክፍል መጫን አልተቻለም።",
+      "escalatedUnavailable": "ወደ ከፍተኛ ደረጃ የተሸጋገሩ ቅሬታዎችን ብዛት መጫን አልተቻለም።",
+      "unavailableValue": "አይገኝም",
+      "uncategorised": "ያልተመደበ",
+      "otherCategories": "{count, plural, one {# ሌላ ምድብ} other {# ሌሎች ምድቦች}}",
+      "noCategories": "በምድብ የሚመደብ ቅሬታ እስካሁን የለም።",
+      "title": "የOAN ቅሬታ ዳሽቦርድ",
+      "subtitle": "የግብርና ዘርፍ ቅሬታዎች — የኢትዮጵያ OAN ፖርታል",
+      "kpi": {
+        "total": "ጠቅላላ ቅሬታዎች",
+        "awaiting_action": "እርምጃ በመጠባበቅ ላይ",
+        "resolved": "የተፈቱ",
+        "escalated": "ወደ ከፍተኛ ደረጃ የተሸጋገሩ",
+        "fromLastMonth": "ከባለፈው ወር",
+        "newThisWeek": "በዚህ ሳምንት አዲስ",
+        "resolvedThisWeek": "በዚህ ሳምንት የተፈቱ"
+      },
+      "byServiceCategory": "በአገልግሎት ምድብ",
+      "statusDistribution": "የሁኔታ ስርጭት",
+      "statusTotal": "ጠቅላላ",
+      "monthlyTrend": "ወርሃዊ የቅሬታ ማቅረብና የመፍታት አዝማሚያ",
+      "submitted": "የቀረቡ",
+      "resolved": "የተፈቱ",
+      "statuses": {
+        "submitted": "የቀረበ",
+        "assigned": "የተመደበ",
+        "inProgress": "በሂደት ላይ",
+        "moreInfoNeeded": "ተጨማሪ መረጃ ያስፈልጋል",
+        "resolved": "የተፈታ",
+        "closed": "የተዘጋ",
+        "rejected": "ውድቅ የተደረገ"
+      },
+      "noStatuses": "በሁኔታ የሚታይ ቅሬታ እስካሁን የለም።",
+      "escalatedCaption": "በSLA ጥሰት የሚቀሰቀስ",
+      "levels": {
+        "title": "ቅሬታዎች በአስተዳደራዊ ደረጃ",
+        "loading": "በአስተዳደራዊ ደረጃ የተቆጠሩ ቅሬታዎችን በመጫን ላይ…",
+        "forbidden": "በአስተዳደራዊ ደረጃ የተቆጠሩ ቅሬታዎችን የማየት ፈቃድ የለዎትም።",
+        "federal": "ፌዴራል",
+        "regions": "ክልሎች",
+        "woredas": "ወረዳዎች",
+        "woredasIn": "በ{region} ያሉ ወረዳዎች",
+        "topWoredas": "ከፍተኛ ቅሬታ ያላቸው ወረዳዎች",
+        "more": "{count, plural, one {+# ተጨማሪ} other {+# ተጨማሪ}}",
+        "selectHint": "ዳሽቦርዱን ለማጥበብ ክልል ይምረጡ።",
+        "noWoredas": "በዚህ ክልል በማንኛውም ወረዳ እስካሁን ቅሬታ የለም።",
+        "noData": "ለአካባቢዎ የሚቆጠር ቅሬታ እስካሁን የለም።",
+        "filteredBy": "ዳሽቦርዱ ለ{region} እየታየ ነው።",
+        "clear": "ሁሉንም ክልሎች አሳይ"
+      }
+    }
+  },
+  "analytics": {
+    "title": "ትንተናና ሪፖርት",
+    "subtitle": "የግብርና ቅሬታ አፈጻጸም መለኪያዎች — የኢትዮጵያ OAN፣ {month}",
+    "monthLabel": "የሪፖርት ወር",
+    "dataAsOf": "መረጃው እስከ {time}",
+    "filters": {
+      "title": "ማጣሪያዎች",
+      "region": "ክልል",
+      "category": "የአገልግሎት ምድብ",
+      "department": "ክፍል",
+      "allRegions": "ሁሉም ክልሎች",
+      "allCategories": "ሁሉም ምድቦች",
+      "allDepartments": "ሁሉም ክፍሎች",
+      "clear": "ማጣሪያዎችን አጽዳ",
+      "unavailable": "አንዳንድ ማጣሪያዎችን መጫን አልተቻለም።"
+    },
+    "loading": "ትንተናውን በመጫን ላይ…",
+    "loadFailed": "ትንተናውን መጫን አልተቻለም።",
+    "forbidden": "ትንተናውን የማየት ፈቃድ የለዎትም።",
+    "retry": "እንደገና ይሞክሩ",
+    "sectionUnavailable": "ይህን ክፍል መጫን አልተቻለም።",
+    "noData": "የሚታይ መረጃ እስካሁን የለም።",
+    "uncategorised": "ያልተመደበ",
+    "kpi": {
+      "avg_resolution_time": "አማካይ የመፍቻ ጊዜ",
+      "resolution_rate": "የመፍታት መጠን",
+      "escalation_rate": "ወደ ከፍተኛ ደረጃ የመሸጋገር መጠን",
+      "satisfaction": "የአርሶ አደር እርካታ",
+      "days": "ቀናት",
+      "unavailableValue": "—",
+      "deltaDays": "ከባለፈው ወር {delta} ቀናት",
+      "deltaPercent": "ከባለፈው ወር {delta}%",
+      "deltaOther": "ከባለፈው ወር {delta} {unit}",
+      "basedOn": "{count, plural, one {በ# ምላሽ ላይ የተመሠረተ} other {በ# ምላሾች ላይ የተመሠረተ}}"
+    },
+    "weeklyTrend": "ሳምንታዊ የቅሬታ ማቅረብ እና የመፍታት ንጽጽር",
+    "received": "የተቀበልናቸው",
+    "resolved": "የተፈቱ",
+    "regionResolution": "በክልል የመፍታት መጠን (%)",
+    "allTime": "ሁሉም ጊዜ",
+    "avgResolution": "በምድብ አማካይ የመፍቻ ቀናት",
+    "avgResolutionSeries": "አማካይ የመፍቻ ጊዜ",
+    "avgDaysValue": "በአማካይ {days} ቀናት",
+    "daysTick": "{days}ቀ",
+    "casesBehind": "{count, plural, one {# የተፈታ ቅሬታ} other {# የተፈቱ ቅሬታዎች}}",
+    "performanceScore": "የሥርዓቱ አፈጻጸም ውጤት",
+    "noScore": "መረጃ የለም",
+    "scoreBasis": "{count, plural, one {በ# ቅሬታ ላይ የተመሠረተ} other {በ# ቅሬታዎች ላይ የተመሠረተ}}",
+    "axis": {
+      "timeliness": "ወቅታዊነት",
+      "resolution_rate": "የመፍታት መጠን",
+      "satisfaction": "እርካታ",
+      "transparency": "ግልጽነት",
+      "follow_up": "ክትትል",
+      "coverage": "ሽፋን"
+    },
+    "regionTooltip": "ከ{total} ውስጥ {resolved} ተፈተዋል",
+    "categoryVolume": "በአገልግሎት ምድብ የቅሬታ ብዛትና የመፍታት ሁኔታ",
+    "filed": "የቀረቡ",
+    "resolvedOnTime": "{count} በጊዜው የተፈቱ",
+    "resolvedBreached": "{count} ከSLA በኋላ የተፈቱ"
+  },
+  "login": {
+    "backToRoles": "ሌላ ሚና ይምረጡ",
+    "welcomeTitle": "ወደ ፖርታሉ እንኳን በደህና መጡ",
+    "welcomeSubtitle": "የቅሬታ አያያዝ ፖርታልን ለመድረስ ሚናዎን ይምረጡ።",
+    "nextStep": "ቀጣይ ደረጃ",
+    "roleFarmerTitle": "አርሶ አደር አመልካች",
+    "roleFarmerDesc": "የግብርና ቅሬታዎችዎን ያቅርቡ እና ይከታተሉ",
+    "roleOrgTitle": "የድርጅት መግቢያ",
+    "roleOrgDesc": "ለNGOዎች፣ ለኅብረት ሥራ ማኅበራት እና ለFPOዎች ቅሬታዎችን ያቅርቡ እና ይከታተሉ",
+    "roleAgentTitle": "የልማት ጣቢያ ሠራተኛ",
+    "roleAgentDesc": "አርሶ አደሮችን ያግዙ እና ከመስክ ቅሬታዎችን ያቅርቡ",
+    "roleStaffTitle": "የሠራተኞች መግቢያ",
+    "roleStaffDesc": "የቅሬታ ጉዳዮችን ይመድቡ፣ ይመረምሩ እና ይፍቱ",
+    "switchAccount": "ይውጡና ሌላ መለያ ይጠቀሙ",
+    "switchingAccount": "በመውጣት ላይ…",
+    "switchAccountHint": "እዚህ መዳረሻ በሌለው የሠራተኛ መለያ ገብተዋል። መውጣት ከመዝገቡ እና ከሌሎች OpenG2P መተግበሪያዎችም ያስወጣዎታል።",
+    "switchAccountFailed": "ከሠራተኛ መለያው ማስወጣት አልተቻለም። ከመዝገቡ ይውጡና እንደገና ይሞክሩ።",
+    "noSignInMethod": "ምንም የመግቢያ ዘዴ አልተዋቀረም። አስተዳዳሪን ያነጋግሩ።"
+  },
+  "attachmentViewer": {
+    "loadingPreview": "ቅድመ እይታ በመጫን ላይ",
+    "previewUnavailable": "ቅድመ እይታ አይገኝም",
+    "previewLoadFailed": "ይህን ፋይል አሁን መጫን አልተቻለም።",
+    "scanPending": "ቅኝቱ እስኪጠናቀቅ ድረስ አይገኝም።",
+    "scanInfected": "ይህ ፋይል የተንኮል አዘል ሶፍትዌር ቅኝት አላለፈም፤ ሊከፈት አይችልም።",
+    "scanFailed": "የተንኮል አዘል ሶፍትዌር ቅኝቱ ሊጠናቀቅ አልቻለም፤ ስለዚህ ይህ ፋይል ሊከፈት አይችልም።"
+  },
+  "grievanceList": {
+    "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ..."
+  },
+  "validation": {
+    "characterCount": "{count} / {max}",
+    "tooLong": "ከ{max} ቁምፊዎች መብለጥ የለበትም።",
+    "charactersRemaining": "{count, plural, one {# ቁምፊ ቀርቷል} other {# ቁምፊዎች ቀርተዋል}}"
+  }
+}
