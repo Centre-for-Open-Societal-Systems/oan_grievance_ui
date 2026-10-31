@@ -15,6 +15,7 @@
       "consentCheckboxLabel": "ብሔራዊ መታወቂያ ቁጥሬን ለማንነት ማረጋገጫ ለመስጠት እስማማለሁ።",
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
+      "selectCategoryFirst": "መጀመሪያ ምድብ ይምረጡ",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",
       "organisationNotice": "ከገቡ በኋላ የድርጅትዎን ዝርዝሮች — ስም፣ የምዝገባ ቁጥር፣ ስልጣን የተሰጠው ተወካይ፣ አድራሻ እና የመገናኛ መረጃ — እንጠይቅዎታለን።",
       "faydaAlreadyRegistered": "ይህ የፋይዳ መታወቂያ አስቀድሞ በሌላ መለያ ተመዝግቧል።",
@@ -703,6 +704,8 @@
     "noSignInMethod": "ምንም የመግቢያ ዘዴ አልተዋቀረም። አስተዳዳሪን ያነጋግሩ።"
   },
   "attachmentViewer": {
+    "playRecording": "ቅጂውን ያጫውቱ",
+    "voiceNote": "የድምፅ ቅጂ",
     "loadingPreview": "ቅድመ እይታ በመጫን ላይ",
     "previewUnavailable": "ቅድመ እይታ አይገኝም",
     "previewLoadFailed": "ይህን ፋይል አሁን መጫን አልተቻለም።",
@@ -711,7 +714,12 @@
     "scanFailed": "የተንኮል አዘል ሶፍትዌር ቅኝቱ ሊጠናቀቅ አልቻለም፤ ስለዚህ ይህ ፋይል ሊከፈት አይችልም።"
   },
   "grievanceList": {
-    "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ..."
+    "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ...",
+    "actionView": "ይመልከቱ",
+    "actionEdit": "አርትዕ",
+    "slaDueToday": "ዛሬ ይጠናቀቃል",
+    "slaDueSoon": "{days, plural, one {# ቀን ይቀራል} other {# ቀናት ይቀራሉ}}",
+    "slaOverdue": "{days, plural, one {ከ# ቀን በፊት ተላልፏል} other {ከ# ቀናት በፊት ተላልፏል}}"
   },
   "validation": {
     "characterCount": "{count} / {max}",

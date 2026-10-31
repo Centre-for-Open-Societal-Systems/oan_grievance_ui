@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import {
   buildInitialIdentityValues,
   identityAfterReset,
+  isIndividualFarmer,
   isSubmitterTypeLocked,
   resolveInitialSubmissionChannel,
   resolveInitialSubmitterType,
@@ -296,7 +297,8 @@ export default function SubmitGrievancePage() {
             setSubmissionChannel={setSubmissionChannel}
             identityValues={identityValues}
             setIdentityValue={setIdentityValue}
-            submitterTypeLocked={isSubmitterTypeLocked(user)}
+            submitterTypeLocked={isSubmitterTypeLocked(user) || isIndividualFarmer(user)}
+            isSubmissionChannelLocked={isIndividualFarmer(user)}
             readOnlyFields={providerOwnedFields}
             profileSubmitterType={user?.submitter_type || user?.type}
             profileSubmissionChannel={user?.submission_channel}

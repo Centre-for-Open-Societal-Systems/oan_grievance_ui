@@ -8,16 +8,19 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Pencil,
+  Eye,
   ArrowUpCircle,
   SlidersHorizontal,
   FileQuestion,
   Loader2,
   AlertCircle,
+  Clock,
   X
 } from 'lucide-react';
 import type { Grievance } from '../types';
 import type { FilterOption } from './FilterDropdown';
-import { statusBadgeClass } from '../utils/statusStyles';
+import { isMoreInfoStatus, statusBadgeClass } from '../utils/statusStyles';
+import { getSlaReminder, slaBadgeClass, slaRowClass, type SlaReminder } from '../utils/slaReminder';
 
 
 function renderSubmittedAt(submittedAt?: string | null) {
@@ -59,7 +62,8 @@ export function GrievanceTable({
   selectedCategories,
   setSelectedCategories,
   onClearFilters,
-  onViewGrievance
+  onViewGrievance,
+  isEditLimitedToMoreInfo = false
 }: {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -82,8 +86,16 @@ export function GrievanceTable({
   setSelectedCategories: (values: string[]) => void;
   onClearFilters: () => void;
   onViewGrievance: (grievance: Grievance) => void;
+  /** My Grievances: a submitter only edits a case that needs more information from them; every other row is View. */
+  isEditLimitedToMoreInfo?: boolean;
 }) {
   const t = useTranslations('grievanceList');
+  const reminderText = (reminder: SlaReminder) =>
+    reminder.kind === 'dueToday'
+      ? t('slaDueToday')
+      : reminder.kind === 'dueSoon'
+        ? t('slaDueSoon', { days: reminder.days })
+        : t('slaOverdue', { days: reminder.days });
   const [openFilter, setOpenFilter] = React.useState<string | null>(null);
 
   const handlePageChange = (page: number) => {
@@ -207,8 +219,10 @@ export function GrievanceTable({
                 </tr>
               ))
             ) : grievances.length > 0 ? (
-              grievances.map((grievance: Grievance) => (
-                <tr key={grievance.id} className="hover:bg-gray-50/80 transition-colors group">
+              grievances.map((grievance: Grievance) => {
+                const reminder = getSlaReminder(grievance.slaDueAt, grievance.status);
+                return (
+                <tr key={grievance.id} className={`${slaRowClass(reminder)} transition-colors group`}>
                   <td className="px-3.5 py-4 font-semibold text-gray-900 text-xs sm:text-sm">
                     <span className="truncate block font-mono sm:font-sans" title={grievance.ticketId}>
                       {grievance.ticketId}
@@ -246,6 +260,14 @@ export function GrievanceTable({
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold leading-tight ${statusBadgeClass(grievance.status)}`}>
                       {grievance.status}
                     </span>
+                    {reminder && (
+                      <span
+                        className={`mt-1.5 flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-tight ${slaBadgeClass(reminder)}`}
+                      >
+                        <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
+                        {reminderText(reminder)}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3.5 py-4">
                     {renderSubmittedAt(grievance.submittedAt)}
@@ -255,12 +277,22 @@ export function GrievanceTable({
                       onClick={() => onViewGrievance(grievance)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#E6F3EA] border border-[#C9E5D2] text-green-700 hover:bg-[#C8E6C9] rounded-full text-xs font-semibold transition-colors opacity-90 group-hover:opacity-100"
                     >
-                      <Pencil className="h-3.5 w-3.5 shrink-0" />
-                      Edit
+                      {isEditLimitedToMoreInfo && !isMoreInfoStatus(grievance.status) ? (
+                        <>
+                          <Eye className="h-3.5 w-3.5 shrink-0" />
+                          {t('actionView')}
+                        </>
+                      ) : (
+                        <>
+                          <Pencil className="h-3.5 w-3.5 shrink-0" />
+                          {t('actionEdit')}
+                        </>
+                      )}
                     </button>
                   </td>
                 </tr>
-              ))
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={7} className="px-6 py-24 text-center text-gray-500">

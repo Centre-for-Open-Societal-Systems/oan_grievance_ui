@@ -23,23 +23,24 @@ const KPI_ORDER: KpiMetric[] = ['total', 'awaiting_action', 'resolved', 'escalat
  * the colour is looked up by label (case and spacing forgiven). A label this app
  * has not met gets the grey fallback rather than breaking the donut.
  */
-const STATUS_COLORS: Record<string, string> = {
-  submitted: '#4f46e5',
-  assigned: '#3b82f6',
-  'in progress': '#6366f1',
-  'more info needed': '#f97316',
-  resolved: '#10b981',
+export const STATUS_COLORS: Record<string, string> = {
+  submitted: '#0ea5e9',
+  assigned: '#4f46e5',
+  'in progress': '#16a34a',
+  'under review': '#7c3aed',
+  'more info needed': '#db2777',
+  resolved: '#0f766e',
   closed: '#374151',
-  rejected: '#ef4444',
+  rejected: '#dc2626',
 };
 const FALLBACK_STATUS_COLOR = '#9ca3af';
 
 /** Bar colours, cycled by rank. Full class names so Tailwind sees them. */
-const CATEGORY_COLORS = ['bg-[#2563eb]', 'bg-[#6366f1]', 'bg-[#a855f7]', 'bg-[#c084fc]', 'bg-[#d8b4fe]'];
+const CATEGORY_COLORS = ['bg-[#0ea5e9]', 'bg-[#16a34a]', 'bg-[#f59e0b]', 'bg-[#7c3aed]', 'bg-[#db2777]'];
 const REMAINDER_COLOR = 'bg-gray-400';
 
 function categoryColor(rank: number): string {
-  return CATEGORY_COLORS[rank % CATEGORY_COLORS.length] ?? 'bg-[#2563eb]';
+  return CATEGORY_COLORS[rank % CATEGORY_COLORS.length] ?? 'bg-[#0ea5e9]';
 }
 
 /** How many categories the card lists by name; any further ones are added up in one row. */

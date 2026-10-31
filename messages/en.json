@@ -15,6 +15,7 @@
       "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
+      "selectCategoryFirst": "Select a category first",
       "fieldRequired": "This field is required.",
       "organisationNotice": "After you sign in, we'll ask for your organisation's details — name, registration number, authorised representative, address and contacts.",
       "faydaAlreadyRegistered": "This Fayda ID is already registered to another account.",
@@ -703,6 +704,8 @@
     "noSignInMethod": "No sign-in method is configured. Contact an administrator."
   },
   "attachmentViewer": {
+    "playRecording": "Play recording",
+    "voiceNote": "Voice recording",
     "loadingPreview": "Loading preview",
     "previewUnavailable": "Preview unavailable",
     "previewLoadFailed": "Could not load this file right now.",
@@ -711,7 +714,12 @@
     "scanFailed": "The malware scan could not be completed, so this file cannot be opened."
   },
   "grievanceList": {
-    "searchPlaceholder": "Search by ticket number, submitter name, or grievance type..."
+    "searchPlaceholder": "Search by ticket number, submitter name, or grievance type...",
+    "actionView": "View",
+    "actionEdit": "Edit",
+    "slaDueToday": "Due today",
+    "slaDueSoon": "{days, plural, one {# day left} other {# days left}}",
+    "slaOverdue": "{days, plural, one {Breached # day ago} other {Breached # days ago}}"
   },
   "validation": {
     "characterCount": "{count} / {max}",

@@ -107,6 +107,42 @@ describe('GrievanceTable', () => {
     expect(onViewGrievance).toHaveBeenCalledWith(mockGrievances[0]);
   });
 
+  it("shows View instead of Edit for a submitter unless the case needs more information", () => {
+    const { container } = renderIntl(
+      <GrievanceTable
+        {...defaultProps}
+        isEditLimitedToMoreInfo
+        grievances={[
+          { ...mockGrievances[0]!, status: "In Progress" },
+          { ...mockGrievances[1]!, status: "Require More Info" },
+        ]}
+      />
+    );
+    const view = within(container);
+    expect(view.getAllByRole("button", { name: /^view$/i }).length).toBe(1);
+    expect(view.getAllByRole("button", { name: /^edit$/i }).length).toBe(1);
+  });
+
+  it('flags a case about to breach with a badge and a coloured row, and leaves a breached one plain', () => {
+    const day = 86_400_000;
+    const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * day).toISOString();
+    const { container } = renderIntl(
+      <GrievanceTable
+        {...defaultProps}
+        grievances={[
+          { ...mockGrievances[0]!, id: 'a', ticketId: 'T-SOON', status: 'In Progress', slaDueAt: iso(2) },
+          { ...mockGrievances[1]!, id: 'b', ticketId: 'T-LATE', status: 'In Progress', slaDueAt: iso(-3) },
+        ]}
+      />
+    );
+    const view = within(container);
+
+    expect(view.getByText(/days? left|Due today/)).toBeTruthy();
+    expect(view.getByText(/Breached 3 days ago/)).toBeTruthy();
+    expect(view.getByText('T-SOON').closest('tr')?.className).toMatch(/bg-(amber|orange)-50/);
+    expect(view.getByText('T-LATE').closest('tr')?.className).not.toMatch(/bg-(amber|orange|red)-50/);
+  });
+
   it('renders empty state when there are no records', () => {
     const { container } = renderIntl(
       <GrievanceTable {...defaultProps} grievances={[]} totalItems={0} totalPages={0} />

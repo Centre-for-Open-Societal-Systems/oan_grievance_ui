@@ -122,6 +122,7 @@ export function mapGrievanceListItem(item: GrievanceListItem): Grievance {
     department: item.department ?? item.assigned_dept ?? '',
     assignedTo: item.assigned_to ?? '',
     slaDueDate: formatDate(item.sla_due_date),
+    slaDueAt: item.sla_due_date ?? undefined,
     submissionChannel: item.submission_channel ?? '',
     description: item.description ?? '',
     administrativeArea: item.administrative_area ?? '',

@@ -5,6 +5,7 @@ import { useAppSelector } from "@/store/hooks";
 import { selectUser } from "@/features/auth/store/authSlice";
 import { fullNameOf, getFullProfile, mobileOf, resolveFaydaId, type BackendAuthMeData } from "@/features/auth/api/authApi";
 import { logger } from "@/lib/logger";
+import { maskIdKeepLast4 } from "@/lib/maskId";
 import { UserCircle, Loader2, AlertTriangle, Info, Eye, EyeOff } from "lucide-react";
 
 function initialsFor(name: string): string {
@@ -54,8 +55,8 @@ function MaskedField({ label, value }: { label: string; value: string | null | u
       <div className="relative">
         <input
           id={id}
-          type={revealed ? "text" : "password"}
-          value={displayValue(value)}
+          type="text"
+          value={hasValue && !revealed ? maskIdKeepLast4(value as string) : displayValue(value)}
           readOnly
           className={`${lockedFieldClass} pr-10`}
         />

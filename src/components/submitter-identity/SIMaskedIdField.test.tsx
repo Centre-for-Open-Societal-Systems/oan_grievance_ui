@@ -35,3 +35,36 @@ describe('SIMaskedIdField', () => {
     expect(input).toHaveAttribute('type', 'password');
   });
 });
+
+describe('SIMaskedIdField masking at rest', () => {
+  const FULL = '1234567890123456';
+  const MASKED = '••••••••••••3456';
+
+  it('shows only the last four characters until the field is used, without ever showing the rest', () => {
+    vi.stubGlobal('CSS', { supports: () => true });
+    renderField();
+
+    expect(screen.getByText(MASKED)).toBeInTheDocument();
+    expect(screen.queryByText(FULL)).not.toBeInTheDocument();
+  });
+
+  it('swaps the overlay out for the real value while it is being edited, and back on blur', () => {
+    vi.stubGlobal('CSS', { supports: () => true });
+    const input = renderField();
+
+    fireEvent.focus(input);
+    expect(screen.queryByText(MASKED)).not.toBeInTheDocument();
+
+    fireEvent.blur(input);
+    expect(screen.getByText(MASKED)).toBeInTheDocument();
+  });
+
+  it('shows the whole number only after the explicit reveal', () => {
+    vi.stubGlobal('CSS', { supports: () => true });
+    renderField();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show ID number' }));
+    expect(screen.queryByText(MASKED)).not.toBeInTheDocument();
+    expect(document.getElementById('fayda')).toHaveValue(FULL);
+  });
+});
