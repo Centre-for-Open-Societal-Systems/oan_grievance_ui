@@ -53,7 +53,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
             <Bar
               dataKey="submitted"
               name={t("submitted")}
-              fill="#2563eb"
+              fill="#0ea5e9"
               radius={[2, 2, 0, 0]}
               maxBarSize={30}
               isAnimationActive={true}
@@ -63,7 +63,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
             <Bar
               dataKey="resolved"
               name={t("resolved")}
-              fill="#10b981"
+              fill="#0f766e"
               radius={[2, 2, 0, 0]}
               maxBarSize={30}
               isAnimationActive={true}

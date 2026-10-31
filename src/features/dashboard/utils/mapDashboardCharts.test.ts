@@ -88,10 +88,10 @@ describe('mapDashboardCharts', () => {
     });
 
     expect(statusDistribution).toEqual([
-      { name: 'Submitted', value: 64, color: '#4f46e5' },
-      { name: 'Rejected', value: 2, color: '#ef4444' },
+      { name: 'Submitted', value: 64, color: '#0ea5e9' },
+      { name: 'Rejected', value: 2, color: '#dc2626' },
       { name: 'Something New', value: 1, color: '#9ca3af' },
-      { name: 'in_progress', value: 5, color: '#6366f1' },
+      { name: 'in_progress', value: 5, color: '#16a34a' },
     ]);
   });
 

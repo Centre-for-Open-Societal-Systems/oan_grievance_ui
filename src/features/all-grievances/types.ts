@@ -114,6 +114,8 @@ export interface Grievance {
   department: string;
   assignedTo: string;
   slaDueDate: string;
+  /** The backend's raw `sla_due_date`, for working out how close the case is to breaching. */
+  slaDueAt?: string;
   submissionChannel: string;
   description?: string;
   administrativeArea?: string;

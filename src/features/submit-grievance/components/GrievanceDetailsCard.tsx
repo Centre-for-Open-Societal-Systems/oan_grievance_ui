@@ -256,8 +256,11 @@ export function GrievanceDetailsCard({
   // Whether the category/type now showing were filled in by a recording (not picked by the user), so deleting
   // the recording can take them back out again.
   const filledByVoice = useRef(false);
-  // Set when a recording is made with no category chosen: "Other" is filled in as soon as the options it comes
-  // from have loaded (a recording can finish before they do), then this is cleared.
+  // What the submitter had chosen before a recording put "Other" in its place, so deleting the recording gives
+  // their choice back. Null while no recording has replaced anything.
+  const beforeVoice = useRef<{ category: string; type: string } | null>(null);
+  // Set when a recording is made: "Other" is filled in as soon as the options it comes from have loaded
+  // (a recording can finish before they do), then this is cleared.
   const wantsOtherFill = useRef(false);
   const otherType = otherTypes.find((o) => o.label.toLowerCase() === "other")?.value;
 
@@ -273,7 +276,7 @@ export function GrievanceDetailsCard({
 
   /* eslint-disable react-hooks/exhaustive-deps -- reacts to the options arriving; fillOther only reads them */
   useEffect(() => {
-    if (wantsOtherFill.current && !serviceCategory && !grievanceType) fillOther();
+    if (wantsOtherFill.current) fillOther();
   }, [otherCategory, otherType]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -289,9 +292,9 @@ export function GrievanceDetailsCard({
     ]);
     fieldErrors.setError("description", null);
 
-    // A recording is triaged by hand, so file it under the catch-all "Other" - but only when the submitter has
-    // not already chosen a category; a category they picked stays.
-    if (serviceCategory || grievanceType) return;
+    // A recording is triaged by hand, so it is always filed under the catch-all "Other", replacing any category
+    // or type already chosen; deleting the recording gives that choice back.
+    if (!beforeVoice.current) beforeVoice.current = { category: serviceCategory, type: grievanceType };
     wantsOtherFill.current = true;
     fillOther();
   };
@@ -300,9 +303,10 @@ export function GrievanceDetailsCard({
     setAttachments((prev) => prev.filter((item) => item.kind !== "voice"));
     // Take back the category we filled in, unless the submitter has since changed it.
     if (filledByVoice.current && serviceCategory === otherCategory) {
-      setServiceCategory("");
-      setGrievanceType("");
+      setServiceCategory(beforeVoice.current?.category ?? "");
+      setGrievanceType(beforeVoice.current?.type ?? "");
     }
+    beforeVoice.current = null;
     filledByVoice.current = false;
     wantsOtherFill.current = false;
   };
@@ -375,7 +379,8 @@ export function GrievanceDetailsCard({
               <AnimatedSelect
                 id="grievance-type"
                 options={dynamicGrievanceTypes}
-                placeholder="Select grievance type"
+                placeholder={serviceCategory ? "Select grievance type" : t("selectCategoryFirst")}
+                disabled={!serviceCategory}
                 value={grievanceType}
                 onChange={(type) => {
                   setGrievanceType(type);

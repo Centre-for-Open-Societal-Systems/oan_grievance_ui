@@ -107,6 +107,22 @@ describe('GrievanceTable', () => {
     expect(onViewGrievance).toHaveBeenCalledWith(mockGrievances[0]);
   });
 
+  it("shows View instead of Edit for a submitter unless the case needs more information", () => {
+    const { container } = renderIntl(
+      <GrievanceTable
+        {...defaultProps}
+        viewOnlyUnlessMoreInfo
+        grievances={[
+          { ...mockGrievances[0]!, status: "In Progress" },
+          { ...mockGrievances[1]!, status: "Require More Info" },
+        ]}
+      />
+    );
+    const view = within(container);
+    expect(view.getAllByRole("button", { name: /^view$/i }).length).toBe(1);
+    expect(view.getAllByRole("button", { name: /^edit$/i }).length).toBe(1);
+  });
+
   it('renders empty state when there are no records', () => {
     const { container } = renderIntl(
       <GrievanceTable {...defaultProps} grievances={[]} totalItems={0} totalPages={0} />

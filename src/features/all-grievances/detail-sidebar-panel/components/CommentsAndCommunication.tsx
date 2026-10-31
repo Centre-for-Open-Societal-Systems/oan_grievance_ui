@@ -20,6 +20,7 @@ import {
   Paperclip,
 } from 'lucide-react';
 import type { Grievance, GrievanceTimelineData, TimelineEntry, TimelineEventItem } from '../../types';
+import { audioAttachments, VoiceNotePlayer } from './VoiceNotePlayer';
 import { normalizeTimelineEntry, getInitials, type FormattedTimelineEvent, type TimelineContext } from '../../utils/mapGrievance';
 
 interface CommentsAndCommunicationProps {
@@ -94,6 +95,8 @@ export function CommentsAndCommunication({
   }, [timelineData, grievance, canSeeInternal]);
 
   const visibleMessageCount = normalizedEvents.length;
+  const isSubmissionEntry = (event: FormattedTimelineEvent) =>
+    event.entryType.toLowerCase() === 'submission' || event.typeLabel.toLowerCase() === 'submission';
 
   const toggleMsg = (id: string) => {
     setExpandedMsgs((prev) => ({
@@ -242,6 +245,10 @@ export function CommentsAndCommunication({
 
               {normalizedEvents.map((event) => {
                 const expanded = isMsgExpanded(event.id);
+                // A submission's recording is played in the message itself, so it is not also listed as a file chip.
+                // Only the recordings filed with this very entry count; a later audio file on a comment stays a chip.
+                const voiceNotes = isSubmissionEntry(event) ? audioAttachments(event.attachments) : [];
+                const chipAttachments = (event.attachments ?? []).filter((att) => !voiceNotes.includes(att));
                 const styling = getBadgeStyle(event);
 
                 return (
@@ -292,7 +299,8 @@ export function CommentsAndCommunication({
                     >
                       {/* Message card */}
                       {(Boolean(event.body) ||
-                        Boolean(event.attachments && event.attachments.length > 0) ||
+                        Boolean(chipAttachments.length > 0) ||
+                        voiceNotes.length > 0 ||
                         !(event.fromStatus || event.toStatus || event.action)) && (
                         <div className={`ml-[60px] p-4 rounded-xl rounded-tl-none ${styling.cardBg}`}>
                           {event.actionTaken ? (
@@ -310,14 +318,14 @@ export function CommentsAndCommunication({
                             </div>
                           ) : event.body ? (
                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{event.body}</p>
-                          ) : !event.attachments || event.attachments.length === 0 ? (
+                          ) : chipAttachments.length === 0 && voiceNotes.length === 0 ? (
                             <p className="text-sm italic opacity-70">No message text recorded for this event.</p>
                           ) : null}
 
                           {/* Inline attachments if present for this timeline event */}
-                          {event.attachments && event.attachments.length > 0 && (
+                          {chipAttachments.length > 0 && (
                             <div className={`${event.body ? 'mt-3 pt-2.5 border-t border-gray-200/60' : ''} flex flex-wrap gap-2`}>
-                              {event.attachments.map((att) => (
+                              {chipAttachments.map((att) => (
                                 <button
                                   key={att.name || att.id || att.file_name}
                                   type="button"
@@ -349,6 +357,13 @@ export function CommentsAndCommunication({
                               ))}
                             </div>
                           )}
+
+                          {/* The submitter's voice recording, inside the message it came with */}
+                          {voiceNotes.map((voice) => (
+                            <div key={voice.name || voice.id} className="mt-2.5 pt-2.5 border-t border-gray-200/60">
+                              <VoiceNotePlayer attachment={voice} />
+                            </div>
+                          ))}
                         </div>
                       )}
 

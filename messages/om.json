@@ -15,6 +15,7 @@
       "consentCheckboxLabel": "Lakkoofsa ID biyyaalessaa koo mirkaneessa eenyummaaf kennuuf nan waliigala.",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
+      "selectCategoryFirst": "Duraan ramaddii filadhu",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
       "organisationNotice": "Erga seentanii booda, bal'ina dhaabbata keessanii — maqaa, lakkoofsa galmee, bakka bu'aa aangoo qabu, teessoo fi qunnamtii — isin gaafanna.",
       "faydaAlreadyRegistered": "ID Fayda kun duraan akkaawuntii biraatiin galmaa'eera.",
@@ -703,6 +704,8 @@
     "noSignInMethod": "Malli seensaa tokkollee hin qindoofne. Bulchaa quunnamaa."
   },
   "attachmentViewer": {
+    "playRecording": "Waraabbii taphachiisi",
+    "voiceNote": "Waraabbii sagalee",
     "loadingPreview": "Dursee ilaaluun fe'aa jira",
     "previewUnavailable": "Dursee ilaaluun hin argamu",
     "previewLoadFailed": "Faayilii kana yeroo ammaa fe'uun hin danda'amne.",
@@ -711,7 +714,12 @@
     "scanFailed": "Sakatta'insi malwerii xumuramuu hin dandeenye; kanaaf faayiliin kun banamuu hin danda'u."
   },
   "grievanceList": {
-    "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi..."
+    "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi...",
+    "actionView": "Ilaali",
+    "actionEdit": "Gulaali",
+    "slaDueToday": "Har'a dhumata",
+    "slaDueSoon": "{days, plural, one {Guyyaa # hafe} other {Guyyoota # hafan}}",
+    "slaOverdue": "{days, plural, one {Guyyaa # dura darbe} other {Guyyoota # dura darbe}}"
   },
   "validation": {
     "characterCount": "{count} / {max}",

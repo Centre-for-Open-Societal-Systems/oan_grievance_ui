@@ -165,6 +165,7 @@ export default function AllGrievancesPage() {
         isLoading={isLoading}
         error={error}
         onRetry={refetch}
+        viewOnlyUnlessMoreInfo={!canViewAllGrievances(userRoles)}
         onOpenAdvancedFilters={() => setIsAdvancedFiltersOpen(true)}
         statusOptions={statusOptions}
         categoryOptions={categoryOptions}

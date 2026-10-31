@@ -129,3 +129,14 @@ function organisationIdentityValues(user: User | null, submitterType: string): R
 export function isSubmitterTypeLocked(user: User | null): boolean {
   return Boolean(user?.organisation && organisationKindFor(user.type) !== null);
 }
+
+/**
+ * Whether the signed-in account is an individual farmer. Such an account files as
+ * itself through the web portal, so Step 1 shows its submitter type and channel
+ * but does not let them be changed.
+ */
+export function isIndividualFarmer(user: User | null): boolean {
+  if (!user) return false;
+  const backendType = user.submitter_type || user.type;
+  return Boolean(backendType) && normalizeSubmitterType(backendType as string) === "individual";
+}

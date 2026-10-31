@@ -326,11 +326,14 @@ describe('Step 2 — voice recording', () => {
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps a category the submitter already chose', () => {
+  it('files under Other even when the submitter had already chosen a category, and gives it back when the recording is deleted', () => {
     renderStep({ ...AREAS, serviceCategory: 'Inputs', grievanceType: 'GTYPE-00001' });
 
     fireEvent.click(screen.getByText('mock-record'));
+    expect((byId('service-category') as HTMLInputElement).value).toBe('Other');
+    expect((byId('grievance-type') as HTMLInputElement).value).toBe('Other');
 
+    fireEvent.click(screen.getByText('mock-remove'));
     expect((byId('service-category') as HTMLInputElement).value).toBe('Inputs');
     expect((byId('grievance-type') as HTMLInputElement).value).toBe('Fertilizer Shortage');
   });
