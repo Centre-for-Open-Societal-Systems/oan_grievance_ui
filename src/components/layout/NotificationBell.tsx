@@ -1,15 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell } from "lucide-react";
+import Link from "next/link";
+import { Bell, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRealtimeEvent } from "@/lib/realtime";
 import {
   fetchNotifications,
+  deleteAllNotifications,
+  deleteNotification,
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationItem,
 } from "./notificationsApi";
+
+/** The backend sends Frappe message bodies, which may carry HTML; show them as plain text. */
+function plainText(message: string | null): string {
+  return (message ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
 
 /**
  * Header bell and inbox. Reads the caller's own notifications from
@@ -88,6 +96,26 @@ export function NotificationBell() {
     }
   };
 
+  const handleDelete = async (item: NotificationItem) => {
+    setItems((prev) => prev.filter((n) => n.id !== item.id));
+    if (!item.read) setUnread((count) => Math.max(0, count - 1));
+    try {
+      await deleteNotification(item.id);
+    } catch {
+      void load();
+    }
+  };
+
+  const handleClearAll = async () => {
+    setItems([]);
+    setUnread(0);
+    try {
+      await deleteAllNotifications();
+    } catch {
+      void load();
+    }
+  };
+
   return (
     <div ref={containerRef} className="relative ml-2">
       <button
@@ -114,15 +142,26 @@ export function NotificationBell() {
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <h2 className="text-sm font-bold text-gray-900">{t("title")}</h2>
-            {unread > 0 && (
-              <button
-                type="button"
-                onClick={handleMarkAll}
-                className="text-xs font-semibold text-[#16A34A] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800/40 rounded"
-              >
-                {t("markAllRead")}
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAll}
+                  className="text-xs font-semibold text-[#16A34A] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800/40 rounded"
+                >
+                  {t("markAllRead")}
+                </button>
+              )}
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="text-xs font-semibold text-gray-500 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800/40 rounded"
+                >
+                  {t("clearAll")}
+                </button>
+              )}
+            </div>
           </div>
           <ul className="max-h-96 overflow-y-auto divide-y divide-gray-100">
             {hasError ? (
@@ -131,22 +170,45 @@ export function NotificationBell() {
               <li className="px-4 py-6 text-sm text-gray-500 text-center">{t("empty")}</li>
             ) : (
               items.map((item) => (
-                <li key={item.id}>
+                <li key={item.id} className={`relative ${item.read ? "" : "bg-emerald-50/50"}`}>
                   <button
                     type="button"
                     onClick={() => void handleItemClick(item)}
-                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-50 ${item.read ? "" : "bg-emerald-50/50"}`}
+                    className="w-full text-left pl-4 pr-10 py-3 hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-50"
                   >
                     <span className="flex items-start gap-2">
                       {!item.read && <span aria-hidden="true" className="mt-1.5 w-2 h-2 rounded-full bg-[#16A34A] shrink-0" />}
                       <span className="min-w-0">
                         <span className={`block text-sm text-gray-900 ${item.read ? "font-medium" : "font-bold"}`}>{item.subject}</span>
+                        {plainText(item.message) && (
+                          <span className="block text-xs text-gray-600 mt-0.5 line-clamp-3">{plainText(item.message)}</span>
+                        )}
                         <span className="block text-xs text-gray-400 mt-0.5">
                           {format.relativeTime(new Date(item.created_at))}
                         </span>
                       </span>
                     </span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(item)}
+                    aria-label={t("delete", { subject: item.subject })}
+                    className="absolute top-2 right-2 p-1 rounded text-gray-400 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800/40"
+                  >
+                    <X className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                  {item.document_type === "Grievance" && item.document_name && (
+                    <Link
+                      href={`/all-grievances?ticket=${encodeURIComponent(item.document_name)}`}
+                      onClick={() => {
+                        void handleItemClick(item);
+                        setIsOpen(false);
+                      }}
+                      className="block px-4 pb-3 pl-8 text-xs font-semibold text-[#16A34A] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800/40 rounded"
+                    >
+                      {t("viewGrievance")}
+                    </Link>
+                  )}
                 </li>
               ))
             )}

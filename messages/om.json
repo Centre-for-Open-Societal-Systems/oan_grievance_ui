@@ -256,6 +256,9 @@
     "unreadLabel": "Beeksisoota, {count} haaraa",
     "title": "Beeksisoota",
     "markAllRead": "Hunda akka dubbifameetti mallatteessi",
+    "viewGrievance": "Mareeffama ilaali",
+    "clearAll": "Hunda haqi",
+    "delete": "Beeksisa haqi: {subject}",
     "empty": "Beeksisni hin jiru.",
     "loadError": "Beeksisoota fe'uu hin dandeenye."
   },

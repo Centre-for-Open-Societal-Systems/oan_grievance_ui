@@ -35,6 +35,7 @@ import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
 import { OrganisationVerificationNotice } from "./components/OrganisationVerificationNotice";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
 import type { ServiceProviderRef } from "./api/serviceProviderApi";
+import { randomUuid } from "@/lib/randomUuid";
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
   return (
@@ -90,7 +91,7 @@ export default function SubmitGrievancePage() {
   // Identifies this wizard session's submission — sent as
   // `client_submission_uuid` so a retried submit is recognised by the backend
   // rather than filed twice.
-  const [clientUuid, setClientUuid] = useState(() => crypto.randomUUID());
+  const [clientUuid, setClientUuid] = useState(() => randomUuid());
 
   // Step 1 — Submitter Identity
   const [submitterType, setSubmitterType] = useState(() => resolveInitialSubmitterType(user, savedProfile));
@@ -202,7 +203,7 @@ export default function SubmitGrievancePage() {
     // A fresh submission key for the next grievance — reusing the old one
     // would make the backend treat the next, different grievance as a retry
     // of the one just filed.
-    setClientUuid(crypto.randomUUID());
+    setClientUuid(randomUuid());
   };
 
   const handleReset = () => {

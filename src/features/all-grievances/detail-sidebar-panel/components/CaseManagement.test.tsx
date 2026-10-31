@@ -20,6 +20,7 @@ const mockTimelineData: GrievanceTimelineData = {
   assignment: {
     department: 'Inputs Supply & Distribution Agency',
     assigned_to: 'Tigist Alemu',
+    assigned_to_name: 'Tigist Alemu',
   },
 };
 

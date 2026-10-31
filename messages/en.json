@@ -256,6 +256,9 @@
     "unreadLabel": "Notifications, {count} new",
     "title": "Notifications",
     "markAllRead": "Mark all as read",
+    "viewGrievance": "View grievance",
+    "clearAll": "Clear all",
+    "delete": "Delete notification: {subject}",
     "empty": "You have no notifications.",
     "loadError": "Could not load notifications."
   },

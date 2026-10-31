@@ -47,8 +47,11 @@ export function SLATracker({
     Math.max(0, slaData?.sla_consumed_percent ?? (isResolved ? 100 : 50))
   );
 
-  const isOverdue = !isResolved && (consumedPercent >= 100 || grievance.status === 'Overdue');
-  const isAtRisk = !isResolved && !isOverdue && consumedPercent >= 80;
+  // While the clock is held (e.g. More Info Needed) there is no real due date to meet.
+  const isPaused = !isResolved && Boolean(slaData?.is_paused);
+
+  const isOverdue = !isResolved && !isPaused && (consumedPercent >= 100 || grievance.status === 'Overdue');
+  const isAtRisk = !isResolved && !isPaused && !isOverdue && consumedPercent >= 80;
 
   const submittedDate =
     formatDate(slaData?.sla_start_at) || grievance.submittedAt.split(',')[0] || 'N/A';
@@ -66,6 +69,13 @@ export function SLATracker({
       return (
         <span className="px-3 py-1 bg-green-50 text-green-700 border border-green-200 text-xs font-bold rounded-full flex items-center gap-1.5">
           <CheckCircle2 className="h-3.5 w-3.5" /> Met SLA
+        </span>
+      );
+    }
+    if (isPaused) {
+      return (
+        <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-full flex items-center gap-1.5">
+          <Clock className="h-3.5 w-3.5" /> Paused
         </span>
       );
     }
@@ -148,11 +158,11 @@ export function SLATracker({
               <div className={`text-xs font-medium ${isOverdue ? 'text-red-500' : 'text-gray-500'}`}>
                 Due Date
               </div>
-              <div className="text-sm font-bold truncate">{dueDate}</div>
+              <div className="text-sm font-bold truncate">{isPaused ? 'On hold' : dueDate}</div>
             </div>
           </div>
 
-          {canDefer && !isResolved && (
+          {canDefer && !isResolved && !isPaused && (
             <button
               type="button"
               onClick={() => {

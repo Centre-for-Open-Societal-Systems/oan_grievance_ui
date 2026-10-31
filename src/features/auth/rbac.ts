@@ -231,6 +231,11 @@ export function isOfficerOrAdmin(roles: string[]): boolean {
   return effectiveRoles(roles).some((role) => role === ROLES.OFFICER || role === ROLES.ADMIN);
 }
 
+/** True when every role the caller holds is a submitter kind (Submitter / Assisted Submitter), i.e. no staff role. */
+export function isSubmitterOnly(roles: string[]): boolean {
+  return effectiveRoles(roles).every((role) => role === ROLES.SUBMITTER || role === ROLES.ASSISTED_SUBMITTER);
+}
+
 /**
  * True for a Grievance Admin only — the role that sees every desk, rather than the
  * caller's own (Analytics & Reporting offers the department filter to it alone). Like

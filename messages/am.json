@@ -256,6 +256,9 @@
     "unreadLabel": "ማሳወቂያዎች፣ {count} አዲስ",
     "title": "ማሳወቂያዎች",
     "markAllRead": "ሁሉንም እንደተነበበ ምልክት አድርግ",
+    "viewGrievance": "ቅሬታውን ይመልከቱ",
+    "clearAll": "ሁሉንም አጽዳ",
+    "delete": "ማሳወቂያ ሰርዝ፦ {subject}",
     "empty": "ምንም ማሳወቂያ የለም።",
     "loadError": "ማሳወቂያዎችን መጫን አልተቻለም።"
   },

@@ -33,6 +33,7 @@ import { VoiceRecorder } from "./VoiceRecorder";
 import { ServiceProviderCombobox } from "./ServiceProviderCombobox";
 import type { ServiceProviderRef } from "../api/serviceProviderApi";
 import { getDescriptionError, getDetailsErrors, type DetailsField } from "../wizardSteps";
+import { randomUuid } from "@/lib/randomUuid";
 
 function isPdf(item: WizardAttachment): boolean {
   return item.file?.type === "application/pdf" || /\.pdf$/i.test(item.fileName);
@@ -244,7 +245,7 @@ export function GrievanceDetailsCard({
 
     setAttachments((prev) => [
       ...prev,
-      ...filesToStage.map((file) => ({ key: crypto.randomUUID(), file, fileName: file.name })),
+      ...filesToStage.map((file) => ({ key: randomUuid(), file, fileName: file.name })),
     ]);
   };
 
@@ -288,7 +289,7 @@ export function GrievanceDetailsCard({
     setError(null);
     setAttachments((prev) => [
       ...prev.filter((item) => item.kind !== "voice"),
-      { key: crypto.randomUUID(), file, fileName: file.name, kind: "voice" },
+      { key: randomUuid(), file, fileName: file.name, kind: "voice" },
     ]);
     fieldErrors.setError("description", null);
 

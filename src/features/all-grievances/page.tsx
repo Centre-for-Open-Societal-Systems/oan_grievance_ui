@@ -26,6 +26,16 @@ export default function AllGrievancesPage() {
 
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [selectedGrievance, setSelectedGrievance] = useState<Grievance | null>(null);
+  // `?ticket=` opens a case straight from a link, such as a notification.
+  const ticketParam = searchParams.get('ticket');
+  const handleCloseDetail = useCallback(() => {
+    setSelectedGrievance(null);
+    if (!ticketParam) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('ticket');
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }, [ticketParam, searchParams, pathname, router]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<GrievanceFilters>({ ...EMPTY_GRIEVANCE_FILTERS });
 
@@ -185,9 +195,9 @@ export default function AllGrievancesPage() {
       />
 
       <GrievanceDetailSidebar
-        ticketNumber={selectedGrievance?.ticketNumber ?? selectedGrievance?.ticketId ?? null}
+        ticketNumber={selectedGrievance?.ticketNumber ?? selectedGrievance?.ticketId ?? ticketParam}
         grievance={selectedGrievance}
-        onClose={() => setSelectedGrievance(null)}
+        onClose={handleCloseDetail}
       />
     </div>
   );
