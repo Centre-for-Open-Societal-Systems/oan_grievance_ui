@@ -215,6 +215,7 @@
       "retry": "እንደገና ይሞክሩ"
     },
     "detailsStep": {
+      "selectCategoryFirst": "መጀመሪያ ምድብ ይምረጡ",
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",

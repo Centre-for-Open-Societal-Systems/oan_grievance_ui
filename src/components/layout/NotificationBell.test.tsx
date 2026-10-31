@@ -28,6 +28,7 @@ vi.mock('./notificationsApi', () => ({
   deleteAllNotifications,
 }));
 vi.mock('@/lib/realtime', () => ({ useRealtimeEvent: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 afterEach(() => {
   cleanup();

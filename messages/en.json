@@ -215,6 +215,7 @@
       "retry": "Try again"
     },
     "detailsStep": {
+      "selectCategoryFirst": "Select a category first",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
       "fieldRequired": "This field is required.",

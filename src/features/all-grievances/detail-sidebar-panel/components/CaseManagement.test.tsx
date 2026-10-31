@@ -10,6 +10,21 @@ import { CaseManagement } from './CaseManagement';
 import { metadataReducer, type MetadataState } from '@/features/metadata/store/metadataSlice';
 import type { GrievanceTimelineData } from '../../types';
 
+vi.mock('@/features/metadata/hooks/useMetadata', () => ({
+  useGrievanceOptions: vi.fn().mockReturnValue({
+    data: {
+      departments: [],
+      officers: [],
+      grievance_types: [],
+      statuses: [],
+      service_categories: [],
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
+
 afterEach(cleanup);
 
 const mockTimelineData: GrievanceTimelineData = {

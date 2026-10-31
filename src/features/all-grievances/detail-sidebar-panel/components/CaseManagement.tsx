@@ -130,7 +130,7 @@ export function CaseManagement({
       initialOfficer && category === initialCategory && !officerOptions.some((o) => o.value === initialOfficer)
         ? [{ value: initialOfficer, label: initialOfficerName || t('assignedOfficer') }, ...officerOptions]
         : officerOptions,
-    [officerOptions, initialOfficer, initialOfficerName, category, initialCategory]
+    [officerOptions, initialOfficer, initialOfficerName, category, initialCategory, t]
   );
 
   if (!canManageCase && !isApprover && !resolvedIsTerminal) return null;

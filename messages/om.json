@@ -215,6 +215,7 @@
       "retry": "Irra deebi'ii yaali"
     },
     "detailsStep": {
+      "selectCategoryFirst": "Duraan ramaddii filadhu",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
