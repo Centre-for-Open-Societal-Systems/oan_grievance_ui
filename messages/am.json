@@ -262,6 +262,15 @@
     "empty": "ምንም ማሳወቂያ የለም።",
     "loadError": "ማሳወቂያዎችን መጫን አልተቻለም።"
   },
+  "caseDetail": {
+    "slaPaused": "ቆሟል",
+    "slaOnHold": "ተይዟል",
+    "grievanceType": "የቅሬታ ዓይነት",
+    "selectGrievanceType": "የቅሬታ ዓይነት ይምረጡ",
+    "loadingTypes": "ዓይነቶችን በመጫን ላይ...",
+    "chooseGrievanceType": "ለ{category} የቅሬታ ዓይነት ይምረጡ",
+    "assignedOfficer": "የተመደበ ኦፊሰር"
+  },
   "caseExport": {
     "title": "ላክ",
     "menuLabel": "ይህን ጉዳይ ላክ",

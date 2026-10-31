@@ -262,6 +262,15 @@
     "empty": "Beeksisni hin jiru.",
     "loadError": "Beeksisoota fe'uu hin dandeenye."
   },
+  "caseDetail": {
+    "slaPaused": "Dhaabbateera",
+    "slaOnHold": "Kaayameera",
+    "grievanceType": "Gosa Mareeffamaa",
+    "selectGrievanceType": "Gosa Mareeffamaa Filadhu",
+    "loadingTypes": "Gosoota fe'aa jira...",
+    "chooseGrievanceType": "{category}f gosa mareeffamaa filadhu",
+    "assignedOfficer": "Ajajaan ramadame"
+  },
   "caseExport": {
     "title": "Ergi",
     "menuLabel": "Dhimma kana ergi",

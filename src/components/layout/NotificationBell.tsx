@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Bell, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRealtimeEvent } from "@/lib/realtime";
@@ -28,6 +29,7 @@ function plainText(message: string | null): string {
 export function NotificationBell() {
   const t = useTranslations("notifications");
   const format = useFormatter();
+  const router = useRouter();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -84,6 +86,20 @@ export function NotificationBell() {
     } catch {
       void load();
     }
+  };
+
+  const grievanceHref = (item: NotificationItem) =>
+    item.document_type === "Grievance" && item.document_name
+      ? `/all-grievances?ticket=${encodeURIComponent(item.document_name)}`
+      : null;
+
+  // One action for the whole row: read it, and go to its case when it has one.
+  const handleOpen = (item: NotificationItem) => {
+    void handleItemClick(item);
+    const href = grievanceHref(item);
+    if (!href) return;
+    setIsOpen(false);
+    router.push(href);
   };
 
   const handleMarkAll = async () => {
@@ -173,7 +189,7 @@ export function NotificationBell() {
                 <li key={item.id} className={`relative ${item.read ? "" : "bg-emerald-50/50"}`}>
                   <button
                     type="button"
-                    onClick={() => void handleItemClick(item)}
+                    onClick={() => handleOpen(item)}
                     className="w-full text-left pl-4 pr-10 py-3 hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-50"
                   >
                     <span className="flex items-start gap-2">
@@ -197,9 +213,9 @@ export function NotificationBell() {
                   >
                     <X className="w-4 h-4" aria-hidden="true" />
                   </button>
-                  {item.document_type === "Grievance" && item.document_name && (
+                  {grievanceHref(item) && (
                     <Link
-                      href={`/all-grievances?ticket=${encodeURIComponent(item.document_name)}`}
+                      href={grievanceHref(item) ?? "#"}
                       onClick={() => {
                         void handleItemClick(item);
                         setIsOpen(false);

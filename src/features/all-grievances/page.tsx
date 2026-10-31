@@ -26,16 +26,27 @@ export default function AllGrievancesPage() {
 
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [selectedGrievance, setSelectedGrievance] = useState<Grievance | null>(null);
-  // `?ticket=` opens a case straight from a link, such as a notification.
+  // `?ticket=` opens a case straight from a link, such as a notification. It
+  // wins over a row picked earlier, so a new link replaces the open case.
   const ticketParam = searchParams.get('ticket');
-  const handleCloseDetail = useCallback(() => {
-    setSelectedGrievance(null);
-    if (!ticketParam) return;
+  const clearTicketParam = useCallback(() => {
+    if (!searchParams.has('ticket')) return;
     const params = new URLSearchParams(searchParams.toString());
     params.delete('ticket');
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname);
-  }, [ticketParam, searchParams, pathname, router]);
+  }, [searchParams, pathname, router]);
+  const handleCloseDetail = useCallback(() => {
+    setSelectedGrievance(null);
+    clearTicketParam();
+  }, [clearTicketParam]);
+  const handleViewGrievance = useCallback(
+    (grievance: Grievance) => {
+      clearTicketParam();
+      setSelectedGrievance(grievance);
+    },
+    [clearTicketParam]
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<GrievanceFilters>({ ...EMPTY_GRIEVANCE_FILTERS });
 
@@ -184,7 +195,7 @@ export default function AllGrievancesPage() {
         selectedCategories={filters.category}
         setSelectedCategories={(category) => setFilters((f) => ({ ...f, category }))}
         onClearFilters={handleClearFilters}
-        onViewGrievance={setSelectedGrievance}
+        onViewGrievance={handleViewGrievance}
       />
 
       <AdvancedFiltersSidebar
@@ -195,8 +206,8 @@ export default function AllGrievancesPage() {
       />
 
       <GrievanceDetailSidebar
-        ticketNumber={selectedGrievance?.ticketNumber ?? selectedGrievance?.ticketId ?? ticketParam}
-        grievance={selectedGrievance}
+        ticketNumber={ticketParam ?? selectedGrievance?.ticketNumber ?? selectedGrievance?.ticketId ?? null}
+        grievance={ticketParam ? null : selectedGrievance}
         onClose={handleCloseDetail}
       />
     </div>

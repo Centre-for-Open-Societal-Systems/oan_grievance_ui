@@ -262,6 +262,15 @@
     "empty": "You have no notifications.",
     "loadError": "Could not load notifications."
   },
+  "caseDetail": {
+    "slaPaused": "Paused",
+    "slaOnHold": "On hold",
+    "grievanceType": "Grievance Type",
+    "selectGrievanceType": "Select Grievance Type",
+    "loadingTypes": "Loading types...",
+    "chooseGrievanceType": "Choose a grievance type for {category}",
+    "assignedOfficer": "Assigned officer"
+  },
   "caseExport": {
     "title": "Export",
     "menuLabel": "Export this case",

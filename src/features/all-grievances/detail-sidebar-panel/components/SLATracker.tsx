@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AlertCircle, CalendarClock, CheckCircle2, Clock, Timer } from 'lucide-react';
 import { DeferSLAPopup } from './DeferSLAPopup';
 import { ReviewDeferralPopup } from './ReviewDeferralPopup';
@@ -26,6 +27,7 @@ export function SLATracker({
   onDecideDeferral,
   isTerminal: propIsTerminal,
 }: SLATrackerProps) {
+  const t = useTranslations('caseDetail');
   const [showPopup, setShowPopup] = useState(false);
   const [showViewPopup, setShowViewPopup] = useState(false);
   const user = useAppSelector((state) => state.auth.user);
@@ -75,7 +77,7 @@ export function SLATracker({
     if (isPaused) {
       return (
         <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-full flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5" /> Paused
+          <Clock className="h-3.5 w-3.5" /> {t('slaPaused')}
         </span>
       );
     }
@@ -158,7 +160,7 @@ export function SLATracker({
               <div className={`text-xs font-medium ${isOverdue ? 'text-red-500' : 'text-gray-500'}`}>
                 Due Date
               </div>
-              <div className="text-sm font-bold truncate">{isPaused ? 'On hold' : dueDate}</div>
+              <div className="text-sm font-bold truncate">{isPaused ? t('slaOnHold') : dueDate}</div>
             </div>
           </div>
 

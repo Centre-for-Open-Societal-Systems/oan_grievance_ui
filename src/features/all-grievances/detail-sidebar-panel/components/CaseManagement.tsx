@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { User, Save, Loader2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAppSelector } from '@/store/hooks';
@@ -32,6 +33,7 @@ export function CaseManagement({
   const activeTicket = ticketNumber || timelineData?.ticket_number || '';
   const optionsData = useAppSelector((state) => state.metadata?.grievanceOptions);
   const categorySelectId = useId();
+  const t = useTranslations('caseDetail');
   const officerSelectId = useId();
   const grievanceTypeSelectId = useId();
 
@@ -126,7 +128,7 @@ export function CaseManagement({
   const officerSelectOptions = useMemo(
     () =>
       initialOfficer && category === initialCategory && !officerOptions.some((o) => o.value === initialOfficer)
-        ? [{ value: initialOfficer, label: initialOfficerName || 'Assigned officer' }, ...officerOptions]
+        ? [{ value: initialOfficer, label: initialOfficerName || t('assignedOfficer') }, ...officerOptions]
         : officerOptions,
     [officerOptions, initialOfficer, initialOfficerName, category, initialCategory]
   );
@@ -139,8 +141,9 @@ export function CaseManagement({
   const handleSave = async () => {
     if (!onReassign || !activeTicket) return;
     setFeedback(null);
+    if (isCategoryChange && isLoadingOfficers) return;
     if (isCategoryChange && grievanceTypeOptions.length > 0 && !targetGrievanceType) {
-      setFeedback({ type: 'error', message: `Choose a grievance type for ${category}` });
+      setFeedback({ type: 'error', message: t('chooseGrievanceType', { category }) });
       return;
     }
     setIsSaving(true);
@@ -243,7 +246,7 @@ export function CaseManagement({
             <div className="flex flex-col gap-1.5">
               <span className="text-[13px] font-semibold text-[#1B362D]">Officer</span>
               <div className="w-full border border-gray-200 bg-gray-50/80 rounded-lg px-3 py-2.5 text-sm text-gray-900 font-medium">
-                {officerOptions.find((o) => o.value === initialOfficer)?.label || initialOfficerName || (initialOfficer ? 'Assigned officer' : 'Unassigned')}
+                {officerOptions.find((o) => o.value === initialOfficer)?.label || initialOfficerName || (initialOfficer ? t('assignedOfficer') : 'Unassigned')}
               </div>
             </div>
 
@@ -269,11 +272,11 @@ export function CaseManagement({
             {isCategoryChange && (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor={grievanceTypeSelectId} className="text-[13px] font-semibold text-[#1B362D]">
-                  Grievance Type
+                  {t('grievanceType')}
                 </label>
                 <AnimatedSelect
                   id={grievanceTypeSelectId}
-                  placeholder={isLoadingOfficers ? "Loading types..." : "Select Grievance Type"}
+                  placeholder={isLoadingOfficers ? t('loadingTypes') : t('selectGrievanceType')}
                   value={targetGrievanceType}
                   onChange={setTargetGrievanceType}
                   options={grievanceTypeOptions}
@@ -322,7 +325,7 @@ export function CaseManagement({
 
             <button
               type="button"
-              disabled={isSaving}
+              disabled={isSaving || (isCategoryChange && isLoadingOfficers)}
               onClick={handleSave}
               className="w-full py-2.5 bg-[#1E9E49] hover:bg-[#18803B] text-white font-bold text-sm rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-xs mt-1 cursor-pointer disabled:opacity-60"
             >
