@@ -2,6 +2,7 @@ import type {
   Grievance,
   GrievanceListItem,
   GrievanceTimelineAttachment,
+  GrievanceTimelineData,
   TimelineEntry,
   TimelineEventItem,
 } from '../types';
@@ -126,6 +127,40 @@ export function mapGrievanceListItem(item: GrievanceListItem): Grievance {
     submissionChannel: item.submission_channel ?? '',
     description: item.description ?? '',
     administrativeArea: item.administrative_area ?? '',
+  };
+}
+
+/**
+ * Builds the row-shaped `Grievance` from a case's timeline alone, for a case
+ * opened by link (a notification) rather than picked from the list. The
+ * panels read the timeline first, so only the fallbacks need filling.
+ */
+export function grievanceFromTimeline(data: GrievanceTimelineData): Grievance {
+  const ticket = data.ticket_number || data.name || '';
+  const anonymous = Boolean(data.submitter?.is_anonymous);
+  return {
+    id: data.name ?? ticket,
+    ticketNumber: ticket,
+    ticketId: data.ticket_number_display || ticket,
+    ticketNumberDisplay: data.ticket_number_display,
+    title: deriveTitle(data.summary?.description),
+    location: data.summary?.location || data.location || '',
+    type: data.summary?.grievance_type_name || data.summary?.grievance_type || data.grievance_type || '',
+    category: data.summary?.service_category || data.service_category || '',
+    status: data.status || data.current_status || '',
+    submittedAt: formatDateTime(data.sla?.sla_start_at),
+    escalated: Boolean(data.escalated),
+    isAnonymous: anonymous,
+    submitterName: anonymous ? 'Anonymous' : (data.submitter?.name ?? data.submitter_name ?? ''),
+    submitterType: data.submitter?.submitter_type ?? undefined,
+    contactMobile: anonymous ? '' : (data.submitter?.contact_mobile ?? ''),
+    contactEmail: anonymous ? '' : (data.submitter?.contact_email ?? ''),
+    department: data.assignment?.department ?? '',
+    assignedTo: data.assignment?.assigned_to ?? '',
+    slaDueDate: formatDate(data.sla?.sla_due_date),
+    submissionChannel: data.summary?.submission_channel ?? '',
+    description: data.summary?.description ?? '',
+    administrativeArea: data.summary?.administrative_area || data.administrative_area || '',
   };
 }
 

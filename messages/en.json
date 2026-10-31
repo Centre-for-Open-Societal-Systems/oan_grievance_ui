@@ -215,6 +215,7 @@
       "retry": "Try again"
     },
     "detailsStep": {
+      "selectCategoryFirst": "Select a category first",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
       "fieldRequired": "This field is required.",
@@ -256,8 +257,20 @@
     "unreadLabel": "Notifications, {count} new",
     "title": "Notifications",
     "markAllRead": "Mark all as read",
+    "viewGrievance": "View grievance",
+    "clearAll": "Clear all",
+    "delete": "Delete notification: {subject}",
     "empty": "You have no notifications.",
     "loadError": "Could not load notifications."
+  },
+  "caseDetail": {
+    "slaPaused": "Paused",
+    "slaOnHold": "On hold",
+    "grievanceType": "Grievance Type",
+    "selectGrievanceType": "Select Grievance Type",
+    "loadingTypes": "Loading types...",
+    "chooseGrievanceType": "Choose a grievance type for {category}",
+    "assignedOfficer": "Assigned officer"
   },
   "caseExport": {
     "title": "Export",

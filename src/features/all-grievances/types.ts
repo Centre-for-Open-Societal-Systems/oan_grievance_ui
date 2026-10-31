@@ -228,11 +228,16 @@ export interface GrievanceTimelineSla {
   next_escalation_at?: string | null;
   confirmation_deadline?: string | null;
   active_deferral_request?: ChangeRequestData | null;
+  /** The SLA clock is held (e.g. waiting on the submitter); staff only. */
+  is_paused?: boolean | null;
+  paused_since?: string | null;
 }
 
 export interface GrievanceTimelineAssignment {
   department?: string | null;
   assigned_to?: string | null;
+  /** The assigned officer's full name; staff only. */
+  assigned_to_name?: string | null;
   routed_automatically?: boolean;
   active_reassignment_request?: ChangeRequestData | null;
 }
@@ -332,6 +337,7 @@ export interface GrievanceCurrentState {
   workflow_status?: string;
   escalated: boolean | number;
   assigned_to?: string | null;
+  assigned_to_name?: string | null;
   assigned_dept?: string | null;
   department?: string | null;
   updated_at?: string | null;
@@ -424,6 +430,7 @@ export interface DeferSLAPayload {
 export interface ReassignGrievancePayload {
   target_department?: string | null;
   target_category?: string | null;
+  target_grievance_type?: string | null;
   target_officer?: string | null;
   reason?: string | null;
   sla_treatment?: 'Continue' | 'Reset' | string;

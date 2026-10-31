@@ -215,6 +215,7 @@
       "retry": "Irra deebi'ii yaali"
     },
     "detailsStep": {
+      "selectCategoryFirst": "Duraan ramaddii filadhu",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
@@ -256,8 +257,20 @@
     "unreadLabel": "Beeksisoota, {count} haaraa",
     "title": "Beeksisoota",
     "markAllRead": "Hunda akka dubbifameetti mallatteessi",
+    "viewGrievance": "Mareeffama ilaali",
+    "clearAll": "Hunda haqi",
+    "delete": "Beeksisa haqi: {subject}",
     "empty": "Beeksisni hin jiru.",
     "loadError": "Beeksisoota fe'uu hin dandeenye."
+  },
+  "caseDetail": {
+    "slaPaused": "Dhaabbateera",
+    "slaOnHold": "Kaayameera",
+    "grievanceType": "Gosa Mareeffamaa",
+    "selectGrievanceType": "Gosa Mareeffamaa Filadhu",
+    "loadingTypes": "Gosoota fe'aa jira...",
+    "chooseGrievanceType": "{category}f gosa mareeffamaa filadhu",
+    "assignedOfficer": "Ajajaan ramadame"
   },
   "caseExport": {
     "title": "Ergi",

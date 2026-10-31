@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { User, Save, Loader2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAppSelector } from '@/store/hooks';
@@ -32,10 +33,13 @@ export function CaseManagement({
   const activeTicket = ticketNumber || timelineData?.ticket_number || '';
   const optionsData = useAppSelector((state) => state.metadata?.grievanceOptions);
   const categorySelectId = useId();
+  const t = useTranslations('caseDetail');
   const officerSelectId = useId();
+  const grievanceTypeSelectId = useId();
 
   const [category, setCategory] = useState<string>('');
   const [targetOfficer, setTargetOfficer] = useState<string>('');
+  const [targetGrievanceType, setTargetGrievanceType] = useState<string>('');
   const [reassignReason, setReassignReason] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [showViewPopup, setShowViewPopup] = useState(false);
@@ -43,8 +47,11 @@ export function CaseManagement({
     null
   );
 
-  const initialCategory = timelineData?.service_category || '';
+  // The service sends the category under `summary` (SubmitterDetails reads it there too).
+  const initialCategory = timelineData?.summary?.service_category || timelineData?.service_category || '';
   const initialOfficer = timelineData?.assignment?.assigned_to || '';
+  const initialOfficerName = timelineData?.assignment?.assigned_to_name || '';
+  const currentDepartment = timelineData?.assignment?.department || '';
   const activeReassignment = timelineData?.assignment?.active_reassignment_request;
   const user = useAppSelector((state) => state.auth?.user);
   const isApprover = !!activeReassignment && activeReassignment.pending_with === user?.email;
@@ -61,11 +68,14 @@ export function CaseManagement({
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setCategory(initialCategory);
     setTargetOfficer(initialOfficer);
+    setTargetGrievanceType('');
     setReassignReason('');
   }, [activeTicket, initialCategory, initialOfficer]);
 
   const handleCategoryChange = (val: string) => {
     setCategory(val);
+    // Types belong to a category, so a previous pick never carries over.
+    setTargetGrievanceType('');
     if (val !== initialCategory) {
       setTargetOfficer('');
     } else {
@@ -85,12 +95,43 @@ export function CaseManagement({
       .map((name) => ({ value: name, label: name }));
   }, [optionsData]);
 
+  // Moving to another category also needs one of that category's grievance types.
+  const isCategoryChange = Boolean(category) && category !== initialCategory;
+  const grievanceTypeOptions = useMemo(
+    () =>
+      (deptOptions?.grievance_types ?? [])
+        .filter((g) => g.service_category === category)
+        .map((g) => ({ value: g.grievance_type_id, label: g.type_name })),
+    [deptOptions, category]
+  );
+
+  // The options list only holds categories with a staffed desk; the case's own
+  // category must still show as selected when it isn't in it.
+  const categorySelectOptions = useMemo(
+    () =>
+      initialCategory && !categoryOptions.some((o) => o.value === initialCategory)
+        ? [{ value: initialCategory, label: initialCategory }, ...categoryOptions]
+        : categoryOptions,
+    [categoryOptions, initialCategory]
+  );
+
   const officerOptions = useMemo(() => {
     return (deptOptions?.officers || []).map((o) => ({
       value: o.user_id,
       label: o.full_name,
     }));
   }, [deptOptions]);
+
+  // The officers list leaves out the caller and is only loaded per category, so
+  // the assigned officer is added from the timeline when it isn't in it. Its
+  // label is the full name, never the email.
+  const officerSelectOptions = useMemo(
+    () =>
+      initialOfficer && category === initialCategory && !officerOptions.some((o) => o.value === initialOfficer)
+        ? [{ value: initialOfficer, label: initialOfficerName || t('assignedOfficer') }, ...officerOptions]
+        : officerOptions,
+    [officerOptions, initialOfficer, initialOfficerName, category, initialCategory, t]
+  );
 
   if (!canManageCase && !isApprover && !resolvedIsTerminal) return null;
 
@@ -99,13 +140,22 @@ export function CaseManagement({
 
   const handleSave = async () => {
     if (!onReassign || !activeTicket) return;
-    setIsSaving(true);
     setFeedback(null);
+    if (isCategoryChange && isLoadingOfficers) return;
+    if (isCategoryChange && grievanceTypeOptions.length > 0 && !targetGrievanceType) {
+      setFeedback({ type: 'error', message: t('chooseGrievanceType', { category }) });
+      return;
+    }
+    setIsSaving(true);
 
     try {
       if (isReassignment) {
         const result = (await onReassign({
-          target_category: category && category !== initialCategory ? category : undefined,
+          // Always sent: the service picks the receiving desk from the officer and the category together.
+          target_category: category || undefined,
+          target_grievance_type: isCategoryChange ? targetGrievanceType || undefined : undefined,
+          // With no category to go on, the case's current desk stands in for it.
+          target_department: category ? undefined : currentDepartment || undefined,
           target_officer: targetOfficer || undefined,
           reason: reassignReason.trim() || undefined,
         })) as GrievanceChangeResponseData | undefined;
@@ -126,7 +176,13 @@ export function CaseManagement({
       }
       setTimeout(() => setFeedback(null), 4000);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to request reassignment';
+      // The thunk rejects with the message string itself (unwrap() rethrows it), not an Error.
+      const msg =
+        typeof err === 'string' && err
+          ? err
+          : err instanceof Error && err.message
+            ? err.message
+            : 'Failed to request reassignment';
       setFeedback({ type: 'error', message: msg });
     } finally {
       setIsSaving(false);
@@ -190,7 +246,7 @@ export function CaseManagement({
             <div className="flex flex-col gap-1.5">
               <span className="text-[13px] font-semibold text-[#1B362D]">Officer</span>
               <div className="w-full border border-gray-200 bg-gray-50/80 rounded-lg px-3 py-2.5 text-sm text-gray-900 font-medium">
-                {officerOptions.find((o) => o.value === initialOfficer)?.label || initialOfficer || 'Unassigned'}
+                {officerOptions.find((o) => o.value === initialOfficer)?.label || initialOfficerName || (initialOfficer ? t('assignedOfficer') : 'Unassigned')}
               </div>
             </div>
 
@@ -209,9 +265,25 @@ export function CaseManagement({
                 placeholder="Select Category"
                 value={category}
                 onChange={handleCategoryChange}
-                options={categoryOptions}
+                options={categorySelectOptions}
               />
             </div>
+
+            {isCategoryChange && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor={grievanceTypeSelectId} className="text-[13px] font-semibold text-[#1B362D]">
+                  {t('grievanceType')}
+                </label>
+                <AnimatedSelect
+                  id={grievanceTypeSelectId}
+                  placeholder={isLoadingOfficers ? t('loadingTypes') : t('selectGrievanceType')}
+                  value={targetGrievanceType}
+                  onChange={setTargetGrievanceType}
+                  options={grievanceTypeOptions}
+                  disabled={isLoadingOfficers}
+                />
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor={officerSelectId} className="text-[13px] font-semibold text-[#1B362D]">
@@ -222,7 +294,7 @@ export function CaseManagement({
                 placeholder={isLoadingOfficers ? "Loading officers..." : "Select Officer"}
                 value={targetOfficer}
                 onChange={setTargetOfficer}
-                options={officerOptions}
+                options={officerSelectOptions}
                 disabled={isLoadingOfficers || !category}
               />
             </div>
@@ -253,7 +325,7 @@ export function CaseManagement({
 
             <button
               type="button"
-              disabled={isSaving}
+              disabled={isSaving || (isCategoryChange && isLoadingOfficers)}
               onClick={handleSave}
               className="w-full py-2.5 bg-[#1E9E49] hover:bg-[#18803B] text-white font-bold text-sm rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-xs mt-1 cursor-pointer disabled:opacity-60"
             >

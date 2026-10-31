@@ -54,6 +54,7 @@ function mergeCurrentState(data: GrievanceTimelineData, cs: GrievanceCurrentStat
   if (cs.available_actions) data.available_actions = cs.available_actions;
   if (data.assignment) {
     if (cs.assigned_to !== undefined) data.assignment.assigned_to = cs.assigned_to;
+    if (cs.assigned_to_name !== undefined) data.assignment.assigned_to_name = cs.assigned_to_name;
     if (cs.department !== undefined) data.assignment.department = cs.department;
   }
 }
@@ -132,11 +133,11 @@ export const addTimelineNoteThunk = createAsyncThunk<
 
 export const executeTimelineActionThunk = createAsyncThunk<
   GrievanceActionResult,
-  { ticketNumber: string; payload: GrievanceActionPayload },
+  { ticketNumber: string; payload: GrievanceActionPayload; files?: File[] },
   { rejectValue: string }
->('timeline/executeAction', async ({ ticketNumber, payload }, { rejectWithValue }) => {
+>('timeline/executeAction', async ({ ticketNumber, payload, files }, { rejectWithValue }) => {
   try {
-    return await executeGrievanceAction(ticketNumber, payload);
+    return await executeGrievanceAction(ticketNumber, payload, files);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to execute action';
     return rejectWithValue(msg);

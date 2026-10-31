@@ -12,21 +12,20 @@ import { AttachmentsList } from './components/AttachmentsList';
 import { CaseActionsPanel } from './components/CaseActionsPanel';
 import { useGrievanceTimeline } from '../hooks/useGrievanceTimeline';
 import type { Grievance } from '../types';
-import { isTerminalStatus } from '../utils/mapGrievance';
+import { grievanceFromTimeline, isTerminalStatus } from '../utils/mapGrievance';
 import { useAppSelector } from '@/store/hooks';
-import { uploadAttachments } from '@/lib/attachments';
-import { canExportCase, isOfficerOrAdmin } from '@/features/auth/rbac';
+import { canExportCase, isOfficerOrAdmin, isSubmitterOnly } from '@/features/auth/rbac';
 
 export function GrievanceDetailSidebar({
   ticketNumber,
-  grievance,
+  grievance: selectedGrievance,
   onClose,
 }: {
   ticketNumber?: string | null;
   grievance?: Grievance | null;
   onClose: () => void;
 }) {
-  const activeTicket = ticketNumber || grievance?.ticketNumber || grievance?.ticketId || null;
+  const activeTicket = ticketNumber || selectedGrievance?.ticketNumber || selectedGrievance?.ticketId || null;
   const user = useAppSelector((state) => state.auth.user);
   const userRoles = user?.roles ?? [];
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -46,6 +45,9 @@ export function GrievanceDetailSidebar({
     ticketNumber: activeTicket,
   });
 
+  // A case opened by link has no list row; fall back to what the timeline carries.
+  const grievance = selectedGrievance ?? (timelineData ? grievanceFromTimeline(timelineData) : null);
+
   const handleDecideDeferral = async (name: string, decision: string, note: string) => {
     const { decideChangeRequest } = await import('../api/grievanceApi');
     await decideChangeRequest(name, { decision, note });
@@ -63,6 +65,7 @@ export function GrievanceDetailSidebar({
   // escalated or not, assigned to them or not — is the backend's call, made
   // through `available_actions`; none offered means none shown.
   const canManageCase = isOfficerOrAdmin(userRoles);
+  const showCaseManagement = !isSubmitterOnly(userRoles);
 
   const statusOptions = useAppSelector((state) => state.metadata?.grievanceOptions?.statuses);
   const currentStatus =
@@ -75,7 +78,6 @@ export function GrievanceDetailSidebar({
   // (action, then the response type mapped onto it). A submitter has no
   // response form, so their actions get the panel in its place.
   const availableActions = timelineData?.available_actions ?? [];
-  const uploadFiles = (files: File[]) => uploadAttachments({ files, grievance: activeTicket });
 
   return (
     <>
@@ -121,7 +123,7 @@ export function GrievanceDetailSidebar({
                 isLoadingActions={!timelineData}
                 onExecuteAction={executeAction}
                 onAddNote={addNote}
-                onUploadFiles={uploadFiles}
+                acceptsFiles
                 isSubmitting={isSubmitting}
                 isTerminal={isTerminal}
                 caseStatus={currentStatus}
@@ -133,7 +135,6 @@ export function GrievanceDetailSidebar({
                   caseStatus={timelineData.status ?? timelineData.current_status}
                   isSubmitting={isSubmitting}
                   onExecute={executeAction}
-                  onUploadFiles={uploadFiles}
                 />
               ) : null}
             </div>
@@ -150,14 +151,16 @@ export function GrievanceDetailSidebar({
                   isTerminal={isTerminal}
                 />
               ) : null}
-              <CaseManagement
-                canManageCase={canManageCase}
-                ticketNumber={activeTicket}
-                timelineData={timelineData}
-                onReassign={reassign}
-                onDecideReassignment={handleDecideReassignment}
-                isTerminal={isTerminal}
-              />
+              {showCaseManagement ? (
+                <CaseManagement
+                  canManageCase={canManageCase}
+                  ticketNumber={activeTicket}
+                  timelineData={timelineData}
+                  onReassign={reassign}
+                  onDecideReassignment={handleDecideReassignment}
+                  isTerminal={isTerminal}
+                />
+              ) : null}
 
               {grievance ? (
                 <SubmitterDetails grievance={grievance} timelineData={timelineData} />

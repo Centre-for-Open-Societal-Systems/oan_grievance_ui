@@ -19,8 +19,10 @@ const ACTIONS = [
   { action: 'Reject', label: 'Reject', requires_reason: true },
 ];
 
-function renderForm(onUploadFiles?: (files: File[]) => Promise<unknown>) {
-  const onExecuteAction = vi.fn().mockResolvedValue({});
+function renderForm(
+  onExecuteAction = vi.fn().mockResolvedValue({}),
+  acceptsFiles?: boolean
+) {
   render(
     <NextIntlClientProvider locale="en" messages={en}>
       <ResponseForm
@@ -29,7 +31,7 @@ function renderForm(onUploadFiles?: (files: File[]) => Promise<unknown>) {
         actions={ACTIONS}
         isLoadingActions={false}
         onExecuteAction={onExecuteAction}
-        onUploadFiles={onUploadFiles}
+        acceptsFiles={acceptsFiles}
       />
     </NextIntlClientProvider>
   );
@@ -57,12 +59,15 @@ describe('ResponseForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
     fillAndSubmit();
 
-    expect(onExecuteAction).toHaveBeenCalledWith({
-      action: 'Reject',
-      template: null,
-      reason: 'Action taken:\nChecked records.\n\nResolution summary:\nDuplicate of 3001001A0.',
-      internal_notes: null,
-    });
+    expect(onExecuteAction).toHaveBeenCalledWith(
+      {
+        action: 'Reject',
+        template: null,
+        reason: 'Action taken:\nChecked records.\n\nResolution summary:\nDuplicate of 3001001A0.',
+        internal_notes: null,
+      },
+      []
+    );
   });
 
   it('sends another action', () => {
@@ -73,13 +78,14 @@ describe('ResponseForm', () => {
     fillAndSubmit();
 
     expect(onExecuteAction).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'Submit Response' })
+      expect.objectContaining({ action: 'Submit Response' }),
+      []
     );
   });
 
-  it('uploads supporting documents before sending the response', async () => {
-    const onUploadFiles = vi.fn().mockResolvedValue([]);
-    const { onExecuteAction } = renderForm(onUploadFiles);
+  it('uploads supporting documents along with sending the response', async () => {
+    const onExecuteAction = vi.fn().mockResolvedValue({});
+    renderForm(onExecuteAction, true);
     const file = new File(['x'], 'site_visit.jpg', { type: 'image/jpeg' });
 
     fireEvent.click(screen.getByRole('button', { name: /Select Action/i }));
@@ -88,12 +94,15 @@ describe('ResponseForm', () => {
     fillAndSubmit();
 
     await waitFor(() => expect(onExecuteAction).toHaveBeenCalled());
-    expect(onUploadFiles).toHaveBeenCalledWith([file]);
-    expect(onUploadFiles.mock.invocationCallOrder[0]).toBeLessThan(onExecuteAction.mock.invocationCallOrder[0]!);
+    expect(onExecuteAction).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'Reject' }),
+      [file]
+    );
   });
 
-  it('does not send the response when the upload fails', async () => {
-    const { onExecuteAction } = renderForm(vi.fn().mockRejectedValue(new Error('Upload rejected')));
+  it('displays error when executing response action fails', async () => {
+    const onExecuteAction = vi.fn().mockRejectedValue(new Error('Action failed'));
+    renderForm(onExecuteAction, true);
 
     fireEvent.click(screen.getByRole('button', { name: /Select Action/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
@@ -102,8 +111,7 @@ describe('ResponseForm', () => {
     });
     fillAndSubmit();
 
-    expect(await screen.findByText('Upload rejected')).toBeInTheDocument();
-    expect(onExecuteAction).not.toHaveBeenCalled();
+    expect(await screen.findByText('Action failed')).toBeInTheDocument();
   });
 
   it('renders a terminal notice instead of the form when isTerminal is true', () => {
