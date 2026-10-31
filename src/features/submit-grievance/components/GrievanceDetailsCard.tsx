@@ -158,7 +158,7 @@ export function GrievanceDetailsCard({
 
   // Generates an object URL for previewing the selected attachment from its
   // in-memory File.
-  /* eslint-disable react-hooks/set-state-in-effect */
+  /* eslint-disable react-hooks/set-state-in-effect -- the preview URL is created from the picked file and released on cleanup */
   useEffect(() => {
     if (!previewItem) {
       setPreviewUrl(null);

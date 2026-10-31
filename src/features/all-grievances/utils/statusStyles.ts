@@ -21,19 +21,20 @@ const STATUS_ALIASES: Record<string, string> = {
 
 const NEUTRAL_BADGE = 'bg-gray-100 text-gray-700';
 
-function normalize(status: string): string {
+/** Case, spacing and `_`/`-` forgiven, so a status is looked up the same way wherever it is classified. */
+export function normalizeStatus(status: string): string {
   return status.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
 }
 
 export function statusBadgeClass(status: string | null | undefined): string {
   if (!status) return NEUTRAL_BADGE;
-  const key = normalize(status);
+  const key = normalizeStatus(status);
   return STATUS_BADGE[key] ?? STATUS_BADGE[STATUS_ALIASES[key] ?? ''] ?? NEUTRAL_BADGE;
 }
 
 /** Whether the status is the one that asks the submitter for more information (the only state they act on). */
 export function isMoreInfoStatus(status: string | null | undefined): boolean {
   if (!status) return false;
-  const key = normalize(status);
+  const key = normalizeStatus(status);
   return (STATUS_ALIASES[key] ?? key) === "require more info";
 }

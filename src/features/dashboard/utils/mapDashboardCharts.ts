@@ -23,7 +23,7 @@ const KPI_ORDER: KpiMetric[] = ['total', 'awaiting_action', 'resolved', 'escalat
  * the colour is looked up by label (case and spacing forgiven). A label this app
  * has not met gets the grey fallback rather than breaking the donut.
  */
-const STATUS_COLORS: Record<string, string> = {
+export const STATUS_COLORS: Record<string, string> = {
   submitted: '#0ea5e9',
   assigned: '#4f46e5',
   'in progress': '#16a34a',

@@ -32,6 +32,9 @@ export function resolveInitialSubmitterType(user: User | null, savedProfile: Sub
  */
 export function resolveInitialSubmissionChannel(user: User | null): string {
   if (!user) return "";
+  // An individual farmer's channel is locked in Step 1 to the portal they are using, not whatever
+  // channel their profile was registered through (an IVR farmer filing here is still filing on the web).
+  if (isIndividualFarmer(user)) return normalizeSubmissionChannel(DEFAULT_SUBMISSION_CHANNEL);
   return normalizeSubmissionChannel(user.submission_channel || DEFAULT_SUBMISSION_CHANNEL);
 }
 
@@ -136,7 +139,6 @@ export function isSubmitterTypeLocked(user: User | null): boolean {
  * but does not let them be changed.
  */
 export function isIndividualFarmer(user: User | null): boolean {
-  if (!user) return false;
-  const backendType = user.submitter_type || user.type;
-  return Boolean(backendType) && normalizeSubmitterType(backendType as string) === "individual";
+  const backendType = user?.submitter_type || user?.type;
+  return backendType ? normalizeSubmitterType(backendType) === "individual" : false;
 }

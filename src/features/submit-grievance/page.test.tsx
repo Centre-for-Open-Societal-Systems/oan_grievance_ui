@@ -212,7 +212,7 @@ describe('SubmitGrievancePage Step 1 prefill from /auth/me', () => {
 
   const field = (id: string) => document.getElementById(id) as HTMLInputElement;
 
-  it('shows the type, Fayda ID and channel the account was registered with, with nothing in localStorage', async () => {
+  it('shows the type and Fayda ID the account was registered with, on the web portal, with nothing in localStorage', async () => {
     localStorage.clear();
     renderWithUser({
       ...mockUser,
@@ -222,7 +222,7 @@ describe('SubmitGrievancePage Step 1 prefill from /auth/me', () => {
     });
 
     await waitFor(() => expect(field('submitter-type')).toHaveValue('Individual Farmer'));
-    expect(field('submission-channel')).toHaveValue('IVR Helpline');
+    expect(field('submission-channel')).toHaveValue('Web Portal');
     expect(field('si-faydaId')).toHaveValue('6557092147530500');
   });
 

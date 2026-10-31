@@ -63,7 +63,7 @@ export function GrievanceTable({
   setSelectedCategories,
   onClearFilters,
   onViewGrievance,
-  viewOnlyUnlessMoreInfo = false
+  isEditLimitedToMoreInfo = false
 }: {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -87,7 +87,7 @@ export function GrievanceTable({
   onClearFilters: () => void;
   onViewGrievance: (grievance: Grievance) => void;
   /** My Grievances: a submitter only edits a case that needs more information from them; every other row is View. */
-  viewOnlyUnlessMoreInfo?: boolean;
+  isEditLimitedToMoreInfo?: boolean;
 }) {
   const t = useTranslations('grievanceList');
   const reminderText = (reminder: SlaReminder) =>
@@ -277,7 +277,7 @@ export function GrievanceTable({
                       onClick={() => onViewGrievance(grievance)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#E6F3EA] border border-[#C9E5D2] text-green-700 hover:bg-[#C8E6C9] rounded-full text-xs font-semibold transition-colors opacity-90 group-hover:opacity-100"
                     >
-                      {viewOnlyUnlessMoreInfo && !isMoreInfoStatus(grievance.status) ? (
+                      {isEditLimitedToMoreInfo && !isMoreInfoStatus(grievance.status) ? (
                         <>
                           <Eye className="h-3.5 w-3.5 shrink-0" />
                           {t('actionView')}

@@ -298,7 +298,7 @@ export default function SubmitGrievancePage() {
             identityValues={identityValues}
             setIdentityValue={setIdentityValue}
             submitterTypeLocked={isSubmitterTypeLocked(user) || isIndividualFarmer(user)}
-            submissionChannelLocked={isIndividualFarmer(user)}
+            isSubmissionChannelLocked={isIndividualFarmer(user)}
             readOnlyFields={providerOwnedFields}
             profileSubmitterType={user?.submitter_type || user?.type}
             profileSubmissionChannel={user?.submission_channel}

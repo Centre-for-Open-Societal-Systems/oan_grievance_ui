@@ -299,7 +299,7 @@ export function CommentsAndCommunication({
                     >
                       {/* Message card */}
                       {(Boolean(event.body) ||
-                        Boolean(chipAttachments.length > 0) ||
+                        chipAttachments.length > 0 ||
                         voiceNotes.length > 0 ||
                         !(event.fromStatus || event.toStatus || event.action)) && (
                         <div className={`ml-[60px] p-4 rounded-xl rounded-tl-none ${styling.cardBg}`}>

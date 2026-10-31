@@ -21,7 +21,7 @@ import type { SubmitFields } from "../submitPayload";
 /** The staged voice recording, with a player, so it is visible next to a typed description rather than only in the file list. */
 function VoiceNotePreview({ file, label }: { file: File; label: string }) {
   const [url, setUrl] = useState<string | null>(null);
-  /* eslint-disable react-hooks/set-state-in-effect */
+  /* eslint-disable react-hooks/set-state-in-effect -- the object URL only exists in the browser, so it is created here and released on cleanup */
   useEffect(() => {
     const objectUrl = URL.createObjectURL(file);
     setUrl(objectUrl);

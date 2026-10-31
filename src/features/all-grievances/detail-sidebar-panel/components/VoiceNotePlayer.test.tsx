@@ -58,6 +58,16 @@ describe('VoiceNotePlayer', () => {
     expect(fetchAttachmentBlobUrl).toHaveBeenCalledWith('ATT-0009', false);
   });
 
+  it('moves focus to the player once it loads, so a keyboard user does not lose their place', async () => {
+    fetchAttachmentBlobUrl.mockResolvedValue('blob:voice');
+    renderIntl(<VoiceNotePlayer attachment={VOICE} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play recording' }));
+    const player = await screen.findByLabelText('Voice recording', { selector: 'audio' });
+
+    await waitFor(() => expect(player).toHaveFocus());
+  });
+
   it('says so, and does not fetch, while the recording is still being scanned', () => {
     renderIntl(<VoiceNotePlayer attachment={{ ...VOICE, scan_status: 'Pending' }} />);
 

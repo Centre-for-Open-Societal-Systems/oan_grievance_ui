@@ -1,13 +1,10 @@
+import { normalizeStatus } from './statusStyles';
+
 /** How many days before the SLA due date a grievance starts showing a reminder. */
 export const SLA_REMINDER_DAYS = 3;
 
 /** Statuses that no longer have a running SLA, as `normalizeStatus` writes them. */
 const CLOSED_STATUSES = ['resolved', 'closed', 'rejected'];
-
-/** Case, spacing and `_`/`-` forgiven, the way the status colours are looked up. */
-function normalizeStatus(status: string): string {
-  return status.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
-}
 
 /**
  * The backend's date or datetime as a local time. A bare `YYYY-MM-DD` is read as that calendar day

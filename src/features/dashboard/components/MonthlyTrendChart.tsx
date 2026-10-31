@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { useTranslations } from "next-intl";
 import type { MonthlyTrendPoint } from "../types";
+import { STATUS_COLORS } from "../utils/mapDashboardCharts";
 
 export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
   const t = useTranslations("dashboard.overview");
@@ -53,7 +54,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
             <Bar
               dataKey="submitted"
               name={t("submitted")}
-              fill="#0ea5e9"
+              fill={STATUS_COLORS.submitted}
               radius={[2, 2, 0, 0]}
               maxBarSize={30}
               isAnimationActive={true}
@@ -63,7 +64,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
             <Bar
               dataKey="resolved"
               name={t("resolved")}
-              fill="#0f766e"
+              fill={STATUS_COLORS.resolved}
               radius={[2, 2, 0, 0]}
               maxBarSize={30}
               isAnimationActive={true}

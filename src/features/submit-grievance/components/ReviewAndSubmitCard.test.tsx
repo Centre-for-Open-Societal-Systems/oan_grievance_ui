@@ -138,6 +138,16 @@ describe('Review step → POST /api/v1/grievances', () => {
     expect((form.get('file') as File).name).toBe('voice-grievance-1.mp3');
   });
 
+  it('shows the Fayda ID as its last four characters until the submitter reveals it', () => {
+    renderCard({ identityValues: { faydaId: '1234567890123456' } });
+
+    expect(screen.getByText('••••••••••••3456')).toBeInTheDocument();
+    expect(screen.queryByText('1234567890123456')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show Fayda ID' }));
+    expect(screen.getByText('1234567890123456')).toBeInTheDocument();
+  });
+
   it('files against the woreda when no kebele was chosen', async () => {
     const fetchMock = mockFetch(200, { data: { ticket_number: 'B00100011', status: 'Submitted' }, status: 'success' });
     const { onSubmitted } = renderCard({
