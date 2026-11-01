@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Copy, KeyRound, RefreshCw, Save, X } from 'lucide-react';
 import { ApiError } from '@/lib/api';
@@ -8,8 +8,7 @@ import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/Fi
 import { PhoneField } from '@/components/ui/PhoneField';
 import { useCopyFeedback } from '@/components/ui/useCopyFeedback';
 import { useModalA11y } from '@/components/ui/useModalA11y';
-import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, useAreas } from '@/features/metadata';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAreas } from '@/features/metadata';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
 import { generateRandomPassword } from '@/lib/validation/password';
 import { validateFullName, validateOptionalLocalPhone, validateTemporaryPassword } from '@/lib/validation/fieldRules';
@@ -18,15 +17,14 @@ import { AnimatedSelect } from './AnimatedSelect';
 import { resetTemporaryPassword, updateOfficer } from '../api/officerApi';
 import { OFFICER_STATUS_OPTIONS, REVIEWER_STATUS_OPTIONS, type Officer } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
-import { useWiredCategoryOptions } from '../hooks/useWiredCategoryOptions';
+import { useServiceCategoryOptions } from '../hooks/useServiceCategoryOptions';
 import type { OfficerBackendStatus, OfficerLevel, OfficerRole } from '../types';
 
-type FormField = 'fullName' | 'phoneNumber' | 'designation' | 'serviceCategories';
+type FormField = 'fullName' | 'phoneNumber' | 'serviceCategories';
 
 const FIELD_IDS: Record<FormField, string> = {
   fullName: 'edit-officer-full-name',
   phoneNumber: 'edit-officer-phone',
-  designation: 'edit-officer-designation',
   serviceCategories: 'edit-officer-categories',
 };
 
@@ -58,34 +56,19 @@ interface EditNodalOfficerModalProps {
  */
 export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, tabLabel, onSaved }: EditNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
-  const dispatch = useAppDispatch();
-  const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const { areas: regionAreas } = useAreas({ level: 'Region' });
   const { options: supervisorOptions } = useL2OfficerOptions(isOpen && level === 'L1');
-
-  useEffect(() => {
-    if (grievanceOptionsStatus === 'idle') {
-      void dispatch(fetchGrievanceOptionsThunk());
-    }
-  }, [dispatch, grievanceOptionsStatus]);
 
   const initialPhone = officer && officer.phone !== '-' ? splitPhoneNumber(officer.phone) : { phoneCode: '+251', phoneNumber: '' };
 
   const [fullName, setFullName] = useState(officer?.name ?? '');
   const [countryCode, setCountryCode] = useState(initialPhone.phoneCode);
   const [phoneNumber, setPhoneNumber] = useState(initialPhone.phoneNumber);
-  // Seeded from the officer's real `designation`, never `roleTitle` — that's a display
-  // fallback ("Department Head"/"Nodal Officer"/…) shown when the backend has none, and
-  // saving it back as if it were a real designation would fabricate one on an officer who
-  // never had one.
-  const [designation, setDesignation] = useState(officer?.designation ?? '');
-  // Not editable here: kept as the officer's own, so the category list matches their desks.
-  const department = officer?.department ?? '';
   const [serviceCategories, setServiceCategories] = useState<string[]>(officer?.tags ?? []);
-  const { options: categoryOptions, isLoading: isCategoryOptionsLoading } = useWiredCategoryOptions(department);
-  const allCategoryOptions = useAppSelector(selectCategoryFilterOptions);
-  const isCategoriesLoading = !department ? grievanceOptionsStatus === 'loading' : isCategoryOptionsLoading;
-  const categoryList = !department ? allCategoryOptions : categoryOptions;
+  // A category admin may take any category; an officer or reviewer only one that has a desk.
+  const { options: categoryList, isLoading: isCategoriesLoading } = useServiceCategoryOptions(
+    !isReviewer && level === 'L3' ? undefined : true
+  );
   // Seeded directly from the officer's own area id (not by re-matching `officer.region`'s
   // display label against the loaded area list) — that match used to fail silently whenever
   // the backend had no region_name to show, leaving `region` blank and wiping the officer's
@@ -117,8 +100,6 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
         return validateFullName(fullName);
       case 'phoneNumber':
         return validateOptionalLocalPhone(phoneNumber, countryCode);
-      case 'designation':
-        return null;
       case 'serviceCategories':
         return serviceCategories.length > 0 ? null : 'Select at least one service category.';
     }
@@ -171,7 +152,6 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
     try {
       await updateOfficer(officer.id, {
         full_name: fullName,
-        ...(isReviewer ? {} : { designation: designation.trim() || null }),
         phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : null,
         region: region || null,
         status: status as OfficerBackendStatus,
@@ -268,23 +248,6 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
                 />
                 {fieldError('phoneNumber')}
               </div>
-
-              {!isReviewer && (
-                <div className="flex flex-col gap-2">
-                  <label htmlFor={FIELD_IDS.designation} className="text-sm font-bold text-gray-900">
-                    Designation
-                  </label>
-                  <input
-                    {...a11y('designation')}
-                    type="text"
-                    value={designation}
-                    onChange={(e) => setDesignation(e.target.value)}
-                    placeholder="Enter Designation"
-                    className={`border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] text-gray-700 placeholder:text-gray-400 transition-colors ${INVALID_INPUT_STYLES}`}
-                  />
-                  {fieldError('designation')}
-                </div>
-              )}
 
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-gray-900">Region</label>

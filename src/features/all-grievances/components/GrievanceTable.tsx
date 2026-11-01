@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import type { Grievance } from '../types';
 import type { FilterOption } from './FilterDropdown';
-import { isMoreInfoStatus, statusBadgeClass } from '../utils/statusStyles';
+import { statusBadgeClass } from '../utils/statusStyles';
+import { formatDate } from '../utils/mapGrievance';
 import { getSlaReminder, slaBadgeClass, slaRowClass, type SlaReminder } from '../utils/slaReminder';
 
 
@@ -63,7 +64,6 @@ export function GrievanceTable({
   setSelectedCategories,
   onClearFilters,
   onViewGrievance,
-  isEditLimitedToMoreInfo = false
 }: {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -86,8 +86,6 @@ export function GrievanceTable({
   setSelectedCategories: (values: string[]) => void;
   onClearFilters: () => void;
   onViewGrievance: (grievance: Grievance) => void;
-  /** My Grievances: a submitter only edits a case that needs more information from them; every other row is View. */
-  isEditLimitedToMoreInfo?: boolean;
 }) {
   const t = useTranslations('grievanceList');
   const reminderText = (reminder: SlaReminder) =>
@@ -260,6 +258,12 @@ export function GrievanceTable({
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold leading-tight ${statusBadgeClass(grievance.status)}`}>
                       {grievance.status}
                     </span>
+                    {grievance.autoCloseAt && (
+                      <span className="mt-1.5 flex w-fit items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold leading-tight text-slate-700">
+                        <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
+                        {t('closesOn', { date: formatDate(grievance.autoCloseAt) })}
+                      </span>
+                    )}
                     {reminder && (
                       <span
                         className={`mt-1.5 flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-tight ${slaBadgeClass(reminder)}`}
@@ -277,7 +281,7 @@ export function GrievanceTable({
                       onClick={() => onViewGrievance(grievance)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#E6F3EA] border border-[#C9E5D2] text-green-700 hover:bg-[#C8E6C9] rounded-full text-xs font-semibold transition-colors opacity-90 group-hover:opacity-100"
                     >
-                      {isEditLimitedToMoreInfo && !isMoreInfoStatus(grievance.status) ? (
+                      {grievance.canAct === false ? (
                         <>
                           <Eye className="h-3.5 w-3.5 shrink-0" />
                           {t('actionView')}

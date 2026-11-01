@@ -14,6 +14,7 @@ vi.mock('../api/officerApi', () => ({
   fetchOfficerCandidates: vi.fn().mockResolvedValue({ candidates: [] }),
   fetchCategoryAssignments: vi.fn().mockResolvedValue({ assignments: [], pagination: {} }),
   fetchOfficers: vi.fn().mockResolvedValue({ officers: [], pagination: { total_count: 0 } }),
+  fetchServiceCategoryNames: vi.fn().mockResolvedValue(['Inputs', 'Markets']),
 }));
 
 vi.mock('@/features/metadata/api/metadataApi', async (importOriginal) => ({
@@ -81,7 +82,6 @@ describe('AddNodalOfficerModal for Category Admins', () => {
           level: 'L3',
           full_name: 'Abebe Bikila',
           email: 'abebe@example.et',
-          designation: null,
           department: null,
           service_categories: ['Inputs'],
         })

@@ -57,6 +57,7 @@ export function SLATracker({
 
   const submittedDate =
     formatDate(slaData?.sla_start_at) || grievance.submittedAt.split(',')[0] || 'N/A';
+  const autoCloseDate = formatDate(slaData?.auto_close_at);
   const dueDate = formatDate(slaData?.sla_due_date) || grievance.slaDueDate || 'N/A';
 
   const getStatusBadge = () => {
@@ -163,6 +164,13 @@ export function SLATracker({
               <div className="text-sm font-bold truncate">{isPaused ? t('slaOnHold') : dueDate}</div>
             </div>
           </div>
+
+          {autoCloseDate && (
+            <div className="-mt-2 mb-5 rounded-lg border border-slate-200/80 bg-slate-50 px-3 py-2 text-center">
+              <div className="text-xs font-medium text-gray-500">{t('slaClosesOn')}</div>
+              <div className="text-sm font-bold text-gray-900">{autoCloseDate}</div>
+            </div>
+          )}
 
           {canDefer && !isResolved && !isPaused && (
             <button
