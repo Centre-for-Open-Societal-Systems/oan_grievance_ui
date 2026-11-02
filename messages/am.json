@@ -520,6 +520,8 @@
       "disableRule": "ደንብ አቦዝን",
       "editTemplate": "የማሳወቂያ አብነት ያርትዑ",
       "closeEditor": "አርታዒ ዝጋ",
+      "viewTemplate": "የማሳወቂያ አብነት ይመልከቱ",
+      "closeTemplate": "አብነት ዝጋ",
       "emailSubject": "የኢሜይል ርዕስ",
       "insert": "አስገባ:",
       "insertSubject": "{token} በርዕስ ውስጥ አስገባ",

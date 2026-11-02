@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Search, Info, RefreshCw, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { useIsReviewOfficer } from '@/features/auth/hooks/useIsReviewOfficer';
 import { NotificationCard } from './components/NotificationCard';
 import {
     fetchNotificationPlaceholders,
@@ -22,6 +23,10 @@ import type {
 
 export default function NotificationConfigPage() {
     const t = useTranslations('admin.notifications');
+    // A Review Officer can view this tab (route access — see rbac.ts) but PR #47/STG-434
+    // refuses it every write server-side, so the edit controls are hidden rather than left
+    // to fail with a 403 — the same `canManage` pattern as the other Administration tabs.
+    const canManage = !useIsReviewOfficer();
     const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
     const [placeholders, setPlaceholders] = useState<PlaceholderItem[]>([]);
     const [recipientOptions, setRecipientOptions] = useState<FlatRecipientOption[]>([]);
@@ -312,7 +317,7 @@ export default function NotificationConfigPage() {
                         <>
                             <NotificationCard
                                 notifications={filteredTemplates}
-                                onUpdate={handleUpdate}
+                                onUpdate={canManage ? handleUpdate : undefined}
                                 placeholders={placeholders}
                                 recipientOptions={recipientOptions}
                             />

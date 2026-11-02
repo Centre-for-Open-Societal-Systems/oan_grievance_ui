@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
-import { Pencil, FileText, X, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, Pencil, FileText, X, Loader2, AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NotificationTemplate, PlaceholderItem, UpdateNotificationTemplatePayload, FlatRecipientOption } from './types';
 import { TemplateBody } from './TemplateBody';
@@ -40,6 +40,8 @@ function formatEventTitle(name: string, event: string): string {
 
 export function NotificationRow({ notification, isLast, onUpdate, placeholders, recipientOptions = [] }: NotificationRowProps) {
     const t = useTranslations('admin.notifications');
+    const canEdit = !!onUpdate;
+    const OpenIcon = canEdit ? Pencil : Eye;
     const [isExpanded, setIsExpanded] = useState(false);
     const [isActive, setIsActive] = useState(notification.enabled);
     const [subject, setSubject] = useState(notification.subject || '');
@@ -184,31 +186,49 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders, 
 
                 {/* Actions */}
                 <div className="flex items-center gap-3 shrink-0 ml-2">
-                    <label className="relative inline-flex items-center cursor-pointer" title={isActive ? t('disableRule') : t('enableRule')}>
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={isActive}
-                            disabled={isToggling}
-                            onChange={(e) => handleToggleActive(e.target.checked)}
-                        />
-                        <div className={`w-10 h-5 rounded-full transition-colors duration-200 ease-in-out ${isActive ? 'bg-[#16A34A]' : 'bg-gray-300'} ${isToggling ? 'opacity-50' : ''}`}></div>
-                        <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-all duration-200 ease-in-out transform shadow-sm ${isActive ? 'translate-x-5' : ''}`}></div>
-                    </label>
+                    {canEdit && (
+                        <label className="relative inline-flex items-center cursor-pointer" title={isActive ? t('disableRule') : t('enableRule')}>
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={isActive}
+                                disabled={isToggling}
+                                onChange={(e) => handleToggleActive(e.target.checked)}
+                            />
+                            <div className={`w-10 h-5 rounded-full transition-colors duration-200 ease-in-out ${isActive ? 'bg-[#16A34A]' : 'bg-gray-300'} ${isToggling ? 'opacity-50' : ''}`}></div>
+                            <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-all duration-200 ease-in-out transform shadow-sm ${isActive ? 'translate-x-5' : ''}`}></div>
+                        </label>
+                    )}
                     <button
                         type="button"
                         onClick={() => setIsExpanded(!isExpanded)}
                         className={`relative w-8 h-8 rounded-lg border flex items-center justify-center transition-all duration-200 active:scale-95 ${isExpanded ? 'bg-[#F7F8FA] border-gray-300' : 'bg-white hover:bg-gray-50 border-gray-200'}`}
-                        title={isExpanded ? t('closeEditor') : t('editTemplate')}
+                        title={canEdit ? (isExpanded ? t('closeEditor') : t('editTemplate')) : (isExpanded ? t('closeTemplate') : t('viewTemplate'))}
                     >
                         <X className={`absolute w-4 h-4 text-gray-500 transition-all duration-200 ${isExpanded ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'}`} />
-                        <Pencil className={`absolute w-3.5 h-3.5 text-gray-500 transition-all duration-200 ${!isExpanded ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 rotate-90 scale-50'}`} />
+                        <OpenIcon className={`absolute w-3.5 h-3.5 text-gray-500 transition-all duration-200 ${!isExpanded ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 rotate-90 scale-50'}`} />
                     </button>
                 </div>
             </div>
 
+            {/* Read-only template view */}
+            {isExpanded && !canEdit && (
+                <div className="border-t border-gray-200 p-6 bg-gray-50/50 flex flex-col gap-5">
+                    {notification.channel === 'Email' && (
+                        <div>
+                            <h4 className="text-[13px] font-medium text-gray-500 mb-1">{t('emailSubject')}</h4>
+                            <p className="text-[14px] text-gray-800 whitespace-pre-wrap">{notification.subject || '—'}</p>
+                        </div>
+                    )}
+                    <div>
+                        <h4 className="text-[13px] font-medium text-gray-500 mb-1">{t('templateBody')}</h4>
+                        <p className="text-[14px] text-gray-800 leading-relaxed whitespace-pre-wrap">{notification.body || '—'}</p>
+                    </div>
+                </div>
+            )}
+
             {/* Expanded Editor */}
-            {isExpanded && (
+            {isExpanded && canEdit && (
                 <div className="border-t border-gray-200">
                     <div className="p-6 bg-gray-50/50">
                         {error && (

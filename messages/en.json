@@ -520,6 +520,8 @@
       "disableRule": "Disable rule",
       "editTemplate": "Edit notification template",
       "closeEditor": "Close editor",
+      "viewTemplate": "View notification template",
+      "closeTemplate": "Close template",
       "emailSubject": "Email Subject",
       "insert": "Insert:",
       "insertSubject": "Insert {token} into subject",
