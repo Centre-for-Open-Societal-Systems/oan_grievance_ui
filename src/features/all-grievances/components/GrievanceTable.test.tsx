@@ -107,14 +107,13 @@ describe('GrievanceTable', () => {
     expect(onViewGrievance).toHaveBeenCalledWith(mockGrievances[0]);
   });
 
-  it("shows View instead of Edit for a submitter unless the case needs more information", () => {
+  it("shows View instead of Edit when the backend says the viewer cannot act", () => {
     const { container } = renderIntl(
       <GrievanceTable
         {...defaultProps}
-        isEditLimitedToMoreInfo
         grievances={[
-          { ...mockGrievances[0]!, status: "In Progress" },
-          { ...mockGrievances[1]!, status: "Require More Info" },
+          { ...mockGrievances[0]!, status: "In Progress", canAct: false },
+          { ...mockGrievances[1]!, status: "Require More Info", canAct: true },
         ]}
       />
     );

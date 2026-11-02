@@ -265,6 +265,7 @@
   },
   "caseDetail": {
     "slaPaused": "ቆሟል",
+    "slaClosesOn": "የሚዘጋበት ቀን",
     "slaOnHold": "ተይዟል",
     "grievanceType": "የቅሬታ ዓይነት",
     "selectGrievanceType": "የቅሬታ ዓይነት ይምረጡ",
@@ -730,6 +731,7 @@
     "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ...",
     "actionView": "ይመልከቱ",
     "actionEdit": "አርትዕ",
+    "closesOn": "{date} ይዘጋል",
     "slaDueToday": "ዛሬ ይጠናቀቃል",
     "slaDueSoon": "{days, plural, one {# ቀን ይቀራል} other {# ቀናት ይቀራሉ}}",
     "slaOverdue": "{days, plural, one {ከ# ቀን በፊት ተላልፏል} other {ከ# ቀናት በፊት ተላልፏል}}"

@@ -35,6 +35,16 @@ export interface GrievanceListItem {
   assigned_to?: string | null;
   sla_due_date?: string | null;
   confirmation_deadline?: string | null;
+  /** Whether the caller may act on the case now (a reply owed, or the assigned officer). */
+  can_act?: boolean | null;
+  /** The one deadline that matters now; `due_kind` says whether it closes the case or breaches the SLA. */
+  due_date?: string | null;
+  due_kind?: 'auto_close' | 'sla_breach' | null;
+  overdue_seconds?: number | null;
+  is_paused?: boolean | null;
+  paused_since?: string | null;
+  /** When the case closes by itself if nobody acts. */
+  auto_close_at?: string | null;
   submitted_on?: string | null;
   updated_at?: string | null;
 }
@@ -116,6 +126,10 @@ export interface Grievance {
   slaDueDate: string;
   /** The backend's raw `sla_due_date`, for working out how close the case is to breaching. */
   slaDueAt?: string;
+  /** The backend's `can_act`: whether the viewer may act on the case now, else the row is view-only. */
+  canAct?: boolean;
+  /** When the case closes by itself if nobody acts (waiting on the submitter, or resolved and unconfirmed). */
+  autoCloseAt?: string;
   submissionChannel: string;
   description?: string;
   administrativeArea?: string;
@@ -231,6 +245,8 @@ export interface GrievanceTimelineSla {
   /** The SLA clock is held (e.g. waiting on the submitter); staff only. */
   is_paused?: boolean | null;
   paused_since?: string | null;
+  /** When the case closes by itself if nobody acts, for a state whose timer closes it. */
+  auto_close_at?: string | null;
 }
 
 export interface GrievanceTimelineAssignment {

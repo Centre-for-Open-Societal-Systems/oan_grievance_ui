@@ -59,7 +59,7 @@ function buildCsp(nonce: string): string {
     `media-src 'self' blob:`,
     `frame-src 'self' blob:`,
     `font-src 'self'`,
-    `connect-src 'self'${realtimeConnectSrc()}`,
+    `connect-src 'self'${realtimeConnectSrc()}${isDev ? ' ws: wss:' : ''}`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
@@ -202,6 +202,6 @@ export const config = {
   // whose pathname happens to contain a dot (an email-shaped segment, a
   // dotted ID), silently skipping the auth check for them.
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff|woff2|ttf|eot)$).*)',
+    '/((?!api|_next|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff|woff2|ttf|eot)$).*)',
   ],
 };

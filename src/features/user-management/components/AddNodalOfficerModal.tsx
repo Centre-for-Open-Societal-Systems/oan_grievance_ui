@@ -7,8 +7,7 @@ import { ApiError } from '@/lib/api';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
 import { useModalA11y } from '@/components/ui/useModalA11y';
-import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, useAreas } from '@/features/metadata';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAreas } from '@/features/metadata';
 import { formatToE164 } from '@/lib/validation/phone';
 import { generateRandomPassword } from '@/lib/validation/password';
 import {
@@ -21,6 +20,7 @@ import { AnimatedSelect } from './AnimatedSelect';
 import { createOfficer, fetchOfficerCandidates } from '../api/officerApi';
 import { OFFICER_STATUS_OPTIONS, REVIEWER_STATUS_OPTIONS } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
+import { useServiceCategoryOptions } from '../hooks/useServiceCategoryOptions';
 import type { OfficerBackendStatus, OfficerCandidate, OfficerLevel, OfficerRole } from '../types';
 
 type FormField = 'fullName' | 'email' | 'phoneNumber' | 'serviceCategories';
@@ -49,7 +49,7 @@ interface AddNodalOfficerModalProps {
 
 /**
  * Creates an officer, department head, or Reviewer via the real `POST /api/v1/officers`
- * endpoint (see `officerApi.ts`). A Reviewer needs no designation, level, or supervisor —
+ * endpoint (see `officerApi.ts`). A Reviewer needs no level or supervisor —
  * see `CreateOfficerPayload`'s own doc comment (STG-443) for exactly which fields each role
  * requires or rejects. `temporary_password` is required by the backend: the account can't
  * sign in with it directly (login answers 403 `PASSWORD_CHANGE_REQUIRED`) — they replace it
@@ -60,16 +60,8 @@ interface AddNodalOfficerModalProps {
  */
 export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, onCreated }: AddNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
-  const dispatch = useAppDispatch();
-  const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const { areas: regionAreas } = useAreas({ level: 'Region' });
   const { options: supervisorOptions } = useL2OfficerOptions(isOpen && level === 'L1');
-
-  useEffect(() => {
-    if (grievanceOptionsStatus === 'idle') {
-      void dispatch(fetchGrievanceOptionsThunk());
-    }
-  }, [dispatch, grievanceOptionsStatus]);
 
   // Logins that already hold the officer role but sit on no desk (e.g. onboarded at the identity
   // provider): picking one fills the name and email. Best-effort — without it the form still works.
@@ -92,9 +84,10 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
   // random password is sent that nobody is told.
   const [password, setPassword] = useState(() => generateRandomPassword());
   const [serviceCategories, setServiceCategories] = useState<string[]>([]);
-  const allCategoryOptions = useAppSelector(selectCategoryFilterOptions);
-  const isCategoriesLoading = grievanceOptionsStatus === 'loading';
-  const categoryList = allCategoryOptions;
+  // A category admin may take any category; an officer or reviewer only one that has a desk.
+  const { options: categoryList, isLoading: isCategoriesLoading } = useServiceCategoryOptions(
+    !isReviewer && level === 'L3' ? undefined : true
+  );
   const [region, setRegion] = useState('');
   const [status, setStatus] = useState<string>('Active');
   const [reportsTo, setReportsTo] = useState('');
@@ -170,7 +163,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
       await createOfficer({
         role,
         full_name: fullName,
-        designation: null,
         level: isReviewer ? null : level,
         department: null,
         email,

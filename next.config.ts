@@ -22,7 +22,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["*.localtest.me"],
+  allowedDevOrigins: [
+    "grievance.openg2p.localtest.me",
+    "*.openg2p.localtest.me",
+    "*.localtest.me",
+  ],
   poweredByHeader: false,
   images: {
     // i.pravatar.cc: the placeholder submitter avatar in SubmitterDetails.tsx

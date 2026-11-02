@@ -265,6 +265,7 @@
   },
   "caseDetail": {
     "slaPaused": "Dhaabbateera",
+    "slaClosesOn": "Guyyaa cufamu",
     "slaOnHold": "Kaayameera",
     "grievanceType": "Gosa Mareeffamaa",
     "selectGrievanceType": "Gosa Mareeffamaa Filadhu",
@@ -730,6 +731,7 @@
     "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi...",
     "actionView": "Ilaali",
     "actionEdit": "Gulaali",
+    "closesOn": "{date} cufama",
     "slaDueToday": "Har'a dhumata",
     "slaDueSoon": "{days, plural, one {Guyyaa # hafe} other {Guyyoota # hafan}}",
     "slaOverdue": "{days, plural, one {Guyyaa # dura darbe} other {Guyyoota # dura darbe}}"

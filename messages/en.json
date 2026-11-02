@@ -265,6 +265,7 @@
   },
   "caseDetail": {
     "slaPaused": "Paused",
+    "slaClosesOn": "Closes on",
     "slaOnHold": "On hold",
     "grievanceType": "Grievance Type",
     "selectGrievanceType": "Select Grievance Type",
@@ -730,6 +731,7 @@
     "searchPlaceholder": "Search by ticket number, submitter name, or grievance type...",
     "actionView": "View",
     "actionEdit": "Edit",
+    "closesOn": "Closes {date}",
     "slaDueToday": "Due today",
     "slaDueSoon": "{days, plural, one {# day left} other {# days left}}",
     "slaOverdue": "{days, plural, one {Breached # day ago} other {Breached # days ago}}"

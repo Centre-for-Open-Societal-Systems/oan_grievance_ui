@@ -123,7 +123,10 @@ export function mapGrievanceListItem(item: GrievanceListItem): Grievance {
     department: item.department ?? item.assigned_dept ?? '',
     assignedTo: item.assigned_to ?? '',
     slaDueDate: formatDate(item.sla_due_date),
-    slaDueAt: item.sla_due_date ?? undefined,
+    // Only an SLA breach is a reminder; an auto-close date or a held clock is not.
+    slaDueAt: item.due_kind === 'sla_breach' && !item.is_paused ? (item.due_date ?? undefined) : undefined,
+    canAct: item.can_act ?? undefined,
+    autoCloseAt: item.auto_close_at ?? (item.due_kind === 'auto_close' ? item.due_date : undefined) ?? undefined,
     submissionChannel: item.submission_channel ?? '',
     description: item.description ?? '',
     administrativeArea: item.administrative_area ?? '',

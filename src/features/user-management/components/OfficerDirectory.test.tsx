@@ -60,6 +60,7 @@ vi.mock('../api/officerApi', () => ({
   fetchOfficerStatistics,
   fetchOfficerStatusCounts,
   fetchOfficerCandidates: vi.fn().mockResolvedValue({ candidates: [] }),
+  fetchServiceCategoryNames: vi.fn().mockResolvedValue(['Inputs', 'Markets']),
 }));
 
 const fetchAdministrativeAreas = vi.hoisted(() =>
