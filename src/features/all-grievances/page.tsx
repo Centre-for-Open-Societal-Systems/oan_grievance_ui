@@ -207,7 +207,12 @@ export default function AllGrievancesPage() {
       <GrievanceDetailSidebar
         ticketNumber={ticketParam ?? selectedGrievance?.ticketNumber ?? selectedGrievance?.ticketId ?? null}
         grievance={ticketParam ? null : selectedGrievance}
-        onClose={handleCloseDetail}
+        onClose={() => {
+          handleCloseDetail();
+          // Actions taken in the panel change the case; reload so the rows (status, assignee) match it.
+          refetch();
+          refetchMetrics();
+        }}
       />
     </div>
   );

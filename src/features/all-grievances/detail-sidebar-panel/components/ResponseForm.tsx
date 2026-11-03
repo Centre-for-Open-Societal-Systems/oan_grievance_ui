@@ -233,6 +233,10 @@ export function ResponseForm({
 
   if (!canManageCase) return null;
 
+  // The backend offers actions only to the officer the case is assigned to (or
+  // their supervisor), so a viewer with none has no response to give here.
+  if (!isLoadingActions && !isTerminal && actions.length === 0) return null;
+
   if (isTerminal) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col gap-2">

@@ -47,6 +47,17 @@ describe('mapGrievanceListItem', () => {
     expect(grievance.location).toBe('Basona Werana / Oromia');
   });
 
+  it('gives a voice grievance a default title with or without a description', () => {
+    const base = { name: 'GRV-0003', ticket_number: 'GRV-0003', status: 'Open', escalated: false, is_anonymous: false };
+    expect(mapGrievanceListItem({ ...base, submission_channel: 'Voice' }).title).toBe('Voice grievance');
+    expect(
+      mapGrievanceListItem({ ...base, description: 'Voice grievance - please listen to the attached audio recording.' }).title,
+    ).toBe('Voice grievance');
+    expect(
+      mapGrievanceListItem({ ...base, submission_channel: 'Voice', description: 'Fertiliser arrived six weeks late' }).title,
+    ).toBe('Fertiliser arrived six weeks late');
+  });
+
   it('tolerates missing optional fields', () => {
     const grievance = mapGrievanceListItem({
       name: 'GRV-0002',
@@ -57,7 +68,7 @@ describe('mapGrievanceListItem', () => {
     });
 
     expect(grievance.ticketId).toBe('GRV-0002');
-    expect(grievance.title).toBe('Untitled grievance');
+    expect(grievance.title).toBe('Grievance GRV-0002');
     expect(grievance.location).toBe('');
     expect(grievance.submittedAt).toBe('');
     expect(grievance.escalated).toBe(true);
