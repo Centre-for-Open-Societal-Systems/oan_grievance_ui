@@ -151,34 +151,38 @@ export function ReviewReassignmentPopup({
             </div>
           </div>
 
-          {/* Comments */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="review-reassignment-comments" className="text-sm font-bold text-gray-700">
-              {t('yourComments')} <span className="text-gray-400 font-normal">{t('requiredRejecting')}</span>
-            </label>
-            <textarea
-              id="review-reassignment-comments"
-              rows={3}
-              value={comments}
-              maxLength={REASON_MAX_LENGTH}
-              aria-describedby="review-reassignment-comments-count"
-              onChange={(e) => setComments(e.target.value)}
-              placeholder="e.g. Approved, reassignment is appropriate. Or, if rejecting: explain why it should stay in the current department..."
-              className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white resize-none"
-            />
-            <div className="flex items-start justify-between gap-2">
-              <div className="text-[11px] text-gray-400">{t('optionalApproving')}</div>
-              <CharacterCounter id="review-reassignment-comments-count" count={comments.length} max={REASON_MAX_LENGTH} />
-            </div>
-          </div>
+          {!readOnly && (
+            <>
+              {/* Comments */}
+              <div className="flex flex-col gap-2">
+                <label htmlFor="review-reassignment-comments" className="text-sm font-bold text-gray-700">
+                  {t('yourComments')} <span className="text-gray-400 font-normal">{t('requiredRejecting')}</span>
+                </label>
+                <textarea
+                  id="review-reassignment-comments"
+                  rows={3}
+                  value={comments}
+                  maxLength={REASON_MAX_LENGTH}
+                  aria-describedby="review-reassignment-comments-count"
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder="e.g. Approved, reassignment is appropriate. Or, if rejecting: explain why it should stay in the current department..."
+                  className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white resize-none"
+                />
+                <div className="flex items-start justify-between gap-2">
+                  <div className="text-[11px] text-gray-400">{t('optionalApproving')}</div>
+                  <CharacterCounter id="review-reassignment-comments-count" count={comments.length} max={REASON_MAX_LENGTH} />
+                </div>
+              </div>
 
-          {/* Warning */}
-          <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200/60 text-sm text-amber-800">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
-            <p className="leading-relaxed">
-              {t('auditWarning')}
-            </p>
-          </div>
+              {/* Warning */}
+              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200/60 text-sm text-amber-800">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+                <p className="leading-relaxed">
+                  {t('auditWarning')}
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}
