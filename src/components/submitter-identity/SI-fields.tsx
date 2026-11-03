@@ -33,7 +33,7 @@ interface FieldShellProps {
   required?: boolean;
   error: string | undefined;
   /** Helper text under the field, shown until an error takes its place. */
-  hint?: string;
+  hint?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 }
@@ -91,8 +91,7 @@ export function SITextField({
   className,
   type = "text",
   maxLength,
-  inputMode,
-}: FieldProps & { type?: "text" | "email"; maxLength?: number; inputMode?: "numeric" }) {
+}: FieldProps & { type?: "text" | "email"; maxLength?: number }) {
   const id = siFieldId(name);
   const error = errors?.[name];
   const readOnly = !!readOnlyFields?.includes(name);
@@ -104,7 +103,6 @@ export function SITextField({
         readOnly={readOnly}
         autoComplete="off"
         maxLength={maxLength}
-        inputMode={inputMode}
         value={values[name] || ""}
         onChange={(e) => setValue(name, e.target.value)}
         onBlur={() => onFieldBlur?.(name)}

@@ -24,6 +24,14 @@ export interface AnimatedSelectProps {
   invalid?: boolean;
   /** Whether the selection can be cleared (the × button and the placeholder row). Turn off for a required field. Defaults to on. */
   clearable?: boolean;
+  /**
+   * Called with what the person has typed to search (`''` once they stop). For a list that is
+   * only part of the whole, so the search can be asked of the server: the options are still
+   * also filtered by the typed text here.
+   */
+  onQueryChange?: (query: string) => void;
+  /** A line under the options, e.g. to say the list was cut short. */
+  note?: string;
 }
 
 /**
@@ -43,6 +51,8 @@ export function AnimatedSelect({
   describedBy,
   invalid,
   clearable = true,
+  onQueryChange,
+  note,
 }: AnimatedSelectProps) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
@@ -83,6 +93,10 @@ export function AnimatedSelect({
           );
         })
       : options;
+
+  useEffect(() => {
+    onQueryChange?.(isTyping ? typedQuery.trim() : "");
+  }, [isTyping, typedQuery, onQueryChange]);
 
   // Close and reset typing on click outside
   useEffect(() => {
@@ -365,6 +379,7 @@ export function AnimatedSelect({
               })
             )}
           </ul>
+          {note && <p className="px-4 py-2 text-xs text-gray-500 border-t border-gray-100">{note}</p>}
         </div>
       )}
     </div>

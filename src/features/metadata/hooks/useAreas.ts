@@ -5,6 +5,7 @@ import type { AdministrativeArea } from '../types';
 import { AREA_QUERY_LIMIT, areaQueryArgs, useGetAreasQuery, type AreaLevel } from '../api/areasApi';
 
 const NO_AREAS: AdministrativeArea[] = [];
+const noop = () => {};
 
 export interface UseAreasOptions {
   level: AreaLevel;
@@ -22,6 +23,8 @@ export interface UseAreasResult {
   isError: boolean;
   /** The backend returned `AREA_QUERY_LIMIT` rows, so there may be more — narrow with `search`. */
   isTruncated: boolean;
+  /** Asks again after a failed load. Does nothing while no request is being made. */
+  refetch: () => void;
 }
 
 /** Administrative areas for a dropdown, cached and deduped by `areasApi`. */
@@ -30,7 +33,7 @@ export function useAreas({ level, parents, search = '' }: UseAreasOptions): UseA
   const args = areaQueryArgs(level, parents, search);
   const skip = needsParents && args.parents.length === 0;
 
-  const { data, isFetching, isError } = useGetAreasQuery(skip ? skipToken : args);
+  const { data, isFetching, isError, refetch } = useGetAreasQuery(skip ? skipToken : args);
   const areas = skip ? NO_AREAS : (data ?? NO_AREAS);
 
   return {
@@ -38,5 +41,7 @@ export function useAreas({ level, parents, search = '' }: UseAreasOptions): UseA
     isLoading: !skip && isFetching,
     isError: !skip && isError,
     isTruncated: areas.length >= AREA_QUERY_LIMIT,
+    // RTK Query's `refetch` throws for a query that was skipped.
+    refetch: skip ? noop : () => void refetch(),
   };
 }

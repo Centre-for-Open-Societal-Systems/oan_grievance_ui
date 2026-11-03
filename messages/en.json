@@ -120,10 +120,14 @@
     "areas": {
       "loading": "Loading…",
       "none": "No areas available",
+      "noneOptional": "None listed — you can leave this blank",
+      "truncated": "Showing the first {count} — type to search for others.",
       "selectRegionFirst": "Select region first",
       "selectZoneFirst": "Select zone first",
       "selectWoredaFirst": "Select woreda first",
-      "loadFailed": "Could not load this list. Reload the page to try again."
+      "loadFailed": "Could not load this list.",
+      "loadFailedShort": "Could not load — try again",
+      "retry": "Try again"
     },
     "entityTypes": {
       "localNgo": "Local NGO",

@@ -120,10 +120,14 @@
     "areas": {
       "loading": "በመጫን ላይ…",
       "none": "ምንም አማራጭ የለም",
+      "noneOptional": "ምንም አልተዘረዘረም — ባዶ መተው ይችላሉ",
+      "truncated": "የመጀመሪያዎቹ {count} ብቻ ይታያሉ — ሌሎችን ለማግኘት ይተይቡ።",
       "selectRegionFirst": "መጀመሪያ ክልል ይምረጡ",
       "selectZoneFirst": "መጀመሪያ ዞን ይምረጡ",
       "selectWoredaFirst": "መጀመሪያ ወረዳ ይምረጡ",
-      "loadFailed": "ይህንን ዝርዝር መጫን አልተቻለም። ገጹን እንደገና ይጫኑ።"
+      "loadFailed": "ይህንን ዝርዝር መጫን አልተቻለም።",
+      "loadFailedShort": "መጫን አልተቻለም — እንደገና ይሞክሩ",
+      "retry": "እንደገና ይሞክሩ"
     },
     "entityTypes": {
       "localNgo": "የሀገር ውስጥ መንግሥታዊ ያልሆነ ድርጅት",
