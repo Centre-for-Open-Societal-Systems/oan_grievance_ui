@@ -14,6 +14,29 @@ vi.mock('../api/organisationApi', async (importOriginal) => ({
   getMyOrganisation: (...args: unknown[]) => getMyOrganisation(...args),
 }));
 
+// Two-level slice of the administrative-area tree, keyed by the parent's area_id.
+const AREAS: Record<string, Array<[id: string, name: string]>> = {
+  '': [['region-ET14', 'Addis Ababa'], ['region-ET04', 'Oromia']],
+  'region-ET14': [['zone-ET1401', 'Arada Sub-city']],
+  'region-ET04': [['zone-ET0401', 'East Shewa']],
+  'zone-ET1401': [['woreda-ET140101', 'Woreda 01']],
+  'woreda-ET140101': [['kebele-ET14010101', 'Kebele 01']],
+};
+type AreasArgs = { level: string; parents?: readonly string[]; search?: string };
+const areasResult = ({ parents = [] }: AreasArgs) => ({
+  areas: (AREAS[parents[0] ?? ''] ?? []).map(([area_id, area_name]) => ({ area_id, area_name })),
+  isLoading: false,
+  isError: false,
+  isTruncated: false,
+  refetch: vi.fn(),
+});
+const useAreas = vi.fn(areasResult);
+
+vi.mock('@/features/metadata', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/metadata')>()),
+  useAreas: (...args: Parameters<typeof useAreas>) => useAreas(...args),
+}));
+
 import { ApiError } from '@/lib/api/fetchApi';
 import type { OrganisationKind } from '@/lib/organisationKind';
 import { buildInitialOrganisationValues } from '../lib/defaults';
@@ -40,6 +63,8 @@ function renderForm(kind: OrganisationKind = 'ngo') {
 const type = (label: RegExp | string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
+const pick = (area: string) => fireEvent.click(screen.getByRole('option', { name: area }));
+
 const registerButton = () => screen.getByRole('button', { name: /Register Organization/ });
 
 function fillValidForm(entityType: string) {
@@ -48,8 +73,8 @@ function fillValidForm(entityType: string) {
   type(/^Registration Number/, '0012345678');
   type(/^Authorised Representative/, 'Almaz Tesfaye');
   type(/^Street address/, 'Bole Road, Block 4');
-  type(/^Zone/, 'Addis Ababa');
-  type(/^Region/, 'Addis Ababa');
+  pick('Addis Ababa');
+  pick('Arada Sub-city');
   type(/^Postal code/, '1000');
   type(/^Phone/, '0911234567');
   fireEvent.click(screen.getByRole('checkbox'));
@@ -59,8 +84,13 @@ describe('OrganisationRegistrationForm', () => {
   beforeEach(() => {
     registerOrganisation.mockResolvedValue(undefined);
     getMyOrganisation.mockResolvedValue(null);
+    // jsdom has no layout, so no scrollIntoView: typing in a dropdown highlights an option and scrolls to it.
+    Element.prototype.scrollIntoView = vi.fn();
   });
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+    useAreas.mockImplementation(areasResult);
+  });
 
   it('lays out the three sections of the reference design', () => {
     renderForm();
@@ -75,7 +105,7 @@ describe('OrganisationRegistrationForm', () => {
       /^Authorised Representative/,
       /^Street address/,
       /^Kebele \/ Village/,
-      /^Woreda \/ District/,
+      /^Woreda/,
       /^Zone/,
       /^Region/,
       /^Country\s*\*/,
@@ -163,6 +193,144 @@ describe('OrganisationRegistrationForm', () => {
     expect(screen.queryByRole('option', { name: 'Local NGO' })).not.toBeInTheDocument();
   });
 
+  describe('registered address areas', () => {
+    it('lists Regions first and each narrower level only once the one above is chosen', () => {
+      renderForm();
+      const zone = () => screen.getByRole('combobox', { name: /^Zone/ });
+      const woreda = () => screen.getByRole('combobox', { name: /^Woreda/ });
+      const kebele = () => screen.getByRole('combobox', { name: /^Kebele/ });
+
+      expect(screen.getByRole('option', { name: 'Oromia' })).toBeInTheDocument();
+      expect(zone()).toBeDisabled();
+      expect(woreda()).toBeDisabled();
+      expect(kebele()).toBeDisabled();
+      expect(useAreas).toHaveBeenCalledWith(expect.objectContaining({ level: 'Zone', parents: [] }));
+
+      pick('Addis Ababa');
+      expect(useAreas).toHaveBeenCalledWith({ level: 'Zone', parents: ['region-ET14'], search: '' });
+      expect(zone()).toBeEnabled();
+      expect(woreda()).toBeDisabled();
+
+      pick('Arada Sub-city');
+      expect(useAreas).toHaveBeenCalledWith({ level: 'Woreda', parents: ['zone-ET1401'], search: '' });
+      pick('Woreda 01');
+      expect(useAreas).toHaveBeenCalledWith({ level: 'Kebele', parents: ['woreda-ET140101'], search: '' });
+      expect(kebele()).toBeEnabled();
+    });
+
+    it('says an optional list is empty rather than unavailable', () => {
+      renderForm();
+      pick('Oromia');
+      pick('East Shewa');
+      // East Shewa has no woredas in the data: Woreda and Kebele are optional, so it can be left blank.
+      expect(screen.getByRole('combobox', { name: /^Woreda/ })).toHaveAttribute(
+        'placeholder',
+        'None listed — you can leave this blank'
+      );
+    });
+
+    it('says when a list was cut short, and searches the service as the person types', async () => {
+      useAreas.mockImplementation((args: AreasArgs) => ({ ...areasResult(args), isTruncated: args.level === 'Region' }));
+      renderForm();
+      expect(screen.getByText('Showing the first 2 — type to search for others.')).toBeInTheDocument();
+
+      fireEvent.change(screen.getByRole('combobox', { name: /^Region/ }), { target: { value: 'Oro' } });
+      await waitFor(() => expect(useAreas).toHaveBeenCalledWith({ level: 'Region', search: 'Oro' }));
+    });
+
+    it('keeps showing an area found by searching once the search is over and the list no longer has it', async () => {
+      // The full list is cut short and lacks Addis Ababa; only searching for it finds it.
+      useAreas.mockImplementation((args: AreasArgs) =>
+        args.level === 'Region'
+          ? {
+              ...areasResult(args),
+              areas: args.search
+                ? [{ area_id: 'region-ET14', area_name: 'Addis Ababa' }]
+                : [{ area_id: 'region-ET04', area_name: 'Oromia' }],
+            }
+          : areasResult(args)
+      );
+      renderForm();
+      const region = screen.getByRole('combobox', { name: /^Region/ });
+
+      fireEvent.change(region, { target: { value: 'Add' } });
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Addis Ababa' })).toBeInTheDocument());
+      pick('Addis Ababa');
+      await waitFor(() => expect(useAreas).toHaveBeenLastCalledWith(expect.objectContaining({ search: '' })));
+
+      expect(region).toHaveValue('Addis Ababa');
+      // And a narrower list is still asked for under it.
+      expect(useAreas).toHaveBeenCalledWith({ level: 'Zone', parents: ['region-ET14'], search: '' });
+    });
+
+    it('shows a failed list in the field and offers to try again, without a page reload', () => {
+      const refetch = vi.fn();
+      useAreas.mockImplementation((args: AreasArgs) =>
+        args.level === 'Region' ? { ...areasResult(args), areas: [], isError: true, refetch } : areasResult(args)
+      );
+      renderForm();
+
+      expect(screen.getByRole('combobox', { name: /^Region/ })).toHaveAttribute('placeholder', 'Could not load — try again');
+      expect(screen.getByText(/Could not load this list\./)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends the chosen names, and clears the narrower areas when a broader one changes', async () => {
+      renderForm();
+      fillValidForm('Local NGO');
+      pick('Woreda 01');
+      pick('Kebele 01');
+
+      // Changing the Region drops the Zone, Woreda and Kebele picked under the old one.
+      pick('Oromia');
+      expect(screen.getByRole('combobox', { name: /^Zone/ })).toHaveValue('');
+      expect(screen.getByRole('combobox', { name: /^Woreda/ })).toBeDisabled();
+      fireEvent.click(registerButton());
+      expect(screen.getByText('This field is required.')).toBeInTheDocument();
+      expect(registerOrganisation).not.toHaveBeenCalled();
+
+      pick('East Shewa');
+      fireEvent.click(registerButton());
+      await waitFor(() => expect(registerOrganisation).toHaveBeenCalledTimes(1));
+      const sent = registerOrganisation.mock.calls[0]![0];
+      expect(sent).toMatchObject({ region: 'Oromia', zone: 'East Shewa' });
+      expect(sent).not.toHaveProperty('woreda');
+      expect(sent).not.toHaveProperty('kebele');
+    });
+
+    it('sends the Woreda and Kebele names when they are chosen', async () => {
+      renderForm();
+      fillValidForm('Local NGO');
+      pick('Woreda 01');
+      pick('Kebele 01');
+      fireEvent.click(registerButton());
+
+      await waitFor(() => expect(registerOrganisation).toHaveBeenCalledTimes(1));
+      expect(registerOrganisation.mock.calls[0]![0]).toMatchObject({
+        region: 'Addis Ababa',
+        zone: 'Arada Sub-city',
+        woreda: 'Woreda 01',
+        kebele: 'Kebele 01',
+      });
+    });
+  });
+
+  it('takes a 3-10 character postal code of letters, digits, spaces and hyphens, whatever the country', () => {
+    renderForm();
+    const postal = screen.getByLabelText(/^Postal code/);
+    const invalid = 'Enter a valid postal code, e.g. 1000.';
+    expect(postal).toHaveAttribute('maxlength', '10');
+
+    fireEvent.change(postal, { target: { value: '12' } });
+    fireEvent.blur(postal);
+    expect(screen.getByText(invalid)).toBeInTheDocument();
+
+    // Not tightened to Ethiopia's 4 digits: letters and a space are fine.
+    fireEvent.change(postal, { target: { value: 'SW1A 1AA' } });
+    expect(screen.queryByText(invalid)).not.toBeInTheDocument();
+  });
+
   it('registers an NGO with the backend contract and hands back the record it answers with', async () => {
     registerOrganisation.mockResolvedValue({
       id: 'ORG-0001',
@@ -186,7 +354,7 @@ describe('OrganisationRegistrationForm', () => {
       registration_number: '0012345678',
       representative_name: 'Almaz Tesfaye',
       street_address: 'Bole Road, Block 4',
-      zone: 'Addis Ababa',
+      zone: 'Arada Sub-city',
       region: 'Addis Ababa',
       country: 'Ethiopia',
       postal_code: '1000',

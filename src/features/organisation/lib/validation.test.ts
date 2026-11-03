@@ -119,14 +119,24 @@ describe('registration number', () => {
 });
 
 describe('postal code', () => {
-  it('accepts Ethiopia-style and longer codes', () => {
-    for (const postalCode of ['1000', '12345', 'SW1A 1AA', 'AB-1234']) {
-      expect(check({ postalCode }).postalCode).toBeUndefined();
+  it('requires a postal code', () => {
+    expect(check({ postalCode: '' }).postalCode).toEqual({ code: 'required' });
+  });
+
+  it('accepts 3-10 letters or digits with a single space or hyphen between, in any country', () => {
+    for (const country of ['Ethiopia', 'Kenya']) {
+      for (const postalCode of ['100', '1000', '12345', 'SW1A 1AA', 'AB-1234', '1234567890']) {
+        expect(check({ country, postalCode }).postalCode).toBeUndefined();
+      }
     }
   });
 
-  it('rejects too short, too long and stray punctuation', () => {
-    for (const postalCode of ['12', '12345678901', '-1000', '10#00', '10  00']) {
+  it('is not tightened to Ethiopia\'s 4 digits', () => {
+    expect(check({ country: 'Ethiopia', postalCode: '12345' }).postalCode).toBeUndefined();
+  });
+
+  it('rejects too short, too long, stray punctuation and doubled or dangling separators', () => {
+    for (const postalCode of ['12', '12345678901', '-1000', '1000-', '10#00', '10  00', '10--00']) {
       expect(check({ postalCode }).postalCode).toEqual({ code: 'postalCode' });
     }
   });

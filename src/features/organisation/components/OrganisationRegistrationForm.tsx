@@ -32,6 +32,7 @@ import {
   type OrganisationValues,
 } from '../lib/validation';
 import { backendMessageOf, knownFailureOf } from '../lib/errors';
+import { OrganisationAreaFields, type AreaPatch } from './OrganisationAreaFields';
 import { EMAIL_MAX_LENGTH, REGISTRATION_NUMBER_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 export interface OrganisationRegistrationFormProps {
@@ -104,6 +105,17 @@ export function OrganisationRegistrationForm({
       if (fieldErrors.errors.phoneNumber) checkField('phoneNumber', next);
     } else if (key === 'entityType' || fieldErrors.errors[key as OrganisationField]) {
       checkField(key as OrganisationField, next);
+    }
+  };
+
+  // Choosing a Region/Zone/Woreda/Kebele also clears the narrower ones, so the
+  // names are applied as one change — separate `setValue`s would each start
+  // from the same stale `values` and the last would win.
+  const setAreaValues = (patch: AreaPatch) => {
+    const next = { ...values, ...patch };
+    setValues(next);
+    for (const key of Object.keys(patch) as Array<keyof AreaPatch>) {
+      if (fieldErrors.errors[key]) checkField(key, next);
     }
   };
 
@@ -269,36 +281,7 @@ export function OrganisationRegistrationForm({
           required
           className="md:col-span-2"
         />
-        <SITextField
-          {...field}
-          name="kebele"
-          maxLength={TEXT_MAX_LENGTH}
-          label={t('fields.kebele.label')}
-          placeholder={t('fields.kebele.placeholder')}
-        />
-        <SITextField
-          {...field}
-          name="woreda"
-          maxLength={TEXT_MAX_LENGTH}
-          label={t('fields.woreda.label')}
-          placeholder={t('fields.woreda.placeholder')}
-        />
-        <SITextField
-          {...field}
-          name="zone"
-          maxLength={TEXT_MAX_LENGTH}
-          label={t('fields.zone.label')}
-          placeholder={t('fields.zone.placeholder')}
-          required
-        />
-        <SITextField
-          {...field}
-          name="region"
-          maxLength={TEXT_MAX_LENGTH}
-          label={t('fields.region.label')}
-          placeholder={t('fields.region.placeholder')}
-          required
-        />
+        <OrganisationAreaFields errors={shownErrors} onChange={setAreaValues} />
         <SITextField
           {...field}
           name="country"

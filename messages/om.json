@@ -80,19 +80,19 @@
       },
       "kebele": {
         "label": "Ganda / Gandaa",
-        "placeholder": "Ganda / Gandaa galchi"
+        "placeholder": "Ganda / Gandaa filadhu"
       },
       "woreda": {
         "label": "Aanaa",
-        "placeholder": "Aanaa galchi"
+        "placeholder": "Aanaa filadhu"
       },
       "zone": {
-        "label": "Godina",
-        "placeholder": "Godina galchi"
+        "label": "Godina / Kutaa magaalaa",
+        "placeholder": "Godina / Kutaa magaalaa filadhu"
       },
       "region": {
         "label": "Naannoo",
-        "placeholder": "Naannoo galchi"
+        "placeholder": "Naannoo filadhu"
       },
       "country": {
         "label": "Biyya",
@@ -116,6 +116,18 @@
         "label": "Bilbila",
         "placeholder": "Lakkoofsa bilbilaa galchi"
       }
+    },
+    "areas": {
+      "loading": "Fe'aa jira…",
+      "none": "Filannoon hin jiru",
+      "noneOptional": "Tokkollee hin tarreeffamne — duwwaa dhiisuu dandeessa",
+      "truncated": "Kan jalqabaa {count} qofa agarsiifameera — kan biroo barbaaduuf barreessi.",
+      "selectRegionFirst": "Duraan naannoo filadhu",
+      "selectZoneFirst": "Duraan godina filadhu",
+      "selectWoredaFirst": "Duraan aanaa filadhu",
+      "loadFailed": "Tarreeffamichi kun hin fe'amne.",
+      "loadFailedShort": "Hin fe'amne — irra deebi'ii yaali",
+      "retry": "Irra deebi'ii yaali"
     },
     "entityTypes": {
       "localNgo": "NGO Naannoo",

@@ -33,12 +33,13 @@ interface FieldShellProps {
   required?: boolean;
   error: string | undefined;
   /** Helper text under the field, shown until an error takes its place. */
-  hint?: string;
+  hint?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 }
 
-function FieldShell({ name, label, required, error, hint, className, children }: FieldShellProps) {
+/** The label, control slot and inline error/hint around one field — for a form that needs a control the `SI*Field`s don't cover. */
+export function FieldShell({ name, label, required, error, hint, className, children }: FieldShellProps) {
   const id = siFieldId(name);
   return (
     <div className={`min-w-0 ${className ?? ""}`}>
