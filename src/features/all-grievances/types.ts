@@ -402,6 +402,8 @@ export interface ChangeRequestData {
   requested_by: string;
   requested_at?: string | null;
   pending_with?: string | null;
+  /** User id of who must decide (compare with the signed-in user); `pending_with` is for display. */
+  pending_with_id?: string | null;
   pending_since?: string | null;
   decided_by?: string | null;
   decided_at?: string | null;

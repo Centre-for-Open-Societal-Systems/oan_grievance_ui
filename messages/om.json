@@ -520,6 +520,8 @@
       "disableRule": "Seera dhaabi",
       "editTemplate": "Unkaa beeksisaa gulaali",
       "closeEditor": "Gulaalaa cufi",
+      "viewTemplate": "Unkaa beeksisaa ilaali",
+      "closeTemplate": "Unkaa cufi",
       "emailSubject": "Mata Duree Imeelii",
       "insert": "Galchi:",
       "insertSubject": "{token} mata duree keessa galchi",

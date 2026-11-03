@@ -54,7 +54,7 @@ export function CaseManagement({
   const currentDepartment = timelineData?.assignment?.department || '';
   const activeReassignment = timelineData?.assignment?.active_reassignment_request;
   const user = useAppSelector((state) => state.auth?.user);
-  const isApprover = !!activeReassignment && activeReassignment.pending_with === user?.email;
+  const isApprover = !!activeReassignment && activeReassignment.pending_with_id === user?.email;
 
   const currentStatus = timelineData?.status || timelineData?.current_status || '';
   const resolvedIsTerminal =
@@ -340,10 +340,11 @@ export function CaseManagement({
         <ReviewReassignmentPopup
           request={activeReassignment}
           onClose={() => setShowViewPopup(false)}
+          readOnly={!isApprover}
           onDecide={
             isApprover && onDecideReassignment
               ? (decision, comments) => onDecideReassignment(activeReassignment.name, decision, comments)
-              : async () => {} // If readonly, we don't need a real onDecide, but wait ReviewReassignmentPopup requires it
+              : async () => {} // Read-only view: the popup hides the decision buttons, so this never runs
           }
         />
       )}
