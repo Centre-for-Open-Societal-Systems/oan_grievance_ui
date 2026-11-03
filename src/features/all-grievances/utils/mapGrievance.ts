@@ -92,11 +92,29 @@ export function formatLocation(item: GrievanceListItem): string {
   return '';
 }
 
-/** First line of the description, used as the row title. */
-function deriveTitle(description?: string | null): string {
-  if (!description) return 'Untitled grievance';
-  const firstLine = description.split(/\r?\n/).find((line) => line.trim().length > 0);
-  const text = (firstLine ?? description).trim();
+/**
+ * Start of the stand-in description a voice-only grievance is filed with
+ * (`VOICE_NOTE_DESCRIPTION` in submit-grievance/submitPayload.ts; features may
+ * not import each other). Such a case gets a short default title instead.
+ */
+const VOICE_NOTE_DESCRIPTION_PREFIX = 'Voice grievance - ';
+const VOICE_GRIEVANCE_TITLE = 'Voice grievance';
+
+/** Whether a submission channel names a voice/phone one (the list carries no attachment info). */
+const isVoiceChannel = (channel?: string | null): boolean => /voice|ivr|phone|call/i.test(channel ?? '');
+
+/**
+ * First line of the description, used as the row title. A voice grievance
+ * (`isVoice`, or the stand-in description) gets a default title whether or not
+ * it has a description; any other case without one is named by its ticket.
+ */
+export function deriveTitle(description?: string | null, opts: { isVoice?: boolean; ticket?: string } = {}): string {
+  const firstLine = description?.split(/\r?\n/).find((line) => line.trim().length > 0);
+  const text = (firstLine ?? description ?? '').trim();
+  if ((opts.isVoice && !text) || text.startsWith(VOICE_NOTE_DESCRIPTION_PREFIX)) {
+    return VOICE_GRIEVANCE_TITLE;
+  }
+  if (!text) return opts.ticket ? `Grievance ${opts.ticket}` : 'Untitled grievance';
   return text.length > 140 ? `${text.slice(0, 137)}…` : text;
 }
 
@@ -109,7 +127,10 @@ export function mapGrievanceListItem(item: GrievanceListItem): Grievance {
     ticketNumber: item.ticket_number || item.name,
     ticketId: item.ticket_number_display || item.ticket_number || item.name,
     ticketNumberDisplay: item.ticket_number_display ?? undefined,
-    title: deriveTitle(item.description),
+    title: deriveTitle(item.description, {
+      isVoice: isVoiceChannel(item.submission_channel),
+      ticket: item.ticket_number_display || item.ticket_number || item.name,
+    }),
     location,
     type: (item.grievance_type_name || item.grievance_type) ?? '',
     category: item.service_category ?? '',
@@ -146,7 +167,10 @@ export function grievanceFromTimeline(data: GrievanceTimelineData): Grievance {
     ticketNumber: ticket,
     ticketId: data.ticket_number_display || ticket,
     ticketNumberDisplay: data.ticket_number_display,
-    title: deriveTitle(data.summary?.description),
+    title: deriveTitle(data.summary?.description ?? data.description, {
+      isVoice: isVoiceChannel(data.summary?.submission_channel ?? data.submission_channel),
+      ticket: data.ticket_number_display || ticket,
+    }),
     location: data.summary?.location || data.location || '',
     type: data.summary?.grievance_type_name || data.summary?.grievance_type || data.grievance_type || '',
     category: data.summary?.service_category || data.service_category || '',
@@ -161,8 +185,8 @@ export function grievanceFromTimeline(data: GrievanceTimelineData): Grievance {
     department: data.assignment?.department ?? '',
     assignedTo: data.assignment?.assigned_to ?? '',
     slaDueDate: formatDate(data.sla?.sla_due_date),
-    submissionChannel: data.summary?.submission_channel ?? '',
-    description: data.summary?.description ?? '',
+    submissionChannel: data.summary?.submission_channel ?? data.submission_channel ?? '',
+    description: data.summary?.description ?? data.description ?? '',
     administrativeArea: data.summary?.administrative_area || data.administrative_area || '',
   };
 }

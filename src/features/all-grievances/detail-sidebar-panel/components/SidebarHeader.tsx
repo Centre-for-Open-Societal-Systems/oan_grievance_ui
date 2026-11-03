@@ -2,6 +2,9 @@
 
 import { X, Maximize, Minimize } from 'lucide-react';
 import { ExportMenu } from './ExportMenu';
+import { audioAttachments } from './VoiceNotePlayer';
+import { deriveTitle } from '../../utils/mapGrievance';
+import { statusBadgeClass } from '../../utils/statusStyles';
 import type { Grievance, GrievanceTimelineData } from '../../types';
 
 interface SidebarHeaderProps {
@@ -33,10 +36,16 @@ export function SidebarHeader({ ticketNumber, timelineData, grievance, onClose, 
       ? Boolean(timelineData.escalated)
       : Boolean(grievance?.escalated);
 
+  // A recording on the case marks it as a voice grievance; the list title (same
+  // rule, from the channel) is used when the timeline hasn't loaded yet.
+  const hasRecording = [timelineData?.attachments, ...(timelineData?.events ?? []).map((e) => e.attachments)].some(
+    (list) => audioAttachments(list).length > 0,
+  );
+  const description = timelineData?.summary?.description ?? timelineData?.description;
   const title =
-    timelineData?.summary?.description?.split(/\r?\n/).find((l) => l.trim().length > 0) ||
-    timelineData?.summary?.grievance_type_name ||
-    timelineData?.summary?.grievance_type ||
+    (timelineData
+      ? deriveTitle(description, { isVoice: hasRecording, ticket: displayTicket })
+      : undefined) ||
     grievance?.title ||
     'Grievance Case';
 
@@ -47,7 +56,7 @@ export function SidebarHeader({ ticketNumber, timelineData, grievance, onClose, 
           <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
             {displayTicket}
           </span>
-          <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full border border-slate-200/60">
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold leading-tight ${statusBadgeClass(status)}`}>
             {status}
           </span>
           {isEscalated && (

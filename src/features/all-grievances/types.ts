@@ -298,6 +298,9 @@ export interface GrievanceTimelineData {
   administrative_area?: string | null;
   administrative_hierarchy?: Record<string, string> | null;
   location?: string | null;
+  /** The case's own text and channel, sent at the top level of the timeline response. */
+  description?: string | null;
+  submission_channel?: string | null;
   summary?: GrievanceTimelineSummary;
   submitter?: GrievanceTimelineSubmitter;
   sla?: GrievanceTimelineSla;
