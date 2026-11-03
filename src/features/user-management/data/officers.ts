@@ -7,10 +7,8 @@ export interface Officer {
   id: string;
   name: string;
   status: OfficerStatus;
-  /** Display label only — `designation` if the backend has one, else a generic fallback by role/level. Never write this back as if it were the real designation; see `designation` below. */
+  /** Display label, derived from the officer's role and level. */
   roleTitle: string;
-  /** The backend's actual `designation`, or null if it never set one. What an edit form should seed and save — `roleTitle` above is a display fallback, not this value. */
-  designation: string | null;
   department: string;
   email: string;
   phone: string;

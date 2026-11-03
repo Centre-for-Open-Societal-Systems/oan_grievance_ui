@@ -6,8 +6,6 @@ import type { ResponseTemplate } from './types';
 
 interface ResponseTemplateRowProps {
     template: ResponseTemplate;
-    /** Display name for the template's department id. */
-    departmentName: string | null;
     isLast?: boolean;
     isBusy?: boolean;
     /** False hides Edit/Retire/Reactivate — for a read-only role (Review Officer) the backend refuses the write anyway. */
@@ -38,7 +36,6 @@ const getStatusStyles = (action: string) => {
 
 export function ResponseTemplateRow({
     template,
-    departmentName,
     isLast,
     isBusy = false,
     canManage = true,
@@ -78,7 +75,7 @@ export function ResponseTemplateRow({
                             <span className="text-[14px] font-semibold text-gray-900 truncate">{template.title}</span>
                         </div>
                         <div className="text-[13px] text-gray-500">
-                            {template.service_category || t('allCategories')} • {departmentName ?? t('allDepartments')}
+                            {template.service_category || t('allCategories')}
                         </div>
                     </div>
                 </div>

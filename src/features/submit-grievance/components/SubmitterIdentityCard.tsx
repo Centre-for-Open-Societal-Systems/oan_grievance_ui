@@ -25,6 +25,10 @@ interface SubmitterIdentityCardProps {
   setIdentityValue: (key: string, value: string) => void;
   /** The account's type is fixed (a registered NGO / FPO files as itself), so the dropdown is shown but not editable. */
   submitterTypeLocked?: boolean;
+  /** An individual farmer files through the web portal, so the channel is shown but not editable. */
+  isSubmissionChannelLocked?: boolean;
+  /** Field keys the identity provider owns for this account: shown, not editable. */
+  readOnlyFields?: string[];
   /** The account's own submitter type and channel names (from /auth/me), shown while the options list is unavailable. */
   profileSubmitterType?: string;
   profileSubmissionChannel?: string;
@@ -55,6 +59,8 @@ export function SubmitterIdentityCard({
   identityValues,
   setIdentityValue,
   submitterTypeLocked = false,
+  isSubmissionChannelLocked = false,
+  readOnlyFields,
   profileSubmitterType,
   profileSubmissionChannel,
 }: SubmitterIdentityCardProps) {
@@ -138,6 +144,7 @@ export function SubmitterIdentityCard({
     values: identityValues,
     setValue: handleIdentityValue,
     errors: identity.errors,
+    readOnlyFields,
     onFieldBlur: (key: string) => identity.validateField(key),
   };
 
@@ -196,6 +203,7 @@ export function SubmitterIdentityCard({
               placeholder="Select Submission Channel"
               value={submissionChannel}
               onChange={handleChannelChange}
+              disabled={isSubmissionChannelLocked}
               clearable={false}
               invalid={!!identity.errors.submissionChannel}
               describedBy={identity.errors.submissionChannel ? errorIdFor("submission-channel") : undefined}

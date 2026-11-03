@@ -38,7 +38,7 @@ describe('useDashboardStatistics', () => {
     expect(result.current.isRefreshing).toBe(false);
     expect(result.current.statistics.escalated).toBe(2);
     expect(result.current.statistics.statusDistribution).toEqual([
-      { name: 'Submitted', value: 4, color: '#4f46e5' },
+      { name: 'Submitted', value: 4, color: '#0ea5e9' },
     ]);
     expect(result.current.statistics.monthlyTrend?.[0]?.month).toBe('Apr 2026');
   });
@@ -109,5 +109,20 @@ describe('useDashboardStatistics', () => {
     await waitFor(() => expect(result.current).toMatchObject({ status: 'ready', isRefreshing: false }));
     if (result.current.status !== 'ready') throw new Error('expected ready');
     expect(result.current.statistics.serviceCategories).toHaveLength(1);
+  });
+
+  it('reloads for a region, keeping the previous statistics on screen meanwhile', async () => {
+    mockFetch.mockResolvedValueOnce(charts);
+    const { result, rerender } = renderHook(({ region }) => useDashboardStatistics('en', region), {
+      initialProps: { region: null as string | null },
+    });
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(mockFetch).toHaveBeenLastCalledWith(expect.objectContaining({ region: null }));
+
+    mockFetch.mockReturnValueOnce(new Promise(() => {}));
+    rerender({ region: 'ET04' });
+
+    expect(mockFetch).toHaveBeenLastCalledWith(expect.objectContaining({ region: 'ET04' }));
+    await waitFor(() => expect(result.current).toMatchObject({ status: 'ready', isRefreshing: true }));
   });
 });

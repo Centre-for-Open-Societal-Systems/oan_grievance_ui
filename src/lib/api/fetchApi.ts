@@ -154,12 +154,15 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
  * Accepts absolute proxy path (e.g. `/api/v1/submitters/options`) or relative path.
  * `timeoutMs` overrides the default 15s — a `FormData` file upload can
  * legitimately take longer than a JSON call on a slow connection.
+ * Used through `fetchApi` (the data), `fetchApiWithMeta` (the data and the envelope's `meta`) or
+ * `fetchApiBlob` (a file). Sends the call and, on a 401, renews the session and retries once.
  */
-export async function fetchApi<T = unknown>(
+async function sendRequest(
   path: string,
-  options: RequestInit = {},
-  timeoutMs?: number
-): Promise<T> {
+  options: RequestInit,
+  timeoutMs: number | undefined,
+  accept = 'application/json'
+): Promise<Response> {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   const proxyPath = cleanPath.startsWith('api/proxy/') ? cleanPath : `api/proxy/${cleanPath}`;
   const url = new URL(proxyPath, BASE_URL);
@@ -169,7 +172,7 @@ export async function fetchApi<T = unknown>(
     headers.set('Content-Type', 'application/json');
   }
   if (!headers.has('Accept')) {
-    headers.set('Accept', 'application/json');
+    headers.set('Accept', accept);
   }
 
   let response = await fetchWithTimeout(
@@ -218,6 +221,16 @@ export async function fetchApi<T = unknown>(
     }
   }
 
+  return response;
+}
+
+async function requestEnvelope<T>(
+  path: string,
+  options: RequestInit,
+  timeoutMs: number | undefined
+): Promise<{ data: T; meta: unknown }> {
+  const response = await sendRequest(path, options, timeoutMs);
+
   let responseData: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   try {
     responseData = await response.json();
@@ -226,7 +239,7 @@ export async function fetchApi<T = unknown>(
     const isAbort = (error as { name?: string } | null)?.name === 'AbortError' || error === abortReason;
     if (options.signal?.aborted && isAbort) throw error;
     if (!response.ok) throw new ApiError(genericMessageForStatus(response.status), null, response.status);
-    return null as T;
+    return { data: null as T, meta: undefined };
   }
 
   if (!response.ok) {
@@ -272,9 +285,55 @@ export async function fetchApi<T = unknown>(
       extra.message = responseData.message;
     }
     if (Object.keys(extra).length > 0) {
-      return { ...unwrapped, ...extra } as T;
+      return { data: { ...unwrapped, ...extra } as T, meta: responseData?.meta };
     }
   }
 
-  return unwrapped as T;
+  return { data: unwrapped as T, meta: responseData?.meta };
+}
+
+/**
+ * Same call as `fetchApi`, with the envelope's `meta` (e.g. when each chart of
+ * `GET /api/v1/charts` was refreshed) returned beside the data rather than
+ * spliced into it, where it could collide with a key the data has itself.
+ */
+export async function fetchApiWithMeta<T = unknown>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs?: number
+): Promise<{ data: T; meta: unknown }> {
+  return requestEnvelope<T>(path, options, timeoutMs);
+}
+
+/** The data of the call, exactly as every caller has always had it. */
+export async function fetchApi<T = unknown>(path: string, options: RequestInit = {}, timeoutMs?: number): Promise<T> {
+  return (await requestEnvelope<T>(path, options, timeoutMs)).data;
+}
+
+/**
+ * A file the backend answers with instead of the JSON envelope (the ticket
+ * export). Failures still arrive as the envelope, so they surface as the same
+ * `ApiError` `fetchApi` throws, and a 401/403 keeps its usual handling. Pass
+ * a longer `timeoutMs` if rendering the file may take a while.
+ */
+export async function fetchApiBlob(path: string, options: RequestInit = {}, timeoutMs?: number): Promise<Blob> {
+  const response = await sendRequest(path, options, timeoutMs, '*/*');
+  if (response.ok) {
+    // A 200 that is really an error page or envelope must not be saved as the file.
+    const contentType = response.headers.get('content-type') ?? '';
+    if (/json|html/i.test(contentType)) {
+      throw new ApiError(genericMessageForStatus(502), null, 502);
+    }
+    return response.blob();
+  }
+
+  const responseData = await response.json().catch(() => null);
+  const authCode = httpStatusToErrorCode(response.status);
+  if (authCode === ApiErrorCode.Auth || authCode === ApiErrorCode.Forbidden) {
+    throw new Error(authCode);
+  }
+  const message =
+    messageFromDetails(responseData) ??
+    (typeof responseData?.message === 'string' ? responseData.message : genericMessageForStatus(response.status));
+  throw new ApiError(message, responseData, response.status);
 }

@@ -2,7 +2,13 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextIntlClientProvider } from 'next-intl';
+import type { ReactElement } from 'react';
+import messages from '../../../../../messages/en.json';
 import { DeferSLAPopup } from './DeferSLAPopup';
+
+const renderWithIntl = (ui: ReactElement) =>
+  render(ui, { wrapper: ({ children }) => <NextIntlClientProvider locale="en" messages={messages}>{children}</NextIntlClientProvider> });
 
 afterEach(cleanup);
 
@@ -13,7 +19,7 @@ describe('DeferSLAPopup', () => {
 
   it('renders correctly with default values and validation', () => {
     const onClose = vi.fn();
-    render(<DeferSLAPopup onDefer={vi.fn()} onClose={onClose} />);
+    renderWithIntl(<DeferSLAPopup onDefer={vi.fn()} onClose={onClose} />);
 
     expect(screen.getByText('Defer SLA')).toBeInTheDocument();
     expect(screen.getByText('Requires supervisor approval')).toBeInTheDocument();
@@ -26,7 +32,7 @@ describe('DeferSLAPopup', () => {
 
   it('enables submit button only when reason meets 20 chars and days are valid', () => {
     const onClose = vi.fn();
-    render(<DeferSLAPopup onDefer={vi.fn()} onClose={onClose} />);
+    renderWithIntl(<DeferSLAPopup onDefer={vi.fn()} onClose={onClose} />);
 
     const textarea = screen.getByPlaceholderText(/Describe why the SLA requires extension/i);
     const submitBtn = screen.getByRole('button', { name: /Submit for Approval/i });
@@ -63,7 +69,7 @@ describe('DeferSLAPopup', () => {
     const onClose = vi.fn();
     const onSuccess = vi.fn();
 
-    render(
+    renderWithIntl(
       <DeferSLAPopup onDefer={onDefer} onClose={onClose} onSuccess={onSuccess} />
     );
 
@@ -96,7 +102,7 @@ describe('DeferSLAPopup', () => {
 
     const onClose = vi.fn();
 
-    render(<DeferSLAPopup onDefer={onDefer} onClose={onClose} />);
+    renderWithIntl(<DeferSLAPopup onDefer={onDefer} onClose={onClose} />);
 
     const textarea = screen.getByPlaceholderText(/Describe why the SLA requires extension/i);
     const submitBtn = screen.getByRole('button', { name: /Submit for Approval/i });

@@ -15,6 +15,7 @@
       "consentCheckboxLabel": "Lakkoofsa ID biyyaalessaa koo mirkaneessa eenyummaaf kennuuf nan waliigala.",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
+      "selectCategoryFirst": "Duraan ramaddii filadhu",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
       "organisationNotice": "Erga seentanii booda, bal'ina dhaabbata keessanii — maqaa, lakkoofsa galmee, bakka bu'aa aangoo qabu, teessoo fi qunnamtii — isin gaafanna.",
       "faydaAlreadyRegistered": "ID Fayda kun duraan akkaawuntii biraatiin galmaa'eera.",
@@ -152,8 +153,7 @@
       "entityType": "Gosoota dhaabbataa tarreeffaman keessaa tokko filadhu.",
       "taxId": "Arfii ykn lakkoofsa 3 hanga 60 fayyadami; gidduu isaanii sarara gabaabaa ykn sarara muraasuu ni danda'ama.",
       "memberCount": "Lakkoofsa guutuu galchi, fkn 120.",
-      "postalCode": "Koodii poostaa lakkoofsa 3 hanga 10 galchi, fkn 1000.",
-      "postalCodeEthiopia": "Koodiin poostaa Itiyoophiyaa lakkoofsa 4 qofa, fkn 1000.",
+      "postalCode": "Koodii poostaa sirrii galchi, fkn 1000.",
       "registrationNumberTaken": "Dhaabbanni lakkoofsa galmee kanaan galmaa'e duraanuu jira.",
       "website": "Teessoo marsariitii sirrii galchi, fkn www.example.org.",
       "email": "Teessoo imeelii sirrii galchi, fkn name@example.com.",
@@ -223,10 +223,21 @@
       "retry": "Irra deebi'ii yaali"
     },
     "detailsStep": {
+      "selectCategoryFirst": "Duraan ramaddii filadhu",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
-      "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}"
+      "documentsHint": "JPG, PNG, PDF ykn MP3 tokkoon tokkoon hanga 10MB · hanga faayiloota {max}",
+      "fileWrongType": "Hin maxxanfamne: {names}. Faayiloonni PDF, JPG, PNG yookaan MP3 qofa fudhatama.",
+      "fileTooLarge": "Hin maxxanfamne: {names}. Faayiliin tokkoon tokkoon isaa hanga {max}MB ta'uu danda'a."
+    },
+    "serviceProvider": {
+      "placeholder": "Suuqii galtee, hawaasa daldalaa, baankii ykn gabaa barbaadi (yoo jiraate)",
+      "listLabel": "Dhiyeessitoota tajaajilaa",
+      "clear": "Dhiyeessaa tajaajilaa haqi",
+      "searching": "Barbaadaa jira…",
+      "loadError": "Dhiyeessitoota tajaajilaa fe’uun hin danda’amne. Irra deebi’ii yaali, ykn kana duwwaa dhiisii dhiyeessaa kana ibsa keessatti ibsi.",
+      "noMatch": "Dhiyeessaan wal simu hin jiru. Kana duwwaa dhiisii dhiyeessaa kana ibsa keessatti ibsi."
     },
     "voice": {
       "hint": "Of barreessuu mannaa dubbii keessan jechoota keessaniin dubbadhaa. Ofiisarootni waraabbicha dhaggeeffatanii kutaa sirrii ta’eetti ergu.",
@@ -254,8 +265,31 @@
     "unreadLabel": "Beeksisoota, {count} haaraa",
     "title": "Beeksisoota",
     "markAllRead": "Hunda akka dubbifameetti mallatteessi",
+    "viewGrievance": "Mareeffama ilaali",
+    "clearAll": "Hunda haqi",
+    "delete": "Beeksisa haqi: {subject}",
     "empty": "Beeksisni hin jiru.",
     "loadError": "Beeksisoota fe'uu hin dandeenye."
+  },
+  "caseDetail": {
+    "slaPaused": "Dhaabbateera",
+    "slaClosesOn": "Guyyaa cufamu",
+    "slaOnHold": "Kaayameera",
+    "grievanceType": "Gosa Mareeffamaa",
+    "selectGrievanceType": "Gosa Mareeffamaa Filadhu",
+    "loadingTypes": "Gosoota fe'aa jira...",
+    "chooseGrievanceType": "{category}f gosa mareeffamaa filadhu",
+    "assignedOfficer": "Ajajaan ramadame"
+  },
+  "caseExport": {
+    "title": "Ergi",
+    "menuLabel": "Dhimma kana ergi",
+    "pdf": "Akka PDF buusi",
+    "csv": "Akka CSV buusi",
+    "exporting": "Faayilii qopheessaa jira…",
+    "failed": "Erguun hin milkoofne. Maaloo irra deebi'ii yaali.",
+    "notFound": "Dhimmi kun hin argamne, kanaaf ergamuu hin danda'u.",
+    "forbidden": "Dhimma kana ergachuuf hayyama hin qabdu."
   },
   "caseActions": {
     "submitterTitle": "Deebii koo",
@@ -494,6 +528,8 @@
       "disableRule": "Seera dhaabi",
       "editTemplate": "Unkaa beeksisaa gulaali",
       "closeEditor": "Gulaalaa cufi",
+      "viewTemplate": "Unkaa beeksisaa ilaali",
+      "closeTemplate": "Unkaa cufi",
       "emailSubject": "Mata Duree Imeelii",
       "insert": "Galchi:",
       "insertSubject": "{token} mata duree keessa galchi",
@@ -525,7 +561,7 @@
     "requestedChange": "Requested Change",
     "currentDeadline": "Current Deadline",
     "requestedExtension": "Requested Extension",
-    "department": "Department",
+    "category": "Category",
     "officer": "Officer",
     "unassigned": "Unassigned",
     "requestedBy": "Requested By",
@@ -591,16 +627,109 @@
         "rejected": "Didame"
       },
       "noStatuses": "Komiin haalaan agarsiisuu ammaaf hin jiru.",
-      "escalatedCaption": "Cabsa SLAn kakaafame"
+      "escalatedCaption": "Cabsa SLAn kakaafame",
+      "levels": {
+        "title": "Komiiwwan sadarkaa bulchiinsaatiin",
+        "loading": "Lakkoofsa komii sadarkaa bulchiinsaatiin fe’aa jira…",
+        "forbidden": "Lakkoofsa komii sadarkaa bulchiinsaatiin ilaaluuf hayyama hin qabdan.",
+        "federal": "Federaalaa",
+        "regions": "Naannoowwan",
+        "woredas": "Aanaalee",
+        "woredasIn": "Aanaalee {region} keessa jiran",
+        "topWoredas": "Aanaalee komii olaanaa qaban",
+        "more": "{count, plural, one {+# kan biraa} other {+# kan biraa}}",
+        "selectHint": "Daashboordii dhiphisuuf naannoo filadhaa.",
+        "noWoredas": "Aanaa naannoo kanaa keessatti komiin ammaaf hin jiru.",
+        "noData": "Naannoo keessaniif komiin lakkaa’amu ammaaf hin jiru.",
+        "filteredBy": "Daashboordiin {region}f mul’ataa jira.",
+        "clear": "Naannoowwan hunda agarsiisi"
+      }
     }
   },
+  "analytics": {
+    "title": "Xiinxala fi Gabaasa",
+    "subtitle": "Safartuuwwan raawwii komii damee qonnaa — OAN Itoophiyaa, {month}",
+    "monthLabel": "Ji’a gabaasaa",
+    "dataAsOf": "Odeeffannoon hanga {time}",
+    "filters": {
+      "title": "Calleewwan",
+      "region": "Naannoo",
+      "category": "Ramaddii tajaajilaa",
+      "department": "Kutaa",
+      "allRegions": "Naannoowwan hundaa",
+      "allCategories": "Ramaddiiwwan hundaa",
+      "allDepartments": "Kutaawwan hundaa",
+      "clear": "Calleewwan haqi",
+      "unavailable": "Calleewwan tokko tokko fe’uun hin danda’amne."
+    },
+    "loading": "Xiinxala fe’aa jira…",
+    "loadFailed": "Xiinxala fe’uun hin danda’amne.",
+    "forbidden": "Xiinxala ilaaluuf hayyama hin qabdan.",
+    "retry": "Irra deebi’ii yaali",
+    "sectionUnavailable": "Kutaa kana fe’uun hin danda’amne.",
+    "noData": "Odeeffannoon agarsiisuu ammaaf hin jiru.",
+    "uncategorised": "Ramaddii hin qabne",
+    "kpi": {
+      "avg_resolution_time": "Giddugaleessa Yeroo Furmaata",
+      "resolution_rate": "Hanga Furmaata",
+      "escalation_rate": "Hanga Ol-guddisuu",
+      "satisfaction": "Quufinsa Qonnaan Bulaa",
+      "days": "guyyoota",
+      "unavailableValue": "—",
+      "deltaDays": "Guyyaa {delta} ji’a darbe irraa",
+      "deltaPercent": "{delta}% ji’a darbe irraa",
+      "deltaOther": "{delta} {unit} ji’a darbe irraa",
+      "basedOn": "{count, plural, one {Deebii # irratti hundaa’e} other {Deebii # irratti hundaa’e}}"
+    },
+    "weeklyTrend": "Dhiyeessuu fi Furuu Komii Torbaanii",
+    "received": "Fudhataman",
+    "resolved": "Furaman",
+    "regionResolution": "Hanga Furmaata Naannoon (%)",
+    "allTime": "Yeroo hunda",
+    "avgResolution": "Giddugaleessa Guyyaa Furmaata Ramaddiidhaan",
+    "avgResolutionSeries": "Giddugaleessa yeroo furmaata",
+    "avgDaysValue": "Giddugaleessaan guyyaa {days}",
+    "daysTick": "{days}g",
+    "casesBehind": "{count, plural, one {Komii furame #} other {Komiiwwan furaman #}}",
+    "performanceScore": "Qabxii Raawwii Sirnaa",
+    "noScore": "Odeeffannoon hin jiru",
+    "scoreBasis": "{count, plural, one {Komii # irratti hundaa’e} other {Komiiwwan # irratti hundaa’e}}",
+    "axis": {
+      "timeliness": "Yeroon Raawwii",
+      "resolution_rate": "Hanga Furmaata",
+      "satisfaction": "Quufinsa",
+      "transparency": "Iftoomina",
+      "follow_up": "Hordoffii",
+      "coverage": "Uwwisa"
+    },
+    "regionTooltip": "{total} keessaa {resolved} furameera",
+    "categoryVolume": "Baay’ina fi Furmaata Ramaddii Tajaajilaan",
+    "filed": "Dhiyaatan",
+    "resolvedOnTime": "{count} yeroo isaatti furaman",
+    "resolvedBreached": "{count} SLA booda furaman"
+  },
   "login": {
+    "backToRoles": "Gahee biraa filadhu",
+    "welcomeTitle": "Gara Poortaaliitti Baga Nagaan Dhuftan",
+    "welcomeSubtitle": "Poortaalii bulchiinsa komii fayyadamuuf gahee keessan filadhaa.",
+    "nextStep": "Tarkaanfii Itti Aanu",
+    "roleFarmerTitle": "Iyyataa Qonnaan Bulaa",
+    "roleFarmerDesc": "Komiilee qonnaa keessan galchaatii hordofaa",
+    "roleOrgTitle": "Seensa Dhaabbataa",
+    "roleOrgDesc": "NGOwwan, waldaalee hojii gamtaa fi FPOwwaniif komii galchaatii hordofaa",
+    "roleAgentTitle": "Hojjataa Misoomaa",
+    "roleAgentDesc": "Qonnaan bultoota gargaaraa fi dirree irraa komii galchaa",
+    "roleStaffTitle": "Seensa Hojjattootaa",
+    "roleStaffDesc": "Dhimmoota komii qulqulleessaa, qoradhaa fi furmaata kennaa",
     "switchAccount": "Ba'iitii herrega biraa fayyadami",
     "switchingAccount": "Ba'aa jira…",
     "switchAccountHint": "Herrega hojjetaa asitti hayyama hin qabneen seenteetta. Ba'uun galmee fi appiliikeeshinii OpenG2P biroo irraas si baasa.",
-    "switchAccountFailed": "Herrega hojjetaa irraa si baasuun hin danda'amne. Galmee irraa ba'iitii irra deebi'ii yaali."
+    "switchAccountFailed": "Herrega hojjetaa irraa si baasuun hin danda'amne. Galmee irraa ba'iitii irra deebi'ii yaali.",
+    "noSignInMethod": "Malli seensaa tokkollee hin qindoofne. Bulchaa quunnamaa."
   },
   "attachmentViewer": {
+    "playRecording": "Waraabbii taphachiisi",
+    "voiceNote": "Waraabbii sagalee",
     "loadingPreview": "Dursee ilaaluun fe'aa jira",
     "previewUnavailable": "Dursee ilaaluun hin argamu",
     "previewLoadFailed": "Faayilii kana yeroo ammaa fe'uun hin danda'amne.",
@@ -609,6 +738,17 @@
     "scanFailed": "Sakatta'insi malwerii xumuramuu hin dandeenye; kanaaf faayiliin kun banamuu hin danda'u."
   },
   "grievanceList": {
-    "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi..."
+    "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi...",
+    "actionView": "Ilaali",
+    "actionEdit": "Gulaali",
+    "closesOn": "{date} cufama",
+    "slaDueToday": "Har'a dhumata",
+    "slaDueSoon": "{days, plural, one {Guyyaa # hafe} other {Guyyoota # hafan}}",
+    "slaOverdue": "{days, plural, one {Guyyaa # dura darbe} other {Guyyoota # dura darbe}}"
+  },
+  "validation": {
+    "characterCount": "{count} / {max}",
+    "tooLong": "Arfii {max} ykn isaa gadi ta'uu qaba.",
+    "charactersRemaining": "{count, plural, one {Arfii # hafe} other {Arfiiwwan # hafan}}"
   }
 }

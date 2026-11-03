@@ -119,8 +119,7 @@ export function OrganisationPage({ kind }: { kind: OrganisationKind }) {
   // The account is already an NGO / FPO on the backend (set at sign-up), so signing out loses
   // nothing: an unfinished registration is waiting here again at the next sign-in.
   const handleBackToSignIn = async () => {
-    await performLogout(dispatch, user?.email ?? null);
-    router.push('/login');
+    if (!(await performLogout(dispatch, user?.email ?? null)).redirected) router.push('/login');
   };
 
   const title = state.phase === 'registered' ? t('header.registered') : t('header.completeRegistration');

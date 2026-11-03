@@ -6,9 +6,10 @@ import { clearIdleSessionCookies, clearSessionCookies } from '@/lib/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-function noSession(): NextResponse {
+function noSession(apply?: (response: NextResponse) => void): NextResponse {
   const response = NextResponse.json({ message: 'No active session' }, { status: 401 });
   clearSessionCookies(response);
+  apply?.(response);
   return response;
 }
 
@@ -19,7 +20,7 @@ function noSession(): NextResponse {
  * expired (the cookie carries the *session* lifetime, not the 15-minute
  * access-token lifetime, so an expired access token with a live refresh token
  * is the common case, not an edge case). Works the same for a local session
- * and a staff (IAM) one — see `activeSession.ts`. `idleManaged` tells the
+ * and an IAM one — see `activeSession.ts`. `idleManaged` tells the
  * client idle timer (`useIdleTimer`) whether this app's idle clock applies:
  * it does not for an IAM session, whose idle timeout is Keycloak's.
  */
@@ -43,7 +44,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const renewed = await renewSession(request, session, getClientIp(request));
-    if (!renewed) return noSession();
+    // IAM unreachable: the session may be fine, so nothing is cleared.
+    if (renewed.status === 'unavailable') {
+      return NextResponse.json({ message: 'Session check unavailable' }, { status: 503 });
+    }
+    if (renewed.status === 'ended') return noSession(renewed.apply);
 
     if (!renewed.claims) {
       logger.error('Refreshed access token did not decode as a valid JWT');

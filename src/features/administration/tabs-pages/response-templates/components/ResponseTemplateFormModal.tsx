@@ -13,6 +13,8 @@ import {
   type ResponseTemplate,
   type UpdateResponseTemplatePayload,
 } from './types';
+import { CharacterCounter } from '@/components/ui/CharacterCounter';
+import { ACTION_TAKEN_MAX_LENGTH, DATA_FIELD_MAX_LENGTH, RESPONSE_TEXT_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 export interface SelectOption {
   value: string;
@@ -23,7 +25,6 @@ export interface ResponseTemplateFormModalProps {
   /** The template being edited; absent when adding one. */
   template?: ResponseTemplate | null;
   actions: SelectOption[];
-  departments: SelectOption[];
   serviceCategories: SelectOption[];
   onCreate: (payload: CreateResponseTemplatePayload) => Promise<unknown>;
   onUpdate: (template: string, payload: UpdateResponseTemplatePayload) => Promise<unknown>;
@@ -45,7 +46,6 @@ const getInputClass = (hasError?: boolean) =>
 export function ResponseTemplateFormModal({
   template,
   actions,
-  departments,
   serviceCategories,
   onCreate,
   onUpdate,
@@ -70,7 +70,8 @@ export function ResponseTemplateFormModal({
   const code = template?.template ?? '';
   const [title, setTitle] = useState(template?.title ?? '');
   const [action, setAction] = useState(template?.action ?? '');
-  const [department, setDepartment] = useState(template?.department ?? '');
+  // Not editable here: an existing template keeps its scope.
+  const department = template?.department ?? '';
   const [serviceCategory, setServiceCategory] = useState(template?.service_category ?? '');
   const [actionTaken, setActionTaken] = useState(initialParts.action_taken);
   const [resolutionSummary, setResolutionSummary] = useState(initialParts.resolution_summary);
@@ -221,6 +222,7 @@ export function ResponseTemplateFormModal({
                   id={id}
                   ref={firstFieldRef}
                   value={title}
+                  maxLength={DATA_FIELD_MAX_LENGTH}
                   onChange={(e) => {
                     setTitle(e.target.value);
                     if (fieldErrors.title) setFieldErrors((p) => ({ ...p, title: undefined }));
@@ -247,16 +249,6 @@ export function ResponseTemplateFormModal({
                 >
                   <option value="">{t('selectAction')}</option>
                   {withCurrent(actions, action).map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              )}
-            </Field>
-            <Field label={t('department')}>
-              {(id) => (
-                <select id={id} value={department} onChange={(e) => setDepartment(e.target.value)} className={getInputClass()}>
-                  <option value="">{t('allDepartments')}</option>
-                  {withCurrent(departments, department).map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
@@ -292,36 +284,44 @@ export function ResponseTemplateFormModal({
 
           <Field label={t('actionTaken')} required={isTwoPartAction} error={fieldErrors.actionTaken}>
             {(id, describedBy) => (
+              <>
               <textarea
                 id={id}
                 ref={actionTakenRef}
                 rows={4}
                 value={actionTaken}
+                maxLength={ACTION_TAKEN_MAX_LENGTH}
                 onChange={(e) => {
                   setActionTaken(e.target.value);
                   if (fieldErrors.actionTaken) setFieldErrors((p) => ({ ...p, actionTaken: undefined }));
                 }}
-                aria-describedby={describedBy ?? variablesId}
+                aria-describedby={`${describedBy ?? variablesId} template-action-taken-count`}
                 aria-invalid={!!fieldErrors.actionTaken}
                 className={`${getInputClass(!!fieldErrors.actionTaken)} resize-y`}
               />
+              <CharacterCounter id="template-action-taken-count" count={actionTaken.length} max={ACTION_TAKEN_MAX_LENGTH} className="mt-1 text-right" />
+              </>
             )}
           </Field>
           <Field label={t('resolutionSummary')} required error={fieldErrors.resolutionSummary}>
             {(id, describedBy) => (
+              <>
               <textarea
                 id={id}
                 ref={resolutionSummaryRef}
                 rows={5}
                 value={resolutionSummary}
+                maxLength={RESPONSE_TEXT_MAX_LENGTH}
                 onChange={(e) => {
                   setResolutionSummary(e.target.value);
                   if (fieldErrors.resolutionSummary) setFieldErrors((p) => ({ ...p, resolutionSummary: undefined }));
                 }}
-                aria-describedby={describedBy ?? variablesId}
+                aria-describedby={`${describedBy ?? variablesId} template-summary-count`}
                 aria-invalid={!!fieldErrors.resolutionSummary}
                 className={`${getInputClass(!!fieldErrors.resolutionSummary)} resize-y`}
               />
+              <CharacterCounter id="template-summary-count" count={resolutionSummary.length} max={RESPONSE_TEXT_MAX_LENGTH} className="mt-1 text-right" />
+              </>
             )}
           </Field>
 

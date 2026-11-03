@@ -174,12 +174,13 @@ describe('SubmitGrievancePage for a registered NGO', () => {
     expect(await screen.findByRole('link', { name: 'Register your organisation' })).toHaveAttribute('href', '/fpo');
   });
 
-  it('shows no such notice, and leaves the type editable, for a farmer', async () => {
+  it('shows no such notice, and fixes the type and channel, for an individual farmer', async () => {
     renderPage();
     await screen.findByText('Submitter Identity', { selector: 'h3' });
     expect(screen.queryByText('Your organisation is awaiting verification')).not.toBeInTheDocument();
     expect(screen.queryByText('Register your organisation first')).not.toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /Submitter Type/ })).toBeEnabled();
+    expect(screen.getByRole('combobox', { name: /Submitter Type/ })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: /Submission Channel/ })).toBeDisabled();
   });
 });
 
@@ -211,7 +212,7 @@ describe('SubmitGrievancePage Step 1 prefill from /auth/me', () => {
 
   const field = (id: string) => document.getElementById(id) as HTMLInputElement;
 
-  it('shows the type, Fayda ID and channel the account was registered with, with nothing in localStorage', async () => {
+  it('shows the type and Fayda ID the account was registered with, on the web portal, with nothing in localStorage', async () => {
     localStorage.clear();
     renderWithUser({
       ...mockUser,
@@ -221,7 +222,7 @@ describe('SubmitGrievancePage Step 1 prefill from /auth/me', () => {
     });
 
     await waitFor(() => expect(field('submitter-type')).toHaveValue('Individual Farmer'));
-    expect(field('submission-channel')).toHaveValue('IVR Helpline');
+    expect(field('submission-channel')).toHaveValue('Web Portal');
     expect(field('si-faydaId')).toHaveValue('6557092147530500');
   });
 
@@ -236,12 +237,10 @@ describe('SubmitGrievancePage Step 1 prefill from /auth/me', () => {
     expect(field('si-faydaId')).toHaveValue('1234567890123456');
   });
 
-  it('keeps the channel editable per grievance', async () => {
+  it('locks the channel to the web portal for an individual farmer', async () => {
     renderWithUser({ ...mockUser, submission_channel: 'Web Portal' });
     await waitFor(() => expect(field('submission-channel')).toHaveValue('Web Portal'));
 
-    fireEvent.click(screen.getByRole('option', { name: 'IVR Helpline' }));
-
-    expect(field('submission-channel')).toHaveValue('IVR Helpline');
+    expect(screen.getByRole('combobox', { name: /Submission Channel/ })).toBeDisabled();
   });
 });

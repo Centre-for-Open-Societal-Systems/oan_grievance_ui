@@ -1,4 +1,5 @@
 import { EMAIL_MAX_LENGTH, EMAIL_PATTERN } from '@/lib/validation/fieldRules';
+import { DATA_FIELD_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 import { isEthiopianDialCode, isValidLocalPhoneForCountry } from '@/lib/validation/phone';
 
 // Rules for the organisation onboarding form. Pure functions returning *what is
@@ -38,7 +39,6 @@ export type OrganisationProblem =
         | 'phone'
         | 'phoneEthiopia'
         | 'postalCode'
-        | 'postalCodeEthiopia'
         | 'website'
         | 'entityType'
         | 'memberCount';
@@ -48,10 +48,12 @@ export type OrganisationProblem =
 export type OrganisationProblems = Partial<Record<OrganisationField, OrganisationProblem>>;
 
 /** Frappe's Data fieldtype default — what a name or address line can hold. */
-export const TEXT_MAX_LENGTH = 140;
+export const TEXT_MAX_LENGTH = DATA_FIELD_MAX_LENGTH;
 export const WEBSITE_MAX_LENGTH = 255;
 /** The backend's ceiling for a Cooperative / FPO's member count (`MEMBERS_MAX` in oan_grievance_service). */
 export const MEMBER_COUNT_MAX = 100_000_000;
+/** How many digits the member-count input needs to hold `MEMBER_COUNT_MAX`. */
+export const MEMBER_COUNT_MAX_DIGITS = String(MEMBER_COUNT_MAX).length;
 
 /** Fields the reference design marks required, plus the authorised representative. */
 const REQUIRED_FIELDS: readonly OrganisationField[] = [
@@ -91,24 +93,9 @@ const TEXT_FIELDS: readonly OrganisationField[] = [
  */
 export const TAX_ID_PATTERN = /^(?=.{3,60}$)[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*$/;
 
-/** Digits only, 3-10 of them — Ethiopia's own codes are exactly 4 (below), other countries' vary in length. */
-export const POSTAL_CODE_PATTERN = /^\d{3,10}$/;
-
-/** The longest postal code the field takes, so the input can stop there. */
 export const POSTAL_CODE_MAX_LENGTH = 10;
-
-/** A postal code as typed or pasted, with everything but digits dropped — the field takes digits only. */
-export function digitsOnly(raw: string): string {
-  return raw.replace(/\D/g, '');
-}
-
-/** Ethiopia's postal codes are exactly 4 digits: region, central office, then the delivery office. */
-export const ETHIOPIA_POSTAL_CODE_PATTERN = /^\d{4}$/;
-
-/** True when the free-text country is Ethiopia — what switches the postal code to the 4-digit rule. */
-export function isEthiopia(country: string): boolean {
-  return country.trim().toLowerCase() === 'ethiopia';
-}
+/** 3-10 letters/digits, with single spaces or hyphens between — Ethiopia's own codes are 4 digits, other countries' vary. */
+export const POSTAL_CODE_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9]|[ -](?=[A-Za-z0-9])){1,8}[A-Za-z0-9]$/;
 
 /**
  * The address to send for what the user typed, or null if it isn't a website.
@@ -156,7 +143,6 @@ export function validateOrganisationField(
     case 'taxId':
       return TAX_ID_PATTERN.test(value) ? null : { code: 'taxId' };
     case 'postalCode':
-      if (isEthiopia(values.country)) return ETHIOPIA_POSTAL_CODE_PATTERN.test(value) ? null : { code: 'postalCodeEthiopia' };
       return POSTAL_CODE_PATTERN.test(value) ? null : { code: 'postalCode' };
     case 'memberCount':
       // A whole number from 0 — what `members_affected` takes.

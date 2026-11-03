@@ -6,6 +6,7 @@ import { PhoneField } from '@/components/ui/PhoneField';
 import { Spinner } from '@/components/ui/Spinner';
 import { PasswordRequirements } from '@/components/ui/PasswordRequirements';
 import type { AccountField } from '@/lib/validation/fieldRules';
+import { EMAIL_MAX_LENGTH, FULL_NAME_MAX_LENGTH, PASSWORD_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 import type { FieldErrors } from '@/lib/validation/useFieldErrors';
 import { Lock, Mail, User } from 'lucide-react';
 import Link from 'next/link';
@@ -97,6 +98,7 @@ export function AccountStep({
               {...a11y('fullName')}
               type="text"
               autoComplete="name"
+              maxLength={FULL_NAME_MAX_LENGTH}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Full Name"
@@ -116,6 +118,7 @@ export function AccountStep({
               {...a11y('email')}
               type="email"
               autoComplete="off"
+              maxLength={EMAIL_MAX_LENGTH}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -157,6 +160,7 @@ export function AccountStep({
               {...a11y('password')}
               type="password"
               autoComplete="new-password"
+              maxLength={PASSWORD_MAX_LENGTH}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -176,6 +180,7 @@ export function AccountStep({
               {...a11y('confirmPassword')}
               type="password"
               autoComplete="new-password"
+              maxLength={PASSWORD_MAX_LENGTH}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"

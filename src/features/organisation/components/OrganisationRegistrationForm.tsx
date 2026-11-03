@@ -20,9 +20,11 @@ import {
 } from '../api/organisationApi';
 import { ORGANISATION_CONFIG } from '../config';
 import {
-  digitsOnly,
+  MEMBER_COUNT_MAX_DIGITS,
   ORGANISATION_FIELDS,
   POSTAL_CODE_MAX_LENGTH,
+  TEXT_MAX_LENGTH,
+  WEBSITE_MAX_LENGTH,
   validateOrganisation,
   validateOrganisationField,
   type OrganisationField,
@@ -31,6 +33,7 @@ import {
 } from '../lib/validation';
 import { backendMessageOf, knownFailureOf } from '../lib/errors';
 import { OrganisationAreaFields, type AreaPatch } from './OrganisationAreaFields';
+import { EMAIL_MAX_LENGTH, REGISTRATION_NUMBER_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 export interface OrganisationRegistrationFormProps {
   kind: OrganisationKind;
@@ -95,17 +98,11 @@ export function OrganisationRegistrationForm({
   // its own, but it changes what a valid phone number is, so a phone error
   // already showing is re-judged against the newly chosen country. The
   // entity-type dropdown has no blur event, so it is checked on every change.
-  const setValue = (key: string, typed: string) => {
-    // The postal code is digits only: anything else is dropped as it is typed or pasted.
-    const value = key === 'postalCode' ? digitsOnly(typed) : typed;
+  const setValue = (key: string, value: string) => {
     const next = { ...values, [key]: value };
     setValues(next);
     if (key === 'phoneCode') {
       if (fieldErrors.errors.phoneNumber) checkField('phoneNumber', next);
-    } else if (key === 'country') {
-      // Ethiopia has its own 4-digit postal code rule, so a postal-code error already showing is re-judged against the new country.
-      if (fieldErrors.errors.postalCode) checkField('postalCode', next);
-      if (fieldErrors.errors.country) checkField('country', next);
     } else if (key === 'entityType' || fieldErrors.errors[key as OrganisationField]) {
       checkField(key as OrganisationField, next);
     }
@@ -224,6 +221,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="legalName"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.legalName.label')}
           placeholder={t('fields.legalName.placeholder')}
           required
@@ -232,6 +230,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="brandName"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.brandName.label')}
           placeholder={t('fields.brandName.placeholder')}
           hint={t('fields.brandName.hint')}
@@ -250,12 +249,13 @@ export function OrganisationRegistrationForm({
           label={t('fields.taxId.label')}
           placeholder={t('fields.taxId.placeholder')}
           hint={t('fields.taxId.hint')}
-          maxLength={60}
+          maxLength={REGISTRATION_NUMBER_MAX_LENGTH}
           required
         />
         <SITextField
           {...field}
           name="representativeName"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.representativeName.label')}
           placeholder={t('fields.representativeName.placeholder')}
           required
@@ -266,7 +266,7 @@ export function OrganisationRegistrationForm({
             name="memberCount"
             label={t('fields.memberCount.label')}
             placeholder={t('fields.memberCount.placeholder')}
-            maxLength={9}
+            maxLength={MEMBER_COUNT_MAX_DIGITS}
           />
         )}
       </Section>
@@ -275,6 +275,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="streetAddress"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.streetAddress.label')}
           placeholder={t('fields.streetAddress.placeholder')}
           required
@@ -284,6 +285,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="country"
+          maxLength={TEXT_MAX_LENGTH}
           label={t('fields.country.label')}
           placeholder={t('fields.country.placeholder')}
           required
@@ -291,15 +293,15 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="postalCode"
+          maxLength={POSTAL_CODE_MAX_LENGTH}
           label={t('fields.postalCode.label')}
           placeholder={t('fields.postalCode.placeholder')}
-          inputMode="numeric"
-          maxLength={POSTAL_CODE_MAX_LENGTH}
           required
         />
         <SITextField
           {...field}
           name="website"
+          maxLength={WEBSITE_MAX_LENGTH}
           label={t('fields.website.label')}
           placeholder={t('fields.website.placeholder')}
           hint={t('fields.website.hint')}
@@ -310,6 +312,7 @@ export function OrganisationRegistrationForm({
         <SITextField
           {...field}
           name="email"
+          maxLength={EMAIL_MAX_LENGTH}
           type="email"
           label={t('fields.email.label')}
           placeholder={t('fields.email.placeholder')}

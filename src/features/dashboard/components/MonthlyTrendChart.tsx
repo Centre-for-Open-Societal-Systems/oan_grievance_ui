@@ -11,12 +11,13 @@ import {
 } from 'recharts';
 import { useTranslations } from "next-intl";
 import type { MonthlyTrendPoint } from "../types";
+import { STATUS_COLORS } from "../utils/mapDashboardCharts";
 
 export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
   const t = useTranslations("dashboard.overview");
 
   return (
-    <div className="lg:col-span-2 bg-white rounded-2xl flex flex-col h-[400px] border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 rounded-xl">
+    <div className="bg-white rounded-2xl flex flex-col h-[400px] border border-[#F1F3F4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-1px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
       <div className="px-6 py-5 border-b border-gray-200">
         <h3 className="text-[16px] font-semibold text-[#111827] tracking-tight">{t("monthlyTrend")}</h3>
       </div>
@@ -53,7 +54,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
             <Bar
               dataKey="submitted"
               name={t("submitted")}
-              fill="#2563eb"
+              fill={STATUS_COLORS.submitted}
               radius={[2, 2, 0, 0]}
               maxBarSize={30}
               isAnimationActive={true}
@@ -63,7 +64,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
             <Bar
               dataKey="resolved"
               name={t("resolved")}
-              fill="#10b981"
+              fill={STATUS_COLORS.resolved}
               radius={[2, 2, 0, 0]}
               maxBarSize={30}
               isAnimationActive={true}

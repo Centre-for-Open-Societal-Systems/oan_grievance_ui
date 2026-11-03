@@ -117,45 +117,35 @@ describe('Review step → POST /api/v1/grievances', () => {
     expect(body).toMatchObject({ is_anonymous: 1 });
   });
 
-  it('uploads the staged files to the new ticket once the case is filed', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: { ticket_number: 'B00100013', status: 'Submitted' }, status: 'success' }),
-      })
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: [], status: 'success' }) });
-    global.fetch = fetchMock as unknown as typeof fetch;
-    const file = new File(['x'], 'receipt.png', { type: 'image/png' });
-    const { onSubmitted } = renderCard({ attachments: [{ key: 'k1', file, fileName: 'receipt.png' }] });
+  it('sends the staged files with the grievance in one multipart request', async () => {
+    const fetchMock = mockFetch(200, { data: { ticket_number: 'B00100013', status: 'Submitted' }, status: 'success' });
+    const voice = new File(['x'], 'voice-grievance-1.mp3', { type: 'audio/mpeg' });
+    const { onSubmitted } = renderCard({
+      attachments: [{ key: 'k1', file: voice, fileName: 'voice-grievance-1.mp3', kind: 'voice' }],
+    });
 
     consentAndSubmit();
 
     await waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
-    expect(String(fetchMock.mock.calls[1]![0])).toContain('/api/v1/grievances/B00100013/attachments');
-    expect(onSubmitted).toHaveBeenCalledWith(expect.not.objectContaining({ attachment_upload_failed: true }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toContain('/api/v1/grievances');
+    expect(String(url)).not.toContain('/attachments');
+    const form = init.body as FormData;
+    expect(form).toBeInstanceOf(FormData);
+    expect(form.get('description')).toBe(DESCRIPTION);
+    expect(form.get('consent_given')).toBe('1');
+    expect((form.get('file') as File).name).toBe('voice-grievance-1.mp3');
   });
 
-  it('still hands back the ticket, flagged, when the attachment upload fails', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: { ticket_number: 'B00100014', status: 'Submitted' }, status: 'success' }),
-      })
-      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ message: 'boom' }) });
-    global.fetch = fetchMock as unknown as typeof fetch;
-    const file = new File(['x'], 'receipt.png', { type: 'image/png' });
-    const { onSubmitted } = renderCard({ attachments: [{ key: 'k1', file, fileName: 'receipt.png' }] });
+  it('shows the Fayda ID as its last four characters until the submitter reveals it', () => {
+    renderCard({ identityValues: { faydaId: '1234567890123456' } });
 
-    consentAndSubmit();
+    expect(screen.getByText('••••••••••••3456')).toBeInTheDocument();
+    expect(screen.queryByText('1234567890123456')).not.toBeInTheDocument();
 
-    await waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
-    expect(onSubmitted).toHaveBeenCalledWith(
-      expect.objectContaining({ ticket_number: 'B00100014', attachment_upload_failed: true })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Show Fayda ID' }));
+    expect(screen.getByText('1234567890123456')).toBeInTheDocument();
   });
 
   it('files against the woreda when no kebele was chosen', async () => {
@@ -245,20 +235,18 @@ describe('Submitted screen', () => {
     expect(screen.getByText('B-001-0001-0')).toBeInTheDocument();
   });
 
-  it('shows the status, the date a response is expected by, and who it was assigned to', () => {
+  it('shows the status, and the date a response is expected by', () => {
     render(
       <GrievanceSubmittedCard
         result={{
           ticket_number: 'B-001-0001-0',
           status: 'Submitted',
           sla_due_date: '2026-10-05 12:00:00',
-          assigned_department: 'Agriculture Office',
         }}
       />
     );
     expect(screen.getByText('Submitted')).toBeInTheDocument();
     expect(screen.getByText('5 Oct 2026')).toBeInTheDocument();
-    expect(screen.getByText('Agriculture Office')).toBeInTheDocument();
   });
 
   it('leaves out details the backend did not return, rather than showing blanks', () => {

@@ -15,6 +15,7 @@
       "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
+      "selectCategoryFirst": "Select a category first",
       "fieldRequired": "This field is required.",
       "organisationNotice": "After you sign in, we'll ask for your organisation's details — name, registration number, authorised representative, address and contacts.",
       "faydaAlreadyRegistered": "This Fayda ID is already registered to another account.",
@@ -152,8 +153,7 @@
       "entityType": "Choose one of the listed entity types.",
       "taxId": "Use 3-60 letters or numbers; hyphens or slashes are allowed between them.",
       "memberCount": "Enter a whole number of members, e.g. 120.",
-      "postalCode": "Enter a postal code of 3 to 10 digits, e.g. 1000.",
-      "postalCodeEthiopia": "Ethiopian postal codes are exactly 4 digits, e.g. 1000.",
+      "postalCode": "Enter a valid postal code, e.g. 1000.",
       "registrationNumberTaken": "An organisation with this registration number is already registered.",
       "website": "Enter a valid website address, e.g. www.example.org.",
       "email": "Enter a valid email address, e.g. name@example.com.",
@@ -223,10 +223,21 @@
       "retry": "Try again"
     },
     "detailsStep": {
+      "selectCategoryFirst": "Select a category first",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
       "fieldRequired": "This field is required.",
-      "documentsHint": "JPG, PNG, PDF or MP3 up to 10MB each · up to {max} files"
+      "documentsHint": "JPG, PNG, PDF or MP3 up to 10MB each · up to {max} files",
+      "fileWrongType": "Not attached: {names}. Only PDF, JPG, PNG or MP3 files are accepted.",
+      "fileTooLarge": "Not attached: {names}. Each file can be up to {max}MB."
+    },
+    "serviceProvider": {
+      "placeholder": "Search input store, cooperative, bank, or market (if applicable)",
+      "listLabel": "Service providers",
+      "clear": "Clear service provider",
+      "searching": "Searching…",
+      "loadError": "Could not load service providers. Try again, or leave this empty and describe the provider below.",
+      "noMatch": "No matching provider. Leave this empty and describe the provider in the description."
     },
     "voice": {
       "hint": "Speak in your own words instead of typing. Officers will listen to the recording and route it to the right department.",
@@ -254,8 +265,31 @@
     "unreadLabel": "Notifications, {count} new",
     "title": "Notifications",
     "markAllRead": "Mark all as read",
+    "viewGrievance": "View grievance",
+    "clearAll": "Clear all",
+    "delete": "Delete notification: {subject}",
     "empty": "You have no notifications.",
     "loadError": "Could not load notifications."
+  },
+  "caseDetail": {
+    "slaPaused": "Paused",
+    "slaClosesOn": "Closes on",
+    "slaOnHold": "On hold",
+    "grievanceType": "Grievance Type",
+    "selectGrievanceType": "Select Grievance Type",
+    "loadingTypes": "Loading types...",
+    "chooseGrievanceType": "Choose a grievance type for {category}",
+    "assignedOfficer": "Assigned officer"
+  },
+  "caseExport": {
+    "title": "Export",
+    "menuLabel": "Export this case",
+    "pdf": "Download as PDF",
+    "csv": "Download as CSV",
+    "exporting": "Preparing the file…",
+    "failed": "The export could not be completed. Please try again.",
+    "notFound": "This case could not be found, so it cannot be exported.",
+    "forbidden": "You do not have permission to export this case."
   },
   "caseActions": {
     "submitterTitle": "My response",
@@ -494,6 +528,8 @@
       "disableRule": "Disable rule",
       "editTemplate": "Edit notification template",
       "closeEditor": "Close editor",
+      "viewTemplate": "View notification template",
+      "closeTemplate": "Close template",
       "emailSubject": "Email Subject",
       "insert": "Insert:",
       "insertSubject": "Insert {token} into subject",
@@ -525,7 +561,7 @@
     "requestedChange": "Requested Change",
     "currentDeadline": "Current Deadline",
     "requestedExtension": "Requested Extension",
-    "department": "Department",
+    "category": "Category",
     "officer": "Officer",
     "unassigned": "Unassigned",
     "requestedBy": "Requested By",
@@ -591,16 +627,109 @@
         "rejected": "Rejected"
       },
       "noStatuses": "No grievances to show by status yet.",
-      "escalatedCaption": "Triggered by SLA breach"
+      "escalatedCaption": "Triggered by SLA breach",
+      "levels": {
+        "title": "Grievances by Administrative Level",
+        "loading": "Loading counts by administrative level…",
+        "forbidden": "You do not have access to the counts by administrative level.",
+        "federal": "Federal",
+        "regions": "Regions",
+        "woredas": "Woredas",
+        "woredasIn": "Woredas in {region}",
+        "topWoredas": "Top woredas",
+        "more": "{count, plural, one {+# more} other {+# more}}",
+        "selectHint": "Select a region to narrow the dashboard to it.",
+        "noWoredas": "No grievances in any woreda of this region yet.",
+        "noData": "No grievances to count for your area yet.",
+        "filteredBy": "Showing the dashboard for {region}.",
+        "clear": "Show all regions"
+      }
     }
   },
+  "analytics": {
+    "title": "Analytics & Reporting",
+    "subtitle": "Agriculture grievance performance metrics — OAN Ethiopia, {month}",
+    "monthLabel": "Report month",
+    "dataAsOf": "Data as of {time}",
+    "filters": {
+      "title": "Filters",
+      "region": "Region",
+      "category": "Service category",
+      "department": "Department",
+      "allRegions": "All regions",
+      "allCategories": "All categories",
+      "allDepartments": "All departments",
+      "clear": "Clear filters",
+      "unavailable": "Some filters could not be loaded."
+    },
+    "loading": "Loading analytics…",
+    "loadFailed": "Could not load the analytics.",
+    "forbidden": "You do not have access to the analytics.",
+    "retry": "Retry",
+    "sectionUnavailable": "This section could not be loaded.",
+    "noData": "No data to show yet.",
+    "uncategorised": "Uncategorised",
+    "kpi": {
+      "avg_resolution_time": "Avg Resolution Time",
+      "resolution_rate": "Resolution Rate",
+      "escalation_rate": "Escalation Rate",
+      "satisfaction": "Farmer Satisfaction",
+      "days": "days",
+      "unavailableValue": "—",
+      "deltaDays": "{delta} days vs last month",
+      "deltaPercent": "{delta}% vs last month",
+      "deltaOther": "{delta} {unit} vs last month",
+      "basedOn": "{count, plural, one {Based on # response} other {Based on # responses}}"
+    },
+    "weeklyTrend": "Weekly Submission vs Resolution",
+    "received": "Received",
+    "resolved": "Resolved",
+    "regionResolution": "Resolution Rate by Region (%)",
+    "allTime": "All time",
+    "avgResolution": "Avg Resolution Days by Category",
+    "avgResolutionSeries": "Avg resolution time",
+    "avgDaysValue": "{days} days on average",
+    "daysTick": "{days}d",
+    "casesBehind": "{count, plural, one {# resolved case} other {# resolved cases}}",
+    "performanceScore": "System Performance Score",
+    "noScore": "No data",
+    "scoreBasis": "{count, plural, one {Based on # case} other {Based on # cases}}",
+    "axis": {
+      "timeliness": "Timeliness",
+      "resolution_rate": "Resolution Rate",
+      "satisfaction": "Satisfaction",
+      "transparency": "Transparency",
+      "follow_up": "Follow-up",
+      "coverage": "Coverage"
+    },
+    "regionTooltip": "{resolved} of {total} resolved",
+    "categoryVolume": "Volume & Resolution by Service Category",
+    "filed": "Filed",
+    "resolvedOnTime": "{count} resolved on time",
+    "resolvedBreached": "{count} resolved after the SLA"
+  },
   "login": {
+    "backToRoles": "Choose a different role",
+    "welcomeTitle": "Welcome to the Portal",
+    "welcomeSubtitle": "Select your role to access the grievance management portal.",
+    "nextStep": "Next Step",
+    "roleFarmerTitle": "Farmer Applicant",
+    "roleFarmerDesc": "Submit and track your agricultural grievances",
+    "roleOrgTitle": "Organisation Login",
+    "roleOrgDesc": "Submit and track grievances for NGOs, cooperatives, and FPOs",
+    "roleAgentTitle": "Development Agent",
+    "roleAgentDesc": "Assist farmers and submit grievances from the field",
+    "roleStaffTitle": "Staff Login",
+    "roleStaffDesc": "Triage, investigate, and resolve grievance cases",
     "switchAccount": "Sign out and use a different account",
     "switchingAccount": "Signing out…",
     "switchAccountHint": "You are signed in with a staff account that has no access here. Signing out also signs you out of the registry and other OpenG2P apps.",
-    "switchAccountFailed": "Could not sign you out of the staff account. Sign out from the registry, then try again."
+    "switchAccountFailed": "Could not sign you out of the staff account. Sign out from the registry, then try again.",
+    "noSignInMethod": "No sign-in method is configured. Contact an administrator."
   },
   "attachmentViewer": {
+    "playRecording": "Play recording",
+    "voiceNote": "Voice recording",
     "loadingPreview": "Loading preview",
     "previewUnavailable": "Preview unavailable",
     "previewLoadFailed": "Could not load this file right now.",
@@ -609,6 +738,17 @@
     "scanFailed": "The malware scan could not be completed, so this file cannot be opened."
   },
   "grievanceList": {
-    "searchPlaceholder": "Search by ticket number, submitter name, or grievance type..."
+    "searchPlaceholder": "Search by ticket number, submitter name, or grievance type...",
+    "actionView": "View",
+    "actionEdit": "Edit",
+    "closesOn": "Closes {date}",
+    "slaDueToday": "Due today",
+    "slaDueSoon": "{days, plural, one {# day left} other {# days left}}",
+    "slaOverdue": "{days, plural, one {Breached # day ago} other {Breached # days ago}}"
+  },
+  "validation": {
+    "characterCount": "{count} / {max}",
+    "tooLong": "Must be {max} characters or fewer.",
+    "charactersRemaining": "{count, plural, one {# character remaining} other {# characters remaining}}"
   }
 }

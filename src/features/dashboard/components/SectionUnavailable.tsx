@@ -21,7 +21,7 @@ export function SectionUnavailable({ onRetry, isRetrying = false, className = ""
         type="button"
         aria-disabled={isRetrying}
         onClick={isRetrying ? undefined : onRetry}
-        className="text-sm font-semibold underline"
+        className="text-sm font-semibold underline rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]"
       >
         {isRetrying ? t("retrying") : t("retry")}
       </button>

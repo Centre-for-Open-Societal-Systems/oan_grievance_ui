@@ -115,7 +115,7 @@ describe('timelineSlice', () => {
     expect(selectTimelineAssignment(mockRootState)).toEqual(sampleTimelineData.assignment);
   });
 
-  it('updates current_state and appends timeline_event on executeTimelineActionThunk.fulfilled', () => {
+  it('leaves the cached case to the reload on executeTimelineActionThunk.fulfilled', () => {
     const currentState: TimelineState = {
       selectedTicketNumber: 'ET14IN000012026',
       timelineData: { ...sampleTimelineData },
@@ -151,13 +151,14 @@ describe('timelineSlice', () => {
       meta: { arg: { ticketNumber: 'ET14IN000012026' } },
     });
 
+    // The thunk re-reads the case before it finishes, so the cache is not patched
+    // from the response (that would show a half-updated case, then replace it).
     expect(nextState.isSubmitting).toBe(false);
-    expect(nextState.timelineData?.status).toBe('Closed');
-    expect(nextState.timelineData?.timeline?.length).toBe(2);
-    expect(nextState.timelineData?.timeline?.[1]?.body).toBe('Resolution confirmed by submitter');
+    expect(nextState.timelineData?.status).toBe('In Progress');
+    expect(nextState.timelineData?.timeline?.length).toBe(1);
   });
 
-  it('appends the written entry on postTimelineMessageThunk and addTimelineNoteThunk without a refetch', () => {
+  it('leaves the cached case to the reload on postTimelineMessageThunk and addTimelineNoteThunk', () => {
     const base: TimelineState = {
       selectedTicketNumber: 'ET14IN000012026',
       timelineData: { ...sampleTimelineData },
@@ -182,7 +183,7 @@ describe('timelineSlice', () => {
     for (const type of ['timeline/postMessage/fulfilled', 'timeline/addNote/fulfilled']) {
       const next = timelineReducer(base, { type, payload: result, meta: { arg: { ticketNumber: 'ET14IN000012026' } } });
       expect(next.isSubmitting).toBe(false);
-      expect(next.timelineData?.timeline?.at(-1)?.body).toBe('We are looking into it.');
+      expect(next.timelineData?.timeline?.at(-1)?.body).toBe('Sample lab sent.');
     }
   });
 

@@ -22,3 +22,13 @@ describe('generateRandomPassword', () => {
     }
   });
 });
+
+describe('validatePassword length', () => {
+  it('accepts a password up to the backend maximum of 128 characters', () => {
+    expect(validatePassword(`Aa1!${'x'.repeat(124)}`)).toBeNull();
+  });
+
+  it('rejects one character past 128, naming the real bounds', () => {
+    expect(validatePassword(`Aa1!${'x'.repeat(125)}`)).toBe('Password must be between 8 and 128 characters long.');
+  });
+});

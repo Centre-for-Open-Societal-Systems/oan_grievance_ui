@@ -38,7 +38,7 @@ export default async function RootLayout({
       lang={locale}
       className={`${inter.variable} antialiased`}
     >
-      <body className="h-screen bg-gray-50 overflow-hidden">
+      <body className="min-h-screen bg-gray-50">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>

@@ -15,6 +15,7 @@
       "consentCheckboxLabel": "ብሔራዊ መታወቂያ ቁጥሬን ለማንነት ማረጋገጫ ለመስጠት እስማማለሁ።",
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
+      "selectCategoryFirst": "መጀመሪያ ምድብ ይምረጡ",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",
       "organisationNotice": "ከገቡ በኋላ የድርጅትዎን ዝርዝሮች — ስም፣ የምዝገባ ቁጥር፣ ስልጣን የተሰጠው ተወካይ፣ አድራሻ እና የመገናኛ መረጃ — እንጠይቅዎታለን።",
       "faydaAlreadyRegistered": "ይህ የፋይዳ መታወቂያ አስቀድሞ በሌላ መለያ ተመዝግቧል።",
@@ -152,8 +153,7 @@
       "entityType": "ከተዘረዘሩት የተቋም ዓይነቶች አንዱን ይምረጡ።",
       "taxId": "ከ3 እስከ 60 ፊደላት ወይም ቁጥሮች ይጠቀሙ፤ በመካከላቸው ሰረዝ ወይም ሰያፍ መስመር ሊኖር ይችላል።",
       "memberCount": "ሙሉ ቁጥር ያስገቡ፣ ለምሳሌ 120።",
-      "postalCode": "ከ3 እስከ 10 አሃዞች ያለው የፖስታ ኮድ ያስገቡ፣ ለምሳሌ 1000።",
-      "postalCodeEthiopia": "የኢትዮጵያ ፖስታ ኮድ በትክክል 4 አሃዞች ነው፣ ለምሳሌ 1000።",
+      "postalCode": "ትክክለኛ የፖስታ ኮድ ያስገቡ፣ ለምሳሌ 1000።",
       "registrationNumberTaken": "በዚህ የምዝገባ ቁጥር የተመዘገበ ድርጅት አስቀድሞ አለ።",
       "website": "ትክክለኛ የድር ጣቢያ አድራሻ ያስገቡ፣ ለምሳሌ www.example.org።",
       "email": "ትክክለኛ ኢሜይል አድራሻ ያስገቡ፣ ለምሳሌ name@example.com።",
@@ -223,10 +223,21 @@
       "retry": "እንደገና ይሞክሩ"
     },
     "detailsStep": {
+      "selectCategoryFirst": "መጀመሪያ ምድብ ይምረጡ",
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",
-      "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች"
+      "documentsHint": "JPG፣ PNG፣ PDF ወይም MP3 እያንዳንዱ እስከ 10MB · እስከ {max} ፋይሎች",
+      "fileWrongType": "አልተያያዘም፦ {names}። PDF፣ JPG፣ PNG ወይም MP3 ፋይሎች ብቻ ተቀባይነት አላቸው።",
+      "fileTooLarge": "አልተያያዘም፦ {names}። እያንዳንዱ ፋይል እስከ {max}MB ሊሆን ይችላል።"
+    },
+    "serviceProvider": {
+      "placeholder": "የግብዓት መደብር፣ ኅብረት ሥራ ማኅበር፣ ባንክ ወይም ገበያ ይፈልጉ (ካለ)",
+      "listLabel": "አገልግሎት ሰጪዎች",
+      "clear": "አገልግሎት ሰጪውን አጽዳ",
+      "searching": "በመፈለግ ላይ…",
+      "loadError": "አገልግሎት ሰጪዎችን መጫን አልተቻለም። እንደገና ይሞክሩ፣ ወይም ይህን ባዶ ትተው አገልግሎት ሰጪውን ከታች ይግለጹ።",
+      "noMatch": "የሚዛመድ አገልግሎት ሰጪ የለም። ይህን ባዶ ትተው አገልግሎት ሰጪውን በመግለጫው ውስጥ ይግለጹ።"
     },
     "voice": {
       "hint": "ከመጻፍ ይልቅ በራስዎ ቃላት ይናገሩ። ኃላፊዎች ቅጂውን አዳምጠው ወደ ትክክለኛው ክፍል ያስተላልፉታል።",
@@ -254,8 +265,31 @@
     "unreadLabel": "ማሳወቂያዎች፣ {count} አዲስ",
     "title": "ማሳወቂያዎች",
     "markAllRead": "ሁሉንም እንደተነበበ ምልክት አድርግ",
+    "viewGrievance": "ቅሬታውን ይመልከቱ",
+    "clearAll": "ሁሉንም አጽዳ",
+    "delete": "ማሳወቂያ ሰርዝ፦ {subject}",
     "empty": "ምንም ማሳወቂያ የለም።",
     "loadError": "ማሳወቂያዎችን መጫን አልተቻለም።"
+  },
+  "caseDetail": {
+    "slaPaused": "ቆሟል",
+    "slaClosesOn": "የሚዘጋበት ቀን",
+    "slaOnHold": "ተይዟል",
+    "grievanceType": "የቅሬታ ዓይነት",
+    "selectGrievanceType": "የቅሬታ ዓይነት ይምረጡ",
+    "loadingTypes": "ዓይነቶችን በመጫን ላይ...",
+    "chooseGrievanceType": "ለ{category} የቅሬታ ዓይነት ይምረጡ",
+    "assignedOfficer": "የተመደበ ኦፊሰር"
+  },
+  "caseExport": {
+    "title": "ላክ",
+    "menuLabel": "ይህን ጉዳይ ላክ",
+    "pdf": "እንደ PDF አውርድ",
+    "csv": "እንደ CSV አውርድ",
+    "exporting": "ፋይሉን በማዘጋጀት ላይ…",
+    "failed": "ወደ ውጭ መላኩ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
+    "notFound": "ይህ ጉዳይ አልተገኘም፤ ስለዚህ ሊላክ አይችልም።",
+    "forbidden": "ይህን ጉዳይ ለመላክ ፈቃድ የለዎትም።"
   },
   "caseActions": {
     "submitterTitle": "የእኔ ምላሽ",
@@ -494,6 +528,8 @@
       "disableRule": "ደንብ አቦዝን",
       "editTemplate": "የማሳወቂያ አብነት ያርትዑ",
       "closeEditor": "አርታዒ ዝጋ",
+      "viewTemplate": "የማሳወቂያ አብነት ይመልከቱ",
+      "closeTemplate": "አብነት ዝጋ",
       "emailSubject": "የኢሜይል ርዕስ",
       "insert": "አስገባ:",
       "insertSubject": "{token} በርዕስ ውስጥ አስገባ",
@@ -525,7 +561,7 @@
     "requestedChange": "Requested Change",
     "currentDeadline": "Current Deadline",
     "requestedExtension": "Requested Extension",
-    "department": "Department",
+    "category": "Category",
     "officer": "Officer",
     "unassigned": "Unassigned",
     "requestedBy": "Requested By",
@@ -591,16 +627,109 @@
         "rejected": "ውድቅ የተደረገ"
       },
       "noStatuses": "በሁኔታ የሚታይ ቅሬታ እስካሁን የለም።",
-      "escalatedCaption": "በSLA ጥሰት የሚቀሰቀስ"
+      "escalatedCaption": "በSLA ጥሰት የሚቀሰቀስ",
+      "levels": {
+        "title": "ቅሬታዎች በአስተዳደራዊ ደረጃ",
+        "loading": "በአስተዳደራዊ ደረጃ የተቆጠሩ ቅሬታዎችን በመጫን ላይ…",
+        "forbidden": "በአስተዳደራዊ ደረጃ የተቆጠሩ ቅሬታዎችን የማየት ፈቃድ የለዎትም።",
+        "federal": "ፌዴራል",
+        "regions": "ክልሎች",
+        "woredas": "ወረዳዎች",
+        "woredasIn": "በ{region} ያሉ ወረዳዎች",
+        "topWoredas": "ከፍተኛ ቅሬታ ያላቸው ወረዳዎች",
+        "more": "{count, plural, one {+# ተጨማሪ} other {+# ተጨማሪ}}",
+        "selectHint": "ዳሽቦርዱን ለማጥበብ ክልል ይምረጡ።",
+        "noWoredas": "በዚህ ክልል በማንኛውም ወረዳ እስካሁን ቅሬታ የለም።",
+        "noData": "ለአካባቢዎ የሚቆጠር ቅሬታ እስካሁን የለም።",
+        "filteredBy": "ዳሽቦርዱ ለ{region} እየታየ ነው።",
+        "clear": "ሁሉንም ክልሎች አሳይ"
+      }
     }
   },
+  "analytics": {
+    "title": "ትንተናና ሪፖርት",
+    "subtitle": "የግብርና ቅሬታ አፈጻጸም መለኪያዎች — የኢትዮጵያ OAN፣ {month}",
+    "monthLabel": "የሪፖርት ወር",
+    "dataAsOf": "መረጃው እስከ {time}",
+    "filters": {
+      "title": "ማጣሪያዎች",
+      "region": "ክልል",
+      "category": "የአገልግሎት ምድብ",
+      "department": "ክፍል",
+      "allRegions": "ሁሉም ክልሎች",
+      "allCategories": "ሁሉም ምድቦች",
+      "allDepartments": "ሁሉም ክፍሎች",
+      "clear": "ማጣሪያዎችን አጽዳ",
+      "unavailable": "አንዳንድ ማጣሪያዎችን መጫን አልተቻለም።"
+    },
+    "loading": "ትንተናውን በመጫን ላይ…",
+    "loadFailed": "ትንተናውን መጫን አልተቻለም።",
+    "forbidden": "ትንተናውን የማየት ፈቃድ የለዎትም።",
+    "retry": "እንደገና ይሞክሩ",
+    "sectionUnavailable": "ይህን ክፍል መጫን አልተቻለም።",
+    "noData": "የሚታይ መረጃ እስካሁን የለም።",
+    "uncategorised": "ያልተመደበ",
+    "kpi": {
+      "avg_resolution_time": "አማካይ የመፍቻ ጊዜ",
+      "resolution_rate": "የመፍታት መጠን",
+      "escalation_rate": "ወደ ከፍተኛ ደረጃ የመሸጋገር መጠን",
+      "satisfaction": "የአርሶ አደር እርካታ",
+      "days": "ቀናት",
+      "unavailableValue": "—",
+      "deltaDays": "ከባለፈው ወር {delta} ቀናት",
+      "deltaPercent": "ከባለፈው ወር {delta}%",
+      "deltaOther": "ከባለፈው ወር {delta} {unit}",
+      "basedOn": "{count, plural, one {በ# ምላሽ ላይ የተመሠረተ} other {በ# ምላሾች ላይ የተመሠረተ}}"
+    },
+    "weeklyTrend": "ሳምንታዊ የቅሬታ ማቅረብ እና የመፍታት ንጽጽር",
+    "received": "የተቀበልናቸው",
+    "resolved": "የተፈቱ",
+    "regionResolution": "በክልል የመፍታት መጠን (%)",
+    "allTime": "ሁሉም ጊዜ",
+    "avgResolution": "በምድብ አማካይ የመፍቻ ቀናት",
+    "avgResolutionSeries": "አማካይ የመፍቻ ጊዜ",
+    "avgDaysValue": "በአማካይ {days} ቀናት",
+    "daysTick": "{days}ቀ",
+    "casesBehind": "{count, plural, one {# የተፈታ ቅሬታ} other {# የተፈቱ ቅሬታዎች}}",
+    "performanceScore": "የሥርዓቱ አፈጻጸም ውጤት",
+    "noScore": "መረጃ የለም",
+    "scoreBasis": "{count, plural, one {በ# ቅሬታ ላይ የተመሠረተ} other {በ# ቅሬታዎች ላይ የተመሠረተ}}",
+    "axis": {
+      "timeliness": "ወቅታዊነት",
+      "resolution_rate": "የመፍታት መጠን",
+      "satisfaction": "እርካታ",
+      "transparency": "ግልጽነት",
+      "follow_up": "ክትትል",
+      "coverage": "ሽፋን"
+    },
+    "regionTooltip": "ከ{total} ውስጥ {resolved} ተፈተዋል",
+    "categoryVolume": "በአገልግሎት ምድብ የቅሬታ ብዛትና የመፍታት ሁኔታ",
+    "filed": "የቀረቡ",
+    "resolvedOnTime": "{count} በጊዜው የተፈቱ",
+    "resolvedBreached": "{count} ከSLA በኋላ የተፈቱ"
+  },
   "login": {
+    "backToRoles": "ሌላ ሚና ይምረጡ",
+    "welcomeTitle": "ወደ ፖርታሉ እንኳን በደህና መጡ",
+    "welcomeSubtitle": "የቅሬታ አያያዝ ፖርታልን ለመድረስ ሚናዎን ይምረጡ።",
+    "nextStep": "ቀጣይ ደረጃ",
+    "roleFarmerTitle": "አርሶ አደር አመልካች",
+    "roleFarmerDesc": "የግብርና ቅሬታዎችዎን ያቅርቡ እና ይከታተሉ",
+    "roleOrgTitle": "የድርጅት መግቢያ",
+    "roleOrgDesc": "ለNGOዎች፣ ለኅብረት ሥራ ማኅበራት እና ለFPOዎች ቅሬታዎችን ያቅርቡ እና ይከታተሉ",
+    "roleAgentTitle": "የልማት ጣቢያ ሠራተኛ",
+    "roleAgentDesc": "አርሶ አደሮችን ያግዙ እና ከመስክ ቅሬታዎችን ያቅርቡ",
+    "roleStaffTitle": "የሠራተኞች መግቢያ",
+    "roleStaffDesc": "የቅሬታ ጉዳዮችን ይመድቡ፣ ይመረምሩ እና ይፍቱ",
     "switchAccount": "ይውጡና ሌላ መለያ ይጠቀሙ",
     "switchingAccount": "በመውጣት ላይ…",
     "switchAccountHint": "እዚህ መዳረሻ በሌለው የሠራተኛ መለያ ገብተዋል። መውጣት ከመዝገቡ እና ከሌሎች OpenG2P መተግበሪያዎችም ያስወጣዎታል።",
-    "switchAccountFailed": "ከሠራተኛ መለያው ማስወጣት አልተቻለም። ከመዝገቡ ይውጡና እንደገና ይሞክሩ።"
+    "switchAccountFailed": "ከሠራተኛ መለያው ማስወጣት አልተቻለም። ከመዝገቡ ይውጡና እንደገና ይሞክሩ።",
+    "noSignInMethod": "ምንም የመግቢያ ዘዴ አልተዋቀረም። አስተዳዳሪን ያነጋግሩ።"
   },
   "attachmentViewer": {
+    "playRecording": "ቅጂውን ያጫውቱ",
+    "voiceNote": "የድምፅ ቅጂ",
     "loadingPreview": "ቅድመ እይታ በመጫን ላይ",
     "previewUnavailable": "ቅድመ እይታ አይገኝም",
     "previewLoadFailed": "ይህን ፋይል አሁን መጫን አልተቻለም።",
@@ -609,6 +738,17 @@
     "scanFailed": "የተንኮል አዘል ሶፍትዌር ቅኝቱ ሊጠናቀቅ አልቻለም፤ ስለዚህ ይህ ፋይል ሊከፈት አይችልም።"
   },
   "grievanceList": {
-    "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ..."
+    "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ...",
+    "actionView": "ይመልከቱ",
+    "actionEdit": "አርትዕ",
+    "closesOn": "{date} ይዘጋል",
+    "slaDueToday": "ዛሬ ይጠናቀቃል",
+    "slaDueSoon": "{days, plural, one {# ቀን ይቀራል} other {# ቀናት ይቀራሉ}}",
+    "slaOverdue": "{days, plural, one {ከ# ቀን በፊት ተላልፏል} other {ከ# ቀናት በፊት ተላልፏል}}"
+  },
+  "validation": {
+    "characterCount": "{count} / {max}",
+    "tooLong": "ከ{max} ቁምፊዎች መብለጥ የለበትም።",
+    "charactersRemaining": "{count, plural, one {# ቁምፊ ቀርቷል} other {# ቁምፊዎች ቀርተዋል}}"
   }
 }

@@ -10,8 +10,8 @@ export const FIELDS = [
   { key: "email", label: "Contact Email ID", required: true },
 ];
 
-export function IndividualFarmerForm({ values, setValue, hiddenFields = [], errors, onFieldBlur }: SIFormProps) {
-  const field = { values, setValue, errors, onFieldBlur };
+export function IndividualFarmerForm({ values, setValue, hiddenFields = [], readOnlyFields, errors, onFieldBlur }: SIFormProps) {
+  const field = { values, setValue, errors, onFieldBlur, readOnlyFields };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
       {!hiddenFields.includes("fullName") && (

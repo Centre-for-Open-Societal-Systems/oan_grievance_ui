@@ -44,6 +44,8 @@ export interface User {
   fayda_id?: string;
   /** An NGO / FPO's registration number, as given at sign-up. */
   registration_number?: string;
+  /** Set when the identity provider (eSignet) owns this account's details, e.g. `eSignet`. */
+  id_source?: string;
   administrative_area?: string;
   administrative_unit?: string;
   preferred_language?: string;

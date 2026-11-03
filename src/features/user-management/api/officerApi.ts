@@ -6,6 +6,7 @@ import type {
   ListOfficersParams,
   ListOfficerStatisticsParams,
   ListOfficerStatusCountsParams,
+  OfficerCandidateData,
   OfficerData,
   OfficerListData,
   OfficerStatisticsListData,
@@ -51,6 +52,22 @@ export async function fetchOfficers(
  */
 export async function fetchOfficer(officerId: string, options: RequestOptions = {}): Promise<OfficerData> {
   return fetchApi<OfficerData>(`/api/v1/officers/${encodeURIComponent(officerId)}`, {
+    method: 'GET',
+    signal: options.signal,
+  });
+}
+
+/**
+ * Logins that hold the officer role (`role: 'Reviewer'` for the review role) but are on no
+ * desk yet, so an admin can place one instead of typing an email. `q` matches name or email.
+ *
+ * Corresponding REST endpoint: GET /api/v1/officers/candidates
+ */
+export async function fetchOfficerCandidates(
+  params: { role?: 'Officer' | 'Reviewer'; q?: string } = {},
+  options: RequestOptions = {}
+): Promise<OfficerCandidateData> {
+  return fetchApi<OfficerCandidateData>(`/api/v1/officers/candidates${buildQuery(params)}`, {
     method: 'GET',
     signal: options.signal,
   });
@@ -160,6 +177,24 @@ export async function fetchCategoryAssignments(
     method: 'GET',
     signal: options.signal,
   });
+}
+
+/**
+ * Names of the active service categories, in display order. `hasDesk: true` keeps only those
+ * with an active desk (what an officer or reviewer can be placed on); omit it for every
+ * category, which is what a category admin may be assigned.
+ *
+ * Corresponding REST endpoint: GET /api/v1/service-categories
+ */
+export async function fetchServiceCategoryNames(
+  params: { hasDesk?: boolean } = {},
+  options: RequestOptions = {}
+): Promise<string[]> {
+  const data = await fetchApi<{ service_categories: { category_name: string }[] }>(
+    `/api/v1/service-categories${buildQuery({ is_active: true, has_desk: params.hasDesk, page_size: 100 })}`,
+    { method: 'GET', signal: options.signal }
+  );
+  return (data?.service_categories ?? []).map((category) => category.category_name);
 }
 
 /** Service object matching the OAN A2C enterprise standard */

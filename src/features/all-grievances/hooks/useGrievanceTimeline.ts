@@ -104,9 +104,9 @@ export function useGrievanceTimeline({ ticketNumber }: UseGrievanceTimelineOptio
   );
 
   const executeAction = useCallback(
-    async (payload: GrievanceActionPayload) => {
+    async (payload: GrievanceActionPayload, files?: File[]) => {
       if (!ticketNumber) return;
-      return dispatch(executeTimelineActionThunk({ ticketNumber, payload })).unwrap();
+      return dispatch(executeTimelineActionThunk({ ticketNumber, payload, files })).unwrap();
     },
     [ticketNumber, dispatch]
   );

@@ -5,6 +5,7 @@ import {
   canViewAllGrievances,
   homeRouteForRoles,
   homeRouteForUser,
+  isAdmin,
   isOfficerOrAdmin,
   isProtectedRoute,
   isPublicRoute,
@@ -187,6 +188,18 @@ describe('isOfficerOrAdmin', () => {
   });
 });
 
+describe('isAdmin', () => {
+  it('is true for Admin only, not for Officer, Review Officer, Submitter, or empty/unknown roles', () => {
+    expect(isAdmin([ROLES.ADMIN])).toBe(true);
+    expect(isAdmin([ROLES.SUBMITTER, ROLES.ADMIN])).toBe(true);
+    expect(isAdmin([ROLES.OFFICER])).toBe(false);
+    expect(isAdmin([ROLES.REVIEW_OFFICER])).toBe(false);
+    expect(isAdmin([ROLES.SUBMITTER])).toBe(false);
+    expect(isAdmin([])).toBe(false);
+    expect(isAdmin(['Some Future Role'])).toBe(false);
+  });
+});
+
 describe('canViewAllGrievances', () => {
   it('is true for Officer, Admin, and Review Officer — the three roles PR #47 lets read every case', () => {
     expect(canViewAllGrievances([ROLES.OFFICER])).toBe(true);
@@ -202,5 +215,23 @@ describe('canViewAllGrievances', () => {
 
   it('differs from isOfficerOrAdmin exactly on Review Officer — the whole reason it exists', () => {
     expect(canViewAllGrievances([ROLES.REVIEW_OFFICER])).not.toBe(isOfficerOrAdmin([ROLES.REVIEW_OFFICER]));
+  });
+});
+
+describe('canExportCase', () => {
+  it('allows every role but the Review Officer', async () => {
+    const { canExportCase, ROLES } = await import('./rbac');
+    expect(canExportCase([ROLES.OFFICER])).toBe(true);
+    expect(canExportCase([ROLES.SUBMITTER])).toBe(true);
+    expect(canExportCase([])).toBe(true);
+    expect(canExportCase([ROLES.REVIEW_OFFICER])).toBe(false);
+    expect(canExportCase([ROLES.REVIEW_OFFICER, ROLES.OFFICER])).toBe(true);
+  });
+});
+
+describe('canExportCase with an unrecognised role', () => {
+  it('shows no button for a role that does not hold the permission', async () => {
+    const { canExportCase } = await import('./rbac');
+    expect(canExportCase(['Some Future Auditor'])).toBe(false);
   });
 });

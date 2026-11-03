@@ -26,7 +26,7 @@ export function LeftSidebar({ badge = 'Grievance Management Portal' }: LeftSideb
           Resolving<br />Grievances,<br />Building Trust
         </h1>
         <p className="text-white/80 text-sm md:text-[15px] leading-relaxed max-w-sm font-medium pr-4">
-          A transparent grievance redressal system connecting farmers, field agents, and administrators across Ethiopia&apos;s agricultural credit network.
+          A transparent grievance redressal system connecting farmers, field agents, and administrators across Ethiopia&apos;s agricultural network.
         </p>
       </div>
 

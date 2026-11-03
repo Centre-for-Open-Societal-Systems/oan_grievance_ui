@@ -32,7 +32,7 @@ async function idleOut() {
 describe('useIdleTimer', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    performLogout.mockResolvedValue(false);
+    performLogout.mockResolvedValue({ redirected: false, providerLoggedOut: false });
   });
 
   afterEach(() => {
@@ -43,10 +43,10 @@ describe('useIdleTimer', () => {
   it('signs a local session out once it has been idle for the timeout', async () => {
     getIdleManaged.mockResolvedValue(true);
     await idleOut();
-    expect(performLogout).toHaveBeenCalledWith(expect.anything(), 'user@example.com', '/login?reason=idle&returnUrl=%2F');
+    expect(performLogout).toHaveBeenCalledWith(expect.anything(), 'user@example.com');
   });
 
-  it('never signs a staff (IAM) session out or warns it — that would end the whole SSO session', async () => {
+  it('never signs an IAM session out or warns it — that would end the whole SSO session', async () => {
     getIdleManaged.mockResolvedValue(false);
     const { result } = await idleOut();
     expect(performLogout).not.toHaveBeenCalled();

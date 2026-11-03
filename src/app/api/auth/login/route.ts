@@ -5,7 +5,21 @@ import { logger } from '@/lib/logger';
 import { BackendAuthError, callBackendAuth, type TokenPair } from '@/lib/oanAuthBackend';
 import { buildRateLimitKey, checkRateLimit, rateLimitedResponse, RATE_LIMITS } from '@/lib/rateLimit';
 import { setSessionCookies } from '@/lib/session';
+import { relativeRedirect } from '@/lib/relativeRedirect';
 import { NextResponse } from 'next/server';
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const key =
+    url.searchParams.get('key') ??
+    url.searchParams.get('role') ??
+    url.searchParams.get('type') ??
+    url.searchParams.get('portal');
+  if (key) {
+    return relativeRedirect(`/api/auth/iam/login${url.search}`);
+  }
+  return NextResponse.json({ message: 'Missing key parameter' }, { status: 400 });
+}
 
 export async function POST(request: Request) {
   const csrfError = checkCsrf(request);

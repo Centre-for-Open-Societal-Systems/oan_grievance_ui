@@ -60,7 +60,7 @@ describe('ResponseTemplateFormModal', () => {
         title: 'Old title',
         action: 'Resolved',
         department: 'DEPT-INPUTS',
-        service_category: null,
+        service_category: 'Inputs',
         body: 'Action taken:\nCalled the agent.\n\nResolution summary:\nPaid.',
         usage_count: 3,
         is_active: true,
@@ -71,11 +71,11 @@ describe('ResponseTemplateFormModal', () => {
     expect(screen.getByLabelText(/Action taken/)).toHaveValue('Called the agent.');
     expect(screen.getByLabelText(/Resolution summary/)).toHaveValue('Paid.');
 
-    change(/^Department/, '');
+    change(/Service Category/, '');
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => expect(onUpdate).toHaveBeenCalled());
-    expect(onUpdate).toHaveBeenCalledWith('TPL-1', expect.objectContaining({ department: null, title: 'Old title' }));
+    expect(onUpdate).toHaveBeenCalledWith('TPL-1', expect.objectContaining({ service_category: null, title: 'Old title' }));
   });
 
   it('keeps the dialog open and shows the error when saving fails', async () => {

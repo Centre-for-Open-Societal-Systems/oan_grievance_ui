@@ -2,19 +2,6 @@ import { X, Save, ChevronDown } from 'lucide-react';
 import { Officer } from './OfficerCard';
 import { CustomSelect } from './CustomSelect';
 
-const departmentOptions = [
-  { value: 'Ministry of Agriculture (MoA)', label: 'Ministry of Agriculture (MoA)' },
-  { value: 'Agricultural Transformation Institute (ATI)', label: 'Agricultural Transformation Institute (ATI)' },
-  { value: 'Ethiopian Agricultural Business Corporation (EABC)', label: 'Ethiopian Agricultural Business Corporation (EABC)' },
-  { value: 'Cooperative Promotion Agency', label: 'Cooperative Promotion Agency' },
-  { value: 'Agricultural Finance Institute (AFI)', label: 'Agricultural Finance Institute (AFI)' },
-  { value: 'Inputs Supply & Distribution Agency', label: 'Inputs Supply & Distribution Agency' },
-  { value: 'Market Development & Trade Bureau', label: 'Market Development & Trade Bureau' },
-  { value: 'Regional Bureau of Agriculture', label: 'Regional Bureau of Agriculture' },
-  { value: 'Woreda Agriculture & Natural Resource Office', label: 'Woreda Agriculture & Natural Resource Office' },
-  { value: 'Irrigation & Lowlands Development Authority', label: 'Irrigation & Lowlands Development Authority' }
-];
-
 const statusOptions = [
   { value: 'Active', label: 'Active' },
   { value: 'Inactive', label: 'Inactive' },
@@ -81,18 +68,6 @@ export function EditOfficerModal({ isOpen, onClose, officer }: EditOfficerModalP
                   defaultValue={officer.role}
                   placeholder="Enter Job title"
                   className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] transition-colors placeholder:text-gray-400"
-                />
-              </div>
-
-              {/* Department */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                  Department
-                </label>
-                <CustomSelect
-                  options={departmentOptions}
-                  defaultValue={officer.department}
-                  placeholder="Select Department"
                 />
               </div>
 

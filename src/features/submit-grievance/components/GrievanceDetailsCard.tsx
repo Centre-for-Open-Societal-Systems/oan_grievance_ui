@@ -6,7 +6,9 @@ import { FileText, Info, ArrowRight, ArrowLeft, Eye, Trash2, X, Loader2, AlertTr
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { FileDropzone, FileRow } from "@/components/ui/FileDropzone";
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from "@/components/ui/FieldError";
+import { CharacterCounter } from "@/components/ui/CharacterCounter";
 import { MIN_DESCRIPTION_LENGTH } from "@/lib/validation/fieldRules";
+import { DESCRIPTION_MAX_LENGTH, DESIRED_OUTCOME_MAX_LENGTH } from "@/lib/validation/lengthLimits";
 import { focusFirstError, useFieldErrors, type FieldErrors } from "@/lib/validation/useFieldErrors";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -21,10 +23,17 @@ import {
 import { AnimatedSelect } from "@/components/submitter-identity/SI-Dropdown";
 import {
   MAX_ATTACHMENTS_PER_CASE,
+  MAX_ATTACHMENT_BYTES,
+  screenAttachments,
+  WIZARD_ATTACHMENT_EXTENSIONS,
+  WIZARD_ATTACHMENT_MIME_TYPES,
   type WizardAttachment,
 } from "@/lib/attachments";
 import { VoiceRecorder } from "./VoiceRecorder";
+import { ServiceProviderCombobox } from "./ServiceProviderCombobox";
+import type { ServiceProviderRef } from "../api/serviceProviderApi";
 import { getDescriptionError, getDetailsErrors, type DetailsField } from "../wizardSteps";
+import { randomUuid } from "@/lib/randomUuid";
 
 function isPdf(item: WizardAttachment): boolean {
   return item.file?.type === "application/pdf" || /\.pdf$/i.test(item.fileName);
@@ -63,9 +72,9 @@ interface GrievanceDetailsCardProps {
   /** What the submitter would like done about it — optional. Sent as `desired_outcome`. */
   desiredOutcome: string;
   setDesiredOutcome: (value: string) => void;
-  /** The store, cooperative, bank or market the grievance is about — optional. Sent as `associated_service_provider`. */
-  serviceProvider: string;
-  setServiceProvider: (value: string) => void;
+  /** The store, cooperative, bank or market the grievance is about — optional. Chosen from the directory; its ID is sent as `associated_service_provider`. */
+  serviceProvider: ServiceProviderRef | null;
+  setServiceProvider: (value: ServiceProviderRef | null) => void;
   // The staged attachment list — owned by page.tsx, not local state here, so
   // it survives this component unmounting on every Step 1<->2 navigation and
   // so Step 3's review card can see it too. The files upload only once the
@@ -150,7 +159,7 @@ export function GrievanceDetailsCard({
 
   // Generates an object URL for previewing the selected attachment from its
   // in-memory File.
-  /* eslint-disable react-hooks/set-state-in-effect */
+  /* eslint-disable react-hooks/set-state-in-effect -- the preview URL is created from the picked file and released on cleanup */
   useEffect(() => {
     if (!previewItem) {
       setPreviewUrl(null);
@@ -203,8 +212,21 @@ export function GrievanceDetailsCard({
     onNext();
   };
 
-  const handleFiles = (files: File[]) => {
-    if (files.length === 0) return;
+  const handleFiles = (picked: File[]) => {
+    if (picked.length === 0) return;
+
+    // The backend refuses a file by type or size only after the ticket exists, so refuse it here, by name.
+    const { accepted: files, wrongType, tooLarge } = screenAttachments(picked, WIZARD_ATTACHMENT_MIME_TYPES);
+    const rejectedNotes = [
+      wrongType.length > 0 ? t("fileWrongType", { names: wrongType.map((f) => f.name).join(", ") }) : null,
+      tooLarge.length > 0
+        ? t("fileTooLarge", { names: tooLarge.map((f) => f.name).join(", "), max: MAX_ATTACHMENT_BYTES / (1024 * 1024) })
+        : null,
+    ].filter(Boolean);
+    if (files.length === 0) {
+      setError(rejectedNotes.join(" "));
+      return;
+    }
 
     // The backend caps a case at MAX_ATTACHMENTS_PER_CASE total — trim a
     // bulk selection that would blow past it rather than sending it and
@@ -215,15 +237,15 @@ export function GrievanceDetailsCard({
       return;
     }
     const filesToStage = files.slice(0, remainingSlots);
-    setError(
+    const slotNote =
       files.length > filesToStage.length
         ? `Only ${remainingSlots} more file(s) could be added (max ${MAX_ATTACHMENTS_PER_CASE} per grievance) — the rest were skipped.`
-        : null
-    );
+        : null;
+    setError([...rejectedNotes, slotNote].filter(Boolean).join(" ") || null);
 
     setAttachments((prev) => [
       ...prev,
-      ...filesToStage.map((file) => ({ key: crypto.randomUUID(), file, fileName: file.name })),
+      ...filesToStage.map((file) => ({ key: randomUuid(), file, fileName: file.name })),
     ]);
   };
 
@@ -235,8 +257,11 @@ export function GrievanceDetailsCard({
   // Whether the category/type now showing were filled in by a recording (not picked by the user), so deleting
   // the recording can take them back out again.
   const filledByVoice = useRef(false);
-  // Set when a recording is made with no category chosen: "Other" is filled in as soon as the options it comes
-  // from have loaded (a recording can finish before they do), then this is cleared.
+  // What the submitter had chosen before a recording put "Other" in its place, so deleting the recording gives
+  // their choice back. Null while no recording has replaced anything.
+  const beforeVoice = useRef<{ category: string; type: string } | null>(null);
+  // Set when a recording is made: "Other" is filled in as soon as the options it comes from have loaded
+  // (a recording can finish before they do), then this is cleared.
   const wantsOtherFill = useRef(false);
   const otherType = otherTypes.find((o) => o.label.toLowerCase() === "other")?.value;
 
@@ -252,7 +277,7 @@ export function GrievanceDetailsCard({
 
   /* eslint-disable react-hooks/exhaustive-deps -- reacts to the options arriving; fillOther only reads them */
   useEffect(() => {
-    if (wantsOtherFill.current && !serviceCategory && !grievanceType) fillOther();
+    if (wantsOtherFill.current) fillOther();
   }, [otherCategory, otherType]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -264,13 +289,13 @@ export function GrievanceDetailsCard({
     setError(null);
     setAttachments((prev) => [
       ...prev.filter((item) => item.kind !== "voice"),
-      { key: crypto.randomUUID(), file, fileName: file.name, kind: "voice" },
+      { key: randomUuid(), file, fileName: file.name, kind: "voice" },
     ]);
     fieldErrors.setError("description", null);
 
-    // A recording is triaged by hand, so file it under the catch-all "Other" - but only when the submitter has
-    // not already chosen a category; a category they picked stays.
-    if (serviceCategory || grievanceType) return;
+    // A recording is triaged by hand, so it is always filed under the catch-all "Other", replacing any category
+    // or type already chosen; deleting the recording gives that choice back.
+    if (!beforeVoice.current) beforeVoice.current = { category: serviceCategory, type: grievanceType };
     wantsOtherFill.current = true;
     fillOther();
   };
@@ -279,9 +304,10 @@ export function GrievanceDetailsCard({
     setAttachments((prev) => prev.filter((item) => item.kind !== "voice"));
     // Take back the category we filled in, unless the submitter has since changed it.
     if (filledByVoice.current && serviceCategory === otherCategory) {
-      setServiceCategory("");
-      setGrievanceType("");
+      setServiceCategory(beforeVoice.current?.category ?? "");
+      setGrievanceType(beforeVoice.current?.type ?? "");
     }
+    beforeVoice.current = null;
     filledByVoice.current = false;
     wantsOtherFill.current = false;
   };
@@ -354,7 +380,8 @@ export function GrievanceDetailsCard({
               <AnimatedSelect
                 id="grievance-type"
                 options={dynamicGrievanceTypes}
-                placeholder="Select grievance type"
+                placeholder={serviceCategory ? "Select grievance type" : t("selectCategoryFirst")}
+                disabled={!serviceCategory}
                 value={grievanceType}
                 onChange={(type) => {
                   setGrievanceType(type);
@@ -487,16 +514,7 @@ export function GrievanceDetailsCard({
             <label htmlFor="grievance-service-provider" className="block text-sm font-semibold text-gray-800 mb-2">
               Service Provider / Branch / Office Name
             </label>
-            <input
-              id="grievance-service-provider"
-              type="text"
-              // The backend stores this in a 140-character field.
-              maxLength={140}
-              value={serviceProvider}
-              onChange={(e) => setServiceProvider(e.target.value)}
-              placeholder="Enter Input store, cooperative, bank, or market name (if applicable)"
-              className="w-full bg-white border border-gray-300 text-gray-900 py-2.5 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm"
-            />
+            <ServiceProviderCombobox id="grievance-service-provider" value={serviceProvider} onChange={setServiceProvider} />
           </div>
 
           {/* Description */}
@@ -524,11 +542,22 @@ export function GrievanceDetailsCard({
                 }}
                 onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
                 aria-invalid={fieldErrors.errors.description ? true : undefined}
-                aria-describedby={fieldErrors.errors.description ? errorIdFor("grievance-description") : undefined}
+                maxLength={DESCRIPTION_MAX_LENGTH}
+                aria-describedby={
+                  [fieldErrors.errors.description ? errorIdFor("grievance-description") : null, "grievance-description-count"]
+                    .filter(Boolean)
+                    .join(" ")
+                }
                 placeholder="Describe the issue clearly — what happened, when, where, and who was involved. Include dates, amounts, and reference numbers where available."
                 className={`w-full bg-white border border-gray-300 text-gray-900 py-3 pl-4 pr-14 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
               />
             </VoiceRecorder>
+            <CharacterCounter
+              id="grievance-description-count"
+              count={description.length}
+              max={DESCRIPTION_MAX_LENGTH}
+              className="mt-1 text-right"
+            />
             {fieldErrors.errors.description && (
               <FieldError id={errorIdFor("grievance-description")}>{fieldErrors.errors.description}</FieldError>
             )}
@@ -544,8 +573,16 @@ export function GrievanceDetailsCard({
               rows={3}
               value={desiredOutcome}
               onChange={(e) => setDesiredOutcome(e.target.value)}
+              maxLength={DESIRED_OUTCOME_MAX_LENGTH}
+              aria-describedby="grievance-desired-outcome-count"
               placeholder="What is the expected resolution for this grievance?"
               className="w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y"
+            />
+            <CharacterCounter
+              id="grievance-desired-outcome-count"
+              count={desiredOutcome.length}
+              max={DESIRED_OUTCOME_MAX_LENGTH}
+              className="mt-1 text-right"
             />
           </div>
 
@@ -563,7 +600,7 @@ export function GrievanceDetailsCard({
               })}
               hint={t("documentsHint", { max: MAX_ATTACHMENTS_PER_CASE })}
               inputLabel={tDocs("label")}
-              accept=".jpg,.jpeg,.png,.pdf,.mp3"
+              accept={WIZARD_ATTACHMENT_EXTENSIONS}
               disabled={attachments.length >= MAX_ATTACHMENTS_PER_CASE}
               onFiles={handleFiles}
             >

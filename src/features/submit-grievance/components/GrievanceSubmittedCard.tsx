@@ -86,12 +86,6 @@ export function GrievanceSubmittedCard({
             : "Your grievance has been registered. Acknowledgement sent via SMS/email."}
         </p>
 
-        {result.attachment_upload_failed && (
-          <p role="alert" className="mb-5 max-w-[340px] rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Your grievance was filed, but your attachments could not be uploaded. Add them from the case page.
-          </p>
-        )}
-
         {/* Ticket Number Box */}
         <div className="bg-[#F1F5F9] rounded-xl p-5 mb-5 min-w-[340px] border border-gray-100 animate-slide-up delay-400 shadow-inner">
           <p className="text-[11px] font-semibold text-gray-400 tracking-widest mb-1.5 uppercase">
@@ -102,7 +96,7 @@ export function GrievanceSubmittedCard({
           </p>
         </div>
 
-        {(result.status || respondBy || result.assigned_department) && (
+        {(result.status || respondBy) && (
           <dl className="mb-5 grid gap-x-8 gap-y-1 text-sm text-gray-600 animate-slide-up delay-400 sm:grid-cols-[auto_auto]">
             {result.status && (
               <>
@@ -119,14 +113,6 @@ export function GrievanceSubmittedCard({
                 </dt>
                 <dd className="text-left font-medium text-gray-900">
                   {respondBy}
-                </dd>
-              </>
-            )}
-            {result.assigned_department && (
-              <>
-                <dt className="font-semibold text-gray-500">Assigned to</dt>
-                <dd className="text-left font-medium text-gray-900">
-                  {result.assigned_department}
                 </dd>
               </>
             )}

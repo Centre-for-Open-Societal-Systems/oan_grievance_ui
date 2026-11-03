@@ -26,7 +26,7 @@ type Outcome =
 
 /** The outcome of one request, tagged with the reload token that produced it. */
 interface Settled {
-  key: number;
+  key: string;
   outcome: Outcome;
 }
 
@@ -42,15 +42,15 @@ function hasNoChart(charts: DashboardCharts): boolean {
  * Loading is derived by comparing the last settled request to the current reload
  * token, rather than being set synchronously inside the effect.
  */
-export function useDashboardStatistics(locale = 'en'): UseDashboardStatisticsResult {
+export function useDashboardStatistics(locale = 'en', region: string | null = null): UseDashboardStatisticsResult {
   const [settled, setSettled] = useState<Settled | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
-    const requestKey = reloadToken;
+    const requestKey = `${reloadToken}:${region ?? ''}`;
 
-    fetchDashboardCharts({ signal: controller.signal })
+    fetchDashboardCharts({ signal: controller.signal, region })
       .then((charts) => {
         if (controller.signal.aborted) return;
         // Nothing built means nothing to draw: report the failure rather than a page of gaps.
@@ -66,7 +66,7 @@ export function useDashboardStatistics(locale = 'en'): UseDashboardStatisticsRes
       });
 
     return () => controller.abort();
-  }, [reloadToken]);
+  }, [reloadToken, region]);
 
   const retry = useCallback(() => setReloadToken((token) => token + 1), []);
 
@@ -75,7 +75,7 @@ export function useDashboardStatistics(locale = 'en'): UseDashboardStatisticsRes
   const charts = settled?.outcome.kind === 'charts' ? settled.outcome.charts : null;
   const statistics = useMemo(() => (charts ? mapDashboardCharts(charts, locale) : null), [charts, locale]);
 
-  const isSettled = settled?.key === reloadToken;
+  const isSettled = settled?.key === `${reloadToken}:${region ?? ''}`;
   let state: DashboardState;
   if (!isSettled) {
     state = statistics ? { status: 'ready', statistics, isRefreshing: true } : { status: 'loading' };

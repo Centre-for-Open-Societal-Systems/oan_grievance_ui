@@ -20,6 +20,7 @@ describe('callBackendAuth', () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok,
       status,
+      headers: new Headers(),
       json: async () => body,
     } as Response);
   }
@@ -105,6 +106,7 @@ describe('callBackendAuth', () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 502,
+      headers: new Headers(),
       json: async () => {
         throw new Error('Invalid JSON');
       },

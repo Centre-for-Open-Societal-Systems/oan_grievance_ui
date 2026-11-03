@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { FileText, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { FileText, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2, Mic } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
-import { uploadAttachments, type WizardAttachment } from "@/lib/attachments";
+import type { WizardAttachment } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
+import { maskIdKeepLast4 } from "@/lib/maskId";
 import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
 import { useAppSelector } from "@/store/hooks";
 import {
@@ -16,6 +17,27 @@ import {
 } from "@/features/metadata";
 import { submitErrorMessage, submitGrievance, type SubmitGrievanceResult } from "../api/submitGrievanceApi";
 import type { SubmitFields } from "../submitPayload";
+
+/** The staged voice recording, with a player, so it is visible next to a typed description rather than only in the file list. */
+function VoiceNotePreview({ file, label }: { file: File; label: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  /* eslint-disable react-hooks/set-state-in-effect -- the object URL only exists in the browser, so it is created here and released on cleanup */
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+  return (
+    <div className="mt-2">
+      <p className="flex items-center gap-1.5 text-sm font-medium text-gray-600">
+        <Mic className="w-4 h-4 text-[#0b8535]" aria-hidden="true" />
+        {label}
+      </p>
+      {url && <audio controls src={url} aria-label={label} className="mt-1.5 h-10 w-full max-w-sm" />}
+    </div>
+  );
+}
 
 interface ReviewAndSubmitCardProps {
   onBack: () => void;
@@ -91,6 +113,7 @@ export function ReviewAndSubmitCard({
   submissionBlockedMessage,
 }: ReviewAndSubmitCardProps) {
   const t = useTranslations("submitGrievance.reviewStep");
+  const voiceNote = attachments.find((a) => a.kind === "voice") ?? null;
   const [consentChecked, setConsentChecked] = useState(false);
   // Hides the submitter's identity from the handling desks.
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -130,25 +153,18 @@ export function ReviewAndSubmitCard({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await submitGrievance({
-        ...submitFields,
-        consent_given: 1,
-        ...(canRequestMoreInfo ? {} : { can_request_more_info: 0 }),
-        ...(isAnonymous ? { is_anonymous: 1 } : {}),
-      });
-      // The case exists now, so the staged files can attach to its ticket.
-      // A failed upload doesn't undo the filing — the submitter is told on
-      // the confirmation screen and can add the files from the case instead.
-      let attachmentUploadFailed = false;
-      if (attachments.length > 0) {
-        try {
-          await uploadAttachments({ files: attachments.map((a) => a.file), grievance: result.ticket_number });
-        } catch (uploadError) {
-          logger.error("Failed to upload attachments after submit:", uploadError);
-          attachmentUploadFailed = true;
-        }
-      }
-      onSubmitted(attachmentUploadFailed ? { ...result, attachment_upload_failed: true } : result);
+      // The files go with the grievance in one multipart request, so the backend attaches them to the
+      // submission entry — a voice recording then shows next to the description it came with.
+      const result = await submitGrievance(
+        {
+          ...submitFields,
+          consent_given: 1,
+          ...(canRequestMoreInfo ? {} : { can_request_more_info: 0 }),
+          ...(isAnonymous ? { is_anonymous: 1 } : {}),
+        },
+        attachments.map((a) => a.file)
+      );
+      onSubmitted(result);
     } catch (error) {
       logger.error("Failed to submit grievance:", error);
       setSubmitError(submitErrorMessage(error));
@@ -222,7 +238,7 @@ export function ReviewAndSubmitCard({
                       {isIdField && value ? (
                         <div className="flex items-center gap-2">
                           <p className="text-[15px] font-semibold text-gray-900">
-                            {revealed ? value : "•".repeat(Math.max(value.length, 8))}
+                            {revealed ? value : maskIdKeepLast4(value)}
                           </p>
                           <button
                             type="button"
@@ -253,7 +269,8 @@ export function ReviewAndSubmitCard({
               </div>
               <div className="md:col-span-2">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</p>
-                <p className="text-[15px] font-semibold text-gray-900">{description || (attachments.some((a) => a.kind === "voice") ? t("voiceDescription") : "Not provided")}</p>
+                <p className="text-[15px] font-semibold text-gray-900">{description || (voiceNote ? t("voiceDescription") : "Not provided")}</p>
+                {voiceNote && <VoiceNotePreview file={voiceNote.file} label={t("voiceDescription")} />}
               </div>
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Service Provider / Office</p>

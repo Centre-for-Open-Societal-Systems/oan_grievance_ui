@@ -12,7 +12,18 @@ import { ApiError } from '@/lib/api/fetchApi';
 // than that on a slow connection — this app targets Ethiopia OpenAgriNet,
 // not a fast/reliable link — so uploads get a longer allowance instead of
 // aborting a request the backend would otherwise have accepted.
-const UPLOAD_TIMEOUT_MS = 60_000;
+export const UPLOAD_TIMEOUT_MS = 60_000;
+
+/** Builds a multipart body from scalar fields plus the repeated `files` part, skipping unset fields. */
+export function toMultipartBody(fields: Record<string, string | number | boolean | null | undefined>, files: File[]): FormData {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined || value === null) continue;
+    form.append(key, String(value));
+  }
+  for (const file of files) form.append('files', file);
+  return form;
+}
 
 /**
  * Mirrors the backend's Grievance Attachment `scan_status` field exactly
@@ -52,6 +63,67 @@ export const ACCEPTED_ATTACHMENT_MIME_TYPES = [
 ] as const;
 
 export const ACCEPTED_ATTACHMENT_EXTENSIONS = '.pdf,.jpg,.jpeg,.png';
+
+/**
+ * What the backend's `ALLOWED_MIME_TYPES` accepts for a case's own evidence: the
+ * three above plus MP3, which is how a voice note travels (grievance_attachment.py).
+ */
+export const WIZARD_ATTACHMENT_MIME_TYPES: readonly string[] = [...ACCEPTED_ATTACHMENT_MIME_TYPES, 'audio/mpeg'];
+
+/** The wizard's file picker `accept` list: the document types above plus MP3 for voice notes. */
+export const WIZARD_ATTACHMENT_EXTENSIONS = '.jpg,.jpeg,.png,.pdf,.mp3';
+
+// Browsers and operating systems report MP3 under several names, or none at all.
+const MIME_ALIASES: Record<string, string> = {
+  'audio/mp3': 'audio/mpeg',
+  'audio/x-mp3': 'audio/mpeg',
+  'audio/mpeg3': 'audio/mpeg',
+  'audio/x-mpeg-3': 'audio/mpeg',
+};
+const MIME_BY_EXTENSION: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.mp3': 'audio/mpeg',
+};
+
+/**
+ * The type to screen a picked file by. The declared type is used as reported,
+ * except for the known MP3 aliases; only a file with no declared type falls back
+ * to its extension. The backend sniffs the real type from the bytes either way,
+ * so this only has to avoid refusing a file the backend would accept.
+ */
+export function effectiveMimeType(file: File): string {
+  const declared = file.type.toLowerCase();
+  if (declared) return MIME_ALIASES[declared] ?? declared;
+  const dot = file.name.lastIndexOf('.');
+  return dot >= 0 ? (MIME_BY_EXTENSION[file.name.slice(dot).toLowerCase()] ?? '') : '';
+}
+
+export interface ScreenedAttachments {
+  accepted: File[];
+  wrongType: File[];
+  tooLarge: File[];
+}
+
+/**
+ * Splits picked files by the backend's own per-file rules (type allow-list, 10MB),
+ * so a file it would refuse is caught when picked rather than after the ticket
+ * exists. A file of the wrong type is reported as that even if it is also too big.
+ */
+export function screenAttachments(
+  files: File[],
+  allowedMimeTypes: readonly string[] = ACCEPTED_ATTACHMENT_MIME_TYPES
+): ScreenedAttachments {
+  const result: ScreenedAttachments = { accepted: [], wrongType: [], tooLarge: [] };
+  for (const file of files) {
+    if (!allowedMimeTypes.includes(effectiveMimeType(file))) result.wrongType.push(file);
+    else if (file.size > MAX_ATTACHMENT_BYTES) result.tooLarge.push(file);
+    else result.accepted.push(file);
+  }
+  return result;
+}
 
 /**
  * One row in the submission wizard's attachment list — a file picked in this

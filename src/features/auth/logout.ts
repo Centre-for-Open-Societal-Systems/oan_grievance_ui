@@ -14,21 +14,21 @@ import type { AppDispatch } from '@/store';
  * Callers pass it because it must be read before `dispatch(logout())` clears
  * the very state it lives in.
  *
- * `returnTo` is where the user lands afterwards. Callers navigate there
- * themselves — except for a staff (IAM) session, where this navigates the
- * whole page to the identity provider's logout instead, so its SSO session
- * ends too, and the provider sends the browser on to `returnTo`. Returns
- * whether it did, so the caller skips its own navigation.
+ * Callers navigate to the login page themselves — except when an IAM session's
+ * identity provider could not be signed out server-side: then this navigates
+ * the whole page to the provider's logout, so its SSO session ends too, and
+ * the provider sends the browser on to the page IAM has configured for it.
+ * `redirected` says it did, so the caller skips its own navigation.
+ * `providerLoggedOut` says the provider session was ended server-side.
  */
 export async function performLogout(
   dispatch: AppDispatch,
-  email: string | null,
-  returnTo = '/login'
-): Promise<boolean> {
-  const providerLogoutUrl = await logoutUser(returnTo);
+  email: string | null
+): Promise<{ redirected: boolean; providerLoggedOut: boolean }> {
+  const { redirectTo, providerLoggedOut } = await logoutUser();
   dispatch(logout());
   if (email) clearSubmitterProfile(email);
-  if (!providerLogoutUrl) return false;
-  window.location.assign(providerLogoutUrl);
-  return true;
+  if (!redirectTo) return { redirected: false, providerLoggedOut };
+  window.location.assign(redirectTo);
+  return { redirected: true, providerLoggedOut };
 }

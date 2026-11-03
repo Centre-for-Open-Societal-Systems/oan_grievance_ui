@@ -160,9 +160,9 @@ export const RATE_LIMITS = {
   // `/api/realtime/config`). Called once per connect and once per reconnect,
   // so a tab only reaches this on a flapping connection.
   realtimeConfig: limitFromEnv('REALTIME_CONFIG', 30, 60_000),
-  // "Sign in as staff" (`/api/auth/staff/login`): each hit opens a login
-  // transaction in IAM's Redis, so a flood costs IAM real state. Keyed by IP
+  // IAM login start (`/api/auth/iam/login`): each hit opens a login
+  // transaction in an IAM's Redis, so a flood costs IAM real state. Keyed by IP
   // only — there is no per-caller identity before the identity provider has
   // seen the user — so the default is sized for a shared "unknown" bucket.
-  staffLogin: limitFromEnv('STAFF_LOGIN', 30, 60_000),
+  iamLogin: limitFromEnv('IAM_LOGIN', 30, 60_000),
 } as const;

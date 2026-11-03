@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Zap, Bell, BellOff, Edit2, Save, AlertTriangle } from 'lucide-react';
+import { Zap, Bell, BellOff, Edit2, Save } from 'lucide-react';
 import { z } from 'zod';
 import { SlaCategory } from './types';
 import { describeSaveError } from './apiErrorMessage';
@@ -166,19 +166,6 @@ export function SlaCategoryCard({
                     </div>
 
                     <div className="flex flex-col gap-0.5 flex-1 w-full min-w-0">
-                        <div className='flex justify-between items-center'>
-                            {!categoryData.department ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
-                                    {t('noDepartment')}
-                                </span>
-                            ) : (
-                                <span className="text-sm font-medium text-gray-900 truncate">
-                                    {categoryData.department}
-                                </span>
-                            )}
-                        </div>
-
                         <div className="flex items-center gap-3">
                             <div className="h-1.5 bg-gray-100 rounded-full flex-1 overflow-hidden">
                                 <div

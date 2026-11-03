@@ -40,7 +40,7 @@ describe('RecentGrievances', () => {
     renderWidget();
     expect(await screen.findByText('Seed delivery is two weeks late')).toBeInTheDocument();
     expect(screen.getByText('OR-INP-0001')).toBeInTheDocument();
-    expect(screen.getByText('Require More Info')).toHaveClass('bg-orange-50');
+    expect(screen.getByText('Require More Info')).toHaveClass('bg-pink-50');
     expect(fetchGrievances).toHaveBeenCalledWith(
       expect.objectContaining({ page: 1, page_size: 10, sort_by: 'creation', sort_order: 'desc' }),
       expect.anything()

@@ -250,36 +250,19 @@ describe('OrganisationRegistrationForm', () => {
     });
   });
 
-  it('asks for a 4-digit postal code in Ethiopia, and only a length-and-characters one elsewhere', () => {
+  it('takes a 3-10 character postal code of letters, digits, spaces and hyphens, whatever the country', () => {
     renderForm();
     const postal = screen.getByLabelText(/^Postal code/);
-    const ethiopian = 'Ethiopian postal codes are exactly 4 digits, e.g. 1000.';
+    const invalid = 'Enter a valid postal code, e.g. 1000.';
+    expect(postal).toHaveAttribute('maxlength', '10');
 
-    fireEvent.change(postal, { target: { value: '12345' } });
+    fireEvent.change(postal, { target: { value: '12' } });
     fireEvent.blur(postal);
-    expect(screen.getByText(ethiopian)).toBeInTheDocument();
+    expect(screen.getByText(invalid)).toBeInTheDocument();
 
-    // The rule follows the country: the same code is fine once it is not Ethiopia.
-    type(/^Country\s*\*/, 'Kenya');
-    expect(screen.queryByText(ethiopian)).not.toBeInTheDocument();
-
-    type(/^Country\s*\*/, 'Ethiopia');
-    fireEvent.blur(postal);
-    expect(screen.getByText(ethiopian)).toBeInTheDocument();
-
-    fireEvent.change(postal, { target: { value: '1000' } });
-    expect(screen.queryByText(ethiopian)).not.toBeInTheDocument();
-  });
-
-  it('takes digits only in the postal code, dropping anything else as it is typed or pasted', () => {
-    renderForm();
-    const postal = screen.getByLabelText(/^Postal code/);
-    expect(postal).toHaveAttribute('inputmode', 'numeric');
-
-    fireEvent.change(postal, { target: { value: '1a0-0 0' } });
-    expect(postal).toHaveValue('1000');
-    fireEvent.change(postal, { target: { value: 'ABC' } });
-    expect(postal).toHaveValue('');
+    // Not tightened to Ethiopia's 4 digits: letters and a space are fine.
+    fireEvent.change(postal, { target: { value: 'SW1A 1AA' } });
+    expect(screen.queryByText(invalid)).not.toBeInTheDocument();
   });
 
   it('registers an NGO with the backend contract and hands back the record it answers with', async () => {

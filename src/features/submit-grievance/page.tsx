@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { fetchAdministrativeAreaAncestors } from "@/features/metadata/api/metadataApi";
 import { selectUser } from "@/features/auth/store/authSlice";
 import {
   selectServiceCategoryOptions,
@@ -14,6 +15,7 @@ import { useTranslations } from "next-intl";
 import {
   buildInitialIdentityValues,
   identityAfterReset,
+  isIndividualFarmer,
   isSubmitterTypeLocked,
   resolveInitialSubmissionChannel,
   resolveInitialSubmitterType,
@@ -32,6 +34,8 @@ import { ReviewAndSubmitCard } from "./components/ReviewAndSubmitCard";
 import { GrievanceSubmittedCard } from "./components/GrievanceSubmittedCard";
 import { OrganisationVerificationNotice } from "./components/OrganisationVerificationNotice";
 import { SubmitGrievanceHeader } from "./components/TopHeader";
+import type { ServiceProviderRef } from "./api/serviceProviderApi";
+import { randomUuid } from "@/lib/randomUuid";
 
 function labelFor(options: { value: string; label: string }[], value: string): string {
   return (
@@ -87,7 +91,7 @@ export default function SubmitGrievancePage() {
   // Identifies this wizard session's submission — sent as
   // `client_submission_uuid` so a retried submit is recognised by the backend
   // rather than filed twice.
-  const [clientUuid, setClientUuid] = useState(() => crypto.randomUUID());
+  const [clientUuid, setClientUuid] = useState(() => randomUuid());
 
   // Step 1 — Submitter Identity
   const [submitterType, setSubmitterType] = useState(() => resolveInitialSubmitterType(user, savedProfile));
@@ -112,9 +116,32 @@ export default function SubmitGrievancePage() {
   const [zone, setZone] = useState<AreaRef | null>(null);
   const [woreda, setWoreda] = useState<AreaRef | null>(null);
   const [kebele, setKebele] = useState<AreaRef | null>(null);
+  // Pre-fills the location from the account's own area (set from the identity
+  // provider's address at sign-in), once — never over a choice already made.
+  const profileArea = user?.administrative_area;
+  const prefilledArea = useRef<string | null>(null);
+  useEffect(() => {
+    if (!profileArea || prefilledArea.current === profileArea) return;
+    prefilledArea.current = profileArea;
+    fetchAdministrativeAreaAncestors(profileArea)
+      .then(({ current, breadcrumbs }) => {
+        const chain = [...breadcrumbs, ...(current ? [current] : [])];
+        const refFor = (level: string): AreaRef | null => {
+          const node = chain.find((n) => n.level_name === level);
+          return node ? { id: node.area_id, name: node.area_name, pathCode: node.path_code ?? "" } : null;
+        };
+        setRegion((prev) => prev ?? refFor("Region"));
+        setZone((prev) => prev ?? refFor("Zone"));
+        setWoreda((prev) => prev ?? refFor("Woreda"));
+        setKebele((prev) => prev ?? refFor("Kebele"));
+      })
+      .catch(() => {
+        // Best-effort: the dropdowns simply stay empty.
+      });
+  }, [profileArea]);
   const [description, setDescription] = useState("");
   const [desiredOutcome, setDesiredOutcome] = useState("");
-  const [serviceProvider, setServiceProvider] = useState("");
+  const [serviceProvider, setServiceProvider] = useState<ServiceProviderRef | null>(null);
   // The attachment list — lifted up here (not kept local to
   // GrievanceDetailsCard) for two reasons: page.tsx conditionally unmounts
   // that component on every Step 1<->2 navigation (`{currentStep === 2 &&
@@ -171,12 +198,12 @@ export default function SubmitGrievancePage() {
     setKebele(null);
     setDescription("");
     setDesiredOutcome("");
-    setServiceProvider("");
+    setServiceProvider(null);
     setAttachments([]);
     // A fresh submission key for the next grievance — reusing the old one
     // would make the backend treat the next, different grievance as a retry
     // of the one just filed.
-    setClientUuid(crypto.randomUUID());
+    setClientUuid(randomUuid());
   };
 
   const handleReset = () => {
@@ -186,6 +213,12 @@ export default function SubmitGrievancePage() {
     resetFields();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // A farmer signed in through the identity provider cannot edit what it supplied — only when it
+  // did supply a value, so an empty field stays fillable. The Fayda ID is left editable.
+  const providerOwnedFields = user?.id_source
+    ? (["fullName", "phoneNumber"] as const).filter((key) => identityValues[key]?.trim())
+    : undefined;
 
   const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
   const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
@@ -204,7 +237,7 @@ export default function SubmitGrievancePage() {
     kebele: kebele?.name,
     serviceCategoryLabel: serviceCategory ? labelFor(serviceCategories, serviceCategory) : undefined,
     grievanceType,
-    associatedServiceProvider: serviceProvider,
+    associatedServiceProvider: serviceProvider?.id,
     description,
     hasVoiceNote,
     desiredOutcome,
@@ -265,7 +298,9 @@ export default function SubmitGrievancePage() {
             setSubmissionChannel={setSubmissionChannel}
             identityValues={identityValues}
             setIdentityValue={setIdentityValue}
-            submitterTypeLocked={isSubmitterTypeLocked(user)}
+            submitterTypeLocked={isSubmitterTypeLocked(user) || isIndividualFarmer(user)}
+            isSubmissionChannelLocked={isIndividualFarmer(user)}
+            readOnlyFields={providerOwnedFields}
             profileSubmitterType={user?.submitter_type || user?.type}
             profileSubmissionChannel={user?.submission_channel}
           />
@@ -312,7 +347,7 @@ export default function SubmitGrievancePage() {
             kebele={kebele}
             description={description}
             desiredOutcome={desiredOutcome}
-            serviceProvider={serviceProvider}
+            serviceProvider={serviceProvider?.name}
             attachments={attachments}
             submissionBlockedMessage={submissionBlockedMessage}
           />

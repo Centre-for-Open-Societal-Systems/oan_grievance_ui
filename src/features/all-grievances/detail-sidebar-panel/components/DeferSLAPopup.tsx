@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, CalendarClock, AlertTriangle, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { DeferSLAPayload, GrievanceChangeResponseData } from '../../types';
+import { CharacterCounter } from '@/components/ui/CharacterCounter';
+import { REASON_MAX_LENGTH } from '@/lib/validation/lengthLimits';
 
 interface DeferSLAPopupProps {
   /** Bound to the active ticket by `useGrievanceTimeline().deferSLA`, same as CaseManagement's `onReassign`. */
@@ -114,10 +116,13 @@ export function DeferSLAPopup({ onDefer, onClose, onSuccess }: DeferSLAPopupProp
 
           {/* Reason */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-bold text-gray-700">Reason for Deferral * <span className="text-gray-400 font-normal">(min. 20 characters)</span></label>
+            <label htmlFor="defer-reason" className="text-sm font-bold text-gray-700">Reason for Deferral * <span className="text-gray-400 font-normal">(min. 20 characters)</span></label>
             <textarea
+              id="defer-reason"
               rows={3}
               value={reason}
+              maxLength={REASON_MAX_LENGTH}
+              aria-describedby="defer-reason-count"
               onChange={(e) => setReason(e.target.value)}
               placeholder="Describe why the SLA requires extension — e.g. awaiting lab results, pending inter-agency coordination, seasonal factor..."
               className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-gray-50/50 resize-none"
@@ -125,6 +130,7 @@ export function DeferSLAPopup({ onDefer, onClose, onSuccess }: DeferSLAPopupProp
             <div className={`text-[11px] font-bold ${reason.trim().length < 20 ? 'text-amber-500' : 'text-emerald-500'}`}>
               {reason.trim().length} / 20 minimum characters
             </div>
+            <CharacterCounter id="defer-reason-count" count={reason.length} max={REASON_MAX_LENGTH} />
           </div>
 
           {/* Days */}

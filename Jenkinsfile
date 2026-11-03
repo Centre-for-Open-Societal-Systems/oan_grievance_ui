@@ -34,7 +34,7 @@ pipeline {
                     def targets = [
                         develop: [
                             namespace: 'develop',
-                            verifyUrl: 'https://grievance-dev.oanstaging.com/login'
+                            verifyUrl: 'https://grievance.development.oanstaging.com/login'
                         ],
                         staging: [
                             namespace: 'staging',

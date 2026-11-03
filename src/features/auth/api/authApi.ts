@@ -29,8 +29,6 @@ export interface BackendAuthMeData {
   login_email?: string;
   first_name?: string;
   last_name?: string;
-  full_name?: string;
-  mobile_no?: string;
   country_code?: string;
   phone_number?: string;
   roles?: string[];
@@ -38,6 +36,7 @@ export interface BackendAuthMeData {
     grievance?: {
       active?: number;
       administrative_area?: string | null;
+      id_source?: string | null;
       administrative_unit?: string | null;
       contact_email?: string | null;
       contact_mobile?: string | null;
@@ -207,29 +206,27 @@ export async function setInitialPassword(usr: string, currentPassword: string, n
 }
 
 /**
- * Ends the session server-side. `returnTo` is the page to land on afterwards.
- * Returns the identity provider's logout URL when the session was a staff
- * (IAM) one — the caller navigates there so the provider's SSO session ends
- * too, and the provider sends the browser on to `returnTo` — otherwise null.
- * Callers should reset client auth state either way.
+ * Ends the session server-side. `redirectTo` is the identity provider's logout
+ * URL when the session was an IAM one whose provider session could not be
+ * ended server-to-server — the caller navigates there so it ends too;
+ * `providerLoggedOut` is true when it was. Callers should reset client auth
+ * state either way.
  */
-export async function logoutUser(returnTo: string): Promise<string | null> {
+export async function logoutUser(): Promise<{ redirectTo: string | null; providerLoggedOut: boolean }> {
   try {
-    const res = await fetch('/api/auth/logout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ returnTo }),
-    });
+    const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     if (!res.ok) {
       logger.security(`Logout refused by the server with status ${res.status}`);
-      return null;
+      return { redirectTo: null, providerLoggedOut: false };
     }
-    const data = (await res.json().catch(() => ({}))) as { redirectTo?: unknown };
-    return typeof data.redirectTo === 'string' ? data.redirectTo : null;
+    const data = (await res.json().catch(() => ({}))) as { redirectTo?: unknown; providerLoggedOut?: unknown };
+    return {
+      redirectTo: typeof data.redirectTo === 'string' ? data.redirectTo : null,
+      providerLoggedOut: data.providerLoggedOut === true,
+    };
   } catch (error) {
     logger.error('Logout request failed:', error);
-    return null;
+    return { redirectTo: null, providerLoggedOut: false };
   }
 }
 
@@ -251,8 +248,8 @@ export async function sendHeartbeat(): Promise<void> {
 
 /**
  * Whether this app's idle timeout applies to the current session — true for
- * an email/password session, false for a staff (IAM) one, whose idle timeout
- * is Keycloak's. Null when it can't be told (no session, network failure).
+ * an email/password session, false for an IAM one, whose idle timeout is the
+ * identity provider's. Null when it can't be told (no session, network failure).
  */
 export async function getIdleManaged(): Promise<boolean | null> {
   try {
@@ -271,9 +268,19 @@ export async function getIdleManaged(): Promise<boolean | null> {
  * response envelope (`.data`) before returning, so what
  * comes back here is already the flat shape — no further unwrapping needed.
  */
+/** `/auth/me` sends the name in parts; the full name is joined here. */
+export function fullNameOf(d: Pick<BackendAuthMeData, 'first_name' | 'last_name'>): string {
+  return [d.first_name, d.last_name].filter(Boolean).join(' ');
+}
+
+/** `/auth/me` sends the number as country code + national number; the E.164 form is joined here. */
+export function mobileOf(d: Pick<BackendAuthMeData, 'country_code' | 'phone_number'>): string | undefined {
+  return d.phone_number ? `${d.country_code ?? ''}${d.phone_number}` : undefined;
+}
+
 async function fetchAndValidateMe(): Promise<BackendAuthMeData> {
   const d = await fetchApi<BackendAuthMeData>('/api/v1/auth/me', { method: 'GET' });
-  if (!d || (!d.user && !d.login_email && !d.full_name)) {
+  if (!d || (!d.user && !d.login_email)) {
     throw new Error(AUTH_MESSAGES.sessionExpired);
   }
   return d;
@@ -305,8 +312,10 @@ export function toUserOrganisation(raw: BackendOrganization | null | undefined):
 export async function getMe(): Promise<User> {
   const d = await fetchAndValidateMe();
   const grievanceProfile = d.profiles?.grievance;
-  const fullName = d.full_name || grievanceProfile?.full_name || d.login_email || d.user || 'User';
-  const email = d.login_email || d.user || '';
+  const fullName = fullNameOf(d) || grievanceProfile?.full_name || d.login_email || d.user || 'User';
+  // An IAM user (eSignet) has no login email: their `user` id is a synthetic address, so the
+  // profile's own contact email comes before it.
+  const email = d.login_email || grievanceProfile?.contact_email || d.user || '';
   const type = grievanceProfile?.type || d.roles?.[0] || 'Grievance Submitter';
 
   return {
@@ -315,7 +324,7 @@ export async function getMe(): Promise<User> {
     full_name: fullName,
     first_name: d.first_name || undefined,
     last_name: d.last_name || undefined,
-    mobile_no: d.mobile_no || grievanceProfile?.contact_mobile || undefined,
+    mobile_no: mobileOf(d) || grievanceProfile?.contact_mobile || undefined,
     country_code: d.country_code || grievanceProfile?.country_code || undefined,
     phone_number: d.phone_number || grievanceProfile?.phone_number || undefined,
     type,
@@ -327,6 +336,7 @@ export async function getMe(): Promise<User> {
     // An NGO's / FPO's registration number once the backend holds it (it is not part of sign-up,
     // so before the organisation is registered it is normally absent).
     registration_number: grievanceProfile?.registration_number || resolveOrganisationNumber(grievanceProfile?.identities),
+    id_source: grievanceProfile?.id_source || undefined,
     administrative_area: grievanceProfile?.administrative_area || undefined,
     administrative_unit: grievanceProfile?.administrative_unit || undefined,
     preferred_language: grievanceProfile?.preferred_language || undefined,

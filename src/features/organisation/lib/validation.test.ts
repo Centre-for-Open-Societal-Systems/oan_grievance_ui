@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  digitsOnly,
   normaliseWebsite,
   ORGANISATION_FIELDS,
   validateOrganisation,
@@ -120,44 +119,26 @@ describe('registration number', () => {
 });
 
 describe('postal code', () => {
-  it('accepts exactly 4 digits for Ethiopia, whatever case or spacing the country is typed in', () => {
-    for (const country of ['Ethiopia', ' ethiopia ', 'ETHIOPIA']) {
-      expect(check({ country, postalCode: '1000' }).postalCode).toBeUndefined();
-    }
-  });
-
-  it('rejects anything but 4 digits for Ethiopia', () => {
-    for (const postalCode of ['100', '12345', 'ABCD', '10 00', '1O00', '-100']) {
-      expect(check({ postalCode }).postalCode).toEqual({ code: 'postalCodeEthiopia' });
-    }
-  });
-
-  it('ignores whitespace around an Ethiopian code', () => {
-    expect(check({ postalCode: ' 1000 ' }).postalCode).toBeUndefined();
-  });
-
   it('requires a postal code', () => {
     expect(check({ postalCode: '' }).postalCode).toEqual({ code: 'required' });
   });
 
-  it('accepts 3 to 10 digits for other countries', () => {
-    for (const postalCode of ['100', '1000', '12345', '1234567890']) {
-      expect(check({ country: 'Kenya', postalCode }).postalCode).toBeUndefined();
+  it('accepts 3-10 letters or digits with a single space or hyphen between, in any country', () => {
+    for (const country of ['Ethiopia', 'Kenya']) {
+      for (const postalCode of ['100', '1000', '12345', 'SW1A 1AA', 'AB-1234', '1234567890']) {
+        expect(check({ country, postalCode }).postalCode).toBeUndefined();
+      }
     }
   });
 
-  it('rejects letters, separators and the wrong length for other countries', () => {
-    for (const postalCode of ['12', '12345678901', 'SW1A 1AA', 'AB-1234', '-1000', '10#00', '10 00']) {
-      expect(check({ country: 'Kenya', postalCode }).postalCode).toEqual({ code: 'postalCode' });
-    }
+  it('is not tightened to Ethiopia\'s 4 digits', () => {
+    expect(check({ country: 'Ethiopia', postalCode: '12345' }).postalCode).toBeUndefined();
   });
-});
 
-describe('digitsOnly', () => {
-  it('drops everything but digits', () => {
-    expect(digitsOnly('1a0-0 0')).toBe('1000');
-    expect(digitsOnly('ABC')).toBe('');
-    expect(digitsOnly('1000')).toBe('1000');
+  it('rejects too short, too long, stray punctuation and doubled or dangling separators', () => {
+    for (const postalCode of ['12', '12345678901', '-1000', '1000-', '10#00', '10  00', '10--00']) {
+      expect(check({ postalCode }).postalCode).toEqual({ code: 'postalCode' });
+    }
   });
 });
 

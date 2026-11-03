@@ -3,8 +3,9 @@
 import { useEffect, useId, useState } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { selectUser } from "@/features/auth/store/authSlice";
-import { getFullProfile, resolveFaydaId, type BackendAuthMeData } from "@/features/auth/api/authApi";
+import { fullNameOf, getFullProfile, mobileOf, resolveFaydaId, type BackendAuthMeData } from "@/features/auth/api/authApi";
 import { logger } from "@/lib/logger";
+import { maskIdKeepLast4 } from "@/lib/maskId";
 import { UserCircle, Loader2, AlertTriangle, Info, Eye, EyeOff } from "lucide-react";
 
 function initialsFor(name: string): string {
@@ -54,8 +55,8 @@ function MaskedField({ label, value }: { label: string; value: string | null | u
       <div className="relative">
         <input
           id={id}
-          type={revealed ? "text" : "password"}
-          value={displayValue(value)}
+          type="text"
+          value={hasValue && !revealed ? maskIdKeepLast4(value as string) : displayValue(value)}
           readOnly
           className={`${lockedFieldClass} pr-10`}
         />
@@ -98,12 +99,12 @@ export default function ProfilePage() {
   }, []);
 
   const grievanceProfile = profile?.profiles?.grievance;
-  const displayName = profile?.full_name || user?.email || "User";
+  const displayName = (profile && fullNameOf(profile)) || user?.email || "User";
   const initials = initialsFor(displayName);
   // Same fallback authApi.ts's getMe() uses for Redux's `user.mobile_no` —
   // kept in sync so this page doesn't show "Not provided" for a value the
   // header/rest of the app already displays correctly for the same account.
-  const mobileNo = profile?.mobile_no || grievanceProfile?.contact_mobile;
+  const mobileNo = (profile && mobileOf(profile)) || grievanceProfile?.contact_mobile;
   const faydaId = resolveFaydaId(grievanceProfile?.identities);
 
   return (
@@ -154,7 +155,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <Field label="Full Name" value={profile?.full_name} />
+                <Field label="Full Name" value={profile ? fullNameOf(profile) : undefined} />
                 <Field label="Email" value={profile?.login_email} />
                 <Field label="Phone Number" value={mobileNo} />
                 <Field label="Preferred Language" value={grievanceProfile?.preferred_language} />

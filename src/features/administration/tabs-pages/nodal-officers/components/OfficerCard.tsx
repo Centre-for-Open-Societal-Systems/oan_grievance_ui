@@ -53,7 +53,6 @@ export function OfficerCard({ officer, onEdit }: { officer: Officer, onEdit?: (o
               )}
             </div>
             <p className="text-[14px] text-gray-500 font-medium leading-tight">{officer.role}</p>
-            <p className="text-[14px] text-gray-500 leading-tight">{officer.department}</p>
           </div>
         </div>
         <button 

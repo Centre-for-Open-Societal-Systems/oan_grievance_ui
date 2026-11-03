@@ -14,7 +14,6 @@ const REPLY_ACTIONS = [{ action: 'Submitter Reply', label: 'Submitter Reply', re
 
 function renderPanel(props: Partial<CaseActionsPanelProps> = {}) {
   const onExecute = props.onExecute ?? vi.fn().mockResolvedValue({});
-  const onUploadFiles = props.onUploadFiles ?? vi.fn().mockResolvedValue([]);
   render(
     <NextIntlClientProvider locale="en" messages={en}>
       <CaseActionsPanel
@@ -22,11 +21,10 @@ function renderPanel(props: Partial<CaseActionsPanelProps> = {}) {
         isSubmitting={false}
         {...props}
         onExecute={onExecute}
-        onUploadFiles={onUploadFiles}
       />
     </NextIntlClientProvider>
   );
-  return { onExecute, onUploadFiles };
+  return { onExecute };
 }
 
 describe('CaseActionsPanel', () => {
@@ -43,7 +41,7 @@ describe('CaseActionsPanel', () => {
     expect(submit).toBeEnabled();
     fireEvent.click(submit);
 
-    expect(onExecute).toHaveBeenCalledWith({ action: 'Close Case', reason: '', rating: 4 });
+    expect(onExecute).toHaveBeenCalledWith({ action: 'Close Case', reason: '', rating: 4 }, undefined);
     expect(await screen.findByRole('status')).toHaveTextContent('"Close Case" done.');
   });
 
@@ -55,7 +53,7 @@ describe('CaseActionsPanel', () => {
     fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'Still no delivery.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Reopen' }));
 
-    expect(onExecute).toHaveBeenCalledWith({ action: 'Reopen', reason: 'Still no delivery.', rating: null });
+    expect(onExecute).toHaveBeenCalledWith({ action: 'Reopen', reason: 'Still no delivery.', rating: null }, []);
   });
 
   it('skips the action picker when only one action is offered and enforces the minimum length', () => {
@@ -69,10 +67,9 @@ describe('CaseActionsPanel', () => {
     expect(submit).toBeEnabled();
   });
 
-  it('uploads supporting documents before sending the reply', async () => {
+  it('uploads supporting documents along with sending the reply', async () => {
     const onExecute = vi.fn().mockResolvedValue({});
-    const onUploadFiles = vi.fn().mockResolvedValue([]);
-    renderPanel({ actions: REPLY_ACTIONS, onExecute, onUploadFiles });
+    renderPanel({ actions: REPLY_ACTIONS, onExecute });
     const file = new File(['x'], 'bank_statement.pdf', { type: 'application/pdf' });
     const exe = new File(['x'], 'virus.exe', { type: 'application/x-msdownload' });
 
@@ -85,13 +82,15 @@ describe('CaseActionsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit Additional Information' }));
 
     await waitFor(() => expect(onExecute).toHaveBeenCalled());
-    expect(onUploadFiles).toHaveBeenCalledWith([file]);
-    expect(onUploadFiles.mock.invocationCallOrder[0]).toBeLessThan(onExecute.mock.invocationCallOrder[0]!);
+    expect(onExecute).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'Submitter Reply', reason: 'Statement attached.' }),
+      [file]
+    );
   });
 
-  it('does not send the action when the upload fails', async () => {
-    const onUploadFiles = vi.fn().mockRejectedValue(new Error('File too large'));
-    const { onExecute } = renderPanel({ actions: REPLY_ACTIONS, onUploadFiles });
+  it('displays error when executing reply action fails', async () => {
+    const onExecute = vi.fn().mockRejectedValue(new Error('File too large'));
+    renderPanel({ actions: REPLY_ACTIONS, onExecute });
     const file = new File(['x'], 'card.png', { type: 'image/png' });
 
     fireEvent.change(screen.getByLabelText('Supporting Documents'), { target: { files: [file] } });
@@ -99,7 +98,6 @@ describe('CaseActionsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit Additional Information' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('File too large');
-    expect(onExecute).not.toHaveBeenCalled();
   });
 
   it('shows the picker for several unrelated actions', () => {
@@ -151,7 +149,8 @@ describe('CaseActionsPanel', () => {
       expect.objectContaining({
         action: 'Cufaa',
         rating: 5,
-      })
+      }),
+      undefined
     );
   });
 
@@ -195,10 +194,13 @@ describe('CaseActionsPanel', () => {
 
     fireEvent.click(submit);
     await waitFor(() => expect(onExecute).toHaveBeenCalled());
-    expect(onExecute).toHaveBeenCalledWith({
-      action: 'Close Case',
-      reason: 'thanks! issue resolved.',
-      rating: 5,
-    });
+    expect(onExecute).toHaveBeenCalledWith(
+      {
+        action: 'Close Case',
+        reason: 'thanks! issue resolved.',
+        rating: 5,
+      },
+      undefined
+    );
   });
 });

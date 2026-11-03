@@ -236,14 +236,14 @@ export function AnimatedSelect({
 
   return (
     <div
-      className={`relative w-full text-sm ${disabled ? "opacity-60" : ""}`}
+      className="relative w-full text-sm"
       ref={wrapperRef}
     >
       {/* Combobox Input Trigger */}
       <div
         className={`w-full relative flex items-center border rounded-lg transition-all duration-200 shadow-sm ${
           disabled
-            ? "bg-gray-50 border-gray-200 cursor-not-allowed text-gray-400"
+            ? "bg-gray-100 border-gray-300 cursor-not-allowed text-gray-700"
             : isOpen
             ? "bg-white border-[#0b8535] ring-2 ring-[#0b8535]/20"
             : "bg-white border-gray-300 hover:border-gray-400"
@@ -274,7 +274,7 @@ export function AnimatedSelect({
           spellCheck={false}
           className={`w-full py-2.5 pl-4 pr-14 rounded-lg text-sm bg-transparent outline-none transition-colors ${
             disabled
-              ? "cursor-not-allowed text-gray-400"
+              ? "cursor-not-allowed text-gray-700"
               : !searchable
               ? "cursor-pointer text-gray-800"
               : "cursor-text text-gray-800"

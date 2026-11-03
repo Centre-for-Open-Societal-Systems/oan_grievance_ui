@@ -35,6 +35,16 @@ export interface GrievanceListItem {
   assigned_to?: string | null;
   sla_due_date?: string | null;
   confirmation_deadline?: string | null;
+  /** Whether the caller may act on the case now (a reply owed, or the assigned officer). */
+  can_act?: boolean | null;
+  /** The one deadline that matters now; `due_kind` says whether it closes the case or breaches the SLA. */
+  due_date?: string | null;
+  due_kind?: 'auto_close' | 'sla_breach' | null;
+  overdue_seconds?: number | null;
+  is_paused?: boolean | null;
+  paused_since?: string | null;
+  /** When the case closes by itself if nobody acts. */
+  auto_close_at?: string | null;
   submitted_on?: string | null;
   updated_at?: string | null;
 }
@@ -114,6 +124,12 @@ export interface Grievance {
   department: string;
   assignedTo: string;
   slaDueDate: string;
+  /** The backend's raw `sla_due_date`, for working out how close the case is to breaching. */
+  slaDueAt?: string;
+  /** The backend's `can_act`: whether the viewer may act on the case now, else the row is view-only. */
+  canAct?: boolean;
+  /** When the case closes by itself if nobody acts (waiting on the submitter, or resolved and unconfirmed). */
+  autoCloseAt?: string;
   submissionChannel: string;
   description?: string;
   administrativeArea?: string;
@@ -226,11 +242,18 @@ export interface GrievanceTimelineSla {
   next_escalation_at?: string | null;
   confirmation_deadline?: string | null;
   active_deferral_request?: ChangeRequestData | null;
+  /** The SLA clock is held (e.g. waiting on the submitter); staff only. */
+  is_paused?: boolean | null;
+  paused_since?: string | null;
+  /** When the case closes by itself if nobody acts, for a state whose timer closes it. */
+  auto_close_at?: string | null;
 }
 
 export interface GrievanceTimelineAssignment {
   department?: string | null;
   assigned_to?: string | null;
+  /** The assigned officer's full name; staff only. */
+  assigned_to_name?: string | null;
   routed_automatically?: boolean;
   active_reassignment_request?: ChangeRequestData | null;
 }
@@ -275,6 +298,9 @@ export interface GrievanceTimelineData {
   administrative_area?: string | null;
   administrative_hierarchy?: Record<string, string> | null;
   location?: string | null;
+  /** The case's own text and channel, sent at the top level of the timeline response. */
+  description?: string | null;
+  submission_channel?: string | null;
   summary?: GrievanceTimelineSummary;
   submitter?: GrievanceTimelineSubmitter;
   sla?: GrievanceTimelineSla;
@@ -330,6 +356,7 @@ export interface GrievanceCurrentState {
   workflow_status?: string;
   escalated: boolean | number;
   assigned_to?: string | null;
+  assigned_to_name?: string | null;
   assigned_dept?: string | null;
   department?: string | null;
   updated_at?: string | null;
@@ -375,6 +402,8 @@ export interface ChangeRequestData {
   requested_by: string;
   requested_at?: string | null;
   pending_with?: string | null;
+  /** User id of who must decide (compare with the signed-in user); `pending_with` is for display. */
+  pending_with_id?: string | null;
   pending_since?: string | null;
   decided_by?: string | null;
   decided_at?: string | null;
@@ -420,7 +449,9 @@ export interface DeferSLAPayload {
 }
 
 export interface ReassignGrievancePayload {
-  target_department: string;
+  target_department?: string | null;
+  target_category?: string | null;
+  target_grievance_type?: string | null;
   target_officer?: string | null;
   reason?: string | null;
   sla_treatment?: 'Continue' | 'Reset' | string;

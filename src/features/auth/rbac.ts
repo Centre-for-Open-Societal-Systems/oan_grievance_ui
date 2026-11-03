@@ -231,6 +231,22 @@ export function isOfficerOrAdmin(roles: string[]): boolean {
   return effectiveRoles(roles).some((role) => role === ROLES.OFFICER || role === ROLES.ADMIN);
 }
 
+/** True when every role the caller holds is a submitter kind (Submitter / Assisted Submitter), i.e. no staff role. */
+export function isSubmitterOnly(roles: string[]): boolean {
+  return effectiveRoles(roles).every((role) => role === ROLES.SUBMITTER || role === ROLES.ASSISTED_SUBMITTER);
+}
+
+/**
+ * True for a Grievance Admin only — the role that sees every desk, rather than the
+ * caller's own (Analytics & Reporting offers the department filter to it alone). Like
+ * the rest of this file it reads the unverified JWT claim to decide what to *show*; the
+ * service still decides what each caller may *get* and ignores admin-only parameters
+ * from anyone else.
+ */
+export function isAdmin(roles: string[]): boolean {
+  return effectiveRoles(roles).some((role) => role === ROLES.ADMIN);
+}
+
 /**
  * True for a Grievance Review Officer. Used to hide/disable the create, edit, and
  * password-reset controls on screens it can otherwise view (User Management,
@@ -240,6 +256,26 @@ export function isOfficerOrAdmin(roles: string[]): boolean {
  */
 export function isReviewOfficer(roles: string[]): boolean {
   return effectiveRoles(roles).some((role) => role === ROLES.REVIEW_OFFICER);
+}
+
+/**
+ * True for a role that may edit notification templates. Deny-by-default, unlike
+ * `!isReviewOfficer(...)`: the edit controls stay hidden while the session is still
+ * restoring and `roles` is empty, so a Review Officer never sees them flash up.
+ */
+export function canManageNotifications(roles: string[]): boolean {
+  return isAdmin(roles);
+}
+
+/**
+ * True for a role holding the Grievance `export` permission (the ticket export on the case
+ * view): Submitter, Assisted Submitter, Officer and Admin. The Review Officer is read-only
+ * oversight and is refused by the backend, and a role not listed here gets no button. The
+ * backend still re-checks, so this only hides a button that would 403.
+ */
+export function canExportCase(roles: string[]): boolean {
+  const allowed: string[] = [ROLES.SUBMITTER, ROLES.ASSISTED_SUBMITTER, ROLES.OFFICER, ROLES.ADMIN];
+  return effectiveRoles(roles).some((role) => allowed.includes(role));
 }
 
 /**
