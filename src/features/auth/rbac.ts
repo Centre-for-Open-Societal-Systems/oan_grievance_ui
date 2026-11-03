@@ -259,6 +259,15 @@ export function isReviewOfficer(roles: string[]): boolean {
 }
 
 /**
+ * True for a role that may edit notification templates. Deny-by-default, unlike
+ * `!isReviewOfficer(...)`: the edit controls stay hidden while the session is still
+ * restoring and `roles` is empty, so a Review Officer never sees them flash up.
+ */
+export function canManageNotifications(roles: string[]): boolean {
+  return isAdmin(roles);
+}
+
+/**
  * True for a role holding the Grievance `export` permission (the ticket export on the case
  * view): Submitter, Assisted Submitter, Officer and Admin. The Review Officer is read-only
  * oversight and is refused by the backend, and a role not listed here gets no button. The
