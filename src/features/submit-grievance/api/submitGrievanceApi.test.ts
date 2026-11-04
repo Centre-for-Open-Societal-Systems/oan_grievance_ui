@@ -25,7 +25,6 @@ describe('buildSubmitGrievancePayload', () => {
       submission_channel: 'Web Portal',
       submitter_type: 'Individual Farmer',
       submitter_name: 'Abebe Bikila',
-      contact_mobile: '+251911223344',
       country_code: '+251',
       phone_number: '0911223344',
       contact_email: 'abebe@example.com',
@@ -64,7 +63,9 @@ describe('buildSubmitGrievancePayload', () => {
   it("sends the submitter's own identity — never reaches the backend any other way for a represented submission", () => {
     const payload = buildSubmitGrievancePayload(BASE_INPUT);
     expect(payload.submitter_name).toBe('Abebe Bikila');
-    expect(payload.contact_mobile).toBe('+251911223344');
+    expect(payload.country_code).toBe('+251');
+    expect(payload.phone_number).toBe('0911223344');
+    expect(payload).not.toHaveProperty('contact_mobile');
     expect(payload.contact_email).toBe('abebe@example.com');
   });
 

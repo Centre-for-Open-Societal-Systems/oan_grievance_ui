@@ -1,6 +1,6 @@
 import { submitsOnBehalfOfOthers } from "@/components/submitter-identity/fields";
 import { MIN_DESCRIPTION_LENGTH } from "@/lib/validation/fieldRules";
-import { formatToE164 } from "@/lib/validation/phone";
+import { splitPhoneNumber } from "@/lib/validation/phone";
 
 /**
  * The grievance fields of `POST /api/v1/grievances` — everything except
@@ -13,7 +13,6 @@ export interface SubmitFields {
   submission_channel?: string;
   submitter_type?: string;
   submitter_name?: string;
-  contact_mobile?: string;
   country_code?: string;
   phone_number?: string;
   contact_email?: string;
@@ -30,7 +29,7 @@ export interface SubmitFields {
 }
 
 /**
- * `submitter_name`/`contact_mobile`/`contact_email` never reach the backend
+ * `submitter_name`/`country_code`+`phone_number`/`contact_email` never reach the backend
  * any other way for a Cooperative/NGO/Woreda-Kebele/Development-Agent
  * submission: RegisterForm.tsx's Profile step only persists those fields to
  * `localStorage` (see `saveSubmitterProfile`), never to the backend, so the
@@ -71,11 +70,24 @@ export function resolveSubmitterName({ identityValues, userFullName, submitterTy
   );
 }
 
-export function resolveContactMobile({ identityValues, userMobile, submitterType }: WizardIdentitySource): string {
+/**
+ * The mobile number as the backend takes it: the dial code and the local number
+ * separately. `contact_mobile` is deliberately not sent — the backend builds it
+ * from these two, so sending it as well produced a doubled prefix
+ * ("+251251...") that failed its phone validation.
+ */
+export function resolveContactPhone({
+  identityValues,
+  userMobile,
+  submitterType,
+}: WizardIdentitySource): { country_code: string; phone_number: string } {
+  if (identityValues.phoneNumber) {
+    return { country_code: identityValues.phoneCode || "+251", phone_number: identityValues.phoneNumber };
+  }
   const ownProfileFallback = submitsOnBehalfOfOthers(submitterType ?? "") ? "" : userMobile || "";
-  const raw = identityValues.phoneNumber || ownProfileFallback;
-  if (!raw) return "";
-  return formatToE164(raw, identityValues.phoneCode || "+251");
+  if (!ownProfileFallback) return { country_code: identityValues.phoneCode || "+251", phone_number: "" };
+  const { phoneCode, phoneNumber } = splitPhoneNumber(ownProfileFallback);
+  return { country_code: phoneCode, phone_number: phoneNumber };
 }
 
 export function resolveContactEmail({ identityValues, userEmail, submitterType }: WizardIdentitySource): string {
@@ -140,9 +152,7 @@ export function buildSubmitFields(input: BuildSubmitFieldsInput): SubmitFields {
     submission_channel: input.submissionChannelLabel ?? "",
     submitter_type: input.submitterTypeLabel ?? "",
     submitter_name: resolveSubmitterName(input),
-    contact_mobile: resolveContactMobile(input),
-    country_code: input.identityValues.phoneCode || "+251",
-    phone_number: input.identityValues.phoneNumber || "",
+    ...resolveContactPhone(input),
     contact_email: resolveContactEmail(input),
     administrative_area: input.administrativeAreaId || undefined,
     administrative_unit: input.kebele?.trim() ?? "",
