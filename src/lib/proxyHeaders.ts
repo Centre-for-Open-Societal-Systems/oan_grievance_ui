@@ -1,6 +1,7 @@
 import { getClientIp } from '@/lib/clientIp';
 import { env } from '@/lib/env';
 import { logger } from '@/lib/logger';
+import { REQUEST_ID_HEADER, requestIdFrom } from '@/lib/requestId';
 
 // Header and body sanitization for `/api/proxy/*`, which relays traffic
 // between the browser and the Frappe-backed auth service. Both directions are
@@ -25,11 +26,10 @@ const FORWARDED_REQUEST_HEADERS: ReadonlySet<string> = new Set([
   'accept-language',
   'content-type',
   'user-agent',
-  'x-request-id',
 ]);
 
 /** `authToken` is injected server-side from the httpOnly cookie; the browser never holds it. */
-export function buildUpstreamHeaders(request: Request, authToken?: string): Headers {
+export function buildUpstreamHeaders(request: Request, authToken?: string, requestId?: string): Headers {
   const headers = new Headers();
 
   request.headers.forEach((value, key) => {
@@ -38,6 +38,8 @@ export function buildUpstreamHeaders(request: Request, authToken?: string): Head
     }
   });
 
+  // Relayed only when well-formed (a client value ends up in logs); otherwise minted here.
+  headers.set(REQUEST_ID_HEADER, requestId ?? requestIdFrom(request.headers));
   headers.set('X-Forwarded-For', getClientIp(request));
 
   const url = new URL(request.url);

@@ -44,6 +44,13 @@ NGO and FPO representatives register through the ordinary `/register` flow — t
 
 The case sidebar header (`SidebarHeader.tsx`) shows an Export button (`ExportMenu.tsx`) that downloads the open case as the SOW Annexure form, PDF or CSV, from `GET /api/v1/grievances/{ticket}/export?format=pdf|csv&lang=en|am` (`exportGrievance` in `grievanceApi.ts`; contract: `oan_grievance_service/docs/ticket-export.md`). The answer is the file itself, not the JSON envelope, so it goes through `fetchApiBlob` (same session renewal and `ApiError` as `fetchApi`) with a 60 s timeout, because rendering a PDF takes seconds. `lang` follows the portal language where the backend has it (`am`), else `en`. The proxy does not relay `Content-Disposition`, so the file name is rebuilt client-side the way the backend builds it. `canExportCase` (`rbac.ts`) hides the button from roles without the Grievance `export` permission (the Review Officer); the backend re-checks, and answers 404 for a case the caller cannot read. Copy is under `caseExport.*`.
 
+## Logging & error reporting
+
+One helper, `src/lib/logger.ts`, for server route handlers and the browser. Everything it prints passes through `logRedaction.ts` (tokens, emails, long digit runs and sensitive keys such as password/token/email/phone/description/body are replaced; an `Error` is reduced to name and message; URLs lose their query string). `logger.event(level, {...})` writes one JSON line per failure; never put a request or response body in it.
+
+- **Correlation id** (`lib/requestId.ts`): `fetchApi` mints an `X-Request-Id` per call (shared by its post-refresh retry) and puts it on `ApiError.requestId`. `/api/proxy` accepts it only when well-formed (else mints one), forwards it to the backend, echoes it on the response and tags its `proxy.upstream_failed` / `proxy.failed` events with it.
+- **Browser reports** (`lib/clientLogger.ts` → `POST /api/client-logs`): `fetchApi` reports network/timeout failures, 429 and 5xx (not ordinary 4xx); `app/error.tsx`, `app/global-error.tsx` and `ChartErrorBoundary` report render errors; `GlobalErrorListener` reports uncaught errors and unhandled rejections; `ReviewAndSubmitCard` reports a failed submit as `flow.failed`. The client dedupes (30 s) and caps itself at 50 reports per page; the route is CSRF-checked, rate-limited (`RATE_LIMIT_CLIENT_LOG_*`), accepts a fixed set of event names and bounded fields only, and needs no session so the login page can report too. The render-error screen shows the reference id (`errorBoundary.*` copy) for the user to quote.
+
 ## Required environment variables
 
 | Variable | Required | Default | Purpose |

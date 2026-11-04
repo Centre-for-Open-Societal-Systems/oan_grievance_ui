@@ -1,4 +1,6 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
+import { reportClientEvent } from '@/lib/clientLogger';
+import { newRequestId, REQUEST_ID_HEADER } from '@/lib/requestId';
 import { ApiErrorCode, httpStatusToErrorCode } from './apiErrors';
 
 // In the browser, requests are same-origin. On the server (SSR), there is no
@@ -13,12 +15,15 @@ export class ApiError extends Error {
   responseData: unknown;
   /** HTTP status that produced this error, so callers can classify it (e.g. 5xx → Connection). */
   status?: number;
+  /** Correlation id of the call, to quote when reporting the problem; matches the server logs. */
+  requestId?: string;
 
-  constructor(message: string, responseData?: unknown, status?: number) {
+  constructor(message: string, responseData?: unknown, status?: number, requestId?: string) {
     super(message);
     this.name = 'ApiError';
     this.responseData = responseData;
     if (status !== undefined) this.status = status;
+    if (requestId !== undefined) this.requestId = requestId;
     Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
@@ -120,7 +125,22 @@ async function refreshSession(): Promise<RefreshOutcome> {
   }
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 15000): Promise<Response> {
+/**
+ * Calls worth a report: the server failing or throttling, or no answer at all.
+ * Ordinary 4xx (validation, not found, expired session) are the app working as designed.
+ */
+function reportFailedCall(path: string, method: string | undefined, status: number, requestId: string | undefined): void {
+  if (status !== 0 && status !== 408 && status !== 429 && status < 500) return;
+  reportClientEvent({ event: 'api.request_failed', requestId, method: (method ?? 'GET').toUpperCase(), path, status });
+}
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = 15000,
+  requestId?: string
+): Promise<Response> {
+  const reportTransport = (status: number) => reportFailedCall(url, options.method, status, requestId);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(new Error('TimeoutError')), timeoutMs);
 
@@ -143,9 +163,11 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
       throw error; // Intentional abort from frontend (e.g. unmount)
     }
     if (err.message === 'TimeoutError' || err.name === 'TimeoutError' || err.name === 'AbortError') {
-      throw new ApiError('The server is taking too long to respond. Please try again.', null, 408);
+      reportTransport(408);
+      throw new ApiError('The server is taking too long to respond. Please try again.', null, 408, requestId);
     }
-    throw new ApiError('Network error. Please check your connection.', null, 0);
+    reportTransport(0);
+    throw new ApiError('Network error. Please check your connection.', null, 0, requestId);
   }
 }
 
@@ -162,7 +184,7 @@ async function sendRequest(
   options: RequestInit,
   timeoutMs: number | undefined,
   accept = 'application/json'
-): Promise<Response> {
+): Promise<{ response: Response; requestId: string }> {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   const proxyPath = cleanPath.startsWith('api/proxy/') ? cleanPath : `api/proxy/${cleanPath}`;
   const url = new URL(proxyPath, BASE_URL);
@@ -174,6 +196,9 @@ async function sendRequest(
   if (!headers.has('Accept')) {
     headers.set('Accept', accept);
   }
+  // One id for the call and its post-refresh retry, so both share a log trail.
+  const requestId = newRequestId();
+  headers.set(REQUEST_ID_HEADER, requestId);
 
   let response = await fetchWithTimeout(
     url.toString(),
@@ -182,7 +207,8 @@ async function sendRequest(
       credentials: 'include',
       headers,
     },
-    timeoutMs
+    timeoutMs,
+    requestId
   );
 
   if (response.status === 401 && typeof window !== 'undefined') {
@@ -216,12 +242,14 @@ async function sendRequest(
           credentials: 'include',
           headers,
         },
-        timeoutMs
+        timeoutMs,
+        requestId
       );
     }
   }
 
-  return response;
+  reportFailedCall(proxyPath, options.method, response.status, requestId);
+  return { response, requestId };
 }
 
 async function requestEnvelope<T>(
@@ -229,7 +257,7 @@ async function requestEnvelope<T>(
   options: RequestInit,
   timeoutMs: number | undefined
 ): Promise<{ data: T; meta: unknown }> {
-  const response = await sendRequest(path, options, timeoutMs);
+  const { response, requestId } = await sendRequest(path, options, timeoutMs);
 
   let responseData: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   try {
@@ -238,7 +266,7 @@ async function requestEnvelope<T>(
     const abortReason = options.signal?.aborted ? options.signal.reason : undefined;
     const isAbort = (error as { name?: string } | null)?.name === 'AbortError' || error === abortReason;
     if (options.signal?.aborted && isAbort) throw error;
-    if (!response.ok) throw new ApiError(genericMessageForStatus(response.status), null, response.status);
+    if (!response.ok) throw new ApiError(genericMessageForStatus(response.status), null, response.status, requestId);
     return { data: null as T, meta: undefined };
   }
 
@@ -255,13 +283,13 @@ async function requestEnvelope<T>(
     } else if (typeof responseData?.message === 'string') {
       errorMsg = responseData.message;
     }
-    throw new ApiError(errorMsg, responseData, response.status);
+    throw new ApiError(errorMsg, responseData, response.status, requestId);
   }
 
   // Handle application-level errors returned with status 200
   if (responseData?.status === 'error') {
     const errorMsg = messageFromDetails(responseData) ?? (typeof responseData?.message === 'string' ? responseData.message : 'Application Error');
-    throw new ApiError(errorMsg, responseData);
+    throw new ApiError(errorMsg, responseData, undefined, requestId);
   }
 
   const unwrapped = responseData?.data ?? responseData;
@@ -317,12 +345,12 @@ export async function fetchApi<T = unknown>(path: string, options: RequestInit =
  * a longer `timeoutMs` if rendering the file may take a while.
  */
 export async function fetchApiBlob(path: string, options: RequestInit = {}, timeoutMs?: number): Promise<Blob> {
-  const response = await sendRequest(path, options, timeoutMs, '*/*');
+  const { response, requestId } = await sendRequest(path, options, timeoutMs, '*/*');
   if (response.ok) {
     // A 200 that is really an error page or envelope must not be saved as the file.
     const contentType = response.headers.get('content-type') ?? '';
     if (/json|html/i.test(contentType)) {
-      throw new ApiError(genericMessageForStatus(502), null, 502);
+      throw new ApiError(genericMessageForStatus(502), null, 502, requestId);
     }
     return response.blob();
   }
@@ -335,5 +363,5 @@ export async function fetchApiBlob(path: string, options: RequestInit = {}, time
   const message =
     messageFromDetails(responseData) ??
     (typeof responseData?.message === 'string' ? responseData.message : genericMessageForStatus(response.status));
-  throw new ApiError(message, responseData, response.status);
+  throw new ApiError(message, responseData, response.status, requestId);
 }

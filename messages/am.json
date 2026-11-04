@@ -754,5 +754,12 @@
     "characterCount": "{count} / {max}",
     "tooLong": "ከ{max} ቁምፊዎች መብለጥ የለበትም።",
     "charactersRemaining": "{count, plural, one {# ቁምፊ ቀርቷል} other {# ቁምፊዎች ቀርተዋል}}"
+  },
+  "errorBoundary": {
+    "title": "የሆነ ችግር ተፈጥሯል",
+    "body": "ይህ ገጽ ችግር አጋጥሞት ሊታይ አልቻለም። በሌላ ቦታ ያለዎት ሥራ አልተነካም።",
+    "reference": "ማጣቀሻ፦ {id}",
+    "retry": "እንደገና ይሞክሩ",
+    "home": "ወደ ዳሽቦርድ ሂድ"
   }
 }

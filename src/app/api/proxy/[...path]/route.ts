@@ -3,6 +3,8 @@ import { checkCsrf } from '@/lib/csrf';
 import { getClientIp } from '@/lib/clientIp';
 import { env } from '@/lib/env';
 import { logger } from '@/lib/logger';
+import { safePath } from '@/lib/logRedaction';
+import { REQUEST_ID_HEADER, requestIdFrom } from '@/lib/requestId';
 import { buildClientResponse, buildUpstreamHeaders } from '@/lib/proxyHeaders';
 import {
   canRenewSession,
@@ -37,6 +39,24 @@ async function handler(request: NextRequest, { params }: RouteContext) {
 export { handler as GET, handler as POST, handler as PUT, handler as PATCH, handler as DELETE };
 
 async function handleProxy(request: NextRequest, pathArray: string[]) {
+  const requestId = requestIdFrom(request.headers);
+  const response = await relay(request, pathArray, requestId);
+  response.headers.set(REQUEST_ID_HEADER, requestId);
+  if (response.status >= 500) {
+    // Never the query string or body: those can hold what a user typed.
+    logger.event('error', {
+      event: 'proxy.upstream_failed',
+      source: 'server',
+      requestId,
+      method: request.method,
+      path: safePath(`/${pathArray.join('/')}`),
+      status: response.status,
+    });
+  }
+  return response;
+}
+
+async function relay(request: NextRequest, pathArray: string[], requestId: string) {
   const isMutating = !['GET', 'HEAD'].includes(request.method);
 
   if (isMutating) {
@@ -81,7 +101,7 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
 
     const response = await fetch(targetUrl, {
       method: request.method,
-      headers: buildUpstreamHeaders(request, authToken),
+      headers: buildUpstreamHeaders(request, authToken, requestId),
       redirect: 'manual',
       body: requestBody,
     });
@@ -101,7 +121,7 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
       if (refreshed.status === 'renewed' && refreshed.refreshed && refreshed.accessToken !== authToken) {
         const retryResponse = await fetch(targetUrl, {
           method: request.method,
-          headers: buildUpstreamHeaders(request, refreshed.accessToken),
+          headers: buildUpstreamHeaders(request, refreshed.accessToken, requestId),
           redirect: 'manual',
           body: requestBody,
         });
@@ -118,7 +138,14 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
     if (renewedEarly?.status === 'renewed') renewedEarly.apply(nextResponse);
     return nextResponse;
   } catch (error) {
-    logger.error(`Proxy error for ${targetUrl}:`, error);
+    logger.event('error', {
+      event: 'proxy.failed',
+      source: 'server',
+      requestId,
+      method: request.method,
+      path: safePath(`/${targetPath}`),
+      error,
+    });
     return NextResponse.json({ message: 'Proxy request failed' }, { status: 502 });
   }
 }
