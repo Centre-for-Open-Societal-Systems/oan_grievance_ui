@@ -34,7 +34,7 @@ export function SLATracker({
   const statusOptions = useAppSelector((state) => state.metadata?.grievanceOptions?.statuses);
   const slaData = timelineData?.sla;
   const activeDeferral = slaData?.active_deferral_request;
-  const isApprover = !!activeDeferral && activeDeferral.pending_with === user?.email;
+  const isApprover = !!activeDeferral && activeDeferral.pending_with_id === user?.email;
   const canDefer = canManageCase || isApprover;
 
   const currentStatus = timelineData?.status || timelineData?.current_status || grievance.status || '';
