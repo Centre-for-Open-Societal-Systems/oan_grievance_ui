@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { isValidRequestId, newRequestId, requestIdFrom } from './requestId';
 
 describe('request id', () => {
+  it('mints a valid id where crypto.randomUUID is unavailable (plain http, non-localhost)', () => {
+    const original = crypto.randomUUID;
+    Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true });
+    try {
+      expect(isValidRequestId(newRequestId())).toBe(true);
+    } finally {
+      Object.defineProperty(crypto, 'randomUUID', { value: original, configurable: true });
+    }
+  });
+
   it('mints a valid id', () => {
     expect(isValidRequestId(newRequestId())).toBe(true);
   });

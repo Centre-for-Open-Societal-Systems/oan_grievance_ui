@@ -174,7 +174,7 @@ export function ReviewAndSubmitCard({
         flow: "submit-grievance",
         requestId: error instanceof ApiError ? error.requestId : undefined,
         status: error instanceof ApiError ? error.status : undefined,
-        message: error instanceof Error ? error.message : undefined,
+        errorName: error instanceof Error ? error.name : undefined,
       });
       setSubmitError(submitErrorMessage(error));
       setIsSubmitting(false);

@@ -26,7 +26,7 @@ export class ChartErrorBoundary extends Component<ChartErrorBoundaryProps, Chart
   }
 
   componentDidCatch(error: Error): void {
-    reportClientEvent({ event: "render.error", flow: "analytics-section", message: error.message });
+    reportClientEvent({ event: "render.error", flow: "analytics-section", errorName: error.name });
   }
 
   render(): ReactElement | ReactNode {

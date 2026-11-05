@@ -2,6 +2,10 @@ import { redact, redactString } from '@/lib/logRedaction';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Stacks and an error's own fields (an `ApiError`'s status) stay in these logs;
+// only secrets and personal data are scrubbed.
+const forLog = (param: unknown): unknown => redact(param, 0, { keepStack: true });
+
 export type EventLevel = 'warn' | 'error';
 
 export interface LogEvent {
@@ -22,11 +26,11 @@ export interface LogEvent {
 export const logger = {
   warn(message: string, ...optionalParams: unknown[]): void {
     if (!isProduction) {
-      console.warn(redactString(message), ...optionalParams.map((param) => redact(param)));
+      console.warn(redactString(message), ...optionalParams.map(forLog));
     }
   },
   error(message: string, ...optionalParams: unknown[]): void {
-    console.error(redactString(message), ...optionalParams.map((param) => redact(param)));
+    console.error(redactString(message), ...optionalParams.map(forLog));
   },
   /**
    * Security-relevant events: rejected sign-ins, rate limits tripped, refused
@@ -34,11 +38,11 @@ export const logger = {
    * the details withheld from the browser's generic error message.
    */
   security(message: string, ...optionalParams: unknown[]): void {
-    console.warn(`[security] ${redactString(message)}`, ...optionalParams.map((param) => redact(param)));
+    console.warn(`[security] ${redactString(message)}`, ...optionalParams.map(forLog));
   },
   log(message: string, ...optionalParams: unknown[]): void {
     if (!isProduction) {
-      console.log(redactString(message), ...optionalParams.map((param) => redact(param)));
+      console.log(redactString(message), ...optionalParams.map(forLog));
     }
   },
   /**
@@ -50,7 +54,7 @@ export const logger = {
     const line = JSON.stringify({
       ts: new Date().toISOString(),
       level,
-      ...(redact(fields) as Record<string, unknown>),
+      ...(redact(fields, 0, { keepStack: true }) as Record<string, unknown>),
     });
     if (level === 'error') console.error(line);
     else console.warn(line);

@@ -2,6 +2,8 @@
 // the backend's: the browser mints it, `/api/proxy` relays it upstream and
 // echoes it back, and every failure log carries it.
 
+import { randomUuid } from '@/lib/randomUuid';
+
 export const REQUEST_ID_HEADER = 'x-request-id';
 
 // Anything a client sends is untrusted and ends up in log lines, so only a
@@ -13,7 +15,8 @@ export function isValidRequestId(value: unknown): value is string {
 }
 
 export function newRequestId(): string {
-  return globalThis.crypto.randomUUID();
+  // Not `crypto.randomUUID()`: it is missing over plain http on a non-localhost host.
+  return randomUuid();
 }
 
 /** The caller's id when it is well-formed, otherwise a fresh one. */

@@ -21,7 +21,10 @@ export interface ClientEvent {
   method?: string;
   /** A URL or path; only its path is sent. */
   path?: string;
-  message?: string;
+  /** The error's class (`TypeError`), never its text: that can carry what a user typed. */
+  errorName?: string;
+  /** Where an uncaught error came from: `/_next/static/chunk.js:12:34`. */
+  location?: string;
   /** Where the browser was, as a path (no query). */
   page?: string;
 }
@@ -36,7 +39,7 @@ let sent = 0;
 const recent = new Map<string, number>();
 
 function dedupeKey(event: ClientEvent): string {
-  return [event.event, event.flow, event.method, event.path && safePath(event.path), event.status, event.message].join('|');
+  return [event.event, event.flow, event.method, event.path && safePath(event.path), event.status, event.errorName, event.location].join('|');
 }
 
 export function reportClientEvent(event: ClientEvent): void {
@@ -71,8 +74,11 @@ export function reportClientEvent(event: ClientEvent): void {
   }
 }
 
-/** Resets the per-page budget; for tests. */
-export function resetClientLoggerForTests(): void {
+/**
+ * Starts a fresh budget. Called on each in-app navigation (the page never
+ * reloads in this SPA, so a per-load cap would silence a long session) and by tests.
+ */
+export function resetClientReportBudget(): void {
   sent = 0;
   recent.clear();
 }

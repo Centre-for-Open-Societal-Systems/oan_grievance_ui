@@ -17,6 +17,9 @@ import { isExpired } from '@/lib/jwt';
 import { clearIdleSessionCookies, clearSessionCookies } from '@/lib/session';
 import { NextRequest, NextResponse } from 'next/server';
 
+/** Responses whose failure `relay` already logged with its cause, so `handleProxy` does not log them again. */
+const alreadyLogged = new WeakSet<Response>();
+
 type RouteContext = { params: Promise<{ path: string[] }> };
 
 function sessionEnded(apply: (response: NextResponse) => void): NextResponse {
@@ -42,7 +45,7 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
   const requestId = requestIdFrom(request.headers);
   const response = await relay(request, pathArray, requestId);
   response.headers.set(REQUEST_ID_HEADER, requestId);
-  if (response.status >= 500) {
+  if (response.status >= 500 && !alreadyLogged.has(response)) {
     // Never the query string or body: those can hold what a user typed.
     logger.event('error', {
       event: 'proxy.upstream_failed',
@@ -146,6 +149,8 @@ async function relay(request: NextRequest, pathArray: string[], requestId: strin
       path: safePath(`/${targetPath}`),
       error,
     });
-    return NextResponse.json({ message: 'Proxy request failed' }, { status: 502 });
+    const failed = NextResponse.json({ message: 'Proxy request failed' }, { status: 502 });
+    alreadyLogged.add(failed);
+    return failed;
   }
 }
