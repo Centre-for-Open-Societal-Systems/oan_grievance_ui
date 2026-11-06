@@ -165,4 +165,8 @@ export const RATE_LIMITS = {
   // only — there is no per-caller identity before the identity provider has
   // seen the user — so the default is sized for a shared "unknown" bucket.
   iamLogin: limitFromEnv('IAM_LOGIN', 30, 60_000),
+  // Browser failure reports (`/api/client-logs`). Unauthenticated, and each hit is a
+  // log line, so a shared "unknown" bucket gets a modest ceiling; the client
+  // also caps itself per page.
+  clientLog: limitFromEnv('CLIENT_LOG', 120, 60_000),
 } as const;

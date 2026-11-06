@@ -1,6 +1,7 @@
 "use client";
 
-import { Component, type ErrorInfo, type ReactElement, type ReactNode } from "react";
+import { Component, type ReactElement, type ReactNode } from "react";
+import { reportClientEvent } from "@/lib/clientLogger";
 import { SectionUnavailable } from "./SectionUnavailable";
 
 interface ChartErrorBoundaryProps {
@@ -24,8 +25,8 @@ export class ChartErrorBoundary extends Component<ChartErrorBoundaryProps, Chart
     return { failed: true };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("Analytics section failed to render", error, info.componentStack);
+  componentDidCatch(error: Error): void {
+    reportClientEvent({ event: "render.error", flow: "analytics-section", errorName: error.name });
   }
 
   render(): ReactElement | ReactNode {

@@ -4,6 +4,8 @@ import { FileText, ArrowRight, ArrowLeft, User, Check, Eye, EyeOff, Loader2, Mic
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ID_FIELD_KEYS, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import type { WizardAttachment } from "@/lib/attachments";
+import { reportClientEvent } from "@/lib/clientLogger";
+import { ApiError } from "@/lib/api/fetchApi";
 import { logger } from "@/lib/logger";
 import { maskIdKeepLast4 } from "@/lib/maskId";
 import { PHONE_NUMBER_E164_REGEX } from "@/lib/validation/phone";
@@ -167,6 +169,13 @@ export function ReviewAndSubmitCard({
       onSubmitted(result);
     } catch (error) {
       logger.error("Failed to submit grievance:", error);
+      reportClientEvent({
+        event: "flow.failed",
+        flow: "submit-grievance",
+        requestId: error instanceof ApiError ? error.requestId : undefined,
+        status: error instanceof ApiError ? error.status : undefined,
+        errorName: error instanceof Error ? error.name : undefined,
+      });
       setSubmitError(submitErrorMessage(error));
       setIsSubmitting(false);
     }

@@ -754,5 +754,12 @@
     "characterCount": "{count} / {max}",
     "tooLong": "Must be {max} characters or fewer.",
     "charactersRemaining": "{count, plural, one {# character remaining} other {# characters remaining}}"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "body": "This page ran into a problem and could not be shown. Your work elsewhere is not affected.",
+    "reference": "Reference: {id}",
+    "retry": "Try again",
+    "home": "Go to dashboard"
   }
 }

@@ -754,5 +754,12 @@
     "characterCount": "{count} / {max}",
     "tooLong": "Arfii {max} ykn isaa gadi ta'uu qaba.",
     "charactersRemaining": "{count, plural, one {Arfii # hafe} other {Arfiiwwan # hafan}}"
+  },
+  "errorBoundary": {
+    "title": "Rakkoon uumame",
+    "body": "Fuulli kun rakkoo isa mudateen mul'achuu hin dandeenye. Hojiin kee bakka biraa jiru hin tuqamne.",
+    "reference": "Wabii: {id}",
+    "retry": "Irra deebi'i yaali",
+    "home": "Gara dashboordii deemi"
   }
 }
