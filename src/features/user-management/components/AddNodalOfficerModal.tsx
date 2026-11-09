@@ -9,7 +9,6 @@ import { PhoneField } from '@/components/ui/PhoneField';
 import { useModalA11y } from '@/components/ui/useModalA11y';
 import { useAreas } from '@/features/metadata';
 import { formatToE164 } from '@/lib/validation/phone';
-import { generateRandomPassword } from '@/lib/validation/password';
 import {
   validateEmail,
   validateFullName,
@@ -51,12 +50,8 @@ interface AddNodalOfficerModalProps {
  * Creates an officer, department head, or Reviewer via the real `POST /api/v1/officers`
  * endpoint (see `officerApi.ts`). A Reviewer needs no level or supervisor —
  * see `CreateOfficerPayload`'s own doc comment (STG-443) for exactly which fields each role
- * requires or rejects. `temporary_password` is required by the backend: the account can't
- * sign in with it directly (login answers 403 `PASSWORD_CHANGE_REQUIRED`) — they replace it
- * via `POST /api/v1/auth/password/initial` first. If `email` already belongs to a login,
- * that login's existing password is left alone instead — the response `message` says so, and
- * this form holds the success screen open on that specific message rather than auto-closing,
- * so the admin doesn't hand the officer a password that silently won't work.
+ * requires or rejects. The backend takes no password: `email` must already belong to a login
+ * (identity provider or onboarding), otherwise it answers 404.
  */
 export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, onCreated }: AddNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
@@ -80,9 +75,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+251');
   const [phoneNumber, setPhoneNumber] = useState('');
-  // Hidden: officers sign in through the identity provider. The backend still requires one, so a
-  // random password is sent that nobody is told.
-  const [password, setPassword] = useState(() => generateRandomPassword());
   const [serviceCategories, setServiceCategories] = useState<string[]>([]);
   // A category admin may take any category; an officer or reviewer only one that has a desk.
   const { options: categoryList, isLoading: isCategoriesLoading } = useServiceCategoryOptions(
@@ -123,7 +115,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
     setEmail('');
     setCountryCode('+251');
     setPhoneNumber('');
-    setPassword(generateRandomPassword());
     setServiceCategories([]);
     setRegion('');
     setStatus('Active');
@@ -167,7 +158,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
         department: null,
         email,
         service_categories: serviceCategories,
-        temporary_password: password,
         phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : null,
         region: region || null,
         status: status as OfficerBackendStatus,
