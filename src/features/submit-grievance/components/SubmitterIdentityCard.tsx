@@ -12,6 +12,8 @@ import { CooperativeFPOForm } from "@/components/submitter-identity/SI-Cooperati
 import { NGOForm } from "@/components/submitter-identity/SI-NGOForm";
 import { WoredaKebeleForm } from "@/components/submitter-identity/SI-WoredaKebeleForm";
 import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-DevelopmentAgentForm";
+import { FarmerLookup } from "./FarmerLookup";
+import type { FarmerAreas } from "../matchFarmerAreas";
 import { useIdentityErrors } from "@/components/submitter-identity/useIdentityErrors";
 import { DEFAULT_SUBMISSION_CHANNEL } from "@/lib/validation/registerSubmitter";
 
@@ -32,6 +34,8 @@ interface SubmitterIdentityCardProps {
   /** The account's own submitter type and channel names (from /auth/me), shown while the options list is unavailable. */
   profileSubmitterType?: string;
   profileSubmissionChannel?: string;
+  /** Called with the areas a looked-up farmer's registry location matched. */
+  onFarmerAreas?: (areas: FarmerAreas) => void;
 }
 
 /**
@@ -63,6 +67,7 @@ export function SubmitterIdentityCard({
   readOnlyFields,
   profileSubmitterType,
   profileSubmissionChannel,
+  onFarmerAreas,
 }: SubmitterIdentityCardProps) {
   const dispatch = useAppDispatch();
   const dynamicSubmitterTypes = useAppSelector(selectSubmitterTypeOptions);
@@ -229,7 +234,16 @@ export function SubmitterIdentityCard({
         {(submitterType === "cooperative" || submitterType === "fpo") && <CooperativeFPOForm {...identityForm} />}
         {submitterType === "ngo" && <NGOForm {...identityForm} />}
         {submitterType === "woreda_kebele" && <WoredaKebeleForm {...identityForm} />}
-        {submitterType === "development_agent" && <DevelopmentAgentForm {...identityForm} />}
+        {submitterType === "development_agent" && (
+          <DevelopmentAgentForm
+            {...identityForm}
+            faydaAddon={<FarmerLookup
+                faydaId={identityValues.faydaId ?? ""}
+                setIdentityValue={handleIdentityValue}
+                onFarmerAreas={onFarmerAreas}
+              />}
+          />
+        )}
       </div>
 
       {/* Card Footer */}

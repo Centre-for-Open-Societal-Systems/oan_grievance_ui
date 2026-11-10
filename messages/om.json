@@ -224,7 +224,19 @@
       "fieldRequired": "Gabateen kun barbaachisaadha.",
       "channelsLoadFailed": "Karaawwan galchuu fe'uun hin danda'amne.",
       "channelsEmpty": "Yeroo ammaa karaan galchuu tokko iyyuu hin jiru.",
-      "retry": "Irra deebi'ii yaali"
+      "retry": "Irra deebi'ii yaali",
+      "farmerLookup": {
+        "search": "Galmee barbaadi",
+        "searching": "Barbaadaa jira…",
+        "found": "Qonnaan bulaan galmee keessatti argameera. Odeeffannoo itti fayyadamuu keessan dura Fayda fi maqaan wal-simuu isaa mirkaneeffadhaa.",
+        "notFound": "Qonnaan bulaan lakkoofsa Fayda kanaan galmee keessatti hin argamne.",
+        "failed": "Galmee barbaaduun hin danda'amne. Irra deebi'ii yaali.",
+        "useDetails": "Odeeffannoo kana fayyadami",
+        "faydaId": "Lakkoofsa Fayda",
+        "name": "Maqaa",
+        "filling": "Guutaa jira…",
+        "fillFailed": "Odeeffannoo qunnamtii qonnaan bulaa argachuun hin danda'amne. Irra deebi'ii yaali."
+      }
     },
     "detailsStep": {
       "selectCategoryFirst": "Duraan ramaddii filadhu",

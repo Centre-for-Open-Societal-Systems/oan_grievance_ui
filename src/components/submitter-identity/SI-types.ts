@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export interface SIFormProps {
   values: Record<string, string>;
   setValue: (key: string, value: string) => void;
@@ -17,6 +19,8 @@ export interface SIFormProps {
   errors?: Record<string, string>;
   /** Called with a field's key when it loses focus, so the caller can validate it. */
   onFieldBlur?: (key: string) => void;
+  /** Rendered directly under the Fayda ID field — a caller's lookup control for it. Only the Development Agent form shows it. */
+  faydaAddon?: ReactNode;
 }
 
 export interface SIFieldMeta {

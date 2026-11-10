@@ -28,6 +28,7 @@ import type { WizardAttachment } from "@/lib/attachments";
 import { useAppSelector } from "@/store/hooks";
 import type { SubmitGrievanceResult } from "./api/submitGrievanceApi";
 import { Stepper } from "./components/Stepper";
+import type { FarmerAreas } from "./matchFarmerAreas";
 import { SubmitterIdentityCard } from "./components/SubmitterIdentityCard";
 import { GrievanceDetailsCard } from "./components/GrievanceDetailsCard";
 import { ReviewAndSubmitCard } from "./components/ReviewAndSubmitCard";
@@ -116,6 +117,16 @@ export default function SubmitGrievancePage() {
   const [zone, setZone] = useState<AreaRef | null>(null);
   const [woreda, setWoreda] = useState<AreaRef | null>(null);
   const [kebele, setKebele] = useState<AreaRef | null>(null);
+
+  // A looked-up farmer's location replaces step 2's pickers only when its region matched, so a
+  // failed match leaves whatever the agent had picked.
+  const applyFarmerAreas = (areas: FarmerAreas) => {
+    if (!areas.region) return;
+    setRegion(areas.region);
+    setZone(areas.zone ?? null);
+    setWoreda(areas.woreda ?? null);
+    setKebele(areas.kebele ?? null);
+  };
   // Pre-fills the location from the account's own area (set from the identity
   // provider's address at sign-in), once — never over a choice already made.
   const profileArea = user?.administrative_area;
@@ -303,6 +314,7 @@ export default function SubmitGrievancePage() {
             readOnlyFields={providerOwnedFields}
             profileSubmitterType={user?.submitter_type || user?.type}
             profileSubmissionChannel={user?.submission_channel}
+            onFarmerAreas={applyFarmerAreas}
           />
         )}
         {currentStep === 2 && (
