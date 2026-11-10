@@ -224,7 +224,19 @@
       "fieldRequired": "This field is required.",
       "channelsLoadFailed": "Couldn't load the submission channels.",
       "channelsEmpty": "No submission channels are available right now.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "farmerLookup": {
+        "search": "Search registry",
+        "searching": "Searching…",
+        "found": "Farmer found in the registry. Check the Fayda ID and name match before using them.",
+        "notFound": "No farmer with this Fayda ID was found in the registry.",
+        "failed": "Couldn't search the registry. Try again.",
+        "useDetails": "Use these details",
+        "faydaId": "Fayda ID",
+        "name": "Name",
+        "filling": "Filling…",
+        "fillFailed": "Couldn't get the farmer's contact details. Try again."
+      }
     },
     "detailsStep": {
       "selectCategoryFirst": "Select a category first",
