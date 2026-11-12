@@ -1,0 +1,37 @@
+# Defaults for the OAN Grievance UI (oan_grievance_ui). Everything sits under `ui`, the values
+# of the ui-service chart this one depends on. Per-environment values live in
+# environments/<env>/oan-grievance-ui.yaml.
+#
+# Set at install, not here:
+# - ui.image.tag: the Jenkins tag `<package.json version>-develop.<build>`
+# Image repository, the backend URL and the host are per environment.
+
+ui:
+  image:
+    # Set per environment. package_chart.py needs both keys to exist.
+    repository: ""
+    tag: ""
+
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPU: 75
+    targetMemory: 75
+  # HPA needs requests to compute utilization.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+  # `kubectl set image` in Jenkins targets this container name.
+  containerName: grievance-ui
+
+  env:
+    # Read at runtime (src/lib/env.ts), so one image serves every environment.
+    # The oan_auth_service API the UI's server routes call, e.g. https://grievance-service.development.oanstaging.com
+    AUTH_API_BASE_URL: ""
+    # Optional: the grievance service's socket.io endpoint and the Frappe site its namespace is named after.
+    # With either unset, realtime is off and the UI reads state through REST only.
+    REALTIME_PUBLIC_URL: ""
+    REALTIME_SITE: ""

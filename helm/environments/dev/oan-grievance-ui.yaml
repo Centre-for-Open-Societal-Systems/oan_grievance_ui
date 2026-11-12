@@ -1,0 +1,22 @@
+# Values for the oan-grievance-ui chart (helm/oan-grievance-ui).
+# Release `grievance-ui`, namespace `grievance` (shared with the backend service).
+#
+# Set at install, not here:
+# - ui.image.tag: the Jenkins tag `<package.json version>-develop.<build>`
+
+ui:
+  image:
+    # Jenkinsfile ECR_REPO for the develop branch: oan/oan-grievance-ui/grievance-ui
+    # Node IAM role (oan-services-dev-ecr-pull) must allow ecr:BatchGetImage on this repo.
+    repository: 379220350808.dkr.ecr.ap-south-1.amazonaws.com/oan/oan-grievance-ui/grievance-ui
+
+  env:
+    # Read at runtime (src/lib/env.ts), so one image serves every environment.
+    AUTH_API_BASE_URL: https://grievance-service.development.oanstaging.com
+
+  ingress:
+    enabled: true
+    hosts:
+    # The host of the grievance UI. DNS still points at the RKE2 deployment; once the record is moved to
+    # this instance, the RKE2 UI is retired.
+    - host: grievance.development.oanstaging.com
