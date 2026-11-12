@@ -217,7 +217,7 @@ ENDSSH
                 checkout scm
                 sh 'rm -rf built-chart'
                 unstash 'built-chart'
-                withCredentials([file(credentialsId: 'oan-dev-grievance-kubeconfig', variable: 'KUBECONFIG')]) {
+                withCredentials([file(credentialsId: 'oan-dev-kubeconfig', variable: 'KUBECONFIG')]) {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
                         IMAGE_REPOSITORY="${IMAGE_REGISTRY}/${ECR_REPO}" \
