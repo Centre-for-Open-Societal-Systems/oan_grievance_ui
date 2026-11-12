@@ -17,6 +17,8 @@ interface DuplicateReviewPanelProps {
   possibleDuplicate?: PossibleDuplicate | null;
   /** The main ticket, once this case is confirmed as a duplicate. */
   duplicateOf?: string | null;
+  /** Turns the main ticket's grievance type id into its name; the id is shown when none is given. */
+  typeNameOf?: (typeId: string) => string;
   onConfirm: (payload: ConfirmDuplicatePayload) => Promise<void>;
   onDismiss: (payload: DismissDuplicatePayload) => Promise<void>;
   onOpenTicket: (ticketNumber: string) => void;
@@ -37,6 +39,7 @@ export function DuplicateReviewPanel({
   ticketNumber,
   possibleDuplicate,
   duplicateOf,
+  typeNameOf,
   onConfirm,
   onDismiss,
   onOpenTicket,
@@ -95,7 +98,7 @@ export function DuplicateReviewPanel({
           <ScanSearch className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
           <div>
             <h3 className="text-sm font-bold text-amber-900">{t('flaggedTitle')}</h3>
-            <p className="text-sm text-amber-800">{t('flaggedIntro')}</p>
+            <p className="text-sm text-amber-800">{t('flaggedIntro', { ticket: possibleDuplicate.ticket_number })}</p>
           </div>
         </div>
         {matchLevel && (
@@ -120,7 +123,14 @@ export function DuplicateReviewPanel({
               <>
                 <dt className="font-semibold text-gray-600">{t('categoryAndType')}</dt>
                 <dd className="text-gray-900">
-                  {[possibleDuplicate.service_category, possibleDuplicate.grievance_type].filter(Boolean).join(' · ')}
+                  {[
+                    possibleDuplicate.service_category,
+                    possibleDuplicate.grievance_type && typeNameOf
+                      ? typeNameOf(possibleDuplicate.grievance_type)
+                      : possibleDuplicate.grievance_type,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </dd>
               </>
             )}

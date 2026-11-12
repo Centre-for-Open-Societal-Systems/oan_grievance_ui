@@ -50,6 +50,16 @@ describe('DuplicateReviewPanel: a flagged ticket', () => {
     expect(screen.queryByText('Same type')).not.toBeInTheDocument();
   });
 
+  it('shows the type by name when it can be looked up, and the id when it cannot', () => {
+    const typeNameOf = (id: string) => (id === 'GTYPE-00003' ? 'Late Delivery' : id);
+    renderPanel({ possibleDuplicate: { ...FLAG, grievance_type: 'GTYPE-00003' }, typeNameOf });
+    expect(screen.getByText('Inputs · Late Delivery')).toBeInTheDocument();
+    cleanup();
+
+    renderPanel({ possibleDuplicate: { ...FLAG, grievance_type: 'GTYPE-00003' } });
+    expect(screen.getByText('Inputs · GTYPE-00003')).toBeInTheDocument();
+  });
+
   it('says so when the earlier ticket is one the officer cannot read', () => {
     renderPanel({ possibleDuplicate: { ticket_number: 'B00100010', match_level: 'Medium', can_review: true } });
     expect(screen.getByText(/not available to you/)).toBeInTheDocument();

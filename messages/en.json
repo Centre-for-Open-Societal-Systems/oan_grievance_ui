@@ -760,7 +760,7 @@
     "chipConfirmed": "Duplicate of {ticket}",
     "actionReview": "Review",
     "flaggedTitle": "Possible duplicate",
-    "flaggedIntro": "This grievance looks like an earlier one from the same farmer. Review the match and decide.",
+    "flaggedIntro": "This looks to be a duplicate of ‘{ticket}’. Review and decide.",
     "matchLevel": "Match: {level}",
     "levelHigh": "High",
     "levelMedium": "Medium",

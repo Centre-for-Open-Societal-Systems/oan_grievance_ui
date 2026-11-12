@@ -760,7 +760,7 @@
     "chipConfirmed": "Irra deebii {ticket}",
     "actionReview": "Ilaali",
     "flaggedTitle": "Komii irra deebi’e ta’uu danda’u",
-    "flaggedIntro": "Komiin kun komii qonnaan bulaa tokkicha irraa duraan dhiyaate waliin wal fakkaata. Wal-simannaa ilaalii murteessi.",
+    "flaggedIntro": "Komiin kun kan ‘{ticket}’ irra deebi’ee fakkaata. Wal-simannaa ilaalii murteessi.",
     "matchLevel": "Wal-simannaa: {level}",
     "levelHigh": "Ol’aanaa",
     "levelMedium": "Giddugaleessa",

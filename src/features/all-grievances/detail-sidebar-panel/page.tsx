@@ -94,6 +94,12 @@ export function GrievanceDetailSidebar({
   const showCaseManagement = !isSubmitterOnly(userRoles);
 
   const statusOptions = useAppSelector((state) => state.metadata?.grievanceOptions?.statuses);
+  // The duplicate flag carries the main ticket's type as an id ("GTYPE-00003"); the officer should read its name.
+  const grievanceTypes = useAppSelector(
+    (state) => state.metadata?.grievanceOptions?.grievance_types ?? state.metadata?.submitterOptions?.grievance_types
+  );
+  const typeNameOf = (typeId: string) =>
+    grievanceTypes?.find((option) => option.grievance_type_id === typeId)?.type_name ?? typeId;
   const currentStatus =
     timelineData?.status || timelineData?.current_status || grievance?.status || '';
   // A confirmed duplicate is read-only whatever the status list says: its main ticket is where the case is worked.
@@ -141,6 +147,7 @@ export function GrievanceDetailSidebar({
                   ticketNumber={activeTicket}
                   possibleDuplicate={timelineData.possible_duplicate}
                   duplicateOf={timelineData.duplicate_of}
+                  typeNameOf={typeNameOf}
                   onConfirm={handleConfirmDuplicate}
                   onDismiss={handleDismissDuplicate}
                   onOpenTicket={handleOpenTicket}

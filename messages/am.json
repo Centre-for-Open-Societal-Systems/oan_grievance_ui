@@ -760,7 +760,7 @@
     "chipConfirmed": "የ{ticket} ተደጋጋሚ",
     "actionReview": "ገምግም",
     "flaggedTitle": "ሊሆን የሚችል ተደጋጋሚ ቅሬታ",
-    "flaggedIntro": "ይህ ቅሬታ ከተመሳሳይ አርሶ አደር ቀደም ብሎ ከቀረበ ቅሬታ ጋር ይመሳሰላል። ተዛማጁን ገምግመው ይወስኑ።",
+    "flaggedIntro": "ይህ ቅሬታ የ‘{ticket}’ ተደጋጋሚ ይመስላል። ተዛማጁን ገምግመው ይወስኑ።",
     "matchLevel": "ተዛማጅነት፦ {level}",
     "levelHigh": "ከፍተኛ",
     "levelMedium": "መካከለኛ",
