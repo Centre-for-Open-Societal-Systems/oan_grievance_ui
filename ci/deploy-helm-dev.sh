@@ -19,7 +19,7 @@ set -euo pipefail
 HELM_RELEASE="${HELM_RELEASE:-grievance-ui}"
 HELM_NAMESPACE="${HELM_NAMESPACE:-grievance}"
 CHART_DIR="$(cd "$(dirname "$0")/../helm/oan-grievance-ui" && pwd)"
-VALUES_FILE="$(cd "$(dirname "$0")/../helm/environments/dev/oan-grievance-ui.yaml" && pwd)"
+VALUES_FILE="$(cd "$(dirname "$0")/../helm/environments/dev" && pwd)/oan-grievance-ui.yaml"
 
 echo "=== Deploying ${HELM_RELEASE} to namespace ${HELM_NAMESPACE} ==="
 echo "    image: ${IMAGE_REPOSITORY}:${IMMUTABLE_TAG}"
