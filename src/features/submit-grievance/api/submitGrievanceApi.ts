@@ -1,4 +1,5 @@
-import { fetchApi } from '@/lib/api/fetchApi';
+import { z } from 'zod';
+import { ApiError, fetchApi } from '@/lib/api/fetchApi';
 import { ApiErrorCode, classifyError } from '@/lib/api/apiErrors';
 import { buildSubmitFields, type BuildSubmitFieldsInput, type SubmitFields } from '../submitPayload';
 
@@ -12,6 +13,39 @@ import { buildSubmitFields, type BuildSubmitFieldsInput, type SubmitFields } fro
  */
 export interface SubmitGrievancePayload extends SubmitFields {
   consent_given: number;
+  /** Sent as 1 once the submitter has said a similar grievance they were shown is a new one. */
+  confirm_new?: number;
+}
+
+/**
+ * One similar grievance of the submitter's from the last day, as `409 POSSIBLE_DUPLICATE` lists it
+ * before anything is filed. `match_level` is a label, never a score.
+ */
+const similarGrievanceSchema = z.object({
+  ticket_number: z.string(),
+  status: z.string().nullish(),
+  service_category: z.string().nullish(),
+  grievance_type: z.string().nullish(),
+  description: z.string().nullish(),
+  submitted_on: z.string().nullish(),
+  match_level: z.string().nullish(),
+});
+
+export type SimilarGrievanceCandidate = z.infer<typeof similarGrievanceSchema>;
+
+const possibleDuplicateBodySchema = z.object({
+  code: z.literal('POSSIBLE_DUPLICATE'),
+  details: z.object({ possible_duplicates: z.array(similarGrievanceSchema).min(1) }),
+});
+
+/**
+ * The similar grievances the service asked about, when a submit was held back with
+ * `409 POSSIBLE_DUPLICATE`; null for any other failure. Nothing was filed in that case.
+ */
+export function similarGrievancesOf(error: unknown): SimilarGrievanceCandidate[] | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  const parsed = possibleDuplicateBodySchema.safeParse(error.responseData);
+  return parsed.success ? parsed.data.details.possible_duplicates : null;
 }
 
 /**

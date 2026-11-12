@@ -5,8 +5,11 @@ import type {
   ChangeRequestData,
   ChangeRequestListData,
   ChangeRequestListQueryParams,
+  ConfirmDuplicatePayload,
   DecideChangeRequestPayload,
   DeferSLAPayload,
+  DismissDuplicatePayload,
+  DuplicateRulingResult,
   GrievanceActionPayload,
   GrievanceActionResult,
   GrievanceChangeResponseData,
@@ -236,6 +239,46 @@ export async function executeGrievanceAction(
   return fetchApi<GrievanceActionResult>(path, {
     method: 'POST',
     body: JSON.stringify(fields),
+    signal: options.signal,
+  });
+}
+
+/**
+ * An officer rules that a flagged grievance is a duplicate of its main ticket. The case becomes
+ * `Duplicate`, a message says all further handling happens on the main ticket, and it turns
+ * read-only for good.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/duplicate/confirm
+ */
+export async function confirmDuplicate(
+  ticketNumber: string,
+  payload: ConfirmDuplicatePayload = {},
+  options: RequestOptions = {}
+): Promise<DuplicateRulingResult> {
+  return fetchApi<DuplicateRulingResult>(`/api/v1/grievances/${encodeURIComponent(ticketNumber)}/duplicate/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({
+      ticket_number: ticketNumber,
+      ...(payload.main_ticket ? { main_ticket: payload.main_ticket } : {}),
+      ...(payload.note ? { note: payload.note } : {}),
+    }),
+    signal: options.signal,
+  });
+}
+
+/**
+ * An officer rules that the flag is wrong. The case stays a normal one.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/duplicate/dismiss
+ */
+export async function dismissDuplicate(
+  ticketNumber: string,
+  payload: DismissDuplicatePayload = {},
+  options: RequestOptions = {}
+): Promise<DuplicateRulingResult> {
+  return fetchApi<DuplicateRulingResult>(`/api/v1/grievances/${encodeURIComponent(ticketNumber)}/duplicate/dismiss`, {
+    method: 'POST',
+    body: JSON.stringify({ ticket_number: ticketNumber, ...(payload.note ? { note: payload.note } : {}) }),
     signal: options.signal,
   });
 }

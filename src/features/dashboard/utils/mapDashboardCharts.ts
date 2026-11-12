@@ -16,7 +16,7 @@ import type {
 } from '../types';
 
 /** The cards in the order the dashboard shows them. */
-const KPI_ORDER: KpiMetric[] = ['total', 'awaiting_action', 'resolved', 'escalated'];
+const KPI_ORDER: KpiMetric[] = ['total', 'awaiting_action', 'resolved', 'escalated', 'duplicates'];
 
 /**
  * The service names a status by its workflow label and sends no id or colour, so
@@ -32,6 +32,7 @@ export const STATUS_COLORS: Record<string, string> = {
   resolved: '#0f766e',
   closed: '#374151',
   rejected: '#dc2626',
+  duplicate: '#64748b',
 };
 const FALLBACK_STATUS_COLOR = '#9ca3af';
 
@@ -49,8 +50,10 @@ export const SERVICE_CATEGORY_LIMIT = 5;
 function mapKpis(rows: KpiRow[] | null): KpiCard[] | null {
   if (!rows) return null;
   const byMetric = new Map(rows.map((row) => [row.metric, row]));
-  return KPI_ORDER.map((metric) => {
+  return KPI_ORDER.flatMap((metric) => {
     const row = byMetric.get(metric);
+    // A service that predates the duplicates count leaves the card out rather than showing it as unavailable.
+    if (metric === 'duplicates' && !row) return [];
     const type = metric === 'total' ? 'percentage' : metric === 'escalated' ? 'alert' : 'number';
     let trend: number | null = null;
     if (metric === 'total') {
@@ -59,7 +62,7 @@ function mapKpis(rows: KpiRow[] | null): KpiCard[] | null {
       // "New / resolved this week" is a count: a negative one means nothing, so it is not shown.
       trend = row?.delta !== undefined && row.delta >= 0 ? row.delta : null;
     }
-    return { metric, value: row?.value ?? null, trend, type };
+    return [{ metric, value: row?.value ?? null, trend, type }];
   });
 }
 

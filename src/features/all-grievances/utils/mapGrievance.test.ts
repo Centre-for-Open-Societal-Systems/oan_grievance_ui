@@ -265,6 +265,12 @@ describe('isTerminalStatus', () => {
     expect(isTerminalStatus('rejected')).toBe(true);
   });
 
+  it('treats a confirmed Duplicate as terminal even when the status list does not mark it so', () => {
+    expect(isTerminalStatus('Duplicate')).toBe(true);
+    expect(isTerminalStatus('Duplicate', [{ status: 'Duplicate', is_terminal: 0 }])).toBe(true);
+    expect(isTerminalStatus('Duplicate', [{ status: 'Duplicate' }])).toBe(true);
+  });
+
   it('identifies non-terminal statuses correctly', () => {
     expect(isTerminalStatus('In Progress')).toBe(false);
     expect(isTerminalStatus('Resolved')).toBe(false);
@@ -284,5 +290,24 @@ describe('isTerminalStatus', () => {
     expect(isTerminalStatus('Completed', options)).toBe(true);
     expect(isTerminalStatus('Dismissed', options)).toBe(true);
     expect(isTerminalStatus('In Review', options)).toBe(false);
+  });
+});
+
+describe('duplicate fields', () => {
+  it('carries the flagged and the confirmed main ticket from a list row', () => {
+    const flagged = mapGrievanceListItem({ ...baseItem, possible_duplicate_of: 'B00100010' });
+    expect(flagged.possibleDuplicateOf).toBe('B00100010');
+    expect(flagged.duplicateOf).toBeUndefined();
+
+    const confirmed = mapGrievanceListItem({ ...baseItem, status: 'Duplicate', duplicate_of: 'B00100010' });
+    expect(confirmed.duplicateOf).toBe('B00100010');
+    expect(confirmed.possibleDuplicateOf).toBeUndefined();
+  });
+
+  it('treats a confirmed duplicate as terminal even when the status list does not say so', () => {
+    expect(isTerminalStatus('Duplicate')).toBe(true);
+    // A confirmed duplicate can't be worked, so the status list cannot reopen it.
+    expect(isTerminalStatus('Duplicate', [{ status: 'Duplicate', is_terminal: 0 }])).toBe(true);
+    expect(isTerminalStatus('In Progress')).toBe(false);
   });
 });

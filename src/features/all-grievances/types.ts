@@ -47,6 +47,10 @@ export interface GrievanceListItem {
   auto_close_at?: string | null;
   submitted_on?: string | null;
   updated_at?: string | null;
+  /** Staff only: the ticket of the best flagged match, while an officer has yet to rule on it. */
+  possible_duplicate_of?: string | null;
+  /** The main ticket, once this one is confirmed as a duplicate. */
+  duplicate_of?: string | null;
 }
 
 export interface GrievanceListPagination {
@@ -134,6 +138,10 @@ export interface Grievance {
   description?: string;
   administrativeArea?: string;
   administrativeUnit?: string;
+  /** Ticket of the best flagged match, awaiting an officer's ruling (staff only). */
+  possibleDuplicateOf?: string;
+  /** The main ticket, once confirmed as a duplicate. */
+  duplicateOf?: string;
 }
 
 /** Filters shared by the advanced-filters sidebar and the table column filters. */
@@ -284,6 +292,27 @@ export interface GrievanceTimelineAttachment {
   is_private?: number | boolean;
 }
 
+/** How likely a flagged ticket is to repeat its main ticket. The service sends the label, never a score. */
+export type DuplicateMatchLevel = 'High' | 'Medium';
+
+/**
+ * What an officer needs to rule on a flag: the best match and how it compares. The main ticket's own
+ * details are missing when the officer cannot read it.
+ */
+export interface PossibleDuplicate {
+  ticket_number: string;
+  match_level: DuplicateMatchLevel | string | null;
+  /** Whether this officer may confirm or dismiss the flag. */
+  can_review: boolean;
+  status?: string | null;
+  service_category?: string | null;
+  grievance_type?: string | null;
+  description?: string | null;
+  same_submitter?: boolean;
+  same_category?: boolean;
+  same_type?: boolean;
+}
+
 export interface GrievanceTimelineData {
   /** Grievance id (document name): the id realtime events and room subscriptions use. */
   name?: string;
@@ -311,6 +340,10 @@ export interface GrievanceTimelineData {
   events?: TimelineEventItem[];
   has_more?: boolean;
   next_cursor?: string | null;
+  /** The main ticket, once this one is confirmed as a duplicate: the case is read-only. */
+  duplicate_of?: string | null;
+  /** Staff only: the flag an officer rules on. Null when nothing is awaiting a ruling. */
+  possible_duplicate?: PossibleDuplicate | null;
 }
 
 export interface ResponseTemplateItem {
@@ -363,6 +396,8 @@ export interface GrievanceCurrentState {
   available_actions?: GrievanceAvailableAction[];
   /** Whether the submitter can be contacted (a phone number or email is on file). */
   can_request_more_info?: boolean;
+  duplicate_of?: string | null;
+  possible_duplicate?: PossibleDuplicate | null;
 }
 
 export interface GrievanceActionResult {
@@ -471,3 +506,22 @@ export interface DecideChangeRequestPayload {
   note?: string | null;
 }
 
+
+export interface ConfirmDuplicatePayload {
+  /** Defaults to the best flagged match. Must be the same submitter's and still open or resolved. */
+  main_ticket?: string;
+  note?: string;
+}
+
+export interface DismissDuplicatePayload {
+  note?: string;
+}
+
+/** What `POST .../duplicate/confirm` and `.../dismiss` answer with. */
+export interface DuplicateRulingResult {
+  ticket_number: string;
+  status: string;
+  duplicate_of?: string | null;
+  current_state?: GrievanceCurrentState;
+  timeline_event?: TimelineEntry | null;
+}

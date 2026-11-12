@@ -6,6 +6,7 @@ import {
   Archive,
   CheckCircle,
   CircleDashed,
+  Copy,
   HelpCircle,
   Layers,
   Loader2,
@@ -70,6 +71,13 @@ const METRIC_CARD_VISUALS: Record<string, MetricVisual> = {
       'text-green-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12',
     bgColor: 'bg-green-50',
   },
+  duplicate: {
+    key: 'duplicate',
+    Icon: Copy,
+    iconClassName:
+      'text-slate-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+    bgColor: 'bg-slate-50',
+  },
   closed: {
     key: 'closed',
     Icon: Archive,
@@ -82,6 +90,7 @@ const METRIC_CARD_VISUALS: Record<string, MetricVisual> = {
 /** Workflow labels that share a queue card's visual. */
 const STATUS_ALIASES: Record<string, string> = {
   'more info needed': 'require more info',
+  duplicates: 'duplicate',
 };
 
 const FALLBACK_VISUAL: MetricVisual = {

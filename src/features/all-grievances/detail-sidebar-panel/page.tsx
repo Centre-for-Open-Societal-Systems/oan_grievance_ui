@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { SidebarHeader } from './components/SidebarHeader';
 import { CommentsAndCommunication } from './components/CommentsAndCommunication';
 import { SLATracker } from './components/SLATracker';
@@ -10,8 +11,9 @@ import { ThreadSummary } from './components/ThreadSummary';
 import { ResponseForm } from './components/ResponseForm';
 import { AttachmentsList } from './components/AttachmentsList';
 import { CaseActionsPanel } from './components/CaseActionsPanel';
+import { DuplicateReviewPanel } from './components/DuplicateReviewPanel';
 import { useGrievanceTimeline } from '../hooks/useGrievanceTimeline';
-import type { Grievance } from '../types';
+import type { ConfirmDuplicatePayload, DismissDuplicatePayload, Grievance } from '../types';
 import { grievanceFromTimeline, isTerminalStatus } from '../utils/mapGrievance';
 import { useAppSelector } from '@/store/hooks';
 import { canExportCase, isOfficerOrAdmin, isSubmitterOnly } from '@/features/auth/rbac';
@@ -29,6 +31,8 @@ export function GrievanceDetailSidebar({
   const user = useAppSelector((state) => state.auth.user);
   const userRoles = user?.roles ?? [];
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Load live timeline, conversation, and case state from Redux
   const {
@@ -60,6 +64,28 @@ export function GrievanceDetailSidebar({
     await refetch();
   };
 
+  const handleConfirmDuplicate = async (payload: ConfirmDuplicatePayload) => {
+    if (!activeTicket) return;
+    const { confirmDuplicate } = await import('../api/grievanceApi');
+    await confirmDuplicate(activeTicket, payload);
+    await refetch();
+  };
+
+  const handleDismissDuplicate = async (payload: DismissDuplicatePayload) => {
+    if (!activeTicket) return;
+    const { dismissDuplicate } = await import('../api/grievanceApi');
+    await dismissDuplicate(activeTicket, payload);
+    await refetch();
+  };
+
+  // `?ticket=` opens a case from a link, which is how the main ticket of a duplicate is reached.
+  // The rest of the query (page, page size, filters) is kept so closing the case returns to the same list.
+  const handleOpenTicket = (ticket: string) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('ticket', ticket);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   // Staff get the staff view (response form, internal notes); everyone else
   // the submitter's. Which actions a staff member may take on this case —
   // escalated or not, assigned to them or not — is the backend's call, made
@@ -70,7 +96,8 @@ export function GrievanceDetailSidebar({
   const statusOptions = useAppSelector((state) => state.metadata?.grievanceOptions?.statuses);
   const currentStatus =
     timelineData?.status || timelineData?.current_status || grievance?.status || '';
-  const isTerminal = isTerminalStatus(currentStatus, statusOptions);
+  // A confirmed duplicate is read-only whatever the status list says: its main ticket is where the case is worked.
+  const isTerminal = isTerminalStatus(currentStatus, statusOptions) || Boolean(timelineData?.duplicate_of);
 
   if (!activeTicket) return null;
 
@@ -108,6 +135,17 @@ export function GrievanceDetailSidebar({
           <div className="grid grid-cols-3 gap-6">
             {/* Left Column: Comments, Activity Timeline & Response Form */}
             <div className="col-span-2 flex flex-col gap-6">
+              {timelineData ? (
+                <DuplicateReviewPanel
+                  key={activeTicket}
+                  ticketNumber={activeTicket}
+                  possibleDuplicate={timelineData.possible_duplicate}
+                  duplicateOf={timelineData.duplicate_of}
+                  onConfirm={handleConfirmDuplicate}
+                  onDismiss={handleDismissDuplicate}
+                  onOpenTicket={handleOpenTicket}
+                />
+              ) : null}
               <CommentsAndCommunication
                 canManageCase={canManageCase}
                 timelineData={timelineData}
