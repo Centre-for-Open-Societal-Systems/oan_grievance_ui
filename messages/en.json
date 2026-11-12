@@ -794,12 +794,7 @@
     "saveFailed": "The ruling could not be saved. Please try again.",
     "bannerTitle": "This ticket is a duplicate",
     "bannerBody": "All further handling happens on the main ticket {ticket}.",
-    "openMain": "Open main ticket",
-    "promptTitle": "You may have already filed this",
-    "promptIntro": "We found a similar grievance from you in the last 24 hours. Is this a new one?",
-    "promptMatch": "Match: {level}",
-    "promptNew": "Yes, this is a new grievance",
-    "promptBack": "Go back"
+    "openMain": "Open main ticket"
   },
   "grievanceList": {
     "searchPlaceholder": "Search by ticket number, submitter name, or grievance type...",

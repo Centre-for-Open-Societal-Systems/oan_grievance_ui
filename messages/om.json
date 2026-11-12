@@ -794,12 +794,7 @@
     "saveFailed": "Murtiin kuufamuu hin dandeenye. Mee irra deebi’ii yaalaa.",
     "bannerTitle": "Tikeettiin kun irra deebii dha",
     "bannerBody": "Hojiin itti aanu hundi tikeettii ijoo {ticket} irratti ta’a.",
-    "openMain": "Tikeettii ijoo bani",
-    "promptTitle": "Kana duraan dhiyeessitee ta’uu dandeessa",
-    "promptIntro": "Sa’aatii 24 darban keessatti komii wal fakkaatu argineerra. Kun haaraa moo?",
-    "promptMatch": "Wal-simannaa: {level}",
-    "promptNew": "Eeyyee, komii haaraa dha",
-    "promptBack": "Deebi’i"
+    "openMain": "Tikeettii ijoo bani"
   },
   "grievanceList": {
     "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi...",

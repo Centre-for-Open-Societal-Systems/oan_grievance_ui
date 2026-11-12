@@ -17,14 +17,7 @@ import {
   selectSubmitterTypeOptions,
   type AreaRef,
 } from "@/features/metadata";
-import {
-  similarGrievancesOf,
-  submitErrorMessage,
-  submitGrievance,
-  type SimilarGrievanceCandidate,
-  type SubmitGrievanceResult,
-} from "../api/submitGrievanceApi";
-import { SimilarGrievancePrompt } from "./SimilarGrievancePrompt";
+import { submitErrorMessage, submitGrievance, type SubmitGrievanceResult } from "../api/submitGrievanceApi";
 import type { SubmitFields } from "../submitPayload";
 
 /** The staged voice recording, with a player, so it is visible next to a typed description rather than only in the file list. */
@@ -153,10 +146,8 @@ export function ReviewAndSubmitCard({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  // Similar grievances the service asked about before filing; nothing is filed until the submitter says this one is new.
-  const [similar, setSimilar] = useState<SimilarGrievanceCandidate[] | null>(null);
 
-  const handleSubmit = async (confirmNew = false) => {
+  const handleSubmit = async () => {
     // The button is already disabled without consent or mid-request; this
     // covers a second click landing before React has re-rendered it disabled.
     if (!consentChecked || isSubmitting || submissionBlockedMessage) return;
@@ -172,20 +163,11 @@ export function ReviewAndSubmitCard({
           consent_given: 1,
           ...(canRequestMoreInfo ? {} : { can_request_more_info: 0 }),
           ...(isAnonymous ? { is_anonymous: 1 } : {}),
-          ...(confirmNew ? { confirm_new: 1 } : {}),
         },
         attachments.map((a) => a.file)
       );
       onSubmitted(result);
     } catch (error) {
-      const candidates = similarGrievancesOf(error);
-      if (candidates) {
-        // Not a failure: the service is asking first, and nothing was filed.
-        setSimilar(candidates);
-        setIsSubmitting(false);
-        return;
-      }
-      setSimilar(null);
       logger.error("Failed to submit grievance:", error);
       reportClientEvent({
         event: "flow.failed",
@@ -406,7 +388,7 @@ export function ReviewAndSubmitCard({
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => void handleSubmit()}
+              onClick={handleSubmit}
               className={`flex items-center gap-2 px-5 py-3 text-white rounded-lg text-sm font-bold transition-colors shadow-sm focus:outline-none focus:ring-2 ${consentChecked && !submissionBlockedMessage
                 ? "bg-[#16A34A] hover:bg-[#10883c] focus:ring-[#0b8535]/50"
                 : "bg-gray-300 cursor-not-allowed text-gray-500"
@@ -420,14 +402,6 @@ export function ReviewAndSubmitCard({
           </div>
         </div>
       </div>
-      {similar && (
-        <SimilarGrievancePrompt
-          candidates={similar}
-          isSubmitting={isSubmitting}
-          onFileAnyway={() => void handleSubmit(true)}
-          onClose={() => setSimilar(null)}
-        />
-      )}
     </div>
   );
 }

@@ -794,12 +794,7 @@
     "saveFailed": "ውሳኔው ሊቀመጥ አልቻለም። እባክዎ እንደገና ይሞክሩ።",
     "bannerTitle": "ይህ ትኬት ተደጋጋሚ ነው",
     "bannerBody": "ተጨማሪ አያያዝ ሁሉ በዋናው ትኬት {ticket} ላይ ይሆናል።",
-    "openMain": "ዋናውን ትኬት ክፈት",
-    "promptTitle": "ይህን ቀደም ብለው አቅርበው ሊሆን ይችላል",
-    "promptIntro": "ባለፉት 24 ሰዓታት ውስጥ ተመሳሳይ ቅሬታ አግኝተናል። ይህ አዲስ ነው?",
-    "promptMatch": "ተዛማጅነት፦ {level}",
-    "promptNew": "አዎ፣ ይህ አዲስ ቅሬታ ነው",
-    "promptBack": "ተመለስ"
+    "openMain": "ዋናውን ትኬት ክፈት"
   },
   "grievanceList": {
     "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ...",
