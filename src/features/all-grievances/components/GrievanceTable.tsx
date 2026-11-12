@@ -15,7 +15,9 @@ import {
   Loader2,
   AlertCircle,
   Clock,
-  X
+  X,
+  Copy,
+  ScanSearch,
 } from 'lucide-react';
 import type { Grievance } from '../types';
 import type { FilterOption } from './FilterDropdown';
@@ -88,6 +90,7 @@ export function GrievanceTable({
   onViewGrievance: (grievance: Grievance) => void;
 }) {
   const t = useTranslations('grievanceList');
+  const tDuplicates = useTranslations('duplicates');
   const reminderText = (reminder: SlaReminder) =>
     reminder.kind === 'dueToday'
       ? t('slaDueToday')
@@ -258,6 +261,17 @@ export function GrievanceTable({
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold leading-tight ${statusBadgeClass(grievance.status)}`}>
                       {grievance.status}
                     </span>
+                    {grievance.duplicateOf ? (
+                      <span className="mt-1.5 flex w-fit items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold leading-tight text-slate-700">
+                        <Copy className="h-3 w-3 shrink-0" aria-hidden="true" />
+                        {tDuplicates('chipConfirmed', { ticket: grievance.duplicateOf })}
+                      </span>
+                    ) : grievance.possibleDuplicateOf ? (
+                      <span className="mt-1.5 flex w-fit items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold leading-tight text-amber-800">
+                        <ScanSearch className="h-3 w-3 shrink-0" aria-hidden="true" />
+                        {tDuplicates('chipPossible', { ticket: grievance.possibleDuplicateOf })}
+                      </span>
+                    ) : null}
                     {grievance.autoCloseAt && (
                       <span className="mt-1.5 flex w-fit items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold leading-tight text-slate-700">
                         <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -281,10 +295,15 @@ export function GrievanceTable({
                       onClick={() => onViewGrievance(grievance)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#E6F3EA] border border-[#C9E5D2] text-green-700 hover:bg-[#C8E6C9] rounded-full text-xs font-semibold transition-colors opacity-90 group-hover:opacity-100"
                     >
-                      {grievance.canAct === false ? (
+                      {grievance.duplicateOf || grievance.canAct === false ? (
                         <>
                           <Eye className="h-3.5 w-3.5 shrink-0" />
                           {t('actionView')}
+                        </>
+                      ) : grievance.possibleDuplicateOf ? (
+                        <>
+                          <ScanSearch className="h-3.5 w-3.5 shrink-0" />
+                          {t('actionReview')}
                         </>
                       ) : (
                         <>
