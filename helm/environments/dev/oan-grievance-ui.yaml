@@ -6,9 +6,9 @@
 
 ui:
   image:
-    # Jenkinsfile ECR_REPO for the develop branch: oan/oan-grievance-ui/grievance-ui
+    # Jenkinsfile ECR_REPO for the develop branch: eoan/oan-grievance-ui/grievance-ui
     # Node IAM role (oan-services-dev-ecr-pull) must allow ecr:BatchGetImage on this repo.
-    repository: 379220350808.dkr.ecr.ap-south-1.amazonaws.com/oan/oan-grievance-ui/grievance-ui
+    repository: 379220350808.dkr.ecr.ap-south-1.amazonaws.com/eoan/oan-grievance-ui/grievance-ui
 
   env:
     # Read at runtime (src/lib/env.ts), so one image serves every environment.

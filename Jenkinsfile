@@ -14,7 +14,7 @@ pipeline {
         IMAGE_NAME      = 'oan-grievance-ui'
         RKE2_NODE       = '13.233.56.204'
         // Helm release `grievance-ui` on the oan_dev k3s node (develop only, stages below).
-        ECR_REPO        = 'oan/oan-grievance-ui/grievance-ui'
+        ECR_REPO        = 'eoan/oan-grievance-ui/grievance-ui'
         // Must match the live objects: kubectl get deploy -n develop / -n staging
         // (the deploy stage fails fast with a clear message if either is wrong)
         DEPLOYMENT_NAME = 'grievance-ui'
@@ -162,7 +162,7 @@ ENDSSH
 
         // ---- develop -> Helm release `grievance-ui` on the oan_dev k3s node ----
         // Runs after the RKE2 deploy above, so a problem here never blocks it. The image built above is
-        // pushed again under oan/oan-grievance-ui/grievance-ui:<package.json version>-develop.<build>,
+        // pushed again under eoan/oan-grievance-ui/grievance-ui:<package.json version>-develop.<build>,
         // the tag that is also the chart version.
         stage('Push image (helm)') {
             when { branch 'develop' }
