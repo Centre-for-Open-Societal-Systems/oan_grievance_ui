@@ -13,10 +13,12 @@ const STATUS_BADGE: Record<string, string> = {
   resolved: 'bg-teal-50 text-teal-800 border border-teal-200/70',
   closed: 'bg-gray-100 text-gray-700 border border-gray-300/70',
   rejected: 'bg-red-50 text-red-700 border border-red-200/70',
+  duplicate: 'bg-slate-100 text-slate-700 border border-slate-300/70',
 };
 
 const STATUS_ALIASES: Record<string, string> = {
   'more info needed': 'require more info',
+  duplicates: 'duplicate',
 };
 
 const NEUTRAL_BADGE = 'bg-gray-100 text-gray-700';

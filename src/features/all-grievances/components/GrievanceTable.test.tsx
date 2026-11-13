@@ -162,3 +162,56 @@ describe('GrievanceTable', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('GrievanceTable: duplicates', () => {
+  const props = {
+    searchTerm: '',
+    setSearchTerm: vi.fn(),
+    currentPage: 1,
+    setCurrentPage: vi.fn(),
+    rowsPerPage: 10,
+    setRowsPerPage: vi.fn(),
+    totalItems: 2,
+    totalPages: 1,
+    isLoading: false,
+    error: null,
+    onRetry: vi.fn(),
+    onViewGrievance: vi.fn(),
+    onOpenAdvancedFilters: vi.fn(),
+    statusOptions: [],
+    categoryOptions: [],
+    selectedStatuses: [],
+    selectedCategories: [],
+    onStatusChange: vi.fn(),
+    onCategoryChange: vi.fn(),
+    onClearFilters: vi.fn(),
+  };
+
+  it('marks a flagged case with a Review action and a chip naming the earlier ticket', () => {
+    const { container } = renderIntl(
+      <GrievanceTable
+        {...(props as unknown as React.ComponentProps<typeof GrievanceTable>)}
+        grievances={[{ ...mockGrievances[0]!, possibleDuplicateOf: 'GRV-2026-0099', canAct: true }]}
+      />
+    );
+    const view = within(container);
+
+    expect(view.getByText('Possible duplicate of GRV-2026-0099')).toBeInTheDocument();
+    expect(view.getByRole('button', { name: /^review$/i })).toBeInTheDocument();
+    expect(view.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
+  });
+
+  it('marks a confirmed duplicate with its main ticket and only lets it be viewed', () => {
+    const { container } = renderIntl(
+      <GrievanceTable
+        {...(props as unknown as React.ComponentProps<typeof GrievanceTable>)}
+        grievances={[{ ...mockGrievances[0]!, status: 'Duplicate', duplicateOf: 'GRV-2026-0099', canAct: true }]}
+      />
+    );
+    const view = within(container);
+
+    expect(view.getByText('Duplicate of GRV-2026-0099')).toBeInTheDocument();
+    expect(view.getByRole('button', { name: /^view$/i })).toBeInTheDocument();
+    expect(view.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
+  });
+});

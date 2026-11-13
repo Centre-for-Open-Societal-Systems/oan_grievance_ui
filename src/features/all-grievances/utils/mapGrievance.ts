@@ -151,6 +151,8 @@ export function mapGrievanceListItem(item: GrievanceListItem): Grievance {
     submissionChannel: item.submission_channel ?? '',
     description: item.description ?? '',
     administrativeArea: item.administrative_area ?? '',
+    possibleDuplicateOf: item.possible_duplicate_of ?? undefined,
+    duplicateOf: item.duplicate_of ?? undefined,
   };
 }
 
@@ -188,6 +190,8 @@ export function grievanceFromTimeline(data: GrievanceTimelineData): Grievance {
     submissionChannel: data.summary?.submission_channel ?? data.submission_channel ?? '',
     description: data.summary?.description ?? data.description ?? '',
     administrativeArea: data.summary?.administrative_area || data.administrative_area || '',
+    possibleDuplicateOf: data.possible_duplicate?.ticket_number ?? undefined,
+    duplicateOf: data.duplicate_of ?? undefined,
   };
 }
 
@@ -354,6 +358,8 @@ export function isTerminalStatus(
 ): boolean {
   if (!status) return false;
   const normalized = status.trim().toLowerCase();
+  // A confirmed duplicate is read-only whatever the status list says: its main ticket is where the case is worked.
+  if (normalized === 'duplicate') return true;
   if (statusOptions && statusOptions.length > 0) {
     const match = statusOptions.find((opt) => opt.status.trim().toLowerCase() === normalized);
     if (match && typeof match.is_terminal === 'number') {

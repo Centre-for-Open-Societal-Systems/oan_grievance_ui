@@ -214,3 +214,30 @@ describe('mapAdminLevels', () => {
     expect(stats).toEqual({ federal: null, regions: [], woredas: [] });
   });
 });
+
+describe('the Duplicates card', () => {
+  it('comes after the other cards, with the count the service sent and no change figure', () => {
+    const stats = mapDashboardCharts({
+      ...NO_CHARTS,
+      grvKpis: [
+        { metric: 'total', value: 128, delta_pct: 12.5 },
+        { metric: 'duplicates', value: 7 },
+      ],
+    });
+
+    const cards = stats.kpis ?? [];
+    expect(cards.at(-1)).toEqual({ metric: 'duplicates', value: 7, trend: null, type: 'number' });
+  });
+
+  it('is left out when the service does not report it, rather than shown as unavailable', () => {
+    const stats = mapDashboardCharts({ ...NO_CHARTS, grvKpis: [{ metric: 'total', value: 128 }] });
+
+    expect((stats.kpis ?? []).map((card) => card.metric)).not.toContain('duplicates');
+  });
+
+  it('gives the Duplicate status its own colour', () => {
+    const stats = mapDashboardCharts({ ...NO_CHARTS, grvStatusDistribution: [{ status: 'Duplicate', count: 3 }] });
+
+    expect(stats.statusDistribution?.[0]?.color).toBe('#64748b');
+  });
+});

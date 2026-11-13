@@ -94,6 +94,13 @@ const METRIC_CARD_VISUALS: Record<string, MetricVisual> = {
       'text-green-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12',
     bgColor: 'bg-green-50',
   },
+  duplicate: {
+    key: 'duplicate',
+    Icon: Copy,
+    iconClassName:
+      'text-slate-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+    bgColor: 'bg-slate-50',
+  },
   closed: {
     key: 'closed',
     Icon: Archive,
