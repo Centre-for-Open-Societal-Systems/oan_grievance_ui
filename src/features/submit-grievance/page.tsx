@@ -21,7 +21,8 @@ import {
   resolveInitialSubmitterType,
 } from "./initialIdentity";
 import { buildSubmitFields } from "./submitPayload";
-import { firstIncompleteStep, type WizardStep } from "./wizardSteps";
+import { SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
+import { FARMER_LOCKED_CATEGORY, FARMER_LOCKED_LOCATION, firstIncompleteStep, type WizardStep } from "./wizardSteps";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
 import { organisationKindOf } from "@/lib/organisationKind";
 import type { WizardAttachment } from "@/lib/attachments";
@@ -163,6 +164,28 @@ export default function SubmitGrievancePage() {
 
   const hasVoiceNote = attachments.some((a) => a.kind === "voice");
 
+  // An individual farmer files as themselves: Step 1 shows their own details and Step 2 files under "Other"
+  // at their profile's location, none of it editable — so none of it is required either.
+  const isFarmer = isIndividualFarmer(user);
+
+  // A farmer signed in through the identity provider cannot edit what it supplied — only when it
+  // did supply a value, so an empty field stays fillable. The Fayda ID is left editable.
+  const providerOwnedFields = user?.id_source
+    ? (["fullName", "phoneNumber"] as const).filter((key) => identityValues[key]?.trim())
+    : undefined;
+  // For an individual farmer every field of Step 1 is read-only (name, Fayda ID, phone, email).
+  const readOnlyIdentityFields = isFarmer
+    ? (SI_FIELDS_BY_TYPE.individual ?? []).map((field) => field.key)
+    : providerOwnedFields;
+  // The location is read-only only once the profile's own area has been filled in (it loads after sign-in); until
+  // then, and for a profile with no area, the farmer picks it — the backend refuses a grievance with none.
+  // All three required levels must be there: a profile area that resolved only partly would otherwise lock the
+  // location while leaving it incomplete, and the farmer could not fix it.
+  const locationLocked = isFarmer && Boolean(profileArea) && Boolean(region && zone && woreda);
+  const lockedDetailsFields = isFarmer
+    ? [...FARMER_LOCKED_CATEGORY, ...(locationLocked ? FARMER_LOCKED_LOCATION : [])]
+    : undefined;
+
   // The step shown is the URL's, clamped to the furthest one the wizard's
   // data allows — opening `?step=3` directly, or reloading it once the
   // in-memory data is gone, lands on the first step that still needs work.
@@ -171,6 +194,7 @@ export default function SubmitGrievancePage() {
     firstIncompleteStep({
       submitterType, submissionChannel, identityValues,
       serviceCategory, grievanceType, region, zone, woreda, description, hasVoiceNote,
+      readOnlyIdentityFields, lockedDetailsFields,
     })
   ) as WizardStep;
 
@@ -224,12 +248,6 @@ export default function SubmitGrievancePage() {
     resetFields();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  // A farmer signed in through the identity provider cannot edit what it supplied — only when it
-  // did supply a value, so an empty field stays fillable. The Fayda ID is left editable.
-  const providerOwnedFields = user?.id_source
-    ? (["fullName", "phoneNumber"] as const).filter((key) => identityValues[key]?.trim())
-    : undefined;
 
   const submitterTypes = useAppSelector(selectSubmitterTypeOptions);
   const submissionChannels = useAppSelector(selectSubmissionChannelOptions);
@@ -309,9 +327,9 @@ export default function SubmitGrievancePage() {
             setSubmissionChannel={setSubmissionChannel}
             identityValues={identityValues}
             setIdentityValue={setIdentityValue}
-            submitterTypeLocked={isSubmitterTypeLocked(user) || isIndividualFarmer(user)}
-            isSubmissionChannelLocked={isIndividualFarmer(user)}
-            readOnlyFields={providerOwnedFields}
+            submitterTypeLocked={isSubmitterTypeLocked(user) || isFarmer}
+            isSubmissionChannelLocked={isFarmer}
+            readOnlyFields={readOnlyIdentityFields}
             profileSubmitterType={user?.submitter_type || user?.type}
             profileSubmissionChannel={user?.submission_channel}
             onFarmerAreas={applyFarmerAreas}
@@ -339,6 +357,8 @@ export default function SubmitGrievancePage() {
             setDesiredOutcome={setDesiredOutcome}
             serviceProvider={serviceProvider}
             setServiceProvider={setServiceProvider}
+            isFarmer={isFarmer}
+            locationLocked={locationLocked}
             attachments={attachments}
             setAttachments={setAttachments}
           />

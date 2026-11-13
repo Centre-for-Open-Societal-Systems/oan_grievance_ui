@@ -15,6 +15,8 @@ interface SIMaskedIdFieldProps {
   /** The id of the error message shown for this field, wired up as `aria-describedby`. */
   describedBy?: string;
   onBlur?: () => void;
+  /** Shown, and still maskable with the eye toggle, but not editable. */
+  readOnly?: boolean;
 }
 
 const subscribeNever = () => () => {};
@@ -39,7 +41,7 @@ function canMaskWithCss(): boolean {
  * Where it cannot, the field falls back to a real password input: that may prompt
  * to save, but the number is never shown in clear text by accident.
  */
-export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, describedBy, onBlur }: SIMaskedIdFieldProps) {
+export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, describedBy, onBlur, readOnly }: SIMaskedIdFieldProps) {
   const [revealed, setRevealed] = useState(false);
   const [focused, setFocused] = useState(false);
   const cssMask = useSyncExternalStore(subscribeNever, canMaskWithCss, () => false);
@@ -69,6 +71,7 @@ export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, des
         // accept far more than a valid Fayda ID's length).
         maxLength={16}
         value={value}
+        readOnly={readOnly}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         onFocus={() => setFocused(true)}
@@ -78,7 +81,7 @@ export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, des
         }}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || "Enter ID number"}
-        className={`w-full bg-white border border-gray-300 py-2.5 pl-4 pr-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm ${INVALID_INPUT_STYLES} ${showMasked ? "text-transparent select-none" : "text-gray-700"}`}
+        className={`w-full ${readOnly ? "bg-gray-50 cursor-not-allowed" : "bg-white"} border border-gray-300 py-2.5 pl-4 pr-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm ${INVALID_INPUT_STYLES} ${showMasked ? "text-transparent select-none" : readOnly ? "text-gray-500" : "text-gray-700"}`}
       />
       {showMasked && (
         <span

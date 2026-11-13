@@ -95,8 +95,8 @@ export function PhoneField({
   return (
     <div
       data-invalid={invalid ? 'true' : undefined}
-      className={`flex shadow-xs rounded-lg border border-gray-300 focus-within:ring-2 focus-within:ring-[#16A34A]/20 focus-within:border-[#16A34A] data-[invalid=true]:border-red-500 data-[invalid=true]:focus-within:border-red-500 data-[invalid=true]:focus-within:ring-red-500/20 transition-colors relative bg-white ${
-        disabled ? 'opacity-60 pointer-events-none' : ''
+      className={`flex shadow-xs rounded-lg border border-gray-300 focus-within:ring-2 focus-within:ring-[#16A34A]/20 focus-within:border-[#16A34A] data-[invalid=true]:border-red-500 data-[invalid=true]:focus-within:border-red-500 data-[invalid=true]:focus-within:ring-red-500/20 transition-colors relative ${
+        disabled ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'
       } ${className}`}
     >
       <div className="relative shrink-0" ref={dropdownRef}>
@@ -185,7 +185,9 @@ export function PhoneField({
           setPhoneNumber(digits.slice(0, effectiveMaxLength));
         }}
         placeholder={placeholder}
-        className="min-w-0 flex-1 bg-white text-gray-800 py-2.5 px-3.5 rounded-r-lg focus:outline-none text-sm placeholder:text-gray-400 font-medium"
+        className={`min-w-0 flex-1 py-2.5 px-3.5 rounded-r-lg focus:outline-none text-sm placeholder:text-gray-400 font-medium ${
+          disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-800'
+        }`}
       />
     </div>
   );
