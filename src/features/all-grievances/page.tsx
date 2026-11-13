@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { canViewAllGrievances } from '@/features/auth/rbac';
+import { canViewAllGrievances, hidesSubmittedQueue } from '@/features/auth/rbac';
 import {
   fetchGrievanceOptionsThunk,
   selectCategoryFilterOptions,
@@ -158,6 +158,10 @@ export default function AllGrievancesPage() {
   const user = useAppSelector((state) => state.auth.user);
   const userRoles = user?.roles ?? [];
   const pageTitle = canViewAllGrievances(userRoles) ? 'All Grievances' : 'My Grievances';
+  // Submitted is the submitter's own view; staff work cases from Assigned onwards, so the card is left out for them.
+  const visibleCards = hidesSubmittedQueue(userRoles)
+    ? cards.filter((card) => card.status.trim().toLowerCase() !== 'submitted')
+    : cards;
 
   return (
     <div className="flex flex-col gap-6 h-full font-sans">
@@ -168,7 +172,7 @@ export default function AllGrievancesPage() {
         summaryUnavailable={Boolean(metricsError)}
       />
       <MetricCardsComponent
-        cards={cards}
+        cards={visibleCards}
         isLoading={metricsLoading}
         error={metricsError}
         onRetry={refetchMetrics}

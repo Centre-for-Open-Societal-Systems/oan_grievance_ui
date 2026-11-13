@@ -6,11 +6,16 @@ import type { GrievanceSummaryData } from '../types';
 
 vi.mock('../api/grievanceApi', () => ({
   fetchGrievanceSummary: vi.fn(),
+  fetchGrievances: vi.fn(),
 }));
 
-import { fetchGrievanceSummary } from '../api/grievanceApi';
+import { fetchGrievances, fetchGrievanceSummary } from '../api/grievanceApi';
 
 const mockFetchSummary = vi.mocked(fetchGrievanceSummary);
+const mockFetchGrievances = vi.mocked(fetchGrievances);
+
+const listWithTotal = (total: number) =>
+  ({ items: [], pagination: { total_count: total } }) as unknown as Awaited<ReturnType<typeof fetchGrievances>>;
 
 const summaryPayload: GrievanceSummaryData = {
   cards: [
@@ -48,6 +53,62 @@ describe('useGrievanceMetrics', () => {
       'Resolved',
     ]);
     expect(mockFetchSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('folds More Info Needed into the In Progress card, reading its count from the list', async () => {
+    mockFetchSummary.mockResolvedValue(summaryPayload);
+    mockFetchGrievances.mockResolvedValue(listWithTotal(3));
+
+    const { result } = renderHook(() => useGrievanceMetrics());
+
+    await waitFor(() => {
+      expect(result.current.cards.find((c) => c.status === 'In Progress')?.count).toBe(23);
+    });
+    const card = result.current.cards.find((c) => c.status === 'In Progress');
+    expect(card?.breakdown).toEqual([
+      { label: 'In Progress', count: 20 },
+      { label: 'More Info Needed', count: 3 },
+    ]);
+    expect(mockFetchGrievances).toHaveBeenCalledWith(
+      { status: ['More Info Needed'], page_size: 1 },
+      expect.anything()
+    );
+  });
+
+  it('keeps the summary and shows a dash for More Info when its count cannot be read', async () => {
+    mockFetchSummary.mockResolvedValue(summaryPayload);
+    mockFetchGrievances.mockRejectedValue(new Error('boom'));
+
+    const { result } = renderHook(() => useGrievanceMetrics());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    await waitFor(() => expect(mockFetchGrievances).toHaveBeenCalled());
+
+    expect(result.current.error).toBeNull();
+    const card = result.current.cards.find((c) => c.status === 'In Progress');
+    expect(card?.count).toBe(20);
+    expect(card?.breakdown?.[1]).toEqual({ label: 'More Info Needed', count: null });
+  });
+
+  it('uses the summary\'s own More Info card, without another request, and does not list it twice', async () => {
+    mockFetchSummary.mockResolvedValue({
+      cards: [
+        ...summaryPayload.cards,
+        { status: 'Require More Info', label: 'Require More Info', order: 3, is_open: 1, is_terminal: 0, count: 4 },
+      ],
+    });
+
+    const { result } = renderHook(() => useGrievanceMetrics());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(mockFetchGrievances).not.toHaveBeenCalled();
+    expect(result.current.cards.map((c) => c.status)).not.toContain('Require More Info');
+    expect(result.current.cards.find((c) => c.status === 'In Progress')?.count).toBe(24);
   });
 
   it('surfaces an error and clears cards when the summary request fails', async () => {

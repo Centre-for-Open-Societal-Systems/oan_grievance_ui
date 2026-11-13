@@ -6,9 +6,12 @@ import {
   Archive,
   CheckCircle,
   CircleDashed,
+  Copy,
   HelpCircle,
+  Inbox,
   Layers,
   Loader2,
+  RotateCcw,
   UserCheck,
   XCircle,
   type LucideIcon,
@@ -35,6 +38,13 @@ const METRIC_CARD_VISUALS: Record<string, MetricVisual> = {
       'text-blue-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
     bgColor: 'bg-blue-50',
   },
+  submitted: {
+    key: 'submitted',
+    Icon: Inbox,
+    iconClassName:
+      'text-cyan-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+    bgColor: 'bg-cyan-50',
+  },
   assigned: {
     key: 'assigned',
     Icon: UserCheck,
@@ -48,6 +58,20 @@ const METRIC_CARD_VISUALS: Record<string, MetricVisual> = {
     iconClassName:
       'text-indigo-600 w-8 h-8 transition-transform duration-500 ease-in-out group-hover:rotate-[180deg]',
     bgColor: 'bg-indigo-50',
+  },
+  reopened: {
+    key: 'reopened',
+    Icon: RotateCcw,
+    iconClassName:
+      'text-amber-600 w-8 h-8 transition-transform duration-500 ease-in-out group-hover:-rotate-[180deg]',
+    bgColor: 'bg-amber-50',
+  },
+  duplicate: {
+    key: 'duplicate',
+    Icon: Copy,
+    iconClassName:
+      'text-violet-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+    bgColor: 'bg-violet-50',
   },
   'require more info': {
     key: 'require-more-info',
@@ -82,6 +106,7 @@ const METRIC_CARD_VISUALS: Record<string, MetricVisual> = {
 /** Workflow labels that share a queue card's visual. */
 const STATUS_ALIASES: Record<string, string> = {
   'more info needed': 'require more info',
+  duplicates: 'duplicate',
 };
 
 const FALLBACK_VISUAL: MetricVisual = {
@@ -193,6 +218,7 @@ export function MetricCardsComponent({
               key={`${card.status}-${card.order}`}
               title={card.label}
               count={card.count ?? 0}
+              breakdown={card.breakdown}
               bgColor={visual.bgColor}
               visualKey={visual.key}
               icon={<Icon className={visual.iconClassName} />}
@@ -240,12 +266,15 @@ export function MetricCardsComponent({
 function MetricCard({
   title,
   count,
+  breakdown,
   icon,
   bgColor,
   visualKey,
 }: {
   title: string;
   count: number;
+  /** The parts the count is made of, listed under it. */
+  breakdown?: GrievanceSummaryCard['breakdown'];
   icon: React.ReactNode;
   bgColor: string;
   visualKey: string;
@@ -255,6 +284,16 @@ function MetricCard({
       <div>
         <p className="text-[14px] font-semibold text-[#6B7280] mb-1">{title}</p>
         <h4 className="text-[32px] font-bold text-[#1F2937] leading-none">{count}</h4>
+        {breakdown && breakdown.length > 0 && (
+          <ul aria-label={`${title} breakdown`} className="mt-3 space-y-1 border-t border-[#F1F3F4] pt-2.5">
+            {breakdown.map((part) => (
+              <li key={part.label} className="flex items-center justify-between gap-6 text-[13px] text-[#6B7280]">
+                <span>{part.label}</span>
+                <span className="font-bold text-[#374151]">{part.count ?? '—'}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div
         data-visual={visualKey}

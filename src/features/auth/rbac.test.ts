@@ -5,6 +5,7 @@ import {
   canViewAllGrievances,
   homeRouteForRoles,
   homeRouteForUser,
+  hidesSubmittedQueue,
   isAdmin,
   isOfficerOrAdmin,
   isProtectedRoute,
@@ -185,6 +186,20 @@ describe('isOfficerOrAdmin', () => {
     expect(isOfficerOrAdmin([ROLES.REVIEW_OFFICER])).toBe(false);
     expect(isOfficerOrAdmin([])).toBe(false);
     expect(isOfficerOrAdmin(['Some Future Role'])).toBe(false);
+  });
+});
+
+describe('hidesSubmittedQueue', () => {
+  it('hides the Submitted card from every staff role', () => {
+    expect(hidesSubmittedQueue([ROLES.OFFICER])).toBe(true);
+    expect(hidesSubmittedQueue([ROLES.ADMIN])).toBe(true);
+    expect(hidesSubmittedQueue([ROLES.REVIEW_OFFICER])).toBe(true);
+    expect(hidesSubmittedQueue([ROLES.OFFICER, ROLES.SUBMITTER])).toBe(true);
+  });
+
+  it('keeps it for a submitter, whose own filed cases it counts', () => {
+    expect(hidesSubmittedQueue([ROLES.SUBMITTER])).toBe(false);
+    expect(hidesSubmittedQueue([ROLES.ASSISTED_SUBMITTER])).toBe(false);
   });
 });
 
