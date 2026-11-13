@@ -21,7 +21,7 @@ import {
   resolveInitialSubmitterType,
 } from "./initialIdentity";
 import { buildSubmitFields } from "./submitPayload";
-import { SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
+import { getFieldError, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 import { FARMER_LOCKED_CATEGORY, FARMER_LOCKED_LOCATION, firstIncompleteStep, type WizardStep } from "./wizardSteps";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
 import { organisationKindOf } from "@/lib/organisationKind";
@@ -102,11 +102,14 @@ export default function SubmitGrievancePage() {
     buildInitialIdentityValues(user, savedProfile, resolveInitialSubmitterType(user, savedProfile))
   );
 
-  // The Step 1 fields the account's own profile filled in. Taken once, at the start: a field the farmer is
-  // typing into must not turn read-only under their hands.
+  // The Step 1 fields the account's own profile filled in with a usable value. Taken once, at the start: a field
+  // the farmer is typing into must not turn read-only under their hands. A value that is missing or malformed is
+  // left out, so it stays editable and is checked like any other — a read-only field with a bad value would
+  // leave the farmer unable to correct it.
   const [prefilledIdentityKeys] = useState(() => {
-    const initial = buildInitialIdentityValues(user, savedProfile, resolveInitialSubmitterType(user, savedProfile));
-    return Object.keys(initial).filter((key) => initial[key]?.trim());
+    const type = resolveInitialSubmitterType(user, savedProfile);
+    const initial = buildInitialIdentityValues(user, savedProfile, type);
+    return Object.keys(initial).filter((key) => initial[key]?.trim() && getFieldError(type, key, initial) === null);
   });
 
   const handleSubmitterTypeChange = (value: string) => {
@@ -180,9 +183,9 @@ export default function SubmitGrievancePage() {
   const providerOwnedFields = user?.id_source
     ? (["fullName", "phoneNumber"] as const).filter((key) => identityValues[key]?.trim())
     : undefined;
-  // For an individual farmer, the Step 1 fields the profile supplied are read-only (name, Fayda ID, phone, email).
-  // One the profile left empty stays editable and required: the backend needs a name and a phone, and a farmer
-  // cannot be left with a blank they are not allowed to fill in.
+  // For an individual farmer, the Step 1 fields the profile supplied correctly are read-only (name, Fayda ID,
+  // phone, email). One it left empty, or with a value the backend would refuse, stays editable and checked: the
+  // backend needs a name and a phone, and a farmer must not be stuck with something they cannot change.
   const readOnlyIdentityFields = isFarmer
     ? (SI_FIELDS_BY_TYPE.individual ?? []).map((field) => field.key).filter((key) => prefilledIdentityKeys.includes(key))
     : providerOwnedFields;

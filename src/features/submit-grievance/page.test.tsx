@@ -259,6 +259,20 @@ describe('SubmitGrievancePage Step 1 prefill from /auth/me', () => {
     expect(field('si-faydaId')).not.toHaveAttribute('readonly');
   });
 
+  it('leaves a profile value the backend would refuse editable, so the farmer can correct it', async () => {
+    renderWithUser({
+      ...mockUser,
+      mobile_no: '+251123',
+      submitter_type: 'Individual Farmer',
+      submission_channel: 'Web Portal',
+    });
+    await waitFor(() => expect(field('si-fullName')).toHaveValue('Tigist Agent'));
+
+    expect(field('si-fullName')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText(/Contact Number/)).toBeEnabled();
+    expect(screen.getByText('Contact Number', { selector: 'label' }).textContent).toContain('*');
+  });
+
   it('locks the channel to the web portal for an individual farmer', async () => {
     renderWithUser({ ...mockUser, submission_channel: 'Web Portal' });
     await waitFor(() => expect(field('submission-channel')).toHaveValue('Web Portal'));
