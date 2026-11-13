@@ -66,13 +66,6 @@ const METRIC_CARD_VISUALS: Record<string, MetricVisual> = {
       'text-amber-600 w-8 h-8 transition-transform duration-500 ease-in-out group-hover:-rotate-[180deg]',
     bgColor: 'bg-amber-50',
   },
-  duplicate: {
-    key: 'duplicate',
-    Icon: Copy,
-    iconClassName:
-      'text-violet-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
-    bgColor: 'bg-violet-50',
-  },
   'require more info': {
     key: 'require-more-info',
     Icon: HelpCircle,
