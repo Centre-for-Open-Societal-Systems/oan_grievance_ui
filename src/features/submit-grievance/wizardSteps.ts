@@ -34,18 +34,35 @@ export function getDescriptionError(value: string, messages: DetailsMessages = D
   return null;
 }
 
-/** Step 2's field errors — what its Next button shows, and what `firstIncompleteStep` checks. */
+/** An individual farmer's grievance is filed under "Other", so category and type are read-only. */
+export const FARMER_LOCKED_CATEGORY: readonly DetailsField[] = ["serviceCategory", "grievanceType"];
+
+/**
+ * The location, read-only for a farmer whose profile supplies it. Only then: the backend refuses a grievance
+ * with no administrative area, so a farmer whose profile has none must still be able to pick one.
+ */
+export const FARMER_LOCKED_LOCATION: readonly DetailsField[] = ["region", "zone", "woreda"];
+
+/** What an individual farmer cannot change on Step 2. A field nobody can edit is never required. */
+export const FARMER_LOCKED_DETAILS: readonly DetailsField[] = [...FARMER_LOCKED_CATEGORY, ...FARMER_LOCKED_LOCATION];
+
+/**
+ * Step 2's field errors — what its Next button shows, and what `firstIncompleteStep` checks.
+ * `lockedFields` are read-only for this submitter, so they are not required.
+ */
 export function getDetailsErrors(
   fields: DetailsFields,
   messages: DetailsMessages = DEFAULT_DETAILS_MESSAGES,
-  hasVoiceNote = false
+  hasVoiceNote = false,
+  lockedFields: readonly DetailsField[] = []
 ): FieldErrors<DetailsField> {
   const errors: FieldErrors<DetailsField> = {};
-  if (!fields.serviceCategory) errors.serviceCategory = messages.required;
-  if (!fields.grievanceType) errors.grievanceType = messages.required;
-  if (!fields.region) errors.region = messages.required;
-  if (!fields.zone) errors.zone = messages.required;
-  if (!fields.woreda) errors.woreda = messages.required;
+  const required = (field: DetailsField) => !lockedFields.includes(field);
+  if (required("serviceCategory") && !fields.serviceCategory) errors.serviceCategory = messages.required;
+  if (required("grievanceType") && !fields.grievanceType) errors.grievanceType = messages.required;
+  if (required("region") && !fields.region) errors.region = messages.required;
+  if (required("zone") && !fields.zone) errors.zone = messages.required;
+  if (required("woreda") && !fields.woreda) errors.woreda = messages.required;
   // A voice recording replaces the typed description.
   const descriptionError = hasVoiceNote ? null : getDescriptionError(fields.description, messages);
   if (descriptionError) errors.description = descriptionError;
@@ -57,6 +74,10 @@ export interface WizardFields extends DetailsFields {
   submissionChannel: string;
   identityValues: Record<string, string>;
   hasVoiceNote?: boolean;
+  /** Step 1 fields this submitter cannot edit (an individual farmer's own details): not required. */
+  readOnlyIdentityFields?: readonly string[];
+  /** Step 2 fields this submitter cannot edit: not required. */
+  lockedDetailsFields?: readonly DetailsField[];
 }
 
 /**
@@ -70,8 +91,8 @@ export function firstIncompleteStep(fields: WizardFields): WizardStep {
   const identityComplete =
     Boolean(fields.submitterType) &&
     Boolean(fields.submissionChannel) &&
-    Object.keys(getFieldErrors(fields.submitterType, fields.identityValues)).length === 0;
+    Object.keys(getFieldErrors(fields.submitterType, fields.identityValues, fields.readOnlyIdentityFields)).length === 0;
   if (!identityComplete) return 1;
-  if (Object.keys(getDetailsErrors(fields, undefined, fields.hasVoiceNote)).length > 0) return 2;
+  if (Object.keys(getDetailsErrors(fields, undefined, fields.hasVoiceNote, fields.lockedDetailsFields)).length > 0) return 2;
   return 3;
 }

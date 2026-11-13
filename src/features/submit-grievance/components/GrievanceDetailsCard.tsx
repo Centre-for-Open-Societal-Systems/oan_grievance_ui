@@ -32,7 +32,13 @@ import {
 import { VoiceRecorder } from "./VoiceRecorder";
 import { ServiceProviderCombobox } from "./ServiceProviderCombobox";
 import type { ServiceProviderRef } from "../api/serviceProviderApi";
-import { getDescriptionError, getDetailsErrors, type DetailsField } from "../wizardSteps";
+import {
+  FARMER_LOCKED_CATEGORY,
+  FARMER_LOCKED_LOCATION,
+  getDescriptionError,
+  getDetailsErrors,
+  type DetailsField,
+} from "../wizardSteps";
 import { randomUuid } from "@/lib/randomUuid";
 
 function isPdf(item: WizardAttachment): boolean {
@@ -75,6 +81,10 @@ interface GrievanceDetailsCardProps {
   /** The store, cooperative, bank or market the grievance is about — optional. Chosen from the directory; its ID is sent as `associated_service_provider`. */
   serviceProvider: ServiceProviderRef | null;
   setServiceProvider: (value: ServiceProviderRef | null) => void;
+  /** An individual farmer: the case is filed under "Other", so category and type are read-only and not required. */
+  isFarmer?: boolean;
+  /** The location came from the account's own profile, so the location fields are read-only and not required. */
+  locationLocked?: boolean;
   // The staged attachment list — owned by page.tsx, not local state here, so
   // it survives this component unmounting on every Step 1<->2 navigation and
   // so Step 3's review card can see it too. The files upload only once the
@@ -114,6 +124,8 @@ export function GrievanceDetailsCard({
   setDesiredOutcome,
   serviceProvider,
   setServiceProvider,
+  isFarmer = false,
+  locationLocked = false,
   attachments,
   setAttachments,
 }: GrievanceDetailsCardProps) {
@@ -199,7 +211,8 @@ export function GrievanceDetailsCard({
     const errors: FieldErrors<DetailsField> = getDetailsErrors(
       { serviceCategory, grievanceType, region, zone, woreda, description },
       detailsMessages,
-      hasVoiceNote
+      hasVoiceNote,
+      [...(isFarmer ? FARMER_LOCKED_CATEGORY : []), ...(locationLocked ? FARMER_LOCKED_LOCATION : [])]
     );
 
     fieldErrors.setAll(errors);
@@ -264,6 +277,13 @@ export function GrievanceDetailsCard({
   // (a recording can finish before they do), then this is cleared.
   const wantsOtherFill = useRef(false);
   const otherType = otherTypes.find((o) => o.label.toLowerCase() === "other")?.value;
+
+  // A farmer's grievance is always filed under the catch-all "Other" category and type, which routes to manual triage.
+  useEffect(() => {
+    if (!isFarmer || !otherCategory || !otherType) return;
+    if (serviceCategory !== otherCategory) setServiceCategory(otherCategory);
+    if (grievanceType !== otherType) setGrievanceType(otherType);
+  }, [isFarmer, otherCategory, otherType, serviceCategory, grievanceType, setServiceCategory, setGrievanceType]);
 
   const fillOther = () => {
     if (!otherCategory || !otherType) return;
@@ -352,12 +372,14 @@ export function GrievanceDetailsCard({
             {/* Service Category */}
             <div>
               <label htmlFor="service-category" className="block text-sm font-semibold text-gray-800 mb-2">
-                Service Category <span className="text-red-500">*</span>
+                Service Category {!isFarmer && <span className="text-red-500">*</span>}
               </label>
               <AnimatedSelect
                 id="service-category"
                 options={dynamicServiceCategories}
                 placeholder="Select category"
+                disabled={isFarmer}
+                clearable={!isFarmer}
                 value={serviceCategory}
                 onChange={(cat) => {
                   setServiceCategory(cat);
@@ -375,13 +397,14 @@ export function GrievanceDetailsCard({
             {/* Grievance Type */}
             <div>
               <label htmlFor="grievance-type" className="block text-sm font-semibold text-gray-800 mb-2">
-                Grievance Type <span className="text-red-500">*</span>
+                Grievance Type {!isFarmer && <span className="text-red-500">*</span>}
               </label>
               <AnimatedSelect
                 id="grievance-type"
                 options={dynamicGrievanceTypes}
                 placeholder={serviceCategory ? "Select grievance type" : t("selectCategoryFirst")}
-                disabled={!serviceCategory}
+                disabled={isFarmer || !serviceCategory}
+                clearable={!isFarmer}
                 value={grievanceType}
                 onChange={(type) => {
                   setGrievanceType(type);
@@ -398,12 +421,14 @@ export function GrievanceDetailsCard({
             {/* Region */}
             <div>
               <label htmlFor="grievance-region" className="block text-sm font-semibold text-gray-800 mb-2">
-                Region <span className="text-red-500">*</span>
+                Region {!locationLocked && <span className="text-red-500">*</span>}
               </label>
               <AnimatedSelect
                 id="grievance-region"
                 options={areaOptions(regions.areas)}
                 placeholder={regions.isLoading ? "Loading regions..." : "Select region"}
+                disabled={locationLocked}
+                clearable={!locationLocked}
                 value={region?.id ?? ""}
                 onChange={(id) => {
                   setRegion(findAreaRef(regions.areas, id));
@@ -423,7 +448,7 @@ export function GrievanceDetailsCard({
             {/* Zone / Sub-city */}
             <div>
               <label htmlFor="grievance-zone" className="block text-sm font-semibold text-gray-800 mb-2">
-                Zone / Sub-city <span className="text-red-500">*</span>
+                Zone / Sub-city {!locationLocked && <span className="text-red-500">*</span>}
               </label>
               <AnimatedSelect
                 id="grievance-zone"
@@ -444,7 +469,8 @@ export function GrievanceDetailsCard({
                   setKebele(null);
                   fieldErrors.setError("zone", null);
                 }}
-                disabled={!region || zones.isLoading}
+                disabled={locationLocked || !region || zones.isLoading}
+                clearable={!locationLocked}
                 invalid={!!fieldErrors.errors.zone}
                 describedBy={fieldErrors.errors.zone ? errorIdFor("grievance-zone") : undefined}
               />
@@ -456,7 +482,7 @@ export function GrievanceDetailsCard({
             {/* Woreda */}
             <div>
               <label htmlFor="grievance-woreda" className="block text-sm font-semibold text-gray-800 mb-2">
-                Woreda <span className="text-red-500">*</span>
+                Woreda {!locationLocked && <span className="text-red-500">*</span>}
               </label>
               <AnimatedSelect
                 id="grievance-woreda"
@@ -476,7 +502,8 @@ export function GrievanceDetailsCard({
                   setKebele(null);
                   fieldErrors.setError("woreda", null);
                 }}
-                disabled={!zone || woredas.isLoading}
+                disabled={locationLocked || !zone || woredas.isLoading}
+                clearable={!locationLocked}
                 invalid={!!fieldErrors.errors.woreda}
                 describedBy={fieldErrors.errors.woreda ? errorIdFor("grievance-woreda") : undefined}
               />
@@ -504,7 +531,8 @@ export function GrievanceDetailsCard({
                 }
                 value={kebele?.id ?? ""}
                 onChange={(id) => setKebele(findAreaRef(kebeles.areas, id))}
-                disabled={!woreda || kebeles.isLoading}
+                disabled={locationLocked || !woreda || kebeles.isLoading}
+                clearable={!locationLocked}
               />
             </div>
           </div>
@@ -519,9 +547,12 @@ export function GrievanceDetailsCard({
 
           {/* Description */}
           <div>
-            <label htmlFor="grievance-description" className="block text-sm font-semibold text-gray-800 mb-2">
-              Description {!hasVoiceNote && <span className="text-red-500">*</span>}
+            <label htmlFor="grievance-description" className="block text-sm font-semibold text-gray-800">
+              {t("descriptionLabel")} {!hasVoiceNote && <span className="text-red-500">*</span>}
             </label>
+            <p id="grievance-description-help" className="mt-0.5 mb-2 text-[13px] text-gray-500">
+              {t("descriptionHelp")}
+            </p>
             <VoiceRecorder
               recording={voiceNote?.file ?? null}
               onRecorded={handleVoiceRecorded}
@@ -529,35 +560,37 @@ export function GrievanceDetailsCard({
               disabled={voiceBlockedByLimit}
               disabledReason={tVoice("attachmentLimit", { max: MAX_ATTACHMENTS_PER_CASE })}
             >
-              <textarea
-                id="grievance-description"
-                rows={4}
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  // Re-check as they type while it's showing an error, so it clears the moment it's long enough.
-                  if (fieldErrors.errors.description) {
-                    fieldErrors.setError("description", descriptionErrorFor(e.target.value));
+              <>
+                <textarea
+                  id="grievance-description"
+                  rows={4}
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    // Re-check as they type while it's showing an error, so it clears the moment it's long enough.
+                    if (fieldErrors.errors.description) {
+                      fieldErrors.setError("description", descriptionErrorFor(e.target.value));
+                    }
+                  }}
+                  onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
+                  aria-invalid={fieldErrors.errors.description ? true : undefined}
+                  maxLength={DESCRIPTION_MAX_LENGTH}
+                  aria-describedby={
+                    [fieldErrors.errors.description ? errorIdFor("grievance-description") : null, "grievance-description-help", "grievance-description-count"]
+                      .filter(Boolean)
+                      .join(" ")
                   }
-                }}
-                onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
-                aria-invalid={fieldErrors.errors.description ? true : undefined}
-                maxLength={DESCRIPTION_MAX_LENGTH}
-                aria-describedby={
-                  [fieldErrors.errors.description ? errorIdFor("grievance-description") : null, "grievance-description-count"]
-                    .filter(Boolean)
-                    .join(" ")
-                }
-                placeholder="Describe the issue clearly — what happened, when, where, and who was involved. Include dates, amounts, and reference numbers where available."
-                className={`w-full bg-white border border-gray-300 text-gray-900 py-3 pl-4 pr-14 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
-              />
+                  placeholder={t("descriptionPlaceholder")}
+                  className={`w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
+                />
+                <CharacterCounter
+                  id="grievance-description-count"
+                  count={description.length}
+                  max={DESCRIPTION_MAX_LENGTH}
+                  className="mt-1 text-right"
+                />
+              </>
             </VoiceRecorder>
-            <CharacterCounter
-              id="grievance-description-count"
-              count={description.length}
-              max={DESCRIPTION_MAX_LENGTH}
-              className="mt-1 text-right"
-            />
             {fieldErrors.errors.description && (
               <FieldError id={errorIdFor("grievance-description")}>{fieldErrors.errors.description}</FieldError>
             )}
@@ -565,17 +598,21 @@ export function GrievanceDetailsCard({
 
           {/* Desired Outcome */}
           <div>
-            <label htmlFor="grievance-desired-outcome" className="block text-sm font-semibold text-gray-800 mb-2">
-              Desired Outcome
+            <label htmlFor="grievance-desired-outcome" className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+              {t("desiredOutcomeLabel")}
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500">{t("optional")}</span>
             </label>
+            <p id="grievance-desired-outcome-help" className="mt-0.5 mb-2 text-[13px] text-gray-500">
+              {t("desiredOutcomeHelp")}
+            </p>
             <textarea
               id="grievance-desired-outcome"
               rows={3}
               value={desiredOutcome}
               onChange={(e) => setDesiredOutcome(e.target.value)}
               maxLength={DESIRED_OUTCOME_MAX_LENGTH}
-              aria-describedby="grievance-desired-outcome-count"
-              placeholder="What is the expected resolution for this grievance?"
+              aria-describedby="grievance-desired-outcome-help grievance-desired-outcome-count"
+              placeholder={t("desiredOutcomePlaceholder")}
               className="w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y"
             />
             <CharacterCounter

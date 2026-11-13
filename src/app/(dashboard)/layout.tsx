@@ -15,7 +15,9 @@ export default function DashboardLayout({
         <Sidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <Header />
-          <main className="flex-1 overflow-y-scroll p-6 bg-[#f3f4f6]">
+          {/* `relative` keeps absolutely positioned descendants (sr-only text) inside this scroller; without it they sit
+              below the content and stretch the whole page, giving a second scrollbar. */}
+          <main className="relative flex-1 overflow-y-scroll p-6 bg-[#f3f4f6]">
             {children}
           </main>
         </div>

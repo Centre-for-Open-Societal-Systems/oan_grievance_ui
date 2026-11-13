@@ -219,6 +219,7 @@
       "voiceDescription": "Waraabbiin sagalee waliin hidhameera"
     },
     "identityStep": {
+      "readOnlyNote": "Odeeffannoon kun akaawuntii keessan irraa fudhatame; as keessatti jijjiiruun hin danda’amu.",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "invalidFields": "{count, plural, one {Gabateen kun} other {Gabateewwan kun}} bifa sirrii hin qabu: {fields}.",
       "fieldRequired": "Gabateen kun barbaachisaadha.",
@@ -239,6 +240,13 @@
       }
     },
     "detailsStep": {
+      "descriptionLabel": "Komii keessan ibsaa",
+      "descriptionHelp": "Maaltu akka ta’e, yoomii fi eessatti akka ta’e, akkasumas eenyutu hirmaate nutti himaa. Yoo qabaattan guyyaa, hanga ykn lakkoofsa wabii dabalaa.",
+      "descriptionPlaceholder": "Fakkeenyaaf: Xaa’oon ani Caamsaa keessa kaffale Adoolessa dhumaatti, yeroon itti fayyadamuu darbee booda ture, ni dhufe.",
+      "desiredOutcomeLabel": "Maal akka isiniif goonu barbaaddu?",
+      "desiredOutcomeHelp": "Dhimmi kun akkamitti akka furamu barbaaddan nutti himaa; fakkeenyaaf, deebii maallaqaa, bakka buusuu ykn daawwannaa ogeessaa.",
+      "desiredOutcomePlaceholder": "Fakkeenyaaf: Maallaqni ani kaffale naaf haa deebi’u, ykn yeroo facaasaa itti aanuu dura bakka buusni naaf haa dhufu.",
+      "optional": "Filannoo",
       "selectCategoryFirst": "Duraan ramaddii filadhu",
       "missingFields": "Gabateewwan barbaachisan hin guutamne: {fields}.",
       "descriptionTooShort": "Ibsi yoo xiqqaate qubee {min} qabaachuu qaba (ammatti {count}).",
@@ -257,7 +265,8 @@
     },
     "voice": {
       "hint": "Of barreessuu mannaa dubbii keessan jechoota keessaniin dubbadhaa. Ofiisarootni waraabbicha dhaggeeffatanii kutaa sirrii ta’eetti ergu.",
-      "record": "Waraabi",
+      "callout": "Dubbachuu barbaaddaa?",
+      "record": "Ergaa sagaleetiin waraabi",
       "recordAgain": "Irra deebi’ii waraabi",
       "stop": "Waraabuu dhaabi",
       "recording": "Waraabaa jira {time} / {max}",

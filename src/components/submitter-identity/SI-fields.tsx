@@ -22,6 +22,9 @@ export function siFieldId(name: string): string {
 const INPUT_CLASS =
   "w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm";
 
+/** A field that is shown but cannot be edited: greyed, so it does not look like something to fill in. */
+const READ_ONLY_INPUT_CLASS = `${INPUT_CLASS.replace("bg-white", "bg-gray-50").replace("text-gray-700", "text-gray-500")} cursor-not-allowed`;
+
 /** The id a field's hint gets, for the input's `aria-describedby` while no error replaces it. */
 function hintIdFor(id: string): string {
   return `${id}-hint`;
@@ -96,7 +99,7 @@ export function SITextField({
   const error = errors?.[name];
   const readOnly = !!readOnlyFields?.includes(name);
   return (
-    <FieldShell name={name} label={label} required={required} error={error} hint={hint} className={className}>
+    <FieldShell name={name} label={label} required={required && !readOnly} error={error} hint={hint} className={className}>
       <input
         id={id}
         type={type}
@@ -109,7 +112,7 @@ export function SITextField({
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorIdFor(id) : hint ? hintIdFor(id) : undefined}
         placeholder={placeholder}
-        className={`${INPUT_CLASS} ${INVALID_INPUT_STYLES} ${readOnly ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`}
+        className={`${readOnly ? READ_ONLY_INPUT_CLASS : INPUT_CLASS} ${INVALID_INPUT_STYLES}`}
       />
     </FieldShell>
   );
@@ -150,13 +153,15 @@ export function SISelectField({
 }
 
 /** A national-ID input — masked, with a reveal toggle. */
-export function SIIdField({ values, setValue, errors, onFieldBlur, name, label, required, placeholder, className }: FieldProps) {
+export function SIIdField({ values, setValue, errors, onFieldBlur, readOnlyFields, name, label, required, placeholder, className }: FieldProps) {
   const id = siFieldId(name);
   const error = errors?.[name];
+  const readOnly = !!readOnlyFields?.includes(name);
   return (
-    <FieldShell name={name} label={label} required={required} error={error} className={className}>
+    <FieldShell name={name} label={label} required={required && !readOnly} error={error} className={className}>
       <SIMaskedIdField
         id={id}
+        readOnly={readOnly}
         value={values[name] || ""}
         onChange={(value) => setValue(name, value)}
         onBlur={() => onFieldBlur?.(name)}
@@ -183,8 +188,9 @@ export function SIPhoneFormField({
 }: Omit<FieldProps, "name"> & { name?: string }) {
   const id = siFieldId(name);
   const error = errors?.[name];
+  const readOnly = !!readOnlyFields?.includes(name);
   return (
-    <FieldShell name={name} label={label} required={required} error={error} className={className}>
+    <FieldShell name={name} label={label} required={required && !readOnly} error={error} className={className}>
       <SIPhoneField
         id={id}
         countryCode={values.phoneCode || "+251"}
@@ -193,7 +199,7 @@ export function SIPhoneFormField({
         setPhoneNumber={(value) => setValue(name, value)}
         onBlur={() => onFieldBlur?.(name)}
         invalid={!!error}
-        disabled={!!readOnlyFields?.includes(name)}
+        disabled={readOnly}
         describedBy={error ? errorIdFor(id) : undefined}
         {...(placeholder ? { placeholder } : {})}
       />

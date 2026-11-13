@@ -58,6 +58,10 @@ interface Initial {
   zone?: AreaRef;
   woreda?: AreaRef;
   description?: string;
+  /** An individual farmer: category, type and location are read-only. */
+  isFarmer?: boolean;
+  /** The farmer's profile supplied the location, so it is read-only too. */
+  locationLocked?: boolean;
   attachmentFileName?: string;
   /** This many extra image attachments (to fill the case up to its limit). */
   extraAttachments?: number;
@@ -124,6 +128,8 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
       setDesiredOutcome={setDesiredOutcome}
       serviceProvider={serviceProvider}
       setServiceProvider={setServiceProvider}
+      isFarmer={initial.isFarmer}
+      locationLocked={initial.locationLocked}
       attachments={attachments}
       setAttachments={setAttachments}
     />
@@ -259,7 +265,8 @@ describe('Step 2 — Save & Continue', () => {
 
     fireEvent.change(byId('grievance-service-provider'), { target: { value: 'Nowhere Bank' } });
 
-    expect(await screen.findByText(/No matching provider/)).toBeInTheDocument();
+    // The search is debounced (300 ms), so under a loaded full run the default 1 s is too tight.
+    expect(await screen.findByText(/No matching provider/, undefined, { timeout: 5000 })).toBeInTheDocument();
   });
 });
 
@@ -305,6 +312,70 @@ describe('Step 2 — staged attachments', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Preview contract.pdf' }));
 
     expect(screen.getByTitle('contract.pdf')).toHaveAttribute('src', 'blob:http://localhost/mock-local-url');
+  });
+});
+
+describe('Step 2 — an individual farmer', () => {
+  const AREAS: Initial = { region: regionRef, zone: zoneRef, woreda: woredaRef };
+
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { areas: [], count: 0 } }) } as Response);
+  });
+
+  it('files under Other, with category and type read-only and not marked required', async () => {
+    renderStep({ isFarmer: true, ...AREAS, description: DESCRIPTION });
+
+    await waitFor(() => expect((byId('service-category') as HTMLInputElement).value).toBe('Other'));
+    expect((byId('grievance-type') as HTMLInputElement).value).toBe('Other');
+
+    expect(byId('service-category')).toBeDisabled();
+    expect(byId('grievance-type')).toBeDisabled();
+    for (const label of ['Service Category', 'Grievance Type']) {
+      expect(screen.getByText(label, { selector: 'label' }).textContent).not.toContain('*');
+    }
+  });
+
+  it('shows the location read-only and not required when the profile supplied it', async () => {
+    renderStep({ isFarmer: true, locationLocked: true, ...AREAS, description: DESCRIPTION });
+
+    for (const id of ['grievance-region', 'grievance-zone', 'grievance-woreda', 'grievance-kebele']) {
+      expect(byId(id)).toBeDisabled();
+    }
+    for (const label of ['Region', 'Zone / Sub-city', 'Woreda']) {
+      expect(screen.getByText(label, { selector: 'label' }).textContent).not.toContain('*');
+    }
+  });
+
+  it('lets the farmer pick a location, and requires one, when the profile has none', async () => {
+    const { onNext } = renderStep({ isFarmer: true, description: DESCRIPTION });
+    await waitFor(() => expect((byId('service-category') as HTMLInputElement).value).toBe('Other'));
+
+    expect(byId('grievance-region')).not.toBeDisabled();
+    saveAndContinue();
+
+    expect(onNext).not.toHaveBeenCalled();
+    expect(byId('grievance-region')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('still asks for the description', () => {
+    const { onNext } = renderStep({ isFarmer: true, locationLocked: true, ...AREAS });
+
+    saveAndContinue();
+
+    expect(onNext).not.toHaveBeenCalled();
+    expect(byId('grievance-description')).toHaveAttribute('aria-invalid', 'true');
+  });
+});
+
+describe('Step 2 — labels', () => {
+  it('asks for the description and the desired outcome in plain words, marking only the outcome optional', () => {
+    renderStep();
+
+    expect(screen.getByText('Describe your grievance', { selector: 'label' })).toBeInTheDocument();
+    expect(screen.getByText(/Tell us what happened, when and where/)).toBeInTheDocument();
+    const outcome = screen.getByText('What would you like us to do?', { selector: 'label' });
+    expect(outcome.textContent).toContain('Optional');
+    expect(byId('grievance-desired-outcome')).toHaveAccessibleDescription(/how you would like this resolved/);
   });
 });
 

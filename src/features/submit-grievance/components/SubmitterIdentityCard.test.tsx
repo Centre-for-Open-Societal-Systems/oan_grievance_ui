@@ -22,11 +22,14 @@ function Harness({
   initialType = '',
   initialChannel = '',
   profile,
+  farmer = false,
   onNext,
 }: {
   initialType?: string;
   initialChannel?: string;
   profile?: { submitterType: string; submissionChannel: string };
+  /** An individual farmer: the type, channel and every identity field are read-only. */
+  farmer?: boolean;
   onNext: () => void;
 }) {
   const [submitterType, setSubmitterType] = useState(initialType);
@@ -55,6 +58,9 @@ function Harness({
       setIdentityValue={setIdentityValue}
       profileSubmitterType={profile?.submitterType}
       profileSubmissionChannel={profile?.submissionChannel}
+      submitterTypeLocked={farmer}
+      isSubmissionChannelLocked={farmer}
+      readOnlyFields={farmer ? ['fullName', 'faydaId', 'phoneNumber', 'email'] : undefined}
     />
   );
 }
@@ -76,7 +82,12 @@ function storeWithTypes() {
 }
 
 function renderCard(
-  props: { initialType?: string; initialChannel?: string; profile?: { submitterType: string; submissionChannel: string } } = {},
+  props: {
+    initialType?: string;
+    initialChannel?: string;
+    profile?: { submitterType: string; submissionChannel: string };
+    farmer?: boolean;
+  } = {},
   store = storeWithTypes()
 ) {
   const onNext = vi.fn();
@@ -92,6 +103,28 @@ function renderCard(
 
 const saveAndContinue = () => fireEvent.click(screen.getByRole('button', { name: /Save & Continue/ }));
 const byId = (id: string) => document.getElementById(id)!;
+
+describe('Step 1 — an individual farmer', () => {
+  it('shows every field read-only and not marked required', () => {
+    renderCard({ initialType: 'individual', initialChannel: 'web', farmer: true });
+
+    for (const id of ['si-fullName', 'si-faydaId', 'si-email']) {
+      expect(byId(id)).toHaveAttribute('readonly');
+    }
+    for (const label of ['Submitter Type', 'Submission Channel', 'Full Name', 'Fayda ID', 'Contact Number', 'Contact Email ID']) {
+      expect(screen.getByText(label, { selector: 'label' }).textContent).not.toContain('*');
+    }
+  });
+
+  it('moves on even when a read-only field is empty, since the farmer cannot fill it', () => {
+    const { onNext } = renderCard({ initialType: 'individual', initialChannel: 'web', farmer: true });
+
+    saveAndContinue();
+
+    expect(onNext).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('This field is required.')).not.toBeInTheDocument();
+  });
+});
 
 describe('Step 1 — inline validation', () => {
   it('flags the submitter type and submission channel when neither is chosen, and does not advance', () => {

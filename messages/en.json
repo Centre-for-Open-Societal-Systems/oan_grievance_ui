@@ -219,6 +219,7 @@
       "voiceDescription": "Voice recording attached"
     },
     "identityStep": {
+      "readOnlyNote": "These details come from your account and cannot be changed here.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
       "fieldRequired": "This field is required.",
@@ -239,6 +240,13 @@
       }
     },
     "detailsStep": {
+      "descriptionLabel": "Describe your grievance",
+      "descriptionHelp": "Tell us what happened, when and where, and who was involved. Add dates, amounts or reference numbers if you have them.",
+      "descriptionPlaceholder": "For example: The fertilizer I paid for in May was only delivered in late July, when it was too late to use.",
+      "desiredOutcomeLabel": "What would you like us to do?",
+      "desiredOutcomeHelp": "Tell us how you would like this resolved, for example a refund, a replacement or a visit from an officer.",
+      "desiredOutcomePlaceholder": "For example: Refund what I paid, or deliver a replacement before the next planting season.",
+      "optional": "Optional",
       "selectCategoryFirst": "Select a category first",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
@@ -257,7 +265,8 @@
     },
     "voice": {
       "hint": "Speak in your own words instead of typing. Officers will listen to the recording and route it to the right department.",
-      "record": "Record",
+      "callout": "Prefer to speak?",
+      "record": "Record voice note",
       "recordAgain": "Record again",
       "stop": "Stop recording",
       "recording": "Recording {time} / {max}",

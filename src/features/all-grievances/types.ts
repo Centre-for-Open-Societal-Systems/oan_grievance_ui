@@ -76,6 +76,8 @@ export interface GrievanceSummaryCard {
   is_open: number;
   is_terminal: number;
   count: number;
+  /** Set by the client, never the service: the parts a card's count is made of, shown under it. A null count is one that could not be read. */
+  breakdown?: Array<{ label: string; count: number | null }>;
 }
 
 /** Payload returned by GET /api/v1/grievances/summary */

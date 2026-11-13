@@ -248,6 +248,17 @@ export function isAdmin(roles: string[]): boolean {
 }
 
 /**
+ * True for a staff role (Officer, Admin, Review Officer). "Submitted" is the submitter's own status — a
+ * case they have filed and that has not been picked up yet — so it is a submitter's view only: the All
+ * Grievances page leaves the Submitted card out for staff, who work cases from Assigned onwards.
+ *
+ * Names the staff roles rather than excluding submitters, so a role this file does not know keeps the card.
+ */
+export function hidesSubmittedQueue(roles: string[]): boolean {
+  return canViewAllGrievances(roles);
+}
+
+/**
  * True for a Grievance Review Officer. Used to hide/disable the create, edit, and
  * password-reset controls on screens it can otherwise view (User Management,
  * Administration) — it can reach those routes (`ROUTE_ROLES` above) but PR #47

@@ -219,6 +219,7 @@
       "voiceDescription": "የድምፅ ቅጂ ተያይዟል"
     },
     "identityStep": {
+      "readOnlyNote": "እነዚህ ዝርዝሮች ከመለያዎ የተወሰዱ ናቸው፤ እዚህ መቀየር አይቻልም።",
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "invalidFields": "{count, plural, one {ይህ መስክ} other {እነዚህ መስኮች}} በትክክለኛው ቅርጸት አልተያዙም፦ {fields}።",
       "fieldRequired": "ይህ መስክ ያስፈልጋል።",
@@ -239,6 +240,13 @@
       }
     },
     "detailsStep": {
+      "descriptionLabel": "ቅሬታዎን ይግለጹ",
+      "descriptionHelp": "ምን እንደተፈጠረ፣ መቼና የት እንደሆነ፣ እንዲሁም ማን እንደተሳተፈ ይንገሩን። ካለዎት ቀኖችን፣ መጠኖችን ወይም የማጣቀሻ ቁጥሮችን ያካትቱ።",
+      "descriptionPlaceholder": "ለምሳሌ፦ በግንቦት የከፈልኩበት ማዳበሪያ የደረሰው በሐምሌ መጨረሻ ሲሆን ለመጠቀም ጊዜው ካለፈ በኋላ ነበር።",
+      "desiredOutcomeLabel": "እንድናደርግልዎ የሚፈልጉት ምንድን ነው?",
+      "desiredOutcomeHelp": "ጉዳዩ እንዴት እንዲፈታ እንደሚፈልጉ ይንገሩን፣ ለምሳሌ ገንዘብ ማስመለስ፣ መተካት ወይም የባለሙያ ጉብኝት።",
+      "desiredOutcomePlaceholder": "ለምሳሌ፦ የከፈልኩት ገንዘብ ይመለስልኝ፣ ወይም ከሚቀጥለው የመዝራት ወቅት በፊት ምትክ ይድረሰኝ።",
+      "optional": "አማራጭ",
       "selectCategoryFirst": "መጀመሪያ ምድብ ይምረጡ",
       "missingFields": "የሚያስፈልጉ መስኮች ጠፍተዋል፦ {fields}።",
       "descriptionTooShort": "መግለጫው ቢያንስ {min} ፊደላት ሊኖረው ይገባል (አሁን {count})።",
@@ -257,7 +265,8 @@
     },
     "voice": {
       "hint": "ከመጻፍ ይልቅ በራስዎ ቃላት ይናገሩ። ኃላፊዎች ቅጂውን አዳምጠው ወደ ትክክለኛው ክፍል ያስተላልፉታል።",
-      "record": "ቅዳ",
+      "callout": "መናገር ይመርጣሉ?",
+      "record": "የድምጽ መልዕክት ቅዳ",
       "recordAgain": "እንደገና ቅዳ",
       "stop": "ቀረጻን አቁም",
       "recording": "በመቅዳት ላይ {time} / {max}",

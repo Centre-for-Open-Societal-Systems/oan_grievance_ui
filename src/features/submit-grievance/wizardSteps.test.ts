@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { firstIncompleteStep, getDetailsErrors, type WizardFields } from './wizardSteps';
+import {
+  FARMER_LOCKED_CATEGORY,
+  FARMER_LOCKED_DETAILS,
+  firstIncompleteStep,
+  getDetailsErrors,
+  type WizardFields,
+} from './wizardSteps';
 
 const area = (id: string) => ({ id, name: id, pathCode: '' });
 
@@ -31,7 +37,43 @@ describe('firstIncompleteStep', () => {
   });
 });
 
+describe('an individual farmer, whose details are read-only', () => {
+  const EMPTY_FARMER: WizardFields = {
+    ...COMPLETE,
+    identityValues: {},
+    serviceCategory: '',
+    grievanceType: '',
+    region: null,
+    zone: null,
+    woreda: null,
+    readOnlyIdentityFields: ['fullName', 'faydaId', 'phoneNumber', 'email'],
+    lockedDetailsFields: FARMER_LOCKED_DETAILS,
+  };
+
+  it('is not held on Step 1 or Step 2 by read-only fields that are empty', () => {
+    expect(firstIncompleteStep(EMPTY_FARMER)).toBe(3);
+  });
+
+  it('still needs the description, which the farmer does write', () => {
+    expect(firstIncompleteStep({ ...EMPTY_FARMER, description: '' })).toBe(2);
+  });
+
+  it('is still held on the location when only category and type are locked (a profile with no area)', () => {
+    expect(firstIncompleteStep({ ...EMPTY_FARMER, lockedDetailsFields: FARMER_LOCKED_CATEGORY })).toBe(2);
+  });
+
+  it('is still held for the same fields when they are not read-only', () => {
+    expect(firstIncompleteStep({ ...EMPTY_FARMER, readOnlyIdentityFields: undefined })).toBe(1);
+    expect(firstIncompleteStep({ ...EMPTY_FARMER, lockedDetailsFields: undefined })).toBe(2);
+  });
+});
+
 describe('getDetailsErrors', () => {
+  it('does not require a locked field', () => {
+    const fields = { serviceCategory: '', grievanceType: '', region: null, zone: null, woreda: null, description: '' };
+    expect(Object.keys(getDetailsErrors(fields, undefined, false, FARMER_LOCKED_DETAILS))).toEqual(['description']);
+  });
+
   it('flags every missing required field, and never the optional kebele', () => {
     const errors = getDetailsErrors({
       serviceCategory: '',

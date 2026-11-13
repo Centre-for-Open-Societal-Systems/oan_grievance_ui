@@ -31,6 +31,54 @@ describe('MetricCardsComponent', () => {
     Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth');
   });
 
+  it('gives every workflow status its own icon rather than the placeholder', () => {
+    const status = (name: string, label = name) => ({ status: name, label, order: 1, is_open: 1, is_terminal: 0, count: 1 });
+    const { container } = render(
+      <MetricCardsComponent
+        cards={[
+          status('Submitted'),
+          status('Assigned'),
+          status('Reopened'),
+          status('In Progress'),
+          status('Duplicate', 'Duplicates'),
+          status('Rejected'),
+          status('Resolved'),
+          status('Closed'),
+        ]}
+      />
+    );
+
+    const keys = visuals(container);
+    expect(keys).toEqual(['submitted', 'assigned', 'reopened', 'in-progress', 'duplicate', 'rejected', 'resolved', 'closed']);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('lists the parts of a card under its count', () => {
+    const { container } = render(
+      <MetricCardsComponent
+        cards={[
+          {
+            status: 'In Progress',
+            label: 'In Progress',
+            order: 1,
+            is_open: 1,
+            is_terminal: 0,
+            count: 23,
+            breakdown: [
+              { label: 'In Progress', count: 20 },
+              { label: 'More Info Needed', count: null },
+            ],
+          },
+        ]}
+      />
+    );
+    const parts = within(within(container).getByRole('list', { name: 'In Progress' }));
+
+    expect(parts.getByText('More Info Needed')).toBeTruthy();
+    expect(parts.getByText('20')).toBeTruthy();
+    expect(parts.getByText('—')).toBeTruthy();
+  });
+
   it('renders labels and counts from the summary API cards', () => {
     const { container } = render(<MetricCardsComponent cards={cards} />);
     const view = within(container);
