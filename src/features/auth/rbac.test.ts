@@ -201,6 +201,11 @@ describe('hidesSubmittedQueue', () => {
     expect(hidesSubmittedQueue([ROLES.SUBMITTER])).toBe(false);
     expect(hidesSubmittedQueue([ROLES.ASSISTED_SUBMITTER])).toBe(false);
   });
+
+  it('keeps it for a role it does not know, and for no roles at all', () => {
+    expect(hidesSubmittedQueue(['Some Other Role'])).toBe(false);
+    expect(hidesSubmittedQueue([])).toBe(false);
+  });
 });
 
 describe('isAdmin', () => {

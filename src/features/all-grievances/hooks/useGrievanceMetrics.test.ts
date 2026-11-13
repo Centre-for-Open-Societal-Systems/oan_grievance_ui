@@ -75,6 +75,22 @@ describe('useGrievanceMetrics', () => {
     );
   });
 
+  it('shows the cards once, with the final In Progress total, rather than changing it a moment later', async () => {
+    mockFetchSummary.mockResolvedValue(summaryPayload);
+    mockFetchGrievances.mockResolvedValue(listWithTotal(3));
+    const totals: Array<number | undefined> = [];
+
+    const { result } = renderHook(() => {
+      const metrics = useGrievanceMetrics();
+      if (!metrics.isLoading) totals.push(metrics.cards.find((c) => c.status === 'In Progress')?.count);
+      return metrics;
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(new Set(totals)).toEqual(new Set([23]));
+  });
+
   it('keeps the summary and shows a dash for More Info when its count cannot be read', async () => {
     mockFetchSummary.mockResolvedValue(summaryPayload);
     mockFetchGrievances.mockRejectedValue(new Error('boom'));
@@ -84,7 +100,6 @@ describe('useGrievanceMetrics', () => {
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
-    await waitFor(() => expect(mockFetchGrievances).toHaveBeenCalled());
 
     expect(result.current.error).toBeNull();
     const card = result.current.cards.find((c) => c.status === 'In Progress');
@@ -92,7 +107,8 @@ describe('useGrievanceMetrics', () => {
     expect(card?.breakdown?.[1]).toEqual({ label: 'More Info Needed', count: null });
   });
 
-  it('uses the summary\'s own More Info card, without another request, and does not list it twice', async () => {
+  it('uses the summary\'s own More Info card in preference to the list count, and does not list it twice', async () => {
+    mockFetchGrievances.mockResolvedValue(listWithTotal(99));
     mockFetchSummary.mockResolvedValue({
       cards: [
         ...summaryPayload.cards,
@@ -106,7 +122,6 @@ describe('useGrievanceMetrics', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(mockFetchGrievances).not.toHaveBeenCalled();
     expect(result.current.cards.map((c) => c.status)).not.toContain('Require More Info');
     expect(result.current.cards.find((c) => c.status === 'In Progress')?.count).toBe(24);
   });

@@ -237,6 +237,28 @@ describe('SubmitGrievancePage Step 1 prefill from /auth/me', () => {
     expect(field('si-faydaId')).toHaveValue('1234567890123456');
   });
 
+  it('makes the details the profile supplied read-only for an individual farmer, and leaves a missing one editable and required', async () => {
+    renderWithUser({
+      ...mockUser,
+      email: 'tigist@example.com',
+      fayda_id: undefined,
+      submitter_type: 'Individual Farmer',
+      submission_channel: 'Web Portal',
+    });
+    await waitFor(() => expect(field('si-fullName')).toHaveValue('Tigist Agent'));
+
+    expect(field('si-fullName')).toHaveAttribute('readonly');
+    expect(field('si-email')).toHaveAttribute('readonly');
+    expect(screen.getByText('Full Name', { selector: 'label' }).textContent).not.toContain('*');
+
+    expect(field('si-faydaId')).not.toHaveAttribute('readonly');
+    expect(screen.getByText('Fayda ID', { selector: 'label' }).textContent).toContain('*');
+
+    // Typing into the empty field does not turn it read-only part-way through.
+    fireEvent.change(field('si-faydaId'), { target: { value: '1234567890123456' } });
+    expect(field('si-faydaId')).not.toHaveAttribute('readonly');
+  });
+
   it('locks the channel to the web portal for an individual farmer', async () => {
     renderWithUser({ ...mockUser, submission_channel: 'Web Portal' });
     await waitFor(() => expect(field('submission-channel')).toHaveValue('Web Portal'));

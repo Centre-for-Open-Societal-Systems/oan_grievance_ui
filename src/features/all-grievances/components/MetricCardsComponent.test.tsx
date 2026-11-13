@@ -72,7 +72,7 @@ describe('MetricCardsComponent', () => {
         ]}
       />
     );
-    const parts = within(within(container).getByRole('list', { name: 'In Progress breakdown' }));
+    const parts = within(within(container).getByRole('list', { name: 'In Progress' }));
 
     expect(parts.getByText('More Info Needed')).toBeTruthy();
     expect(parts.getByText('20')).toBeTruthy();

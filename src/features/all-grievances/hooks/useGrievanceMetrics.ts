@@ -55,18 +55,17 @@ export function useGrievanceMetrics(): UseGrievanceMetricsResult {
     const controller = new AbortController();
     const requestKey = reloadToken;
 
-    fetchGrievanceSummary({ signal: controller.signal })
-      .then((data) => {
+    // The More Info count is asked for alongside the summary, not after it, so the cards appear once with
+    // their final numbers instead of the In Progress total changing a moment later. It never rejects, and it
+    // is used only when the summary has no More Info card of its own.
+    Promise.all([fetchGrievanceSummary({ signal: controller.signal }), readMoreInfoCount(controller.signal)])
+      .then(([data, moreInfoCount]) => {
         if (controller.signal.aborted) return;
         const sorted = sortSummaryCards(data?.cards ?? []);
-        setResult({ key: requestKey, cards: withInProgressBreakdown(sorted, null), error: null });
-
-        // The service sends no More Info card, so its count is read from the list. The cards are already
-        // showing; this only fills the missing part in, and a failure leaves it as a dash.
-        if (!needsMoreInfoCount(sorted)) return;
-        void readMoreInfoCount(controller.signal).then((count) => {
-          if (controller.signal.aborted || count === null) return;
-          setResult({ key: requestKey, cards: withInProgressBreakdown(sorted, count), error: null });
+        setResult({
+          key: requestKey,
+          cards: withInProgressBreakdown(sorted, needsMoreInfoCount(sorted) ? moreInfoCount : null),
+          error: null,
         });
       })
       .catch((err: unknown) => {

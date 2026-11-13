@@ -248,12 +248,14 @@ export function isAdmin(roles: string[]): boolean {
 }
 
 /**
- * True for any staff role (Officer, Admin, Review Officer). "Submitted" is the submitter's own status — a
+ * True for a staff role (Officer, Admin, Review Officer). "Submitted" is the submitter's own status — a
  * case they have filed and that has not been picked up yet — so it is a submitter's view only: the All
  * Grievances page leaves the Submitted card out for staff, who work cases from Assigned onwards.
+ *
+ * Names the staff roles rather than excluding submitters, so a role this file does not know keeps the card.
  */
 export function hidesSubmittedQueue(roles: string[]): boolean {
-  return !isSubmitterOnly(roles);
+  return canViewAllGrievances(roles);
 }
 
 /**

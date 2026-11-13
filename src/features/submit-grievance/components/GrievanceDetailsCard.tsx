@@ -560,36 +560,36 @@ export function GrievanceDetailsCard({
               disabled={voiceBlockedByLimit}
               disabledReason={tVoice("attachmentLimit", { max: MAX_ATTACHMENTS_PER_CASE })}
             >
-              <div>
-              <textarea
-                id="grievance-description"
-                rows={4}
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  // Re-check as they type while it's showing an error, so it clears the moment it's long enough.
-                  if (fieldErrors.errors.description) {
-                    fieldErrors.setError("description", descriptionErrorFor(e.target.value));
+              <>
+                <textarea
+                  id="grievance-description"
+                  rows={4}
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    // Re-check as they type while it's showing an error, so it clears the moment it's long enough.
+                    if (fieldErrors.errors.description) {
+                      fieldErrors.setError("description", descriptionErrorFor(e.target.value));
+                    }
+                  }}
+                  onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
+                  aria-invalid={fieldErrors.errors.description ? true : undefined}
+                  maxLength={DESCRIPTION_MAX_LENGTH}
+                  aria-describedby={
+                    [fieldErrors.errors.description ? errorIdFor("grievance-description") : null, "grievance-description-help", "grievance-description-count"]
+                      .filter(Boolean)
+                      .join(" ")
                   }
-                }}
-                onBlur={() => fieldErrors.setError("description", descriptionErrorFor(description))}
-                aria-invalid={fieldErrors.errors.description ? true : undefined}
-                maxLength={DESCRIPTION_MAX_LENGTH}
-                aria-describedby={
-                  [fieldErrors.errors.description ? errorIdFor("grievance-description") : null, "grievance-description-help", "grievance-description-count"]
-                    .filter(Boolean)
-                    .join(" ")
-                }
-                placeholder={t("descriptionPlaceholder")}
-                className={`w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
-              />
-              <CharacterCounter
-                id="grievance-description-count"
-                count={description.length}
-                max={DESCRIPTION_MAX_LENGTH}
-                className="mt-1 text-right"
-              />
-              </div>
+                  placeholder={t("descriptionPlaceholder")}
+                  className={`w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-lg focus:outline-none focus:border-[#0b8535] focus:ring-2 focus:ring-[#0b8535]/20 transition-all shadow-sm text-sm resize-y ${INVALID_INPUT_STYLES}`}
+                />
+                <CharacterCounter
+                  id="grievance-description-count"
+                  count={description.length}
+                  max={DESCRIPTION_MAX_LENGTH}
+                  className="mt-1 text-right"
+                />
+              </>
             </VoiceRecorder>
             {fieldErrors.errors.description && (
               <FieldError id={errorIdFor("grievance-description")}>{fieldErrors.errors.description}</FieldError>

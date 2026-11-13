@@ -102,6 +102,13 @@ export default function SubmitGrievancePage() {
     buildInitialIdentityValues(user, savedProfile, resolveInitialSubmitterType(user, savedProfile))
   );
 
+  // The Step 1 fields the account's own profile filled in. Taken once, at the start: a field the farmer is
+  // typing into must not turn read-only under their hands.
+  const [prefilledIdentityKeys] = useState(() => {
+    const initial = buildInitialIdentityValues(user, savedProfile, resolveInitialSubmitterType(user, savedProfile));
+    return Object.keys(initial).filter((key) => initial[key]?.trim());
+  });
+
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
     setIdentityValues({});
@@ -173,9 +180,11 @@ export default function SubmitGrievancePage() {
   const providerOwnedFields = user?.id_source
     ? (["fullName", "phoneNumber"] as const).filter((key) => identityValues[key]?.trim())
     : undefined;
-  // For an individual farmer every field of Step 1 is read-only (name, Fayda ID, phone, email).
+  // For an individual farmer, the Step 1 fields the profile supplied are read-only (name, Fayda ID, phone, email).
+  // One the profile left empty stays editable and required: the backend needs a name and a phone, and a farmer
+  // cannot be left with a blank they are not allowed to fill in.
   const readOnlyIdentityFields = isFarmer
-    ? (SI_FIELDS_BY_TYPE.individual ?? []).map((field) => field.key)
+    ? (SI_FIELDS_BY_TYPE.individual ?? []).map((field) => field.key).filter((key) => prefilledIdentityKeys.includes(key))
     : providerOwnedFields;
   // The location is read-only only once the profile's own area has been filled in (it loads after sign-in); until
   // then, and for a profile with no area, the farmer picks it — the backend refuses a grievance with none.
