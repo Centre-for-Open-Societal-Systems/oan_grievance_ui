@@ -13,6 +13,8 @@ ui:
   env:
     # Read at runtime (src/lib/env.ts), so one image serves every environment.
     AUTH_API_BASE_URL: https://grievance-service.development.oanstaging.com
+    # The APISIX gateway serves the backend at `/v1/...` (no `/api`) and rewrites to Frappe's path.
+    API_PATH_PREFIX: ""
 
   ingress:
     enabled: true
