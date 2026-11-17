@@ -20,6 +20,7 @@ const STATUS_MESSAGE_KEYS: Record<string, string> = {
   duplicate: "duplicate",
   duplicates: "duplicate",
   resolved: "resolved",
+  "partially resolved": "partiallyResolved",
   closed: "closed",
   rejected: "rejected",
 };

@@ -649,6 +649,7 @@
         "inProgress": "በሂደት ላይ",
         "moreInfoNeeded": "ተጨማሪ መረጃ ያስፈልጋል",
         "resolved": "የተፈታ",
+        "partiallyResolved": "በከፊል የተፈታ",
         "closed": "የተዘጋ",
         "rejected": "ውድቅ የተደረገ",
         "duplicate": "ተደጋጋሚ"

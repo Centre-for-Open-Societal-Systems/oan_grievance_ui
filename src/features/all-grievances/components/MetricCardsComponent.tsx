@@ -5,6 +5,7 @@ import {
   AlertCircle,
   Archive,
   CheckCircle,
+  CheckCircle2,
   CircleDashed,
   Copy,
   HelpCircle,
@@ -86,6 +87,13 @@ const METRIC_CARD_VISUALS: Record<string, MetricVisual> = {
     iconClassName:
       'text-green-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12',
     bgColor: 'bg-green-50',
+  },
+  'partially resolved': {
+    key: 'partially-resolved',
+    Icon: CheckCircle2,
+    iconClassName:
+      'text-amber-600 w-8 h-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12',
+    bgColor: 'bg-amber-50',
   },
   duplicate: {
     key: 'duplicate',

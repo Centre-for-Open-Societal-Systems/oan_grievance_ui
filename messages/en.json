@@ -649,6 +649,7 @@
         "inProgress": "In Progress",
         "moreInfoNeeded": "More Info Needed",
         "resolved": "Resolved",
+        "partiallyResolved": "Partially Resolved",
         "closed": "Closed",
         "rejected": "Rejected",
         "duplicate": "Duplicate"

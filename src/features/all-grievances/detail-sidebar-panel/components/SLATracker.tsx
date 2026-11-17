@@ -7,6 +7,7 @@ import { DeferSLAPopup } from './DeferSLAPopup';
 import { ReviewDeferralPopup } from './ReviewDeferralPopup';
 import type { DeferSLAPayload, Grievance, GrievanceChangeResponseData, GrievanceTimelineData } from '../../types';
 import { formatDate, isTerminalStatus } from '../../utils/mapGrievance';
+import { isAnsweredStatus } from '../../utils/statusStyles';
 
 import { useAppSelector } from '@/store/hooks';
 
@@ -40,7 +41,7 @@ export function SLATracker({
   const currentStatus = timelineData?.status || timelineData?.current_status || grievance.status || '';
   const resolvedIsTerminal = propIsTerminal ?? isTerminalStatus(currentStatus, statusOptions);
   const isResolved =
-    currentStatus.toLowerCase() === 'resolved' ||
+    isAnsweredStatus(currentStatus) ||
     currentStatus.toLowerCase() === 'closed' ||
     resolvedIsTerminal;
 

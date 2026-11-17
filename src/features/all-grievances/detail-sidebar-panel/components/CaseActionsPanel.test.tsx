@@ -45,6 +45,14 @@ describe('CaseActionsPanel', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('"Close Case" done.');
   });
 
+  it('leads a partially resolved case with closing too, not the action picker', () => {
+    renderPanel({ caseStatus: 'Partially Resolved' });
+
+    expect(screen.queryByRole('group', { name: 'Choose an action' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirm & Close Grievance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Not satisfied? Reopen this grievance' })).toBeInTheDocument();
+  });
+
   it('switches a resolved case to reopening from the link', () => {
     const { onExecute } = renderPanel();
 

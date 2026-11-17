@@ -11,6 +11,7 @@ const STATUS_BADGE: Record<string, string> = {
   'under review': 'bg-violet-50 text-violet-700 border border-violet-200/70',
   'require more info': 'bg-pink-50 text-pink-700 border border-pink-200/70',
   resolved: 'bg-teal-50 text-teal-800 border border-teal-200/70',
+  'partially resolved': 'bg-amber-50 text-amber-800 border border-amber-200/70',
   closed: 'bg-gray-100 text-gray-700 border border-gray-300/70',
   rejected: 'bg-red-50 text-red-700 border border-red-200/70',
   duplicate: 'bg-slate-100 text-slate-700 border border-slate-300/70',
@@ -32,6 +33,16 @@ export function statusBadgeClass(status: string | null | undefined): string {
   if (!status) return NEUTRAL_BADGE;
   const key = normalizeStatus(status);
   return STATUS_BADGE[key] ?? STATUS_BADGE[STATUS_ALIASES[key] ?? ''] ?? NEUTRAL_BADGE;
+}
+
+/**
+ * Whether an officer has answered and the submitter now decides: confirm and close, or reopen. A partial
+ * answer is one of these but is never shown as Resolved.
+ */
+export function isAnsweredStatus(status: string | null | undefined): boolean {
+  if (!status) return false;
+  const key = normalizeStatus(status);
+  return key === 'resolved' || key === 'partially resolved';
 }
 
 /** Whether the status is the one that asks the submitter for more information (the only state they act on). */

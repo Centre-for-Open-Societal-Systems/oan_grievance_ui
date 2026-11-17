@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isMoreInfoStatus, statusBadgeClass } from './statusStyles';
+import { isAnsweredStatus, isMoreInfoStatus, statusBadgeClass } from './statusStyles';
 
 describe('statusBadgeClass', () => {
   it('matches however the backend spells a status', () => {
@@ -22,5 +22,21 @@ describe('statusBadgeClass', () => {
     expect(isMoreInfoStatus("more_info_needed")).toBe(true);
     expect(isMoreInfoStatus("In Progress")).toBe(false);
     expect(isMoreInfoStatus(null)).toBe(false);
+  });
+});
+
+describe('partially resolved', () => {
+  it('has its own badge, apart from Resolved', () => {
+    expect(statusBadgeClass('Partially Resolved')).toContain('amber');
+    expect(statusBadgeClass('partially_resolved')).toBe(statusBadgeClass('Partially Resolved'));
+    expect(statusBadgeClass('Partially Resolved')).not.toBe(statusBadgeClass('Resolved'));
+  });
+
+  it('counts with Resolved as answered, and nothing else does', () => {
+    expect(isAnsweredStatus('Resolved')).toBe(true);
+    expect(isAnsweredStatus('Partially Resolved')).toBe(true);
+    expect(isAnsweredStatus('Closed')).toBe(false);
+    expect(isAnsweredStatus('In Progress')).toBe(false);
+    expect(isAnsweredStatus(undefined)).toBe(false);
   });
 });

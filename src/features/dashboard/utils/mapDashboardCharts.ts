@@ -30,6 +30,7 @@ export const STATUS_COLORS: Record<string, string> = {
   'under review': '#7c3aed',
   'more info needed': '#db2777',
   resolved: '#0f766e',
+  'partially resolved': '#d97706',
   closed: '#374151',
   rejected: '#dc2626',
   duplicate: '#64748b',

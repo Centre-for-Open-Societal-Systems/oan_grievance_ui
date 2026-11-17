@@ -9,6 +9,7 @@ import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { StarRating } from "@/components/ui/StarRating";
 import { SupportingDocumentsField } from "./SupportingDocumentsField";
 import type { GrievanceActionPayload, GrievanceAvailableAction } from "../../types";
+import { isAnsweredStatus } from "../../utils/statusStyles";
 
 /** The action that confirms a resolution; the only one that takes a rating (GrievanceActionRequest.rating). */
 export const CLOSE_CASE_ACTION = "Close Case";
@@ -108,10 +109,10 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute 
 
   // The case moves on after an action (here or elsewhere), so a selection
   // that is no longer offered is treated as no selection. A lone action is
-  // always selected, and a resolved case starts on Close Case.
+  // always selected, and a resolved or partially resolved case starts on Close Case.
   const closeAction = actions.find(isCloseAction) ?? null;
   const reopenAction = actions.find(isReopenAction) ?? null;
-  const isCaseResolved = caseStatus ? caseStatus.trim().toLowerCase() === "resolved" : actions.length === 2;
+  const isCaseResolved = caseStatus ? isAnsweredStatus(caseStatus) : actions.length === 2;
   const isResolvedChoice = isCaseResolved && !!closeAction && !!reopenAction;
   const defaultAction = actions.length === 1 ? actions[0] : isResolvedChoice ? closeAction : null;
   const selected = actions.find((a) => a.action === selectedAction) ?? defaultAction;
