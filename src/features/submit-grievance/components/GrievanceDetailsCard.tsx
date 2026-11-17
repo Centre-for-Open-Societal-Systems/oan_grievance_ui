@@ -321,6 +321,8 @@ export function GrievanceDetailsCard({
   };
 
   const handleRemoveVoice = () => {
+    // The limit note describes the count before this removal.
+    setError(null);
     setAttachments((prev) => prev.filter((item) => item.kind !== "voice"));
     // Take back the category we filled in, unless the submitter has since changed it.
     if (filledByVoice.current && serviceCategory === otherCategory) {
@@ -339,6 +341,8 @@ export function GrievanceDetailsCard({
       handleRemoveVoice();
       return;
     }
+    // Freed slots make the "only N more" / "max reached" note stale, so drop it.
+    setError(null);
     setAttachments((prev) => prev.filter((item) => item.key !== key));
   };
 

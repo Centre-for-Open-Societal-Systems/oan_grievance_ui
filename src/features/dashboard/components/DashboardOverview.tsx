@@ -18,6 +18,7 @@ import { SectionUnavailable } from "./SectionUnavailable";
 import { ServiceCategoryChart } from "./ServiceCategoryChart";
 import { StatusDistributionChart } from "./StatusDistributionChart";
 import { TopHeader } from "./TopHeader";
+import { DashboardWidget, WidgetPager } from "./WidgetPager";
 
 interface DashboardOverviewProps {
   /** The live list of recent grievances. It reads its own data, so it is placed here rather than built here. */
@@ -63,22 +64,34 @@ function DashboardSections({
     <SectionUnavailable onRetry={onRetry} isRetrying={isRefreshing} className={className} />
   );
 
+  const widgetsRef = useRef<HTMLDivElement>(null);
+
   return (
-    <>
-      {kpis ? <KpiCards data={kpis} /> : unavailable("h-[140px]")}
+    <div ref={widgetsRef} className="space-y-6">
+      <WidgetPager containerRef={widgetsRef} />
+
+      <DashboardWidget widget="kpis">{kpis ? <KpiCards data={kpis} /> : unavailable("h-[140px]")}</DashboardWidget>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {monthlyTrend ? <MonthlyTrendChart data={monthlyTrend} /> : unavailable("h-[400px]")}
-        {statusDistribution ? <StatusDistributionChart data={statusDistribution} /> : unavailable("h-[400px]")}
+        <DashboardWidget widget="trend">
+          {monthlyTrend ? <MonthlyTrendChart data={monthlyTrend} /> : unavailable("h-[400px]")}
+        </DashboardWidget>
+        <DashboardWidget widget="status">
+          {statusDistribution ? <StatusDistributionChart data={statusDistribution} /> : unavailable("h-[400px]")}
+        </DashboardWidget>
       </div>
 
-      <AdminLevelCard levels={levels} selectedRegion={region} onSelectRegion={onSelectRegion} />
+      <DashboardWidget widget="levels">
+        <AdminLevelCard levels={levels} selectedRegion={region} onSelectRegion={onSelectRegion} />
+      </DashboardWidget>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {serviceCategories ? <ServiceCategoryChart data={serviceCategories} /> : unavailable("h-[320px]")}
-        {recentGrievances}
+        <DashboardWidget widget="categories">
+          {serviceCategories ? <ServiceCategoryChart data={serviceCategories} /> : unavailable("h-[320px]")}
+        </DashboardWidget>
+        <DashboardWidget widget="recent">{recentGrievances}</DashboardWidget>
       </div>
-    </>
+    </div>
   );
 }
 

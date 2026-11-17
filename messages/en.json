@@ -5,6 +5,13 @@
     "body": "Your account isn't assigned a recognized role in the grievance portal. Please contact your administrator to get one assigned."
   },
   "register": {
+    "account": {
+      "selectTypeFirst": "Select a submitter type to continue.",
+      "fullNameLabel": "Full Name",
+      "fullNamePlaceholder": "Full Name",
+      "organisationNameLabel": "Organisation Name",
+      "organisationNamePlaceholder": "Organisation Name"
+    },
     "profile": {
       "title": "Almost done!",
       "subtitle": "One more thing — tell us how you'll be submitting grievances, so we don't ask again later.",
@@ -71,8 +78,8 @@
         "placeholder": "Enter Rep's full name"
       },
       "memberCount": {
-        "label": "Member Count Affected",
-        "placeholder": "Enter Number of members affected"
+        "label": "Total Number of Members",
+        "placeholder": "Enter total number of members"
       },
       "streetAddress": {
         "label": "Street address",
@@ -612,6 +619,18 @@
       "empty": "No grievances yet."
     },
     "overview": {
+      "widgets": {
+        "navigation": "Dashboard widgets",
+        "previous": "Previous widget",
+        "next": "Next widget",
+        "position": "Widget {current} of {total}",
+        "kpis": "Key figures",
+        "trend": "Monthly trend",
+        "status": "Status distribution",
+        "levels": "Administrative levels",
+        "categories": "By service category",
+        "recent": "Recent grievances"
+      },
       "loading": "Loading dashboard statistics…",
       "loadFailed": "Could not load the dashboard statistics.",
       "forbidden": "You do not have access to the dashboard statistics.",
@@ -818,6 +837,7 @@
     "slaOverdue": "{days, plural, one {Breached # day ago} other {Breached # days ago}}"
   },
   "validation": {
+    "required": "required",
     "characterCount": "{count} / {max}",
     "tooLong": "Must be {max} characters or fewer.",
     "charactersRemaining": "{count, plural, one {# character remaining} other {# characters remaining}}"

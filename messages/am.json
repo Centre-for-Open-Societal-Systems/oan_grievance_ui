@@ -5,6 +5,13 @@
     "body": "የእርስዎ መለያ በቅሬታ መድረክ ውስጥ የታወቀ ሚና አልተመደበለትም። ሚና እንዲመደብልዎ አስተዳዳሪዎን ያነጋግሩ።"
   },
   "register": {
+    "account": {
+      "selectTypeFirst": "ለመቀጠል የአቅራቢ ዓይነት ይምረጡ።",
+      "fullNameLabel": "ሙሉ ስም",
+      "fullNamePlaceholder": "ሙሉ ስም",
+      "organisationNameLabel": "የድርጅት ስም",
+      "organisationNamePlaceholder": "የድርጅት ስም"
+    },
     "profile": {
       "title": "ሊጨርሱ ትንሽ ቀርቷል!",
       "subtitle": "አንድ ተጨማሪ ነገር — ቅሬታዎችን እንዴት እንደሚያቀርቡ ይንገሩን፣ ስለዚህ በኋላ እንደገና አንጠይቅም።",
@@ -71,8 +78,8 @@
         "placeholder": "የተወካዩን ሙሉ ስም ያስገቡ"
       },
       "memberCount": {
-        "label": "የተጎዱ አባላት ብዛት",
-        "placeholder": "የተጎዱ አባላትን ብዛት ያስገቡ"
+        "label": "ጠቅላላ የአባላት ብዛት",
+        "placeholder": "ጠቅላላ የአባላት ብዛት ያስገቡ"
       },
       "streetAddress": {
         "label": "የመንገድ አድራሻ",
@@ -612,6 +619,18 @@
       "empty": "እስካሁን ምንም ቅሬታ የለም።"
     },
     "overview": {
+      "widgets": {
+        "navigation": "የዳሽቦርድ ክፍሎች",
+        "previous": "ቀዳሚ ክፍል",
+        "next": "ቀጣይ ክፍል",
+        "position": "ክፍል {current} ከ{total}",
+        "kpis": "ዋና ቁጥሮች",
+        "trend": "ወርሃዊ አዝማሚያ",
+        "status": "የሁኔታ ስርጭት",
+        "levels": "የአስተዳደር እርከኖች",
+        "categories": "በአገልግሎት ምድብ",
+        "recent": "የቅርብ ጊዜ ቅሬታዎች"
+      },
       "loading": "የዳሽቦርድ ስታቲስቲክስ በመጫን ላይ…",
       "loadFailed": "የዳሽቦርድ ስታቲስቲክስን መጫን አልተቻለም።",
       "forbidden": "የዳሽቦርድ ስታቲስቲክስን የማየት ፈቃድ የለዎትም።",
@@ -818,6 +837,7 @@
     "slaOverdue": "{days, plural, one {ከ# ቀን በፊት ተላልፏል} other {ከ# ቀናት በፊት ተላልፏል}}"
   },
   "validation": {
+    "required": "የግድ ያስፈልጋል",
     "characterCount": "{count} / {max}",
     "tooLong": "ከ{max} ቁምፊዎች መብለጥ የለበትም።",
     "charactersRemaining": "{count, plural, one {# ቁምፊ ቀርቷል} other {# ቁምፊዎች ቀርተዋል}}"

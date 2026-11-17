@@ -20,7 +20,7 @@ import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors
 import { stripLeadingZero } from '@/lib/validation/phone';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { ACCOUNT_FIELD_IDS, AccountStep } from './register/AccountStep';
+import { ACCOUNT_FIELD_IDS, AccountStep, SUBMITTER_TYPE_FIELD_ID } from './register/AccountStep';
 import { ProfileStep } from './register/ProfileStep';
 import { SuccessStep } from './register/SuccessStep';
 
@@ -78,6 +78,7 @@ type RegisterStep = 'account' | 'profile' | 'success';
  */
 export function RegisterForm() {
   const t = useTranslations('register.profile');
+  const tAccount = useTranslations('register.account');
   const [step, setStep] = useState<RegisterStep>('account');
 
   const [fullName, setFullName] = useState('');
@@ -95,6 +96,7 @@ export function RegisterForm() {
   const accountErrors = useFieldErrors<AccountField>();
 
   const [submitterType, setSubmitterType] = useState('');
+  const [submitterTypeError, setSubmitterTypeError] = useState<string | null>(null);
   const [identityValues, setIdentityValues] = useState<Record<string, string>>({});
   const identity = useIdentityErrors({
     submitterType,
@@ -115,6 +117,7 @@ export function RegisterForm() {
     identity.clear();
     setConsentChecked(false);
     setProfileError(null);
+    setSubmitterTypeError(null);
   };
 
   const setIdentityValue = (key: string, value: string) => {
@@ -165,6 +168,12 @@ export function RegisterForm() {
 
     const errors = validateAccount(accountValues);
     accountErrors.setAll(errors);
+    setSubmitterTypeError(submitterType ? null : tAccount('selectTypeFirst'));
+    if (!submitterType) {
+      // The type is the first field on the page, so it is the first one to fix.
+      document.getElementById(SUBMITTER_TYPE_FIELD_ID)?.focus();
+      return;
+    }
     if (Object.keys(errors).length > 0) {
       focusFirstError(
         ACCOUNT_FIELDS.map((key) => ({ key, id: ACCOUNT_FIELD_IDS[key] })),
@@ -224,14 +233,6 @@ export function RegisterForm() {
     if (isLoading) return;
 
     const hiddenFields = ALREADY_COLLECTED_FIELDS_BY_TYPE[submitterType] ?? [];
-    // The type dropdown is checked with the identity fields so a missing type
-    // and missing fields are all reported at once, first bad one focused.
-    const typeCheck = {
-      key: 'submitterType',
-      id: 'register-submitter-type',
-      message: submitterType ? null : 'Select a submitter type to continue.',
-    };
-
     let profileToSave: { submitterType: string; identityValues: Record<string, string> };
 
     // Submit Grievance's own Step 1 isn't pre-filterable to just the "new"
@@ -259,7 +260,7 @@ export function RegisterForm() {
     } else {
       // Includes an NGO / FPO; the rest of its details are collected on the onboarding
       // screen after first sign-in.
-      if (!identity.validateAll([typeCheck])) return;
+      if (!identity.validateAll([])) return;
       profileToSave = { submitterType, identityValues: { ...identityValues, ...accountStepValues } };
     }
 
@@ -283,7 +284,6 @@ export function RegisterForm() {
     return (
       <ProfileStep
         submitterType={submitterType}
-        onSubmitterTypeChange={handleSubmitterTypeChange}
         identityValues={identityValues}
         setIdentityValue={setIdentityValue}
         hiddenFields={ALREADY_COLLECTED_FIELDS_BY_TYPE[submitterType] ?? []}
@@ -305,6 +305,9 @@ export function RegisterForm() {
 
   return (
     <AccountStep
+      submitterType={submitterType}
+      onSubmitterTypeChange={handleSubmitterTypeChange}
+      submitterTypeError={submitterTypeError}
       fullName={fullName}
       setFullName={(value) => changeAccountField('fullName', value, setFullName)}
       email={email}
