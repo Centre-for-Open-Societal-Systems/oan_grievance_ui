@@ -2,7 +2,7 @@ apiVersion: v2
 name: oan-grievance-ui
 description: OAN Grievance Redressal Next.js UI; deploys the OAN ui-service chart with the grievance defaults.
 type: application
-version: 0.1.0-dev.1
+version: 0.0.1
 appVersion: latest
 keywords:
 - oan
@@ -23,4 +23,4 @@ dependencies:
 annotations:
   oan.org/owner: OpenAgriNet (OAN)
   oan.org/application-source: https://github.com/Centre-for-Open-Societal-Systems/oan_grievance_ui
-  oan.org/chart-source: https://github.com/Centre-for-Open-Societal-Systems/oan-helm/tree/main/charts/oan-grievance-ui
+  oan.org/chart-source: https://github.com/Centre-for-Open-Societal-Systems/oan_grievance_ui/tree/develop/helm/oan-grievance-ui
