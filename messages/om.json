@@ -619,18 +619,6 @@
       "empty": "Ammaaf komiin hin jiru."
     },
     "overview": {
-      "widgets": {
-        "navigation": "Kutaalee daashboordii",
-        "previous": "Kutaa duraa",
-        "next": "Kutaa itti aanu",
-        "position": "Kutaa {current} kan {total}",
-        "kpis": "Lakkoofsota ijoo",
-        "trend": "Adeemsa ji’aa",
-        "status": "Raabsa haalaa",
-        "levels": "Sadarkaalee bulchiinsaa",
-        "categories": "Gosa tajaajilaan",
-        "recent": "Komii dhiyoo"
-      },
       "loading": "Istaatistiksii daashboordii fe’amaa jira…",
       "loadFailed": "Istaatistiksii daashboordii fe’uun hin danda’amne.",
       "forbidden": "Istaatistiksii daashboordii ilaaluuf hayyama hin qabdan.",
@@ -825,6 +813,8 @@
     "openMain": "Tikeettii ijoo bani"
   },
   "grievanceList": {
+    "metricsPrevious": "Kaardota duraa",
+    "metricsNext": "Kaardota itti aanan",
     "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi...",
     "actionView": "Ilaali",
     "actionEdit": "Gulaali",

@@ -619,18 +619,6 @@
       "empty": "No grievances yet."
     },
     "overview": {
-      "widgets": {
-        "navigation": "Dashboard widgets",
-        "previous": "Previous widget",
-        "next": "Next widget",
-        "position": "Widget {current} of {total}",
-        "kpis": "Key figures",
-        "trend": "Monthly trend",
-        "status": "Status distribution",
-        "levels": "Administrative levels",
-        "categories": "By service category",
-        "recent": "Recent grievances"
-      },
       "loading": "Loading dashboard statistics…",
       "loadFailed": "Could not load the dashboard statistics.",
       "forbidden": "You do not have access to the dashboard statistics.",
@@ -825,6 +813,8 @@
     "openMain": "Open main ticket"
   },
   "grievanceList": {
+    "metricsPrevious": "Previous cards",
+    "metricsNext": "Next cards",
     "searchPlaceholder": "Search by ticket number, submitter name, or grievance type...",
     "actionView": "View",
     "actionEdit": "Edit",

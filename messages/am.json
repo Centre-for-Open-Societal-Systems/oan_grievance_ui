@@ -619,18 +619,6 @@
       "empty": "እስካሁን ምንም ቅሬታ የለም።"
     },
     "overview": {
-      "widgets": {
-        "navigation": "የዳሽቦርድ ክፍሎች",
-        "previous": "ቀዳሚ ክፍል",
-        "next": "ቀጣይ ክፍል",
-        "position": "ክፍል {current} ከ{total}",
-        "kpis": "ዋና ቁጥሮች",
-        "trend": "ወርሃዊ አዝማሚያ",
-        "status": "የሁኔታ ስርጭት",
-        "levels": "የአስተዳደር እርከኖች",
-        "categories": "በአገልግሎት ምድብ",
-        "recent": "የቅርብ ጊዜ ቅሬታዎች"
-      },
       "loading": "የዳሽቦርድ ስታቲስቲክስ በመጫን ላይ…",
       "loadFailed": "የዳሽቦርድ ስታቲስቲክስን መጫን አልተቻለም።",
       "forbidden": "የዳሽቦርድ ስታቲስቲክስን የማየት ፈቃድ የለዎትም።",
@@ -825,6 +813,8 @@
     "openMain": "ዋናውን ትኬት ክፈት"
   },
   "grievanceList": {
+    "metricsPrevious": "ቀዳሚ ካርዶች",
+    "metricsNext": "ቀጣይ ካርዶች",
     "searchPlaceholder": "በትኬት ቁጥር፣ በአመልካች ስም ወይም በቅሬታ ዓይነት ይፈልጉ...",
     "actionView": "ይመልከቱ",
     "actionEdit": "አርትዕ",
