@@ -1,6 +1,6 @@
 import { performLogout } from '@/features/auth/logout';
 import { isProtectedRoute } from '@/features/auth/rbac';
-import { authReducer, getMeThunk } from '@/features/auth/store/authSlice';
+import { authReducer, getMeThunk, type User } from '@/features/auth/store/authSlice';
 import { metadataReducer } from '@/features/metadata/store/metadataSlice';
 import { areasApi } from '@/features/metadata/api/areasApi';
 import { timelineReducer } from '@/features/all-grievances/store/timelineSlice';
@@ -53,8 +53,13 @@ const sessionExpiryMiddleware: Middleware<object, { auth: AuthState }> = (api) =
   return result;
 };
 
-export const makeStore = () =>
+/**
+ * `initialUser` is a session the server already restored (`lib/initialUser.ts`):
+ * the store then starts signed in, and `AuthBootstrapGate` has nothing to wait for.
+ */
+export const makeStore = (initialUser: User | null = null) =>
   configureStore({
+    preloadedState: initialUser ? { auth: { user: initialUser, status: 'succeeded' as const, error: null } } : undefined,
     reducer: {
       auth: authReducer,
       metadata: metadataReducer,

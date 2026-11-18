@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore, type ReactElement } from "react";
+import dynamic from "next/dynamic";
+import { useRef,useState, useSyncExternalStore, type ReactElement } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { isAdmin } from "@/features/auth/rbac";
 import { selectUser } from "@/features/auth/store/authSlice";
@@ -11,17 +12,33 @@ import { currentMonth } from "./utils/months";
 import { NO_FILTERS, type AnalyticsFilters, type AnalyticsReport } from "./types";
 import { AnalyticsFiltersBar } from "./components/AnalyticsFiltersBar";
 import { AnalyticsSkeleton } from "./components/AnalyticsSkeleton";
-import { AvgResolutionChart } from "./components/AvgResolutionChart";
 import { CARD_WHITE } from "./components/cardStyles";
 import { ChartErrorBoundary } from "./components/ChartErrorBoundary";
 import { CHART_MIN_HEIGHT, SKELETON_KPI_HEIGHT } from "./components/chartTheme";
-import { PerformanceScoreChart } from "./components/PerformanceScoreChart";
 import { PerformanceKpiCards } from "./components/PerformanceKpiCards";
 import { ResolutionRegionChart } from "./components/ResolutionRegionChart";
 import { SectionUnavailable } from "./components/SectionUnavailable";
 import { TopHeader } from "./components/TopHeader";
-import { VolumeServiceChart } from "./components/VolumeServiceChart";
-import { WeeklySubmissionChart } from "./components/WeeklySubmissionChart";
+
+// Recharts is the heaviest client dependency; the charts load in their own chunk
+// so the filters and KPI cards paint first.
+const chartLoading = () => <div className={CHART_MIN_HEIGHT} aria-hidden="true" />;
+const AvgResolutionChart = dynamic(
+  () => import("./components/AvgResolutionChart").then((m) => m.AvgResolutionChart),
+  { ssr: false, loading: chartLoading },
+);
+const PerformanceScoreChart = dynamic(
+  () => import("./components/PerformanceScoreChart").then((m) => m.PerformanceScoreChart),
+  { ssr: false, loading: chartLoading },
+);
+const VolumeServiceChart = dynamic(
+  () => import("./components/VolumeServiceChart").then((m) => m.VolumeServiceChart),
+  { ssr: false, loading: chartLoading },
+);
+const WeeklySubmissionChart = dynamic(
+  () => import("./components/WeeklySubmissionChart").then((m) => m.WeeklySubmissionChart),
+  { ssr: false, loading: chartLoading },
+);
 
 interface SectionsProps {
   readonly report: AnalyticsReport;

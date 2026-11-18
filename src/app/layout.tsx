@@ -5,6 +5,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import { Providers } from "./providers";
+import { isProtectedRoute } from "@/features/auth/rbac";
+import { loadInitialUser } from "@/lib/initialUser";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,7 +30,12 @@ export default async function RootLayout({
   // match what actually got rendered. The value itself isn't otherwise used:
   // this app has no custom inline <Script> tags, so Next applies the nonce to
   // its own framework scripts automatically once rendering is dynamic.
-  await headers();
+  const requestHeaders = await headers();
+
+  // Only a protected screen waits on the session, so only there is the user
+  // looked up on the server (null falls back to the client's own restore).
+  const pathname = requestHeaders.get("x-pathname");
+  const initialUser = pathname && isProtectedRoute(pathname) ? await loadInitialUser() : null;
 
   const locale = await getLocale();
   const messages = await getMessages();
@@ -40,7 +47,7 @@ export default async function RootLayout({
     >
       <body className="min-h-screen bg-gray-50">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Providers>{children}</Providers>
+          <Providers initialUser={initialUser}>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>

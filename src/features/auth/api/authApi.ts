@@ -278,9 +278,14 @@ export function mobileOf(d: Pick<BackendAuthMeData, 'country_code' | 'phone_numb
   return d.phone_number ? `${d.country_code ?? ''}${d.phone_number}` : undefined;
 }
 
+/** Whether a `/auth/me` payload names a user at all. */
+export function isValidMe(d: BackendAuthMeData | null | undefined): d is BackendAuthMeData {
+  return !!d && (!!d.user || !!d.login_email);
+}
+
 async function fetchAndValidateMe(): Promise<BackendAuthMeData> {
   const d = await fetchApi<BackendAuthMeData>('/api/v1/auth/me', { method: 'GET' });
-  if (!d || (!d.user && !d.login_email)) {
+  if (!isValidMe(d)) {
     throw new Error(AUTH_MESSAGES.sessionExpired);
   }
   return d;
@@ -310,7 +315,14 @@ export function toUserOrganisation(raw: BackendOrganization | null | undefined):
  * Only extracts needed profile and identity fields; discards unnecessary backend metadata/claims.
  */
 export async function getMe(): Promise<User> {
-  const d = await fetchAndValidateMe();
+  return mapMeToUser(await fetchAndValidateMe());
+}
+
+/**
+ * Narrows a flat `/auth/me` payload to the `User` Redux carries. Pure, so the
+ * server builds the same user the browser would (`lib/initialUser.ts`).
+ */
+export function mapMeToUser(d: BackendAuthMeData): User {
   const grievanceProfile = d.profiles?.grievance;
   const fullName = fullNameOf(d) || grievanceProfile?.full_name || d.login_email || d.user || 'User';
   // An IAM user (eSignet) has no login email: their `user` id is a synthetic address, so the
