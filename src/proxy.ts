@@ -187,6 +187,8 @@ export async function proxy(request: NextRequest) {
   // the only line that consumes it.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
+  // Lets the root layout tell a protected screen from a public one (initialUser.ts).
+  requestHeaders.set('x-pathname', pathname);
   requestHeaders.set('Content-Security-Policy', csp);
 
   return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));

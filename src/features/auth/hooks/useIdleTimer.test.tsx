@@ -6,6 +6,7 @@ import { useIdleTimer } from './useIdleTimer';
 
 const getIdleManaged = vi.fn();
 const performLogout = vi.fn();
+let seededIdleManaged: boolean | undefined;
 
 vi.mock('@/features/auth/api/authApi', () => ({
   getIdleManaged: () => getIdleManaged(),
@@ -16,7 +17,7 @@ vi.mock('@/features/auth/logout', () => ({
 }));
 vi.mock('@/store/hooks', () => ({
   useAppDispatch: () => vi.fn(),
-  useAppSelector: () => ({ email: 'user@example.com' }),
+  useAppSelector: (select: (state: unknown) => unknown) => select({ auth: { user: { email: 'user@example.com' }, idleManaged: seededIdleManaged } }),
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
@@ -32,6 +33,7 @@ async function idleOut() {
 describe('useIdleTimer', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    seededIdleManaged = undefined;
     performLogout.mockResolvedValue({ redirected: false, providerLoggedOut: false });
   });
 
@@ -57,5 +59,12 @@ describe('useIdleTimer', () => {
     getIdleManaged.mockResolvedValue(null);
     await idleOut();
     expect(performLogout).not.toHaveBeenCalled();
+  });
+
+  it('skips the session-kind lookup when the server already seeded it', async () => {
+    seededIdleManaged = true;
+    await idleOut();
+    expect(getIdleManaged).not.toHaveBeenCalled();
+    expect(performLogout).toHaveBeenCalledWith(expect.anything(), 'user@example.com');
   });
 });
