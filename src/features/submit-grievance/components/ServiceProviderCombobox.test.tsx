@@ -192,21 +192,29 @@ describe('ServiceProviderCombobox', () => {
     expect(input()).toHaveValue('');
   });
 
-  it('ignores a failure from a search that was already abandoned', async () => {
-    let rejectFirst: (e: Error) => void = () => {};
+  it('ignores a failure from a search that was already abandoned, even if it arrives last', async () => {
+    let rejectFirst: () => void = () => {};
+    let firstSignal: AbortSignal | undefined;
     searchServiceProviders.mockImplementationOnce(
       (_q: string, signal: AbortSignal) =>
         new Promise((_, reject) => {
-          rejectFirst = () => reject(new Error(signal.aborted ? 'aborted' : 'fail'));
+          firstSignal = signal;
+          rejectFirst = () => reject(new Error('late failure'));
         })
     );
+    searchServiceProviders.mockResolvedValue([BASONA]);
     render(<Harness />);
     fireEvent.focus(input());
     fireEvent.change(input(), { target: { value: 'Baso' } });
-    await screen.findAllByRole('option');
 
-    rejectFirst(new Error('late'));
-    await Promise.resolve();
+    // The newer search answers; the first one is abandoned by then.
+    expect(await screen.findByRole('option', { name: /Basona Cooperative/ })).toBeInTheDocument();
+    expect(firstSignal?.aborted).toBe(true);
+
+    rejectFirst();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(screen.getByRole('option', { name: /Basona Cooperative/ })).toBeInTheDocument();
     expect(screen.queryByText(copy.loadError)).not.toBeInTheDocument();
   });
 });
