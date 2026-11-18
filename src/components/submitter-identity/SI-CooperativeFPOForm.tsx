@@ -7,7 +7,7 @@ export const FIELDS = [
   { key: "orgName", label: "Organisation Name", required: true },
   { key: "registrationNumber", label: "Registration Number", required: true },
   { key: "representativeName", label: "Authorised Representative", required: true },
-  { key: "memberCount", label: "Member Count Affected", required: false },
+  { key: "memberCount", label: "Total Number of Members", required: false },
   { key: "representativeFaydaId", label: "Representative Fayda ID", required: true },
   { key: "phoneNumber", label: "Contact Mobile", required: true },
   { key: "email", label: "Contact Email ID", required: true },
@@ -45,8 +45,8 @@ export function CooperativeFPOForm({ values, setValue, hiddenFields = [], errors
       <SITextField
         {...field}
         name="memberCount"
-        label="Member Count Affected"
-        placeholder="Enter Number of members affected"
+        label="Total Number of Members"
+        placeholder="Enter total number of members"
       />
 
       <SIIdField

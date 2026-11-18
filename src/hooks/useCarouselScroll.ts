@@ -17,6 +17,8 @@ export interface UseCarouselScrollReturn {
   canScroll: boolean;
   scrollTo: (index: number) => void;
   scrollToProgress: (progress: number) => void;
+  /** Moves one visible page (most of the container's width) toward the end (1) or the start (-1). */
+  scrollByPage: (direction: 1 | -1) => void;
   handleScroll: () => void;
 }
 
@@ -137,6 +139,12 @@ export function useCarouselScroll(options?: UseCarouselScrollOptions): UseCarous
     }
   }, []);
 
+  const scrollByPage = useCallback((direction: 1 | -1) => {
+    const el = containerRef.current;
+    if (!el || typeof el.scrollBy !== 'function') return;
+    el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: 'smooth' });
+  }, []);
+
   const scrollToProgress = useCallback((progress: number) => {
     const el = containerRef.current;
     if (!el) return;
@@ -155,6 +163,7 @@ export function useCarouselScroll(options?: UseCarouselScrollOptions): UseCarous
     canScroll,
     scrollTo,
     scrollToProgress,
+    scrollByPage,
     handleScroll,
   };
 }

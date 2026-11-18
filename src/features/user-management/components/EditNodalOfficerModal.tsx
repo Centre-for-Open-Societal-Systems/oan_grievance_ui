@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
 import { useCopyFeedback } from '@/components/ui/useCopyFeedback';
+import { RequiredMark } from '@/components/ui/RequiredMark';
 import { useModalA11y } from '@/components/ui/useModalA11y';
 import { useAreas } from '@/features/metadata';
 import { formatToE164, splitPhoneNumber } from '@/lib/validation/phone';
@@ -208,7 +209,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.fullName} className="text-sm font-bold text-gray-900">
-                  Full Name <span className="text-red-500">*</span>
+                  Full Name <RequiredMark />
                 </label>
                 <input
                   {...a11y('fullName')}
@@ -261,7 +262,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
 
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-gray-900">
-                  Status <span className="text-red-500">*</span>
+                  Status <RequiredMark />
                 </label>
                 <AnimatedSelect
                   options={isReviewer ? REVIEWER_STATUS_OPTIONS : OFFICER_STATUS_OPTIONS}
@@ -286,7 +287,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
 
             <div className="flex flex-col gap-2">
               <label id={`${FIELD_IDS.serviceCategories}-label`} className="text-sm font-bold text-gray-900">
-                Service Categories <span className="text-red-500">*</span>
+                Service Categories <RequiredMark />
               </label>
               <div
                 id={FIELD_IDS.serviceCategories}

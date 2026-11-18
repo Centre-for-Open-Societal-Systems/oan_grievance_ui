@@ -13,10 +13,11 @@ export interface ContactSource {
 
 /**
  * The form's starting values: Ethiopia as the country, and — from the signed-in
- * account — its holder as the authorised representative (what the backend itself
- * defaults it to) and their email and mobile as the organisation's first
- * contact. All editable, since the representative may differ from the account
- * holder and a work email or office line may differ from the personal ones.
+ * account — the name given at sign-up as the organisation's name (an NGO / FPO
+ * registers under its organisation's name, so `full_name` is that name) and the
+ * account's email and mobile as the organisation's first contact. All editable,
+ * since a work email or office line may differ from the personal ones. The
+ * authorised representative is not guessed: `full_name` names the organisation.
  * Same phone sources, in the same order, as Submit Grievance's pre-fill
  * (`buildInitialIdentityValues`).
  */
@@ -27,7 +28,7 @@ export function buildInitialOrganisationValues(user: ContactSource | null): Orga
   if (!user) return values;
 
   values.email = user.email;
-  if (user.full_name) values.representativeName = user.full_name;
+  if (user.full_name) values.legalName = user.full_name;
   if (user.phone_number) {
     values.phoneNumber = user.phone_number;
     values.phoneCode = user.country_code || '+251';

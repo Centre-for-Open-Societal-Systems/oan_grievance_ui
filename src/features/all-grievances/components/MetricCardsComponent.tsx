@@ -5,6 +5,8 @@ import {
   AlertCircle,
   Archive,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   CircleDashed,
   Copy,
   HelpCircle,
@@ -16,6 +18,7 @@ import {
   XCircle,
   type LucideIcon,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCarouselScroll } from '@/hooks/useCarouselScroll';
 import type { GrievanceSummaryCard } from '../types';
 
@@ -129,6 +132,9 @@ function visualForCard(card: GrievanceSummaryCard): MetricVisual {
   return lookupVisual(card.status) ?? lookupVisual(card.label) ?? FALLBACK_VISUAL;
 }
 
+const ARROW_BUTTON_CLASS =
+  'absolute top-[calc(50%-0.5rem)] z-10 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-md transition-colors hover:bg-gray-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#16A34A] focus-visible:ring-offset-2';
+
 export function MetricCardsComponent({
   cards,
   isLoading = false,
@@ -140,9 +146,14 @@ export function MetricCardsComponent({
   error?: string | null;
   onRetry?: () => void;
 }) {
-  const { scrollRef, scrollProgress, canScroll, scrollToProgress, handleScroll } = useCarouselScroll({
+  const t = useTranslations('grievanceList');
+  const { scrollRef, scrollProgress, canScroll, scrollByPage, handleScroll } = useCarouselScroll({
     enableWheelScroll: true,
   });
+  // aria-disabled, not disabled: pressing Next to reach the last card must not drop the keyboard focus it holds.
+  const atStart = scrollProgress <= 0.01;
+  const atEnd = scrollProgress >= 0.99;
+  const showArrows = cards.length > 1 && canScroll;
 
   if (isLoading && cards.length === 0) {
     return (
@@ -195,8 +206,6 @@ export function MetricCardsComponent({
     return null;
   }
 
-  const totalCards = cards.length;
-
   return (
     <div className="relative mb-2">
       <style>{`
@@ -208,7 +217,10 @@ export function MetricCardsComponent({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar pb-2 px-1"
+        className={`flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar pb-2 ${
+          // Room for the arrows, so they never sit on top of a card.
+          showArrows ? 'px-12' : 'px-1'
+        }`}
       >
         {cards.map((card) => {
           const visual = visualForCard(card);
@@ -227,37 +239,32 @@ export function MetricCardsComponent({
         })}
       </div>
 
-      {/* Pagination Dots — only when the row overflows; if every card fits there is nothing to page through. */}
-      {totalCards > 1 && canScroll && (
-        <div
-          className="flex justify-center items-center gap-2 mt-4"
-          role="tablist"
-          aria-label="Grievance metric cards pagination"
-        >
-          {Array.from({ length: Math.min(totalCards, 3) }).map((_, dotIndex) => {
-            const numDots = Math.min(totalCards, 3);
-            const activeDot = Math.min(numDots - 1, Math.round(scrollProgress * (numDots - 1)));
-            const isActive = activeDot === dotIndex;
-
-            return (
-              <button
-                key={dotIndex}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => {
-                  if (numDots > 1) {
-                    scrollToProgress(dotIndex / (numDots - 1));
-                  }
-                }}
-                className={`transition-all duration-300 rounded-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#16A34A] focus-visible:ring-offset-2 ${
-                  isActive ? 'bg-[#16A34A] w-6 h-2' : 'bg-gray-300 w-2 h-2 hover:bg-gray-400'
-                }`}
-                aria-label={`Go to page ${dotIndex + 1}`}
-              />
-            );
-          })}
-        </div>
+      {/* Previous / next — only when the row overflows; if every card fits there is nothing to move through. */}
+      {showArrows && (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              if (!atStart) scrollByPage(-1);
+            }}
+            aria-disabled={atStart}
+            aria-label={t('metricsPrevious')}
+            className={ARROW_BUTTON_CLASS + ' left-0'}
+          >
+            <ChevronLeft size={20} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!atEnd) scrollByPage(1);
+            }}
+            aria-disabled={atEnd}
+            aria-label={t('metricsNext')}
+            className={ARROW_BUTTON_CLASS + ' right-0'}
+          >
+            <ChevronRight size={20} aria-hidden="true" />
+          </button>
+        </>
       )}
     </div>
   );

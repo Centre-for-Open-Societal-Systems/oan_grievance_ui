@@ -1,6 +1,7 @@
 "use client";
 
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from "@/components/ui/FieldError";
+import { RequiredMark } from "@/components/ui/RequiredMark";
 import { AnimatedSelect, type Option } from "./SI-Dropdown";
 import { SIPhoneField } from "./SI-PhoneField";
 import { SIMaskedIdField } from "./SIMaskedIdField";
@@ -51,7 +52,7 @@ export function FieldShell({ name, label, required, error, hint, className, chil
         {required && (
           <>
             {" "}
-            <span className="text-red-500">*</span>
+            <RequiredMark />
           </>
         )}
       </label>
