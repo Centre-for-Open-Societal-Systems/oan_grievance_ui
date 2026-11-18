@@ -17,6 +17,7 @@ import { AnimatedSelect } from './AnimatedSelect';
 import { resetTemporaryPassword, updateOfficer } from '../api/officerApi';
 import { OFFICER_STATUS_OPTIONS, REVIEWER_STATUS_OPTIONS, type Officer } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
+import { useRoleLevels } from '../hooks/useRoleLevels';
 import { useServiceCategoryOptions } from '../hooks/useServiceCategoryOptions';
 import type { OfficerBackendStatus, OfficerLevel, OfficerRole } from '../types';
 
@@ -57,6 +58,7 @@ interface EditNodalOfficerModalProps {
 export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, tabLabel, onSaved }: EditNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
   const { areas: regionAreas } = useAreas({ level: 'Region' });
+  const { headLevel } = useRoleLevels();
   const { options: supervisorOptions } = useL2OfficerOptions(isOpen && level === 'L1');
 
   const initialPhone = officer && officer.phone !== '-' ? splitPhoneNumber(officer.phone) : { phoneCode: '+251', phoneNumber: '' };
@@ -67,7 +69,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, t
   const [serviceCategories, setServiceCategories] = useState<string[]>(officer?.tags ?? []);
   // A category admin may take any category; an officer or reviewer only one that has a desk.
   const { options: categoryList, isLoading: isCategoriesLoading } = useServiceCategoryOptions(
-    !isReviewer && level === 'L3' ? undefined : true
+    !isReviewer && level !== undefined && level === headLevel ? undefined : true
   );
   // Seeded directly from the officer's own area id (not by re-matching `officer.region`'s
   // display label against the loaded area list) — that match used to fail silently whenever

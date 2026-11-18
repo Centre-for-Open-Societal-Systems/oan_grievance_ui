@@ -10,6 +10,7 @@ import { OFFICER_TAB_QUERY, OFFICER_TABS, OFFICER_TABS_BY_ID, REVIEWER_STATUS_OP
 import { useOfficerCount } from '../hooks/useOfficerCount';
 import { useOfficerList } from '../hooks/useOfficerList';
 import { useOfficerStatusCounts } from '../hooks/useOfficerStatusCounts';
+import { useRoleLevels } from '../hooks/useRoleLevels';
 import { AddNodalOfficerModal } from './AddNodalOfficerModal';
 import { EditNodalOfficerModal } from './EditNodalOfficerModal';
 import { OfficerCard } from './OfficerCard';
@@ -56,7 +57,11 @@ export function OfficerDirectory() {
   const [editingOfficer, setEditingOfficer] = useState<Officer | null>(null);
 
   const activeTabConfig = OFFICER_TABS_BY_ID[activeTab];
-  const { role, level } = OFFICER_TAB_QUERY[activeTab];
+  const { headLevel } = useRoleLevels();
+  const { role, level: tabLevel } = OFFICER_TAB_QUERY[activeTab];
+  // The Admin tab is the top rung, whose `L<n>` is only known once the chain has loaded.
+  const level = activeTab === 'admin' ? (headLevel ?? undefined) : tabLevel;
+  const isLevelKnown = activeTab !== 'admin' || headLevel !== null;
   const isReviewerTab = role === 'Reviewer';
 
   // Metadata (department/service-category/region options) backs both this page's filters
@@ -84,7 +89,7 @@ export function OfficerDirectory() {
   // Independent of which tab is active — a tab's `(N)` badge needs its real total even
   // before you've ever clicked into it, which `apiResult` alone can't provide (it only
   // fetches for the currently active tab).
-  const adminCount = useOfficerCount('Officer', 'L3');
+  const adminCount = useOfficerCount('Officer', headLevel ?? undefined, headLevel !== null);
   const l1Count = useOfficerCount('Officer', 'L1');
   const l2Count = useOfficerCount('Officer', 'L2');
   const reviewerCount = useOfficerCount('Reviewer', undefined, canManage);
@@ -99,7 +104,7 @@ export function OfficerDirectory() {
   const totalPages = apiResult.totalPages;
   const totalCount = apiResult.totalCount;
 
-  const apiStatusCounts = useOfficerStatusCounts(role, level, true);
+  const apiStatusCounts = useOfficerStatusCounts(role, level, isLevelKnown);
   const stats = { active: apiStatusCounts.active, onLeave: apiStatusCounts.onLeave, inactive: apiStatusCounts.inactive };
 
   const activeFilterCount = [categoryFilter, regionFilter, statusFilter].filter(Boolean).length;

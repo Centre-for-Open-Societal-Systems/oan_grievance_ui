@@ -19,6 +19,7 @@ import { AnimatedSelect } from './AnimatedSelect';
 import { createOfficer, fetchOfficerCandidates } from '../api/officerApi';
 import { OFFICER_STATUS_OPTIONS, REVIEWER_STATUS_OPTIONS } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
+import { useRoleLevels } from '../hooks/useRoleLevels';
 import { useServiceCategoryOptions } from '../hooks/useServiceCategoryOptions';
 import type { OfficerBackendStatus, OfficerCandidate, OfficerLevel, OfficerRole } from '../types';
 
@@ -56,6 +57,7 @@ interface AddNodalOfficerModalProps {
 export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, onCreated }: AddNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
   const { areas: regionAreas } = useAreas({ level: 'Region' });
+  const { headLevel } = useRoleLevels();
   const { options: supervisorOptions } = useL2OfficerOptions(isOpen && level === 'L1');
 
   // Logins that already hold the officer role but sit on no desk (e.g. onboarded at the identity
@@ -78,7 +80,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
   const [serviceCategories, setServiceCategories] = useState<string[]>([]);
   // A category admin may take any category; an officer or reviewer only one that has a desk.
   const { options: categoryList, isLoading: isCategoriesLoading } = useServiceCategoryOptions(
-    !isReviewer && level === 'L3' ? undefined : true
+    !isReviewer && level !== undefined && level === headLevel ? undefined : true
   );
   const [region, setRegion] = useState('');
   const [status, setStatus] = useState<string>('Active');

@@ -15,6 +15,13 @@ vi.mock('../api/officerApi', () => ({
   fetchCategoryAssignments: vi.fn().mockResolvedValue({ assignments: [], pagination: {} }),
   fetchOfficers: vi.fn().mockResolvedValue({ officers: [], pagination: { total_count: 0 } }),
   fetchServiceCategoryNames: vi.fn().mockResolvedValue(['Inputs', 'Markets']),
+  fetchRoleLevels: vi.fn().mockResolvedValue({
+    role_levels: [
+      { level_code: 'nodal_officer', level_name: 'Nodal Officer', level_order: 10 },
+      { level_code: 'senior_nodal_officer', level_name: 'Senior Nodal Officer', level_order: 20 },
+      { level_code: 'department_head', level_name: 'Category Admin', level_order: 30 },
+    ],
+  }),
 }));
 
 vi.mock('@/features/metadata/api/metadataApi', async (importOriginal) => ({

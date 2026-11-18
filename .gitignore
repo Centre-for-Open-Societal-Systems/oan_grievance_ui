@@ -160,3 +160,5 @@ cookies.txt
 /test-results/
 /playwright-report/
 /e2e-qa/results.json
+
+certificates
