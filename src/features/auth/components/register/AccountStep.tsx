@@ -113,7 +113,7 @@ export function AccountStep({
       <form className="space-y-5 mb-8" onSubmit={onSubmit} noValidate>
         <div className="flex flex-col gap-2">
           <label htmlFor={SUBMITTER_TYPE_FIELD_ID} className="text-[14px] font-bold text-gray-700">
-            {tProfile('submitterTypeLabel')}
+            {tProfile('submitterTypeLabel')} <RequiredMark />
           </label>
           <AnimatedSelect
             id={SUBMITTER_TYPE_FIELD_ID}
@@ -122,6 +122,7 @@ export function AccountStep({
             value={submitterType}
             onChange={onSubmitterTypeChange}
             invalid={!!submitterTypeError}
+            clearable={false}
             describedBy={submitterTypeError ? errorIdFor(SUBMITTER_TYPE_FIELD_ID) : undefined}
           />
           {submitterTypeError && <FieldError id={errorIdFor(SUBMITTER_TYPE_FIELD_ID)}>{submitterTypeError}</FieldError>}

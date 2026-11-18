@@ -1,13 +1,24 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, waitFor, within } from '@testing-library/react';
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) =>
-    ({ metricsPrevious: 'Previous cards', metricsNext: 'Next cards' })[key] ?? key,
-}));
+import '@testing-library/jest-dom/vitest';
+import { fireEvent, render as rtlRender, waitFor, within } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import type { ReactElement } from 'react';
+import en from '../../../../messages/en.json';
 
 import { MetricCardsComponent } from './MetricCardsComponent';
 import type { GrievanceSummaryCard } from '../types';
+
+const withIntl = (ui: ReactElement) => (
+  <NextIntlClientProvider locale="en" messages={en}>
+    {ui}
+  </NextIntlClientProvider>
+);
+
+function render(ui: ReactElement) {
+  const view = rtlRender(withIntl(ui));
+  return { ...view, rerender: (next: ReactElement) => view.rerender(withIntl(next)) };
+}
 
 const cards: GrievanceSummaryCard[] = [
   { status: 'All', label: 'All', order: 1, is_open: 1, is_terminal: 0, count: 42 },
@@ -214,14 +225,14 @@ describe('MetricCardsComponent', () => {
     expect(view.queryByRole('button', { name: 'Previous cards' })).toBeNull();
   });
 
-  it('shows labelled previous / next buttons, with Previous disabled at the start and Next disabled at the end', async () => {
+  it('shows labelled previous / next buttons, with Previous inactive at the start and Next inactive at the end', async () => {
     const view = render(<MetricCardsComponent cards={cards} />);
     const previous = view.getByRole('button', { name: 'Previous cards' });
     const next = view.getByRole('button', { name: 'Next cards' });
     expect(view.container.querySelectorAll('button[aria-label^="Go to page"]')).toHaveLength(0);
 
-    expect(previous).toBeDisabled();
-    expect(next).toBeEnabled();
+    expect(previous).toHaveAttribute('aria-disabled', 'true');
+    expect(next).toHaveAttribute('aria-disabled', 'false');
 
     const scrollContainer = view.container.querySelector('.overflow-x-auto') as HTMLDivElement;
     Object.defineProperty(scrollContainer, 'scrollWidth', { value: 1000, configurable: true });
@@ -230,9 +241,23 @@ describe('MetricCardsComponent', () => {
     fireEvent.scroll(scrollContainer);
 
     await waitFor(() => {
-      expect(next).toBeDisabled();
-      expect(previous).toBeEnabled();
+      expect(next).toHaveAttribute('aria-disabled', 'true');
+      expect(previous).toHaveAttribute('aria-disabled', 'false');
     });
+  });
+
+  it('keeps focus on an arrow after it reaches the end, rather than disabling it', async () => {
+    const view = render(<MetricCardsComponent cards={cards} />);
+    const next = view.getByRole('button', { name: 'Next cards' });
+    next.focus();
+
+    const scrollContainer = view.container.querySelector('.overflow-x-auto') as HTMLDivElement;
+    Object.defineProperty(scrollContainer, 'scrollLeft', { value: 600, writable: true, configurable: true });
+    fireEvent.scroll(scrollContainer);
+
+    await waitFor(() => expect(next).toHaveAttribute('aria-disabled', 'true'));
+    expect(next).not.toBeDisabled();
+    expect(document.activeElement).toBe(next);
   });
 
   it('moves to the neighbouring card when an arrow is pressed', () => {

@@ -133,7 +133,7 @@ function visualForCard(card: GrievanceSummaryCard): MetricVisual {
 }
 
 const ARROW_BUTTON_CLASS =
-  'absolute top-[calc(50%-0.5rem)] z-10 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-md transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#16A34A] focus-visible:ring-offset-2';
+  'absolute top-[calc(50%-0.5rem)] z-10 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-md transition-colors hover:bg-gray-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#16A34A] focus-visible:ring-offset-2';
 
 export function MetricCardsComponent({
   cards,
@@ -150,6 +150,9 @@ export function MetricCardsComponent({
   const { scrollRef, activeIndex, scrollProgress, canScroll, scrollTo, handleScroll } = useCarouselScroll({
     enableWheelScroll: true,
   });
+  // aria-disabled, not disabled: pressing Next to reach the last card must not drop the keyboard focus it holds.
+  const atStart = scrollProgress <= 0.01;
+  const atEnd = scrollProgress >= 0.99;
 
   if (isLoading && cards.length === 0) {
     return (
@@ -239,8 +242,10 @@ export function MetricCardsComponent({
         <>
           <button
             type="button"
-            onClick={() => scrollTo(Math.max(0, activeIndex - 1))}
-            disabled={scrollProgress <= 0.01}
+            onClick={() => {
+              if (!atStart) scrollTo(Math.max(0, activeIndex - 1));
+            }}
+            aria-disabled={atStart}
             aria-label={t('metricsPrevious')}
             className={ARROW_BUTTON_CLASS + ' left-0'}
           >
@@ -248,8 +253,10 @@ export function MetricCardsComponent({
           </button>
           <button
             type="button"
-            onClick={() => scrollTo(Math.min(totalCards - 1, activeIndex + 1))}
-            disabled={scrollProgress >= 0.99}
+            onClick={() => {
+              if (!atEnd) scrollTo(Math.min(totalCards - 1, activeIndex + 1));
+            }}
+            aria-disabled={atEnd}
             aria-label={t('metricsNext')}
             className={ARROW_BUTTON_CLASS + ' right-0'}
           >

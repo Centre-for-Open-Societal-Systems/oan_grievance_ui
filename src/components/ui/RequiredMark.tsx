@@ -7,7 +7,12 @@ import { useTranslations } from 'next-intl';
  * assistive technology (a screen reader would read it as "star"); the visually
  * hidden "required" is what is announced, as part of the label.
  */
-export function RequiredMark({ className = 'text-red-500' }: { className?: string }) {
+interface RequiredMarkProps {
+  /** Classes for the asterisk (the default is red). */
+  className?: string;
+}
+
+export function RequiredMark({ className = 'text-red-500' }: RequiredMarkProps): React.JSX.Element {
   const t = useTranslations('validation');
   return (
     <>
