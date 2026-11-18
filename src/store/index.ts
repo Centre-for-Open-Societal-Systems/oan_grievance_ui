@@ -59,7 +59,7 @@ const sessionExpiryMiddleware: Middleware<object, { auth: AuthState }> = (api) =
  */
 export const makeStore = (initialUser: User | null = null) =>
   configureStore({
-    preloadedState: initialUser ? { auth: { user: initialUser, status: 'succeeded' as const, error: null } } : undefined,
+    preloadedState: initialUser ? { auth: { user: initialUser, status: 'succeeded' as const, error: null, idleManaged: true } } : undefined,
     reducer: {
       auth: authReducer,
       metadata: metadataReducer,

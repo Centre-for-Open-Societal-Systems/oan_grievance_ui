@@ -38,7 +38,10 @@ export default async function RootLayout({
   const initialUser = pathname && isProtectedRoute(pathname) ? await loadInitialUser() : null;
 
   const locale = await getLocale();
-  const messages = await getMessages();
+  // The administration copy is the largest namespace and only that one screen
+  // reads it, so every other page leaves it out of the HTML it ships; the
+  // administration page supplies it itself (see its page.tsx).
+  const { admin: _admin, ...messages } = await getMessages();
 
   return (
     <html
