@@ -147,12 +147,13 @@ export function MetricCardsComponent({
   onRetry?: () => void;
 }) {
   const t = useTranslations('grievanceList');
-  const { scrollRef, activeIndex, scrollProgress, canScroll, scrollTo, handleScroll } = useCarouselScroll({
+  const { scrollRef, scrollProgress, canScroll, scrollByPage, handleScroll } = useCarouselScroll({
     enableWheelScroll: true,
   });
   // aria-disabled, not disabled: pressing Next to reach the last card must not drop the keyboard focus it holds.
   const atStart = scrollProgress <= 0.01;
   const atEnd = scrollProgress >= 0.99;
+  const showArrows = cards.length > 1 && canScroll;
 
   if (isLoading && cards.length === 0) {
     return (
@@ -205,8 +206,6 @@ export function MetricCardsComponent({
     return null;
   }
 
-  const totalCards = cards.length;
-
   return (
     <div className="relative mb-2">
       <style>{`
@@ -218,7 +217,10 @@ export function MetricCardsComponent({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar pb-2 px-1"
+        className={`flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar pb-2 ${
+          // Room for the arrows, so they never sit on top of a card.
+          showArrows ? 'px-12' : 'px-1'
+        }`}
       >
         {cards.map((card) => {
           const visual = visualForCard(card);
@@ -238,12 +240,12 @@ export function MetricCardsComponent({
       </div>
 
       {/* Previous / next — only when the row overflows; if every card fits there is nothing to move through. */}
-      {totalCards > 1 && canScroll && (
+      {showArrows && (
         <>
           <button
             type="button"
             onClick={() => {
-              if (!atStart) scrollTo(Math.max(0, activeIndex - 1));
+              if (!atStart) scrollByPage(-1);
             }}
             aria-disabled={atStart}
             aria-label={t('metricsPrevious')}
@@ -254,7 +256,7 @@ export function MetricCardsComponent({
           <button
             type="button"
             onClick={() => {
-              if (!atEnd) scrollTo(Math.min(totalCards - 1, activeIndex + 1));
+              if (!atEnd) scrollByPage(1);
             }}
             aria-disabled={atEnd}
             aria-label={t('metricsNext')}

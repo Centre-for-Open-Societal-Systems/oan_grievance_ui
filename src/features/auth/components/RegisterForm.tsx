@@ -132,10 +132,11 @@ export function RegisterForm() {
   };
 
   // --- Account step: inline validation ---------------------------------------
+  const nameSubject = onboardsOrganisationAfterSignIn(submitterType) ? 'organisation' : 'person';
   const accountValues: AccountValues = { fullName, email, phoneNumber, password, confirmPassword, countryCode };
 
   const checkAccountField = (field: AccountField, values: AccountValues = accountValues) => {
-    accountErrors.setError(field, validateAccountField(field, values));
+    accountErrors.setError(field, validateAccountField(field, values, nameSubject));
   };
 
   // A field already showing an error is re-checked as it's edited, so the
@@ -166,7 +167,7 @@ export function RegisterForm() {
   const handleAccountSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    const errors = validateAccount(accountValues);
+    const errors = validateAccount(accountValues, nameSubject);
     accountErrors.setAll(errors);
     setSubmitterTypeError(submitterType ? null : tAccount('selectTypeFirst'));
     if (!submitterType) {

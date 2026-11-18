@@ -536,3 +536,24 @@ describe('Step 2 — the attachment-limit note', () => {
     expect(screen.queryByText(/Only 2 more file\(s\) could be added/)).not.toBeInTheDocument();
   });
 });
+
+describe('Step 2 — rejected-file notes', () => {
+  beforeEach(() => {
+    global.URL.createObjectURL = vi.fn(() => 'blob:http://localhost/mock-local-url');
+    global.URL.revokeObjectURL = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { areas: [], count: 0 } }) } as Response);
+  });
+
+  it('keeps the note about a refused file when an unrelated attachment is removed', () => {
+    renderStep({ ...COMPLETE, attachmentFileName: 'evidence.pdf' });
+
+    fireEvent.change(screen.getByLabelText('Supporting Documents'), {
+      target: { files: [new File(['x'], 'notes.exe', { type: 'application/x-msdownload' }), new File(['x'], 'ok.png', { type: 'image/png' })] },
+    });
+    expect(screen.getByText(/Not attached: notes\.exe/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove evidence.pdf' }));
+
+    expect(screen.getByText(/Not attached: notes\.exe/)).toBeInTheDocument();
+  });
+});

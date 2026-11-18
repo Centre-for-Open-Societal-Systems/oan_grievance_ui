@@ -164,6 +164,9 @@ export function GrievanceDetailsCard({
   // file's own upload/scan problem is shown on that file's row instead — see
   // `attachmentStatusIndicator`.
   const [error, setError] = useState<string | null>(null);
+  // The attachment-count note is kept apart from the rejected-file notes: freeing a slot makes it stale, but says
+  // nothing about a file that was refused for its type or size.
+  const [limitNote, setLimitNote] = useState<string | null>(null);
   const fieldErrors = useFieldErrors<DetailsField>();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -246,7 +249,7 @@ export function GrievanceDetailsCard({
     // letting the whole batch 400 after submit.
     const remainingSlots = MAX_ATTACHMENTS_PER_CASE - attachments.length;
     if (remainingSlots <= 0) {
-      setError(`You can attach up to ${MAX_ATTACHMENTS_PER_CASE} files per grievance. Remove one before adding another.`);
+      setLimitNote(`You can attach up to ${MAX_ATTACHMENTS_PER_CASE} files per grievance. Remove one before adding another.`);
       return;
     }
     const filesToStage = files.slice(0, remainingSlots);
@@ -254,7 +257,8 @@ export function GrievanceDetailsCard({
       files.length > filesToStage.length
         ? `Only ${remainingSlots} more file(s) could be added (max ${MAX_ATTACHMENTS_PER_CASE} per grievance) — the rest were skipped.`
         : null;
-    setError([...rejectedNotes, slotNote].filter(Boolean).join(" ") || null);
+    setError(rejectedNotes.join(" ") || null);
+    setLimitNote(slotNote);
 
     setAttachments((prev) => [
       ...prev,
@@ -303,10 +307,11 @@ export function GrievanceDetailsCard({
 
   const handleVoiceRecorded = (file: File) => {
     if (voiceBlockedByLimit) {
-      setError(tVoice("attachmentLimit", { max: MAX_ATTACHMENTS_PER_CASE }));
+      setLimitNote(tVoice("attachmentLimit", { max: MAX_ATTACHMENTS_PER_CASE }));
       return;
     }
     setError(null);
+    setLimitNote(null);
     setAttachments((prev) => [
       ...prev.filter((item) => item.kind !== "voice"),
       { key: randomUuid(), file, fileName: file.name, kind: "voice" },
@@ -322,7 +327,7 @@ export function GrievanceDetailsCard({
 
   const handleRemoveVoice = () => {
     // The limit note describes the count before this removal.
-    setError(null);
+    setLimitNote(null);
     setAttachments((prev) => prev.filter((item) => item.kind !== "voice"));
     // Take back the category we filled in, unless the submitter has since changed it.
     if (filledByVoice.current && serviceCategory === otherCategory) {
@@ -341,8 +346,8 @@ export function GrievanceDetailsCard({
       handleRemoveVoice();
       return;
     }
-    // Freed slots make the "only N more" / "max reached" note stale, so drop it.
-    setError(null);
+    // Freed slots make the "only N more" / "max reached" note stale, so drop it (and only it).
+    setLimitNote(null);
     setAttachments((prev) => prev.filter((item) => item.key !== key));
   };
 
@@ -684,7 +689,11 @@ export function GrievanceDetailsCard({
 
         {/* Card Footer */}
         <div className="bg-[#F3F4F8]/50 p-4 border-t border-[#E5E7EB] rounded-b-xl">
-          {error && <ErrorAlert id="grievance-details-error" className="mb-4">{error}</ErrorAlert>}
+          {(error || limitNote) && (
+            <ErrorAlert id="grievance-details-error" className="mb-4">
+              {[error, limitNote].filter(Boolean).join(" ")}
+            </ErrorAlert>
+          )}
           <div className="flex items-center justify-between">
             <div className="flex items-center text-sm text-gray-600">
               <button

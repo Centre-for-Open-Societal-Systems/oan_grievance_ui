@@ -260,18 +260,17 @@ describe('MetricCardsComponent', () => {
     expect(document.activeElement).toBe(next);
   });
 
-  it('moves to the neighbouring card when an arrow is pressed', () => {
+  it('moves a page along when an arrow is pressed', () => {
     const view = render(<MetricCardsComponent cards={cards} />);
     const scrollContainer = view.container.querySelector('.overflow-x-auto') as HTMLDivElement;
-    const scrolled = vi.fn();
-    Array.from(scrollContainer.children).forEach((child) => {
-      (child as HTMLElement).scrollIntoView = () => scrolled(child);
-    });
+    const scrollBy = vi.fn();
+    scrollContainer.scrollBy = scrollBy;
 
     fireEvent.click(view.getByRole('button', { name: 'Next cards' }));
 
-    // The first card is active, so Next brings the second into view.
-    expect(scrolled).toHaveBeenCalledWith(scrollContainer.children[1]);
+    // Next moves a page toward the end — it never stalls on a card that is already centred.
+    expect(scrollBy).toHaveBeenCalledWith(expect.objectContaining({ left: expect.any(Number) }));
+    expect(scrollBy.mock.calls[0]?.[0]?.left).toBeGreaterThan(0);
   });
 
   it('shows the arrows even when it first mounted in the loading state', () => {

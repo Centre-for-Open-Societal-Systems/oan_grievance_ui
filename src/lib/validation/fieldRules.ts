@@ -26,11 +26,13 @@ export function validateEmail(value: string): string | null {
   return null;
 }
 
-export function validateFullName(value: string): string | null {
+/** `subject` is what the field names: a person, or the organisation an NGO/FPO representative signs up for. */
+export function validateFullName(value: string, subject: 'person' | 'organisation' = 'person'): string | null {
   const trimmed = value.trim();
-  if (!trimmed) return 'Enter your full name.';
+  const organisation = subject === 'organisation';
+  if (!trimmed) return organisation ? 'Enter your organisation name.' : 'Enter your full name.';
   if (trimmed.length > FULL_NAME_MAX_LENGTH) {
-    return `Full name must be ${FULL_NAME_MAX_LENGTH} characters or fewer.`;
+    return `${organisation ? 'Organisation name' : 'Full name'} must be ${FULL_NAME_MAX_LENGTH} characters or fewer.`;
   }
   return null;
 }
@@ -102,10 +104,14 @@ export type AccountField = (typeof ACCOUNT_FIELDS)[number];
 /** `countryCode` is the phone box's own dial-code selection, not itself a validated field. */
 export type AccountValues = Record<AccountField, string> & { countryCode: string };
 
-export function validateAccountField(field: AccountField, values: AccountValues): string | null {
+export function validateAccountField(
+  field: AccountField,
+  values: AccountValues,
+  nameSubject: 'person' | 'organisation' = 'person'
+): string | null {
   switch (field) {
     case 'fullName':
-      return validateFullName(values.fullName);
+      return validateFullName(values.fullName, nameSubject);
     case 'email':
       return validateEmail(values.email);
     case 'phoneNumber':
@@ -118,10 +124,13 @@ export function validateAccountField(field: AccountField, values: AccountValues)
 }
 
 /** Every failing field of the account step, in form order. Empty when the step is valid. */
-export function validateAccount(values: AccountValues): Partial<Record<AccountField, string>> {
+export function validateAccount(
+  values: AccountValues,
+  nameSubject: 'person' | 'organisation' = 'person'
+): Partial<Record<AccountField, string>> {
   const errors: Partial<Record<AccountField, string>> = {};
   for (const field of ACCOUNT_FIELDS) {
-    const message = validateAccountField(field, values);
+    const message = validateAccountField(field, values, nameSubject);
     if (message) errors[field] = message;
   }
   return errors;

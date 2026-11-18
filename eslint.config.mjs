@@ -72,7 +72,9 @@ const eslintConfig = defineConfig([
               { to: { element: { type: "contexts" } } },
               { to: { element: { type: "app" } } },
               { to: { element: { type: "feature", captured: { featureName: "{{ from.captured.featureName }}" } } } },
-            ] 
+              // auth is the cross-cutting feature: session state, role checks and the logout flow
+              { to: { element: { type: "feature", captured: { featureName: "auth" } } } },
+            ]
           },
           // shared components can import shared, lib, contexts, hooks, types, feature, app, store
           { 
