@@ -10,9 +10,8 @@ auditConfig:
     - GHSA-wq5f-xc86-pv6w
     - GHSA-8r5x-fm3f-whwj
     - GHSA-p8wg-vrv2-v86f
-    # picomatch ReDoS (high). Patched 4.0.8 is not on npm yet (latest is 4.0.7). Only reached through
-    # build and test tooling (vite, tinyglobby, fdir, @parcel/watcher), never user input. Remove this and
-    # pin picomatch@>=4.0.8 once it is published.
+    # picomatch <=4.0.7 ReDoS via repeated extglobs (high). No patched release is published yet (latest is 4.0.7);
+    # it is only reached through build/test tooling, never user input. Drop this once picomatch >=4.0.8 exists.
     - GHSA-fc5q-39xc-vjpf
 minimumReleaseAgeExclude:
   - brace-expansion@1.1.19 || 1.1.20 || 1.1.21 || 5.0.10 || 5.0.11 || 5.0.12

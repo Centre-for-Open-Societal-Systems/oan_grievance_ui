@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { useAdminLevels, type UseAdminLevelsResult } from "../hooks/useAdminLevels";
 import {
@@ -13,11 +14,20 @@ import { CARD_WHITE } from "./cardStyles";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { EscalationBanner, type EscalationBannerProps } from "./EscalationBanner";
 import { KpiCards } from "./KpiCards";
-import { MonthlyTrendChart } from "./MonthlyTrendChart";
 import { SectionUnavailable } from "./SectionUnavailable";
 import { ServiceCategoryChart } from "./ServiceCategoryChart";
-import { StatusDistributionChart } from "./StatusDistributionChart";
 import { TopHeader } from "./TopHeader";
+
+// Recharts is the heaviest client dependency and the charts sit below the KPI
+// row, so they load in their own chunk instead of blocking the page's first paint.
+const MonthlyTrendChart = dynamic(
+  () => import("./MonthlyTrendChart").then((m) => m.MonthlyTrendChart),
+  { ssr: false, loading: () => <div className="h-[400px]" aria-hidden="true" /> },
+);
+const StatusDistributionChart = dynamic(
+  () => import("./StatusDistributionChart").then((m) => m.StatusDistributionChart),
+  { ssr: false, loading: () => <div className="h-[400px]" aria-hidden="true" /> },
+);
 
 interface DashboardOverviewProps {
   /** The live list of recent grievances. It reads its own data, so it is placed here rather than built here. */

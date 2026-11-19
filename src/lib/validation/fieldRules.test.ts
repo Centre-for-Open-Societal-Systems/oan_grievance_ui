@@ -39,6 +39,14 @@ describe('validateEmail', () => {
 });
 
 describe('validateFullName', () => {
+  it('names the organisation when an NGO/FPO representative is signing up', () => {
+    expect(validateFullName('', 'organisation')).toBe('Enter your organisation name.');
+    expect(validateFullName('A'.repeat(FULL_NAME_MAX_LENGTH + 1), 'organisation')).toBe(
+      'Organisation name must be 140 characters or fewer.'
+    );
+    expect(validateFullName('Oromia Farmers Union', 'organisation')).toBeNull();
+  });
+
   it('requires a name that is not just spaces', () => {
     expect(validateFullName('')).toBe('Enter your full name.');
     expect(validateFullName('    ')).toBe('Enter your full name.');

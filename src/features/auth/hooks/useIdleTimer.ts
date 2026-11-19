@@ -2,7 +2,7 @@
 
 import { getIdleManaged, sendHeartbeat } from '@/features/auth/api/authApi';
 import { performLogout } from '@/features/auth/logout';
-import { selectUser } from '@/features/auth/store/authSlice';
+import { selectIdleManaged, selectUser } from '@/features/auth/store/authSlice';
 import { CLIENT_IDLE_TIMEOUT_MS, CLIENT_IDLE_WARNING_LEAD_MS } from '@/lib/idleTimeoutConfig';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useRouter } from 'next/navigation';
@@ -42,8 +42,11 @@ export function useIdleTimer(): IdleTimerState {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const userEmail = useAppSelector(selectUser)?.email ?? null;
+  const knownIdleManaged = useAppSelector(selectIdleManaged);
 
-  const [idleManaged, setIdleManaged] = useState(false);
+  const [fetchedIdleManaged, setFetchedIdleManaged] = useState(false);
+  // A session the server seeded is known to be a local one: no need to ask again.
+  const idleManaged = knownIdleManaged ?? fetchedIdleManaged;
   const [warning, setWarning] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(Math.ceil(CLIENT_IDLE_WARNING_LEAD_MS / 1000));
 
@@ -87,14 +90,15 @@ export function useIdleTimer(): IdleTimerState {
   }, []);
 
   useEffect(() => {
+    if (knownIdleManaged !== undefined) return;
     let cancelled = false;
     void getIdleManaged().then((managed) => {
-      if (!cancelled) setIdleManaged(managed === true);
+      if (!cancelled) setFetchedIdleManaged(managed === true);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [knownIdleManaged]);
 
   useEffect(() => {
     if (!idleManaged) return;
