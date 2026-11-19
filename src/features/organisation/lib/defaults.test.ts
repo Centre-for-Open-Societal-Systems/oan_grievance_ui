@@ -12,10 +12,10 @@ describe('buildInitialOrganisationValues', () => {
     expect(values.memberCount).toBe('');
   });
 
-  it('starts the authorised representative as the account holder, and leaves the organisation fields to be typed', () => {
+  it('starts the organisation name as the name given at sign-up, and leaves the other organisation fields to be typed', () => {
     const values = buildInitialOrganisationValues({ email: 'rep@ngo.org', full_name: 'Almaz Tesfaye' });
-    expect(values.representativeName).toBe('Almaz Tesfaye');
-    expect(values.legalName).toBe('');
+    expect(values.legalName).toBe('Almaz Tesfaye');
+    expect(values.representativeName).toBe('');
     expect(values.taxId).toBe('');
     expect(values.memberCount).toBe('');
   });

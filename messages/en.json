@@ -5,6 +5,13 @@
     "body": "Your account isn't assigned a recognized role in the grievance portal. Please contact your administrator to get one assigned."
   },
   "register": {
+    "account": {
+      "selectTypeFirst": "Select a submitter type to continue.",
+      "fullNameLabel": "Full Name",
+      "fullNamePlaceholder": "Full Name",
+      "organisationNameLabel": "Organisation Name",
+      "organisationNamePlaceholder": "Organisation Name"
+    },
     "profile": {
       "title": "Almost done!",
       "subtitle": "One more thing — tell us how you'll be submitting grievances, so we don't ask again later.",
@@ -71,8 +78,8 @@
         "placeholder": "Enter Rep's full name"
       },
       "memberCount": {
-        "label": "Member Count Affected",
-        "placeholder": "Enter Number of members affected"
+        "label": "Total Number of Members",
+        "placeholder": "Enter total number of members"
       },
       "streetAddress": {
         "label": "Street address",
@@ -806,6 +813,8 @@
     "openMain": "Open main ticket"
   },
   "grievanceList": {
+    "metricsPrevious": "Previous cards",
+    "metricsNext": "Next cards",
     "searchPlaceholder": "Search by ticket number, submitter name, or grievance type...",
     "actionView": "View",
     "actionEdit": "Edit",
@@ -818,6 +827,7 @@
     "slaOverdue": "{days, plural, one {Breached # day ago} other {Breached # days ago}}"
   },
   "validation": {
+    "required": "required",
     "characterCount": "{count} / {max}",
     "tooLong": "Must be {max} characters or fewer.",
     "charactersRemaining": "{count, plural, one {# character remaining} other {# characters remaining}}"

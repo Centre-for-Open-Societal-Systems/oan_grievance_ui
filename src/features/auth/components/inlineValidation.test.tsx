@@ -42,13 +42,15 @@ const type = (label: RegExp | string, value: string) =>
 const VALID_PASSWORD = 'Str0ng!Passw0rd';
 
 /** Fills the register account step with valid values and continues to the profile step. */
-async function completeAccountStep() {
+async function completeAccountStep(submitterTypeName?: string) {
   type(/^Full Name/, 'Abebe Bikila');
   type(/^Email/, 'abebe@example.com');
   type(/^Phone Number/, '0911000000');
   type(/^Password/, VALID_PASSWORD);
   type(/^Confirm Password/, VALID_PASSWORD);
+  if (submitterTypeName) fireEvent.click(screen.getByRole('option', { name: submitterTypeName }));
   fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  if (!submitterTypeName) return; // stays here: the type is required
   await screen.findByText('Almost done!');
 }
 
@@ -202,6 +204,8 @@ describe('Register — account step', () => {
 
   it('reports every invalid field at once, focuses the first, and does not move on', () => {
     renderRegister();
+    fireEvent.click(screen.getByRole('option', { name: 'Individual Farmer' }));
+    fireEvent.mouseDown(document.body); // a real click elsewhere closes the dropdown
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
@@ -263,21 +267,18 @@ describe('Register — profile step', () => {
     registerUser.mockReset();
   });
 
-  it('asks for a submitter type before continuing, under the dropdown', async () => {
+  it('asks for a submitter type before leaving the account step, under the dropdown', async () => {
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await completeAccountStep(); // no type chosen
 
     expect(screen.getByText('Select a submitter type to continue.')).toBeInTheDocument();
+    expect(document.getElementById('register-submitter-type')).toHaveFocus();
     expect(registerUser).not.toHaveBeenCalled();
   });
 
   it('shows required and malformed ID messages under the field itself, and creates no account until they are fixed', async () => {
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'Individual Farmer' }));
+    await completeAccountStep('Individual Farmer');
     fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -296,9 +297,7 @@ describe('Register — profile step', () => {
   it('shows no fields for a Development Agent, and registers them with that type', async () => {
     registerUser.mockResolvedValue(undefined);
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'Development Agent (on behalf)' }));
+    await completeAccountStep('Development Agent (on behalf)');
 
     expect(document.getElementById('si-faydaId')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/I consent to providing my national ID/)).not.toBeInTheDocument();
@@ -315,9 +314,7 @@ describe('Register — profile step', () => {
   it('registers an individual farmer with that type and their Fayda ID', async () => {
     registerUser.mockResolvedValue(undefined);
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'Individual Farmer' }));
+    await completeAccountStep('Individual Farmer');
     fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
     fireEvent.change(document.getElementById('si-faydaId')!, { target: { value: '1234567890123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -331,9 +328,7 @@ describe('Register — profile step', () => {
   it('sends no Fayda ID for a Development Agent, who has none to give', async () => {
     registerUser.mockResolvedValue(undefined);
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'Development Agent (on behalf)' }));
+    await completeAccountStep('Development Agent (on behalf)');
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(registerUser).toHaveBeenCalledTimes(1));
@@ -343,9 +338,7 @@ describe('Register — profile step', () => {
   it('registers a Woreda/Kebele Body under the default type, with its official’s Fayda ID', async () => {
     registerUser.mockResolvedValue(undefined);
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'Woreda/Kebele Body' }));
+    await completeAccountStep('Woreda/Kebele Body');
     fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
     fireEvent.change(document.getElementById('si-officeName')!, { target: { value: 'Bole Woreda Office' } });
     fireEvent.change(document.getElementById('si-adminZone')!, { target: { value: 'Addis Ababa' } });
@@ -362,9 +355,7 @@ describe('Register — profile step', () => {
   it('registers an NGO under its own type with its representative’s Fayda ID alone', async () => {
     registerUser.mockResolvedValue(undefined);
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'NGO' }));
+    await completeAccountStep('NGO');
     fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
     fireEvent.change(document.getElementById('si-representativeFaydaId')!, { target: { value: '6557092147530500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -381,9 +372,7 @@ describe('Register — profile step', () => {
       throw new Error(message);
     });
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'Individual Farmer' }));
+    await completeAccountStep('Individual Farmer');
     fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
     fireEvent.change(document.getElementById('si-faydaId')!, { target: { value: '6557092147530500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -400,9 +389,7 @@ describe('Register — profile step', () => {
       throw new Error("A Submitter Profile with dedupe key 'phone:+2519110…' is already registered.");
     });
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'Individual Farmer' }));
+    await completeAccountStep('Individual Farmer');
     fireEvent.click(screen.getByLabelText(/I consent to providing my national ID/));
     fireEvent.change(document.getElementById('si-faydaId')!, { target: { value: '6557092147530500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -417,9 +404,7 @@ describe('Register — profile step', () => {
     registerUser.mockRejectedValueOnce(new Error("Submitter Type 'Development Agent' does not exist."));
     registerUser.mockResolvedValueOnce(undefined);
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'Development Agent (on behalf)' }));
+    await completeAccountStep('Development Agent (on behalf)');
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/Submitter Type/);
 
@@ -433,9 +418,7 @@ describe('Register — profile step', () => {
       throw new Error('An account with this email already exists.');
     });
     renderRegister();
-    await completeAccountStep();
-
-    fireEvent.click(screen.getByRole('option', { name: 'Development Agent (on behalf)' }));
+    await completeAccountStep('Development Agent (on behalf)');
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(await screen.findByText('An account with this email already exists.')).toBeInTheDocument();
@@ -446,11 +429,13 @@ describe('Register — profile step', () => {
 describe('Submitter identity form fields', () => {
   it('shows a field’s message under it and marks it invalid for assistive tech', () => {
     render(
-      <IndividualFarmerForm
-        values={{}}
-        setValue={vi.fn()}
-        errors={{ faydaId: 'Enter a valid Fayda ID: exactly 16 digits.' }}
-      />
+      <NextIntlClientProvider locale="en" messages={en}>
+        <IndividualFarmerForm
+          values={{}}
+          setValue={vi.fn()}
+          errors={{ faydaId: 'Enter a valid Fayda ID: exactly 16 digits.' }}
+        />
+      </NextIntlClientProvider>
     );
 
     const fayda = document.getElementById('si-faydaId')!;
@@ -464,7 +449,11 @@ describe('Submitter identity form fields', () => {
 
   it('reports a field when it loses focus, so the caller can validate it', () => {
     const onFieldBlur = vi.fn();
-    render(<IndividualFarmerForm values={{}} setValue={vi.fn()} onFieldBlur={onFieldBlur} />);
+    render(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <IndividualFarmerForm values={{}} setValue={vi.fn()} onFieldBlur={onFieldBlur} />
+      </NextIntlClientProvider>
+    );
 
     fireEvent.blur(document.getElementById('si-fullName')!);
     fireEvent.blur(document.getElementById('si-faydaId')!);

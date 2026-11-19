@@ -1,7 +1,9 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { Provider } from 'react-redux';
+import en from '../../../../messages/en.json';
 import { makeStore } from '@/store';
 import { AddNodalOfficerModal } from './AddNodalOfficerModal';
 import { createOfficer } from '../api/officerApi';
@@ -50,6 +52,7 @@ function renderModal(props: Partial<Parameters<typeof AddNodalOfficerModal>[0]> 
   const onClose = vi.fn();
 
   render(
+    <NextIntlClientProvider locale="en" messages={en}>
     <Provider store={store}>
       <AddNodalOfficerModal
         isOpen={true}
@@ -61,6 +64,7 @@ function renderModal(props: Partial<Parameters<typeof AddNodalOfficerModal>[0]> 
         {...props}
       />
     </Provider>
+    </NextIntlClientProvider>
   );
 
   return { store, onCreated, onClose };

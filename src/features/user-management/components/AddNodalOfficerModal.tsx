@@ -6,6 +6,7 @@ import { Save, X } from 'lucide-react';
 import { ApiError } from '@/lib/api';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
+import { RequiredMark } from '@/components/ui/RequiredMark';
 import { useModalA11y } from '@/components/ui/useModalA11y';
 import { useAreas } from '@/features/metadata';
 import { formatToE164 } from '@/lib/validation/phone';
@@ -17,7 +18,6 @@ import {
 import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors';
 import { AnimatedSelect } from './AnimatedSelect';
 import { createOfficer, fetchOfficerCandidates } from '../api/officerApi';
-import { OFFICER_STATUS_OPTIONS, REVIEWER_STATUS_OPTIONS } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
 import { useRoleLevels } from '../hooks/useRoleLevels';
 import { useServiceCategoryOptions } from '../hooks/useServiceCategoryOptions';
@@ -83,7 +83,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
     !isReviewer && level !== undefined && level === headLevel ? undefined : true
   );
   const [region, setRegion] = useState('');
-  const [status, setStatus] = useState<string>('Active');
   const [reportsTo, setReportsTo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -119,7 +118,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
     setPhoneNumber('');
     setServiceCategories([]);
     setRegion('');
-    setStatus('Active');
     setReportsTo('');
     setFormError(null);
     setAll({});
@@ -162,7 +160,8 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
         service_categories: serviceCategories,
         phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : null,
         region: region || null,
-        status: status as OfficerBackendStatus,
+        // A new officer always starts Active; an admin changes it later from Edit.
+        status: 'Active' satisfies OfficerBackendStatus,
         reports_to: level === 'L1' && reportsTo ? reportsTo : null,
       });
       onCreated();
@@ -231,7 +230,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
               )}
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.fullName} className="text-sm font-bold text-gray-900">
-                  Full Name <span className="text-red-500">*</span>
+                  Full Name <RequiredMark />
                 </label>
                 <input
                   {...a11y('fullName')}
@@ -246,7 +245,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
 
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.email} className="text-sm font-bold text-gray-900">
-                  Email ID <span className="text-red-500">*</span>
+                  Email ID <RequiredMark />
                 </label>
                 <input
                   {...a11y('email')}
@@ -288,18 +287,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-gray-900">
-                  Status <span className="text-red-500">*</span>
-                </label>
-                <AnimatedSelect
-                  options={isReviewer ? REVIEWER_STATUS_OPTIONS : OFFICER_STATUS_OPTIONS}
-                  value={status}
-                  onChange={setStatus}
-                  placeholder="Select Status"
-                />
-              </div>
-
               {level === 'L1' && (
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-bold text-gray-900">Reports To (L2 officer)</label>
@@ -315,7 +302,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
 
             <div className="flex flex-col gap-2">
               <label id={`${FIELD_IDS.serviceCategories}-label`} className="text-sm font-bold text-gray-900">
-                Service Categories <span className="text-red-500">*</span>
+                Service Categories <RequiredMark />
               </label>
               <div
                 id={FIELD_IDS.serviceCategories}

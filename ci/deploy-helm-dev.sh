@@ -18,21 +18,23 @@ set -euo pipefail
 
 HELM_RELEASE="${HELM_RELEASE:-grievance-ui}"
 HELM_NAMESPACE="${HELM_NAMESPACE:-grievance}"
-CHART_DIR="$(cd "$(dirname "$0")/../helm/oan-grievance-ui" && pwd)"
+# The archive "Package chart" built for this build (unstashed into built-chart/), versioned like the image.
+CHART_TGZ="$(cd "$(dirname "$0")/.." && pwd)/built-chart/oan-grievance-ui-${IMMUTABLE_TAG}.tgz"
+test -f "${CHART_TGZ}" || { echo "${CHART_TGZ} is missing: run package_chart.py package first" >&2; exit 1; }
 VALUES_FILE="$(cd "$(dirname "$0")/../helm/environments/dev" && pwd)/oan-grievance-ui.yaml"
 
 echo "=== Deploying ${HELM_RELEASE} to namespace ${HELM_NAMESPACE} ==="
 echo "    image: ${IMAGE_REPOSITORY}:${IMMUTABLE_TAG}"
 
 echo "=== Pre-flight: render the chart and validate it against the API server ==="
-helm template "${HELM_RELEASE}" "${CHART_DIR}" \
+helm template "${HELM_RELEASE}" "${CHART_TGZ}" \
   --namespace "${HELM_NAMESPACE}" \
   --values "${VALUES_FILE}" \
   --set ui.image.repository="${IMAGE_REPOSITORY}" \
   --set ui.image.tag="${IMMUTABLE_TAG}" \
   | kubectl apply --dry-run=server --namespace "${HELM_NAMESPACE}" -f -
 
-helm upgrade "${HELM_RELEASE}" "${CHART_DIR}" \
+helm upgrade "${HELM_RELEASE}" "${CHART_TGZ}" \
   --install \
   --namespace "${HELM_NAMESPACE}" \
   --values "${VALUES_FILE}" \

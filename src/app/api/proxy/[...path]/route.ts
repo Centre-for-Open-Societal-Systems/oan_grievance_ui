@@ -1,7 +1,7 @@
 import { AUTH_MESSAGES } from '@/lib/authMessages';
 import { checkCsrf } from '@/lib/csrf';
 import { getClientIp } from '@/lib/clientIp';
-import { env } from '@/lib/env';
+import { backendUrl } from '@/lib/env';
 import { logger } from '@/lib/logger';
 import { safePath } from '@/lib/logRedaction';
 import { REQUEST_ID_HEADER, requestIdFrom } from '@/lib/requestId';
@@ -83,7 +83,7 @@ async function relay(request: NextRequest, pathArray: string[], requestId: strin
 
   const targetPath = pathArray.join('/');
   const search = request.nextUrl.search;
-  const targetUrl = `${env.AUTH_API_BASE_URL}/${targetPath}${search}`;
+  const targetUrl = `${backendUrl(targetPath)}${search}`;
 
   // Read the body once — it can't be re-read from `request` a second time,
   // and a 401 retry below reuses this same payload against the backend.

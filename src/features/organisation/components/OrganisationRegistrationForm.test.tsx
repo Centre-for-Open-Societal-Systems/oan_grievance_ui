@@ -118,16 +118,16 @@ describe('OrganisationRegistrationForm', () => {
     }
   });
 
-  it('shows Member Count Affected on the FPO screen only', () => {
+  it('shows Total Number of Members on the FPO screen only', () => {
     renderForm('fpo');
-    expect(screen.getByLabelText(/^Member Count Affected/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Total Number of Members/)).toBeInTheDocument();
     cleanup();
 
     renderForm('ngo');
-    expect(screen.queryByLabelText(/^Member Count Affected/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Total Number of Members/)).not.toBeInTheDocument();
   });
 
-  it('starts the authorised representative as the account holder, editable', () => {
+  it('starts the organisation name as the name given at sign-up, editable', () => {
     const onRegistered = vi.fn();
     render(
       <NextIntlClientProvider locale="en" messages={en}>
@@ -139,7 +139,7 @@ describe('OrganisationRegistrationForm', () => {
         />
       </NextIntlClientProvider>
     );
-    const rep = screen.getByLabelText(/^Authorised Representative/);
+    const rep = screen.getByLabelText(/^Organisation Name/);
     expect(rep).toHaveValue('Almaz Tesfaye');
     fireEvent.change(rep, { target: { value: 'Someone Else' } });
     expect(rep).toHaveValue('Someone Else');
@@ -370,7 +370,7 @@ describe('OrganisationRegistrationForm', () => {
   it('registers an FPO as org_type FPO, with its member count as a number', async () => {
     renderForm('fpo');
     fillValidForm('Primary Cooperative');
-    type(/^Member Count Affected/, '120');
+    type(/^Total Number of Members/, '120');
     fireEvent.click(registerButton());
 
     await waitFor(() => expect(registerOrganisation).toHaveBeenCalledTimes(1));
@@ -385,12 +385,12 @@ describe('OrganisationRegistrationForm', () => {
   it('leaves the member count out when an FPO gives none, and rejects one that is not a whole number', async () => {
     renderForm('fpo');
     fillValidForm('Primary Cooperative');
-    type(/^Member Count Affected/, '12.5');
+    type(/^Total Number of Members/, '12.5');
     fireEvent.click(registerButton());
     expect(screen.getByText('Enter a whole number of members, e.g. 120.')).toBeInTheDocument();
     expect(registerOrganisation).not.toHaveBeenCalled();
 
-    type(/^Member Count Affected/, '');
+    type(/^Total Number of Members/, '');
     fireEvent.click(registerButton());
     await waitFor(() => expect(registerOrganisation).toHaveBeenCalledTimes(1));
     expect(registerOrganisation.mock.calls[0]![0]).not.toHaveProperty('members_affected');

@@ -5,6 +5,13 @@
     "body": "Baankiin keessan gita (role) beekamaa pilaatfoormii komii keessatti hin ramadamne. Maaloo bulchaa keessan qunnamaatii mirgi akka isiniif ramadamu gaafadhaa."
   },
   "register": {
+    "account": {
+      "selectTypeFirst": "Itti fufuuf gosa dhiheessituu filadhu.",
+      "fullNameLabel": "Maqaa Guutuu",
+      "fullNamePlaceholder": "Maqaa Guutuu",
+      "organisationNameLabel": "Maqaa Dhaabbataa",
+      "organisationNamePlaceholder": "Maqaa Dhaabbataa"
+    },
     "profile": {
       "title": "Xumuruu dhiyaateera!",
       "subtitle": "Wanti tokko hafe — akkaataa komii itti dhiheessitan nu beeksisaa, kanaafuu ammas isin hin gaafannu.",
@@ -71,8 +78,8 @@
         "placeholder": "Maqaa guutuu bakka bu'aa galchi"
       },
       "memberCount": {
-        "label": "Baay'ina Miseensota Miidhaman",
-        "placeholder": "Baay'ina miseensota miidhaman galchi"
+        "label": "Baay'ina Waliigalaa Miseensotaa",
+        "placeholder": "Baay'ina waliigalaa miseensotaa galchi"
       },
       "streetAddress": {
         "label": "Teessoo daandii",
@@ -806,6 +813,8 @@
     "openMain": "Tikeettii ijoo bani"
   },
   "grievanceList": {
+    "metricsPrevious": "Kaardota duraa",
+    "metricsNext": "Kaardota itti aanan",
     "searchPlaceholder": "Lakkoofsa tikeetii, maqaa dhiyeessaa ykn gosa komii fayyadamuun barbaadi...",
     "actionView": "Ilaali",
     "actionEdit": "Gulaali",
@@ -818,6 +827,7 @@
     "slaOverdue": "{days, plural, one {Guyyaa # dura darbe} other {Guyyoota # dura darbe}}"
   },
   "validation": {
+    "required": "barbaachisaa",
     "characterCount": "{count} / {max}",
     "tooLong": "Arfii {max} ykn isaa gadi ta'uu qaba.",
     "charactersRemaining": "{count, plural, one {Arfii # hafe} other {Arfiiwwan # hafan}}"

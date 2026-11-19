@@ -1,4 +1,4 @@
-import { env } from '@/lib/env';
+import { backendUrl } from '@/lib/env';
 
 // Thin, server-only client for oan_auth_service's REST auth endpoints.
 // Every `/api/auth/*` route calls through here rather than hitting `fetch`
@@ -45,7 +45,7 @@ export async function requestBackendAuth<T>(
   { method = 'POST', body, headers }: BackendAuthRequest,
   clientIp: string
 ): Promise<{ data: T; setCookies: string[] }> {
-  const response = await fetch(`${env.AUTH_API_BASE_URL}${path}`, {
+  const response = await fetch(backendUrl(path), {
     method,
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
