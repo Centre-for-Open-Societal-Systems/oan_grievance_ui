@@ -6,6 +6,7 @@ import { fetchOfficerStatistics, fetchOfficers } from '../api/officerApi';
 import type { Officer } from '../data/officers';
 import type { OfficerBackendStatus, OfficerLevel, OfficerRole, OfficerStatisticsRecord } from '../types';
 import { mapOfficerRecord } from '../utils/mapOfficer';
+import { useRoleLevels } from './useRoleLevels';
 
 const SEARCH_DEBOUNCE_MS = 350;
 const PAGE_SIZE = 9;
@@ -51,21 +52,24 @@ interface ListResult {
  */
 export function useOfficerList({ role, level, search, category, region, status, page, enabled }: UseOfficerListArgs): UseOfficerListResult {
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+  const roleLevels = useRoleLevels();
+  // Titles depend on which rung is the head, so wait for the chain rather than label then relabel.
+  const active = enabled && !roleLevels.isLoading;
   const [result, setResult] = useState<ListResult | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
-  // The statistics endpoint only knows L1/L2 — a department head (L3) or a Reviewer is
+  // The statistics endpoint only knows L1/L2 — a department head or a Reviewer is
   // refused (400), since neither carries first-line caseload of their own.
   const statsEligibleLevel = role === 'Officer' && (level === 'L1' || level === 'L2') ? level : null;
 
   const queryKey = useMemo(
-    () => JSON.stringify({ role, level, search: debouncedSearch.trim(), category, region, status, page, reloadToken, enabled }),
-    [role, level, debouncedSearch, category, region, status, page, reloadToken, enabled]
+    () => JSON.stringify({ role, level, search: debouncedSearch.trim(), category, region, status, page, reloadToken, enabled: active }),
+    [role, level, debouncedSearch, category, region, status, page, reloadToken, active]
   );
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!active) return;
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -98,7 +102,7 @@ export function useOfficerList({ role, level, search, category, region, status, 
         const statsByUser = new Map<string, OfficerStatisticsRecord>(stats?.officers.map((s) => [s.user, s]) ?? []);
         setResult({
           key: queryKey,
-          officers: list.officers.map((record) => mapOfficerRecord(record, statsByUser.get(record.name))),
+          officers: list.officers.map((record) => mapOfficerRecord(record, statsByUser.get(record.name), roleLevels)),
           totalCount: list.pagination?.total_count ?? list.officers.length,
           totalPages: Math.max(1, list.pagination?.total_pages ?? 1),
           error: null,
@@ -119,7 +123,7 @@ export function useOfficerList({ role, level, search, category, region, status, 
     // queryKey is derived from exactly these same values (plus reloadToken, to force a
     // refetch) — listed individually so the effect depends on what it actually reads,
     // not on a JSON-stringified stand-in for it.
-  }, [queryKey, enabled, role, level, statsEligibleLevel, debouncedSearch, category, region, status, page]);
+  }, [queryKey, active, roleLevels, role, level, statsEligibleLevel, debouncedSearch, category, region, status, page]);
 
   const refetch = () => setReloadToken((t) => t + 1);
 

@@ -1,4 +1,5 @@
 import type { Officer } from '../data/officers';
+import type { RoleLevels } from '../hooks/useRoleLevels';
 import type { OfficerRecord, OfficerStatisticsRecord } from '../types';
 import { avatarForName } from './avatar';
 
@@ -8,7 +9,7 @@ import { avatarForName } from './avatar';
  * into the `Officer` view model the existing card/modal UI already renders. `stats` is
  * `undefined` when the statistics call hasn't resolved yet or the officer has none.
  */
-export function mapOfficerRecord(record: OfficerRecord, stats: OfficerStatisticsRecord | undefined): Officer {
+export function mapOfficerRecord(record: OfficerRecord, stats: OfficerStatisticsRecord | undefined, roleLevels: RoleLevels): Officer {
   const avatar = avatarForName(record.full_name);
   const avgTimeDays = stats?.avg_resolution_hours != null ? Math.round(stats.avg_resolution_hours / 24) : 0;
 
@@ -19,11 +20,13 @@ export function mapOfficerRecord(record: OfficerRecord, stats: OfficerStatistics
     roleTitle:
       record.role === 'Reviewer'
         ? 'Review Officer'
-        : record.level === 'L3'
+        : record.level === roleLevels.headLevel
           ? 'Category Admin'
           : record.level === 'L1'
             ? 'Nodal Officer'
-            : 'Senior Nodal Officer',
+            : record.level === 'L2'
+              ? 'Senior Nodal Officer'
+              : (roleLevels.levels.find((rung) => rung.level === record.level)?.name ?? record.level ?? '-'),
     department: record.department || '-',
     email: record.email,
     phone: record.phone || '-',

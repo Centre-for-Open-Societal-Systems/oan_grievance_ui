@@ -9,14 +9,18 @@
  * `name` is the user id (the officer's email).
  */
 
-/** L3 is a department head: the department's final escalation rung, shown on the Admin tab. */
-export type OfficerLevel = 'L1' | 'L2' | 'L3';
+/**
+ * `L<rank>` of an active rung of the escalation chain, numbered by `level_order` (see
+ * `useRoleLevels`). The top rung is the department head, shown on the Admin tab — which
+ * number that is depends on how many rungs are active (L3 with three, L4 once a zonal rung exists).
+ */
+export type OfficerLevel = `L${number}`;
 export type OfficerBackendStatus = 'Active' | 'On Leave' | 'Inactive';
 /**
- * `Officer` covers L1/L2/L3 (level distinguishes them); `Reviewer` is a separate, desk-scoped
+ * `Officer` covers every escalation rung (level distinguishes them); `Reviewer` is a separate, desk-scoped
  * read-only account with no level of its own — see `oan_grievance_service/api/v1/officer.py`'s
  * own module doc comment (STG-443). There is no literal "Admin" role on the wire: the
- * Administration tab's "Admin" tab is `role: 'Officer', level: 'L3'`, not a distinct role.
+ * Administration tab's "Admin" tab is `role: 'Officer'` at the top level, not a distinct role.
  */
 export type OfficerRole = 'Officer' | 'Reviewer';
 
@@ -36,7 +40,7 @@ export interface OfficerRecord {
   full_name: string;
   role: OfficerRole;
   designation: string | null;
-  /** Null for a Reviewer — only an Officer (L1/L2/L3) has a level. */
+  /** Null for a Reviewer — only an Officer has a level. */
   level: OfficerLevel | null;
   /** Null only in principle (the backend requires it on create for both roles today). */
   department: string | null;
@@ -121,7 +125,7 @@ export interface ListOfficersParams {
 }
 
 export interface ListOfficerStatisticsParams {
-  /** Statistics only exist for L1/L2 — L3 (department heads) and Reviewers are refused (400). */
+  /** Statistics only exist for L1/L2 — department heads and Reviewers are refused (400). */
   level?: 'L1' | 'L2';
   department?: string;
   page?: number;
@@ -208,4 +212,9 @@ export interface ListCategoryAssignmentsParams {
   active?: boolean;
   page?: number;
   page_size?: number;
+}
+
+/** The part of `GET /api/v1/notification-templates/options` this feature reads. */
+export interface RoleLevelsData {
+  role_levels: Array<{ level_code: string; level_name: string; level_order: number }>;
 }

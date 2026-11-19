@@ -207,7 +207,9 @@ export function RoleChooser({ providers, onLogin }: RoleChooserProps = {}) {
           return (
             <label
               key={choice.id}
-              className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all duration-200 group focus-within:border-[#16A34A] focus-within:ring-1 focus-within:ring-[#16A34A] ${
+              htmlFor={`role-choice-${choice.id}`}
+              onClick={() => setRole(choice.id)}
+              className={`flex items-center p-4 border rounded-xl cursor-pointer select-none transition-all duration-200 group focus-within:border-[#16A34A] focus-within:ring-1 focus-within:ring-[#16A34A] ${
                 isSelected
                   ? 'border-[#16A34A] bg-white ring-1 ring-[#16A34A]'
                   : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -223,6 +225,7 @@ export function RoleChooser({ providers, onLogin }: RoleChooserProps = {}) {
                 <div className="text-[14px] text-gray-500 font-medium mt-0.5">{description}</div>
               </div>
               <input
+                id={`role-choice-${choice.id}`}
                 type="radio"
                 name="role"
                 value={choice.id}

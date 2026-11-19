@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
     "grievance.openg2p.localtest.me",
     "*.openg2p.localtest.me",
     "*.localtest.me",
+    "local.development.oanstaging.com",
+    "*.development.oanstaging.com",
   ],
   poweredByHeader: false,
   images: {

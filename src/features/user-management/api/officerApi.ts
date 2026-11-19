@@ -12,6 +12,7 @@ import type {
   OfficerStatisticsListData,
   OfficerStatusCounts,
   ResetTemporaryPasswordPayload,
+  RoleLevelsData,
   UpdateOfficerPayload,
 } from '../types';
 
@@ -208,3 +209,17 @@ export const officerService = {
   getStatusCounts: fetchOfficerStatusCounts,
   listCategoryAssignments: fetchCategoryAssignments,
 };
+
+/**
+ * The active escalation rungs, ordered by `level_order`. The officer API numbers levels by
+ * rank in this chain (`L1` is the first rung, the last is the department head), so this is
+ * what turns an `L<n>` into a rung and says which one is the head.
+ *
+ * Corresponding REST endpoint: GET /api/v1/notification-templates/options
+ */
+export async function fetchRoleLevels(options: RequestOptions = {}): Promise<RoleLevelsData> {
+  return fetchApi<RoleLevelsData>('/api/v1/notification-templates/options', {
+    method: 'GET',
+    signal: options.signal,
+  });
+}

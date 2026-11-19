@@ -85,12 +85,13 @@ export const OFFICER_TABS_BY_ID: Record<OfficerTabId, OfficerTabConfig> = Object
 
 /**
  * What each tab actually queries on `GET /api/v1/officers` (STG-443): the Admin tab is an
- * Officer at level L3 (a department head — the department's final escalation rung), not a
- * distinct "Admin" role; there is no such role on the wire. The Reviewer tab has no level at
- * all — sending one is refused (400) — so it's `undefined` here, never a level string.
+ * Officer at the top level (a department head — the department's final escalation rung), not a
+ * distinct "Admin" role; there is no such role on the wire. Which `L<n>` that is depends on the
+ * active chain, so the Admin tab's level is `undefined` here and the directory fills it in from
+ * `useRoleLevels`. The Reviewer tab has no level at all — sending one is refused (400).
  */
 export const OFFICER_TAB_QUERY: Record<OfficerTabId, { role: OfficerRole; level?: OfficerLevel }> = {
-  admin: { role: 'Officer', level: 'L3' },
+  admin: { role: 'Officer' },
   'nodal-l1': { role: 'Officer', level: 'L1' },
   'nodal-l2': { role: 'Officer', level: 'L2' },
   reviewer: { role: 'Reviewer' },
@@ -112,7 +113,7 @@ export const TAG_STYLES: Record<string, { bg: string; text: string; border: stri
 
 export const DEFAULT_TAG_STYLE = { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
 
-/** The Add/Edit forms' and the filter drawer's status dropdown for an Officer (L1/L2/L3). */
+/** The Add/Edit forms' and the filter drawer's status dropdown for an Officer. */
 export const OFFICER_STATUS_OPTIONS: OfficerStatus[] = ['Active', 'On Leave', 'Inactive'];
 /** A Reviewer has no 'On Leave' status — the backend refuses it (400). */
 export const REVIEWER_STATUS_OPTIONS: OfficerStatus[] = ['Active', 'Inactive'];

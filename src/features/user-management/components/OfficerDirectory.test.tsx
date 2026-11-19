@@ -63,6 +63,13 @@ vi.mock('../api/officerApi', () => ({
   fetchOfficerStatusCounts,
   fetchOfficerCandidates: vi.fn().mockResolvedValue({ candidates: [] }),
   fetchServiceCategoryNames: vi.fn().mockResolvedValue(['Inputs', 'Markets']),
+  fetchRoleLevels: vi.fn().mockResolvedValue({
+    role_levels: [
+      { level_code: 'nodal_officer', level_name: 'Nodal Officer', level_order: 10 },
+      { level_code: 'senior_nodal_officer', level_name: 'Senior Nodal Officer', level_order: 20 },
+      { level_code: 'department_head', level_name: 'Category Admin', level_order: 30 },
+    ],
+  }),
 }));
 
 const fetchAdministrativeAreas = vi.hoisted(() =>
