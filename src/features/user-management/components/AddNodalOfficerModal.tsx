@@ -6,11 +6,10 @@ import { Save, X } from 'lucide-react';
 import { ApiError } from '@/lib/api';
 import { errorIdFor, FieldError, INVALID_INPUT_STYLES } from '@/components/ui/FieldError';
 import { PhoneField } from '@/components/ui/PhoneField';
+import { RequiredMark } from '@/components/ui/RequiredMark';
 import { useModalA11y } from '@/components/ui/useModalA11y';
-import { fetchGrievanceOptionsThunk, selectCategoryFilterOptions, useAreas } from '@/features/metadata';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAreas } from '@/features/metadata';
 import { formatToE164 } from '@/lib/validation/phone';
-import { generateRandomPassword } from '@/lib/validation/password';
 import {
   validateEmail,
   validateFullName,
@@ -19,8 +18,8 @@ import {
 import { focusFirstError, useFieldErrors } from '@/lib/validation/useFieldErrors';
 import { AnimatedSelect } from './AnimatedSelect';
 import { createOfficer, fetchOfficerCandidates } from '../api/officerApi';
-import { OFFICER_STATUS_OPTIONS, REVIEWER_STATUS_OPTIONS } from '../data/officers';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
+import { useServiceCategoryOptions } from '../hooks/useServiceCategoryOptions';
 import type { OfficerBackendStatus, OfficerCandidate, OfficerLevel, OfficerRole } from '../types';
 
 type FormField = 'fullName' | 'email' | 'phoneNumber' | 'serviceCategories';
@@ -49,27 +48,15 @@ interface AddNodalOfficerModalProps {
 
 /**
  * Creates an officer, department head, or Reviewer via the real `POST /api/v1/officers`
- * endpoint (see `officerApi.ts`). A Reviewer needs no designation, level, or supervisor —
+ * endpoint (see `officerApi.ts`). A Reviewer needs no level or supervisor —
  * see `CreateOfficerPayload`'s own doc comment (STG-443) for exactly which fields each role
- * requires or rejects. `temporary_password` is required by the backend: the account can't
- * sign in with it directly (login answers 403 `PASSWORD_CHANGE_REQUIRED`) — they replace it
- * via `POST /api/v1/auth/password/initial` first. If `email` already belongs to a login,
- * that login's existing password is left alone instead — the response `message` says so, and
- * this form holds the success screen open on that specific message rather than auto-closing,
- * so the admin doesn't hand the officer a password that silently won't work.
+ * requires or rejects. The backend takes no password: `email` must already belong to a login
+ * (identity provider or onboarding), otherwise it answers 404.
  */
 export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, onCreated }: AddNodalOfficerModalProps) {
   const isReviewer = role === 'Reviewer';
-  const dispatch = useAppDispatch();
-  const grievanceOptionsStatus = useAppSelector((state) => state.metadata.grievanceOptionsStatus);
   const { areas: regionAreas } = useAreas({ level: 'Region' });
   const { options: supervisorOptions } = useL2OfficerOptions(isOpen && level === 'L1');
-
-  useEffect(() => {
-    if (grievanceOptionsStatus === 'idle') {
-      void dispatch(fetchGrievanceOptionsThunk());
-    }
-  }, [dispatch, grievanceOptionsStatus]);
 
   // Logins that already hold the officer role but sit on no desk (e.g. onboarded at the identity
   // provider): picking one fills the name and email. Best-effort — without it the form still works.
@@ -88,15 +75,12 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+251');
   const [phoneNumber, setPhoneNumber] = useState('');
-  // Hidden: officers sign in through the identity provider. The backend still requires one, so a
-  // random password is sent that nobody is told.
-  const [password, setPassword] = useState(() => generateRandomPassword());
   const [serviceCategories, setServiceCategories] = useState<string[]>([]);
-  const allCategoryOptions = useAppSelector(selectCategoryFilterOptions);
-  const isCategoriesLoading = grievanceOptionsStatus === 'loading';
-  const categoryList = allCategoryOptions;
+  // A category admin may take any category; an officer or reviewer only one that has a desk.
+  const { options: categoryList, isLoading: isCategoriesLoading } = useServiceCategoryOptions(
+    !isReviewer && level === 'L3' ? undefined : true
+  );
   const [region, setRegion] = useState('');
-  const [status, setStatus] = useState<string>('Active');
   const [reportsTo, setReportsTo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -130,10 +114,8 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
     setEmail('');
     setCountryCode('+251');
     setPhoneNumber('');
-    setPassword(generateRandomPassword());
     setServiceCategories([]);
     setRegion('');
-    setStatus('Active');
     setReportsTo('');
     setFormError(null);
     setAll({});
@@ -170,15 +152,14 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
       await createOfficer({
         role,
         full_name: fullName,
-        designation: null,
         level: isReviewer ? null : level,
         department: null,
         email,
         service_categories: serviceCategories,
-        temporary_password: password,
         phone: phoneNumber ? formatToE164(phoneNumber, countryCode) : null,
         region: region || null,
-        status: status as OfficerBackendStatus,
+        // A new officer always starts Active; an admin changes it later from Edit.
+        status: 'Active' satisfies OfficerBackendStatus,
         reports_to: level === 'L1' && reportsTo ? reportsTo : null,
       });
       onCreated();
@@ -247,7 +228,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
               )}
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.fullName} className="text-sm font-bold text-gray-900">
-                  Full Name <span className="text-red-500">*</span>
+                  Full Name <RequiredMark />
                 </label>
                 <input
                   {...a11y('fullName')}
@@ -262,7 +243,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
 
               <div className="flex flex-col gap-2">
                 <label htmlFor={FIELD_IDS.email} className="text-sm font-bold text-gray-900">
-                  Email ID <span className="text-red-500">*</span>
+                  Email ID <RequiredMark />
                 </label>
                 <input
                   {...a11y('email')}
@@ -304,18 +285,6 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-gray-900">
-                  Status <span className="text-red-500">*</span>
-                </label>
-                <AnimatedSelect
-                  options={isReviewer ? REVIEWER_STATUS_OPTIONS : OFFICER_STATUS_OPTIONS}
-                  value={status}
-                  onChange={setStatus}
-                  placeholder="Select Status"
-                />
-              </div>
-
               {level === 'L1' && (
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-bold text-gray-900">Reports To (L2 officer)</label>
@@ -331,7 +300,7 @@ export function AddNodalOfficerModal({ isOpen, onClose, role, level, tabLabel, o
 
             <div className="flex flex-col gap-2">
               <label id={`${FIELD_IDS.serviceCategories}-label`} className="text-sm font-bold text-gray-900">
-                Service Categories <span className="text-red-500">*</span>
+                Service Categories <RequiredMark />
               </label>
               <div
                 id={FIELD_IDS.serviceCategories}

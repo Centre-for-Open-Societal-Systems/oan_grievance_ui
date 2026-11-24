@@ -1,10 +1,15 @@
 import { fetchApi, fetchApiBlob } from '@/lib/api';
+import { toMultipartBody, UPLOAD_TIMEOUT_MS } from '@/lib/attachments';
+import { randomUuid } from '@/lib/randomUuid';
 import type {
   ChangeRequestData,
   ChangeRequestListData,
   ChangeRequestListQueryParams,
+  ConfirmDuplicatePayload,
   DecideChangeRequestPayload,
   DeferSLAPayload,
+  DismissDuplicatePayload,
+  DuplicateRulingResult,
   GrievanceActionPayload,
   GrievanceActionResult,
   GrievanceChangeResponseData,
@@ -146,7 +151,7 @@ export async function postGrievanceMessage(
 ): Promise<GrievanceActionResult> {
   const client_message_id =
     options.clientMessageId ||
-    (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined);
+    randomUuid();
   return fetchApi<GrievanceActionResult>(
     `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/message`,
     {
@@ -204,30 +209,78 @@ export async function addGrievanceNote(
 export async function executeGrievanceAction(
   ticketNumber: string,
   payload: GrievanceActionPayload,
+  files: File[] = [],
   options: RequestOptions = {}
 ): Promise<GrievanceActionResult> {
-  return fetchApi<GrievanceActionResult>(
-    `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/action`,
-    {
-      method: 'POST',
-      // The request model forbids unknown fields, so only the spec's
-      // fields are sent, and unset optional ones are left out entirely.
-      body: JSON.stringify({
-        ticket_number: ticketNumber,
-        action: payload.action,
-        ...('reason' in payload
-          ? { reason: payload.reason }
-          : {
-              action_taken: payload.action_taken,
-              resolution_summary: payload.resolution_summary,
-            }),
-        ...(payload.internal_notes ? { internal_notes: payload.internal_notes } : {}),
-        ...(payload.template ? { template: payload.template } : {}),
-        ...(payload.rating != null ? { rating: payload.rating } : {}),
-      }),
-      signal: options.signal,
-    }
-  );
+  // The request model forbids unknown fields, so only the spec's
+  // fields are sent, and unset optional ones are left out entirely.
+  const fields = {
+    ticket_number: ticketNumber,
+    action: payload.action,
+    ...('reason' in payload
+      ? { reason: payload.reason }
+      : {
+          action_taken: payload.action_taken,
+          resolution_summary: payload.resolution_summary,
+        }),
+    ...(payload.internal_notes ? { internal_notes: payload.internal_notes } : {}),
+    ...(payload.template ? { template: payload.template } : {}),
+    ...(payload.rating != null ? { rating: payload.rating } : {}),
+  };
+  const path = `/api/v1/grievances/${encodeURIComponent(ticketNumber)}/action`;
+  // Files ride in the same multipart request and attach to the action's own timeline entry.
+  if (files.length > 0) {
+    return fetchApi<GrievanceActionResult>(
+      path,
+      { method: 'POST', body: toMultipartBody(fields, files), signal: options.signal },
+      UPLOAD_TIMEOUT_MS
+    );
+  }
+  return fetchApi<GrievanceActionResult>(path, {
+    method: 'POST',
+    body: JSON.stringify(fields),
+    signal: options.signal,
+  });
+}
+
+/**
+ * An officer rules that a flagged grievance is a duplicate of its main ticket. The case becomes
+ * `Duplicate`, a message says all further handling happens on the main ticket, and it turns
+ * read-only for good.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/duplicate/confirm
+ */
+export async function confirmDuplicate(
+  ticketNumber: string,
+  payload: ConfirmDuplicatePayload = {},
+  options: RequestOptions = {}
+): Promise<DuplicateRulingResult> {
+  return fetchApi<DuplicateRulingResult>(`/api/v1/grievances/${encodeURIComponent(ticketNumber)}/duplicate/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({
+      ticket_number: ticketNumber,
+      ...(payload.main_ticket ? { main_ticket: payload.main_ticket } : {}),
+      ...(payload.note ? { note: payload.note } : {}),
+    }),
+    signal: options.signal,
+  });
+}
+
+/**
+ * An officer rules that the flag is wrong. The case stays a normal one.
+ *
+ * Corresponding REST endpoint: POST /api/v1/grievances/:ticket_number/duplicate/dismiss
+ */
+export async function dismissDuplicate(
+  ticketNumber: string,
+  payload: DismissDuplicatePayload = {},
+  options: RequestOptions = {}
+): Promise<DuplicateRulingResult> {
+  return fetchApi<DuplicateRulingResult>(`/api/v1/grievances/${encodeURIComponent(ticketNumber)}/duplicate/dismiss`, {
+    method: 'POST',
+    body: JSON.stringify({ ticket_number: ticketNumber, ...(payload.note ? { note: payload.note } : {}) }),
+    signal: options.signal,
+  });
 }
 
 /**
@@ -249,6 +302,8 @@ export async function reassignGrievance(
       body: JSON.stringify({
         ticket_number: ticketNumber,
         target_department: payload.target_department,
+        ...(payload.target_category ? { target_category: payload.target_category } : {}),
+        ...(payload.target_grievance_type ? { target_grievance_type: payload.target_grievance_type } : {}),
         target_officer: payload.target_officer ?? null,
         reason: payload.reason ?? null,
         ...(payload.sla_treatment ? { sla_treatment: payload.sla_treatment } : {}),

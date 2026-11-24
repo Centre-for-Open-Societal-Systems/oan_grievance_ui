@@ -6,12 +6,13 @@ import { useTranslations } from 'next-intl';
 
 interface NotificationCardProps {
     notifications: NotificationTemplate[];
-    onUpdate?: (templateName: string, payload: UpdateNotificationTemplatePayload) => Promise<void>;
+    canEdit: boolean;
+    onUpdate: (templateName: string, payload: UpdateNotificationTemplatePayload) => Promise<void>;
     placeholders?: PlaceholderItem[];
     recipientOptions?: FlatRecipientOption[];
 }
 
-export function NotificationCard({ notifications, onUpdate, placeholders, recipientOptions }: NotificationCardProps) {
+export function NotificationCard({ notifications, canEdit, onUpdate, placeholders, recipientOptions }: NotificationCardProps) {
     const t = useTranslations('admin.notifications');
     
     if (notifications.length === 0) {
@@ -29,6 +30,7 @@ export function NotificationCard({ notifications, onUpdate, placeholders, recipi
                     key={notification.name} 
                     notification={notification} 
                     isLast={index === notifications.length - 1} 
+                    canEdit={canEdit}
                     onUpdate={onUpdate}
                     placeholders={placeholders}
                     recipientOptions={recipientOptions}

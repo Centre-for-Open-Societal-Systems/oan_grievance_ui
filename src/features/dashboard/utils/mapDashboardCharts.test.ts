@@ -88,10 +88,10 @@ describe('mapDashboardCharts', () => {
     });
 
     expect(statusDistribution).toEqual([
-      { name: 'Submitted', value: 64, color: '#4f46e5' },
-      { name: 'Rejected', value: 2, color: '#ef4444' },
+      { name: 'Submitted', value: 64, color: '#0ea5e9' },
+      { name: 'Rejected', value: 2, color: '#dc2626' },
       { name: 'Something New', value: 1, color: '#9ca3af' },
-      { name: 'in_progress', value: 5, color: '#6366f1' },
+      { name: 'in_progress', value: 5, color: '#16a34a' },
     ]);
   });
 
@@ -212,5 +212,32 @@ describe('mapAdminLevels', () => {
     ]);
 
     expect(stats).toEqual({ federal: null, regions: [], woredas: [] });
+  });
+});
+
+describe('the Duplicates card', () => {
+  it('comes after the other cards, with the count the service sent and no change figure', () => {
+    const stats = mapDashboardCharts({
+      ...NO_CHARTS,
+      grvKpis: [
+        { metric: 'total', value: 128, delta_pct: 12.5 },
+        { metric: 'duplicates', value: 7 },
+      ],
+    });
+
+    const cards = stats.kpis ?? [];
+    expect(cards.at(-1)).toEqual({ metric: 'duplicates', value: 7, trend: null, type: 'number' });
+  });
+
+  it('is left out when the service does not report it, rather than shown as unavailable', () => {
+    const stats = mapDashboardCharts({ ...NO_CHARTS, grvKpis: [{ metric: 'total', value: 128 }] });
+
+    expect((stats.kpis ?? []).map((card) => card.metric)).not.toContain('duplicates');
+  });
+
+  it('gives the Duplicate status its own colour', () => {
+    const stats = mapDashboardCharts({ ...NO_CHARTS, grvStatusDistribution: [{ status: 'Duplicate', count: 3 }] });
+
+    expect(stats.statusDistribution?.[0]?.color).toBe('#64748b');
   });
 });

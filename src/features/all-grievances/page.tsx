@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { canViewAllGrievances } from '@/features/auth/rbac';
+import { canViewAllGrievances, hidesSubmittedQueue } from '@/features/auth/rbac';
 import {
   fetchGrievanceOptionsThunk,
   selectCategoryFilterOptions,
@@ -26,6 +26,27 @@ export default function AllGrievancesPage() {
 
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [selectedGrievance, setSelectedGrievance] = useState<Grievance | null>(null);
+  // `?ticket=` opens a case straight from a link, such as a notification. It
+  // wins over a row picked earlier, so a new link replaces the open case.
+  const ticketParam = searchParams.get('ticket');
+  const clearTicketParam = useCallback(() => {
+    if (!searchParams.has('ticket')) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('ticket');
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }, [searchParams, pathname, router]);
+  const handleCloseDetail = useCallback(() => {
+    setSelectedGrievance(null);
+    clearTicketParam();
+  }, [clearTicketParam]);
+  const handleViewGrievance = useCallback(
+    (grievance: Grievance) => {
+      clearTicketParam();
+      setSelectedGrievance(grievance);
+    },
+    [clearTicketParam]
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<GrievanceFilters>({ ...EMPTY_GRIEVANCE_FILTERS });
 
@@ -137,6 +158,10 @@ export default function AllGrievancesPage() {
   const user = useAppSelector((state) => state.auth.user);
   const userRoles = user?.roles ?? [];
   const pageTitle = canViewAllGrievances(userRoles) ? 'All Grievances' : 'My Grievances';
+  // Submitted is the submitter's own view; staff work cases from Assigned onwards, so the card is left out for them.
+  const visibleCards = hidesSubmittedQueue(userRoles)
+    ? cards.filter((card) => card.status.trim().toLowerCase() !== 'submitted')
+    : cards;
 
   return (
     <div className="flex flex-col gap-6 h-full font-sans">
@@ -147,7 +172,7 @@ export default function AllGrievancesPage() {
         summaryUnavailable={Boolean(metricsError)}
       />
       <MetricCardsComponent
-        cards={cards}
+        cards={visibleCards}
         isLoading={metricsLoading}
         error={metricsError}
         onRetry={refetchMetrics}
@@ -173,7 +198,7 @@ export default function AllGrievancesPage() {
         selectedCategories={filters.category}
         setSelectedCategories={(category) => setFilters((f) => ({ ...f, category }))}
         onClearFilters={handleClearFilters}
-        onViewGrievance={setSelectedGrievance}
+        onViewGrievance={handleViewGrievance}
       />
 
       <AdvancedFiltersSidebar
@@ -184,9 +209,14 @@ export default function AllGrievancesPage() {
       />
 
       <GrievanceDetailSidebar
-        ticketNumber={selectedGrievance?.ticketNumber ?? selectedGrievance?.ticketId ?? null}
-        grievance={selectedGrievance}
-        onClose={() => setSelectedGrievance(null)}
+        ticketNumber={ticketParam ?? selectedGrievance?.ticketNumber ?? selectedGrievance?.ticketId ?? null}
+        grievance={ticketParam ? null : selectedGrievance}
+        onClose={() => {
+          handleCloseDetail();
+          // Actions taken in the panel change the case; reload so the rows (status, assignee) match it.
+          refetch();
+          refetchMetrics();
+        }}
       />
     </div>
   );

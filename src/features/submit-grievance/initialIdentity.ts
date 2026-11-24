@@ -32,6 +32,9 @@ export function resolveInitialSubmitterType(user: User | null, savedProfile: Sub
  */
 export function resolveInitialSubmissionChannel(user: User | null): string {
   if (!user) return "";
+  // An individual farmer's channel is locked in Step 1 to the portal they are using, not whatever
+  // channel their profile was registered through (an IVR farmer filing here is still filing on the web).
+  if (isIndividualFarmer(user)) return normalizeSubmissionChannel(DEFAULT_SUBMISSION_CHANNEL);
   return normalizeSubmissionChannel(user.submission_channel || DEFAULT_SUBMISSION_CHANNEL);
 }
 
@@ -128,4 +131,14 @@ function organisationIdentityValues(user: User | null, submitterType: string): R
  */
 export function isSubmitterTypeLocked(user: User | null): boolean {
   return Boolean(user?.organisation && organisationKindFor(user.type) !== null);
+}
+
+/**
+ * Whether the signed-in account is an individual farmer. Such an account files as
+ * itself through the web portal, so Step 1 shows its submitter type and channel
+ * but does not let them be changed.
+ */
+export function isIndividualFarmer(user: User | null): boolean {
+  const backendType = user?.submitter_type || user?.type;
+  return backendType ? normalizeSubmitterType(backendType) === "individual" : false;
 }

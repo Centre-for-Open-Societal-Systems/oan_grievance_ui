@@ -38,7 +38,7 @@ describe('useDashboardStatistics', () => {
     expect(result.current.isRefreshing).toBe(false);
     expect(result.current.statistics.escalated).toBe(2);
     expect(result.current.statistics.statusDistribution).toEqual([
-      { name: 'Submitted', value: 4, color: '#4f46e5' },
+      { name: 'Submitted', value: 4, color: '#0ea5e9' },
     ]);
     expect(result.current.statistics.monthlyTrend?.[0]?.month).toBe('Apr 2026');
   });

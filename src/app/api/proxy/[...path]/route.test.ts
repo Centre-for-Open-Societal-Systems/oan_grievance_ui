@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { backendResponse, iamSessionCookies, iamToken, STAFF_OPTION } from '@/lib/iamTestFixtures';
+import { logger } from '@/lib/logger';
 import { GET } from './route';
 
 function get(cookies: Record<string, string>) {
@@ -106,5 +107,62 @@ describe('/api/proxy with an IAM session', () => {
     expect(cookies).toMatch(/refresh_token=;.*Max-Age=0/);
     expect(cookies).not.toContain('X-Access-Token');
     expect(cookies).not.toContain('login_option');
+  });
+});
+
+describe('/api/proxy request ids and failure logs', () => {
+  const call = (requestId?: string) =>
+    GET(
+      new NextRequest('http://localhost:3000/api/proxy/api/v1/charts?q=jane', {
+        headers: requestId ? { 'x-request-id': requestId } : {},
+      }),
+      { params: Promise.resolve({ path: ['api', 'v1', 'charts'] }) }
+    );
+
+  beforeEach(() => {
+    process.env.AUTH_API_BASE_URL = 'http://auth.internal';
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    delete process.env.AUTH_API_BASE_URL;
+    fetchMock.mockReset();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('forwards the id upstream and echoes it back', async () => {
+    fetchMock.mockResolvedValue(ok());
+    const res = await call('abcd1234-ef56');
+    expect(new Headers(fetchMock.mock.calls[0]![1].headers).get('x-request-id')).toBe('abcd1234-ef56');
+    expect(res.headers.get('x-request-id')).toBe('abcd1234-ef56');
+  });
+
+  it('replaces a malformed id with one it mints, the same one upstream and in the response', async () => {
+    fetchMock.mockResolvedValue(ok());
+    const res = await call('bad id; forged');
+    const upstream = new Headers(fetchMock.mock.calls[0]![1].headers).get('x-request-id');
+    expect(upstream).not.toContain('forged');
+    expect(res.headers.get('x-request-id')).toBe(upstream);
+  });
+
+  it('logs a 5xx from the backend once, tagged with the id and without the query string', async () => {
+    const spy = vi.spyOn(logger, 'event').mockImplementation(() => undefined);
+    fetchMock.mockResolvedValue(new Response('{}', { status: 503, headers: { 'content-type': 'application/json' } }));
+    await call('abcd1234-ef56');
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({ event: 'proxy.upstream_failed', requestId: 'abcd1234-ef56', path: '/api/v1/charts', status: 503 })
+    );
+  });
+
+  it('logs a thrown relay error once, as proxy.failed, not again as an upstream failure', async () => {
+    const spy = vi.spyOn(logger, 'event').mockImplementation(() => undefined);
+    fetchMock.mockRejectedValue(new Error('connect ECONNREFUSED'));
+    const res = await call('abcd1234-ef56');
+    expect(res.status).toBe(502);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith('error', expect.objectContaining({ event: 'proxy.failed', requestId: 'abcd1234-ef56' }));
   });
 });

@@ -1,6 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, extractFieldErrors, fetchApi } from './fetchApi';
 
+describe('fetchApi request ids', () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('sends an id and puts it on the error', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({ message: 'Nope' }) } as Response);
+    global.fetch = fetchMock;
+    const error = await fetchApi('api/v1/anything').catch((e: ApiError) => e);
+    const sent = new Headers((fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.headers).get('x-request-id');
+    expect(sent).toBeTruthy();
+    expect((error as ApiError).requestId).toBe(sent);
+  });
+});
+
 describe('fetchApi error messages', () => {
   const originalFetch = global.fetch;
 

@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { INVALID_INPUT_STYLES } from "@/components/ui/FieldError";
+import { maskIdKeepLast4 } from "@/lib/maskId";
 
 interface SIMaskedIdFieldProps {
   value: string;
@@ -14,6 +15,8 @@ interface SIMaskedIdFieldProps {
   /** The id of the error message shown for this field, wired up as `aria-describedby`. */
   describedBy?: string;
   onBlur?: () => void;
+  /** Shown, and still maskable with the eye toggle, but not editable. */
+  readOnly?: boolean;
 }
 
 const subscribeNever = () => () => {};
@@ -38,9 +41,14 @@ function canMaskWithCss(): boolean {
  * Where it cannot, the field falls back to a real password input: that may prompt
  * to save, but the number is never shown in clear text by accident.
  */
-export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, describedBy, onBlur }: SIMaskedIdFieldProps) {
+export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, describedBy, onBlur, readOnly }: SIMaskedIdFieldProps) {
   const [revealed, setRevealed] = useState(false);
+  const [focused, setFocused] = useState(false);
   const cssMask = useSyncExternalStore(subscribeNever, canMaskWithCss, () => false);
+
+  // At rest the number shows only its last four characters; focusing it (or the eye toggle)
+  // swaps to the real value so it can be edited, still hidden by the usual masking.
+  const showMasked = !revealed && !focused && value.trim().length > 0;
 
   return (
     <div className="relative">
@@ -63,13 +71,26 @@ export function SIMaskedIdField({ value, onChange, placeholder, id, invalid, des
         // accept far more than a valid Fayda ID's length).
         maxLength={16}
         value={value}
+        readOnly={readOnly}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
-        onBlur={onBlur}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          onBlur?.();
+        }}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || "Enter ID number"}
-        className={`w-full bg-white border border-gray-300 text-gray-700 py-2.5 pl-4 pr-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm ${INVALID_INPUT_STYLES}`}
+        className={`w-full ${readOnly ? "bg-gray-50 cursor-not-allowed" : "bg-white"} border border-gray-300 py-2.5 pl-4 pr-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b8535]/20 focus:border-[#0b8535] text-sm transition-colors shadow-sm ${INVALID_INPUT_STYLES} ${showMasked ? "text-transparent select-none" : readOnly ? "text-gray-500" : "text-gray-700"}`}
       />
+      {showMasked && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 right-11 flex items-center overflow-hidden pl-4 text-sm text-gray-700"
+        >
+          {maskIdKeepLast4(value)}
+        </span>
+      )}
       <button
         type="button"
         onClick={() => setRevealed((prev) => !prev)}

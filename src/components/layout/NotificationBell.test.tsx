@@ -6,14 +6,29 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import messages from '../../../messages/en.json';
 import { NotificationBell } from './NotificationBell';
 
-const { fetchNotifications, markNotificationRead, markAllNotificationsRead } = vi.hoisted(() => ({
+const {
+  fetchNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification,
+  deleteAllNotifications,
+} = vi.hoisted(() => ({
   fetchNotifications: vi.fn(),
   markNotificationRead: vi.fn().mockResolvedValue({}),
   markAllNotificationsRead: vi.fn().mockResolvedValue({}),
+  deleteNotification: vi.fn().mockResolvedValue({}),
+  deleteAllNotifications: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('./notificationsApi', () => ({ fetchNotifications, markNotificationRead, markAllNotificationsRead }));
+vi.mock('./notificationsApi', () => ({
+  fetchNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification,
+  deleteAllNotifications,
+}));
 vi.mock('@/lib/realtime', () => ({ useRealtimeEvent: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 afterEach(() => {
   cleanup();
@@ -53,10 +68,32 @@ describe('NotificationBell', () => {
     renderBell();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 2 new' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Grievance assigned/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Grievance assigned/ }));
 
     await waitFor(() => expect(markNotificationRead).toHaveBeenCalledWith('N1'));
     expect(screen.getByRole('button', { name: 'Notifications, 1 new' })).toBeInTheDocument();
+  });
+
+  it('deletes a notification when delete button is clicked', async () => {
+    fetchNotifications.mockResolvedValue(INBOX);
+    renderBell();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 2 new' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete notification: Grievance assigned' }));
+
+    await waitFor(() => expect(deleteNotification).toHaveBeenCalledWith('N1'));
+    expect(screen.queryByText('Grievance assigned')).not.toBeInTheDocument();
+  });
+
+  it('clears all notifications when Clear all is clicked', async () => {
+    fetchNotifications.mockResolvedValue(INBOX);
+    renderBell();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 2 new' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Clear all' }));
+
+    await waitFor(() => expect(deleteAllNotifications).toHaveBeenCalled());
+    expect(screen.getByText('You have no notifications.')).toBeInTheDocument();
   });
 
   it('marks everything read', async () => {

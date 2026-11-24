@@ -35,8 +35,22 @@ export interface GrievanceListItem {
   assigned_to?: string | null;
   sla_due_date?: string | null;
   confirmation_deadline?: string | null;
+  /** Whether the caller may act on the case now (a reply owed, or the assigned officer). */
+  can_act?: boolean | null;
+  /** The one deadline that matters now; `due_kind` says whether it closes the case or breaches the SLA. */
+  due_date?: string | null;
+  due_kind?: 'auto_close' | 'sla_breach' | null;
+  overdue_seconds?: number | null;
+  is_paused?: boolean | null;
+  paused_since?: string | null;
+  /** When the case closes by itself if nobody acts. */
+  auto_close_at?: string | null;
   submitted_on?: string | null;
   updated_at?: string | null;
+  /** Staff only: the ticket of the best flagged match, while an officer has yet to rule on it. */
+  possible_duplicate_of?: string | null;
+  /** The main ticket, once this one is confirmed as a duplicate. */
+  duplicate_of?: string | null;
 }
 
 export interface GrievanceListPagination {
@@ -62,6 +76,8 @@ export interface GrievanceSummaryCard {
   is_open: number;
   is_terminal: number;
   count: number;
+  /** Set by the client, never the service: the parts a card's count is made of, shown under it. A null count is one that could not be read. */
+  breakdown?: Array<{ label: string; count: number | null }>;
 }
 
 /** Payload returned by GET /api/v1/grievances/summary */
@@ -114,10 +130,20 @@ export interface Grievance {
   department: string;
   assignedTo: string;
   slaDueDate: string;
+  /** The backend's raw `sla_due_date`, for working out how close the case is to breaching. */
+  slaDueAt?: string;
+  /** The backend's `can_act`: whether the viewer may act on the case now, else the row is view-only. */
+  canAct?: boolean;
+  /** When the case closes by itself if nobody acts (waiting on the submitter, or resolved and unconfirmed). */
+  autoCloseAt?: string;
   submissionChannel: string;
   description?: string;
   administrativeArea?: string;
   administrativeUnit?: string;
+  /** Ticket of the best flagged match, awaiting an officer's ruling (staff only). */
+  possibleDuplicateOf?: string;
+  /** The main ticket, once confirmed as a duplicate. */
+  duplicateOf?: string;
 }
 
 /** Filters shared by the advanced-filters sidebar and the table column filters. */
@@ -226,11 +252,18 @@ export interface GrievanceTimelineSla {
   next_escalation_at?: string | null;
   confirmation_deadline?: string | null;
   active_deferral_request?: ChangeRequestData | null;
+  /** The SLA clock is held (e.g. waiting on the submitter); staff only. */
+  is_paused?: boolean | null;
+  paused_since?: string | null;
+  /** When the case closes by itself if nobody acts, for a state whose timer closes it. */
+  auto_close_at?: string | null;
 }
 
 export interface GrievanceTimelineAssignment {
   department?: string | null;
   assigned_to?: string | null;
+  /** The assigned officer's full name; staff only. */
+  assigned_to_name?: string | null;
   routed_automatically?: boolean;
   active_reassignment_request?: ChangeRequestData | null;
 }
@@ -261,6 +294,27 @@ export interface GrievanceTimelineAttachment {
   is_private?: number | boolean;
 }
 
+/** How likely a flagged ticket is to repeat its main ticket. The service sends the label, never a score. */
+export type DuplicateMatchLevel = 'High' | 'Medium';
+
+/**
+ * What an officer needs to rule on a flag: the best match and how it compares. The main ticket's own
+ * details are missing when the officer cannot read it.
+ */
+export interface PossibleDuplicate {
+  ticket_number: string;
+  match_level: DuplicateMatchLevel | string | null;
+  /** Whether this officer may confirm or dismiss the flag. */
+  can_review: boolean;
+  status?: string | null;
+  service_category?: string | null;
+  grievance_type?: string | null;
+  description?: string | null;
+  same_submitter?: boolean;
+  same_category?: boolean;
+  same_type?: boolean;
+}
+
 export interface GrievanceTimelineData {
   /** Grievance id (document name): the id realtime events and room subscriptions use. */
   name?: string;
@@ -275,6 +329,9 @@ export interface GrievanceTimelineData {
   administrative_area?: string | null;
   administrative_hierarchy?: Record<string, string> | null;
   location?: string | null;
+  /** The case's own text and channel, sent at the top level of the timeline response. */
+  description?: string | null;
+  submission_channel?: string | null;
   summary?: GrievanceTimelineSummary;
   submitter?: GrievanceTimelineSubmitter;
   sla?: GrievanceTimelineSla;
@@ -285,6 +342,10 @@ export interface GrievanceTimelineData {
   events?: TimelineEventItem[];
   has_more?: boolean;
   next_cursor?: string | null;
+  /** The main ticket, once this one is confirmed as a duplicate: the case is read-only. */
+  duplicate_of?: string | null;
+  /** Staff only: the flag an officer rules on. Null when nothing is awaiting a ruling. */
+  possible_duplicate?: PossibleDuplicate | null;
 }
 
 export interface ResponseTemplateItem {
@@ -330,12 +391,15 @@ export interface GrievanceCurrentState {
   workflow_status?: string;
   escalated: boolean | number;
   assigned_to?: string | null;
+  assigned_to_name?: string | null;
   assigned_dept?: string | null;
   department?: string | null;
   updated_at?: string | null;
   available_actions?: GrievanceAvailableAction[];
   /** Whether the submitter can be contacted (a phone number or email is on file). */
   can_request_more_info?: boolean;
+  duplicate_of?: string | null;
+  possible_duplicate?: PossibleDuplicate | null;
 }
 
 export interface GrievanceActionResult {
@@ -375,6 +439,8 @@ export interface ChangeRequestData {
   requested_by: string;
   requested_at?: string | null;
   pending_with?: string | null;
+  /** User id of who must decide (compare with the signed-in user); `pending_with` is for display. */
+  pending_with_id?: string | null;
   pending_since?: string | null;
   decided_by?: string | null;
   decided_at?: string | null;
@@ -422,6 +488,7 @@ export interface DeferSLAPayload {
 export interface ReassignGrievancePayload {
   target_department?: string | null;
   target_category?: string | null;
+  target_grievance_type?: string | null;
   target_officer?: string | null;
   reason?: string | null;
   sla_treatment?: 'Continue' | 'Reset' | string;
@@ -441,3 +508,22 @@ export interface DecideChangeRequestPayload {
   note?: string | null;
 }
 
+
+export interface ConfirmDuplicatePayload {
+  /** Defaults to the best flagged match. Must be the same submitter's and still open or resolved. */
+  main_ticket?: string;
+  note?: string;
+}
+
+export interface DismissDuplicatePayload {
+  note?: string;
+}
+
+/** What `POST .../duplicate/confirm` and `.../dismiss` answer with. */
+export interface DuplicateRulingResult {
+  ticket_number: string;
+  status: string;
+  duplicate_of?: string | null;
+  current_state?: GrievanceCurrentState;
+  timeline_event?: TimelineEntry | null;
+}

@@ -1,7 +1,9 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { Provider } from 'react-redux';
+import en from '../../../../messages/en.json';
 import { loginThunk } from '@/features/auth/store/authSlice';
 import { makeStore } from '@/store';
 import { OfficerDirectory } from './OfficerDirectory';
@@ -60,6 +62,7 @@ vi.mock('../api/officerApi', () => ({
   fetchOfficerStatistics,
   fetchOfficerStatusCounts,
   fetchOfficerCandidates: vi.fn().mockResolvedValue({ candidates: [] }),
+  fetchServiceCategoryNames: vi.fn().mockResolvedValue(['Inputs', 'Markets']),
 }));
 
 const fetchAdministrativeAreas = vi.hoisted(() =>
@@ -87,9 +90,11 @@ function renderDirectory(role?: string) {
     store.dispatch({ type: loginThunk.fulfilled.type, payload: { email: 'user@example.et', roles: [role] } });
   }
   return render(
-    <Provider store={store}>
-      <OfficerDirectory />
-    </Provider>
+    <NextIntlClientProvider locale="en" messages={en}>
+      <Provider store={store}>
+        <OfficerDirectory />
+      </Provider>
+    </NextIntlClientProvider>
   );
 }
 

@@ -5,6 +5,13 @@
     "body": "Your account isn't assigned a recognized role in the grievance portal. Please contact your administrator to get one assigned."
   },
   "register": {
+    "account": {
+      "selectTypeFirst": "Select a submitter type to continue.",
+      "fullNameLabel": "Full Name",
+      "fullNamePlaceholder": "Full Name",
+      "organisationNameLabel": "Organisation Name",
+      "organisationNamePlaceholder": "Organisation Name"
+    },
     "profile": {
       "title": "Almost done!",
       "subtitle": "One more thing — tell us how you'll be submitting grievances, so we don't ask again later.",
@@ -15,6 +22,7 @@
       "consentCheckboxLabel": "I consent to providing my national ID number for identity verification.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
+      "selectCategoryFirst": "Select a category first",
       "fieldRequired": "This field is required.",
       "organisationNotice": "After you sign in, we'll ask for your organisation's details — name, registration number, authorised representative, address and contacts.",
       "faydaAlreadyRegistered": "This Fayda ID is already registered to another account.",
@@ -70,8 +78,8 @@
         "placeholder": "Enter Rep's full name"
       },
       "memberCount": {
-        "label": "Member Count Affected",
-        "placeholder": "Enter Number of members affected"
+        "label": "Total Number of Members",
+        "placeholder": "Enter total number of members"
       },
       "streetAddress": {
         "label": "Street address",
@@ -79,19 +87,19 @@
       },
       "kebele": {
         "label": "Kebele / Village",
-        "placeholder": "Enter Kebele / Village"
+        "placeholder": "Select Kebele / Village"
       },
       "woreda": {
-        "label": "Woreda / District",
-        "placeholder": "Enter Woreda / District"
+        "label": "Woreda",
+        "placeholder": "Select Woreda"
       },
       "zone": {
-        "label": "Zone",
-        "placeholder": "Enter Zone"
+        "label": "Zone / Sub-city",
+        "placeholder": "Select Zone / Sub-city"
       },
       "region": {
         "label": "Region",
-        "placeholder": "Enter Region"
+        "placeholder": "Select Region"
       },
       "country": {
         "label": "Country",
@@ -115,6 +123,18 @@
         "label": "Phone",
         "placeholder": "Enter phone number"
       }
+    },
+    "areas": {
+      "loading": "Loading…",
+      "none": "No areas available",
+      "noneOptional": "None listed — you can leave this blank",
+      "truncated": "Showing the first {count} — type to search for others.",
+      "selectRegionFirst": "Select region first",
+      "selectZoneFirst": "Select zone first",
+      "selectWoredaFirst": "Select woreda first",
+      "loadFailed": "Could not load this list.",
+      "loadFailedShort": "Could not load — try again",
+      "retry": "Try again"
     },
     "entityTypes": {
       "localNgo": "Local NGO",
@@ -206,14 +226,35 @@
       "voiceDescription": "Voice recording attached"
     },
     "identityStep": {
+      "readOnlyNote": "These details come from your account and cannot be changed here.",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "invalidFields": "{count, plural, one {This field looks} other {These fields look}} incorrectly formatted: {fields}.",
       "fieldRequired": "This field is required.",
       "channelsLoadFailed": "Couldn't load the submission channels.",
       "channelsEmpty": "No submission channels are available right now.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "farmerLookup": {
+        "search": "Search registry",
+        "searching": "Searching…",
+        "found": "Farmer found in the registry. Check the Fayda ID and name match before using them.",
+        "notFound": "No farmer with this Fayda ID was found in the registry.",
+        "failed": "Couldn't search the registry. Try again.",
+        "useDetails": "Use these details",
+        "faydaId": "Fayda ID",
+        "name": "Name",
+        "filling": "Filling…",
+        "fillFailed": "Couldn't get the farmer's contact details. Try again."
+      }
     },
     "detailsStep": {
+      "descriptionLabel": "Describe your grievance",
+      "descriptionHelp": "Tell us what happened, when and where, and who was involved. Add dates, amounts or reference numbers if you have them.",
+      "descriptionPlaceholder": "For example: The fertilizer I paid for in May was only delivered in late July, when it was too late to use.",
+      "desiredOutcomeLabel": "What would you like us to do?",
+      "desiredOutcomeHelp": "Tell us how you would like this resolved, for example a refund, a replacement or a visit from an officer.",
+      "desiredOutcomePlaceholder": "For example: Refund what I paid, or deliver a replacement before the next planting season.",
+      "optional": "Optional",
+      "selectCategoryFirst": "Select a category first",
       "missingFields": "Missing required field{count, plural, one {} other {s}}: {fields}.",
       "descriptionTooShort": "Description must be at least {min} characters (currently {count}).",
       "fieldRequired": "This field is required.",
@@ -231,7 +272,8 @@
     },
     "voice": {
       "hint": "Speak in your own words instead of typing. Officers will listen to the recording and route it to the right department.",
-      "record": "Record",
+      "callout": "Prefer to speak?",
+      "record": "Record voice note",
       "recordAgain": "Record again",
       "stop": "Stop recording",
       "recording": "Recording {time} / {max}",
@@ -255,8 +297,21 @@
     "unreadLabel": "Notifications, {count} new",
     "title": "Notifications",
     "markAllRead": "Mark all as read",
+    "viewGrievance": "View grievance",
+    "clearAll": "Clear all",
+    "delete": "Delete notification: {subject}",
     "empty": "You have no notifications.",
     "loadError": "Could not load notifications."
+  },
+  "caseDetail": {
+    "slaPaused": "Paused",
+    "slaClosesOn": "Closes on",
+    "slaOnHold": "On hold",
+    "grievanceType": "Grievance Type",
+    "selectGrievanceType": "Select Grievance Type",
+    "loadingTypes": "Loading types...",
+    "chooseGrievanceType": "Choose a grievance type for {category}",
+    "assignedOfficer": "Assigned officer"
   },
   "caseExport": {
     "title": "Export",
@@ -505,6 +560,8 @@
       "disableRule": "Disable rule",
       "editTemplate": "Edit notification template",
       "closeEditor": "Close editor",
+      "viewTemplate": "View notification template",
+      "closeTemplate": "Close template",
       "emailSubject": "Email Subject",
       "insert": "Insert:",
       "insertSubject": "Insert {token} into subject",
@@ -582,6 +639,7 @@
         "awaiting_action": "Awaiting Action",
         "resolved": "Resolved",
         "escalated": "Escalated",
+        "duplicates": "Duplicates",
         "fromLastMonth": "from last month",
         "newThisWeek": "new this week",
         "resolvedThisWeek": "resolved this week"
@@ -599,7 +657,8 @@
         "moreInfoNeeded": "More Info Needed",
         "resolved": "Resolved",
         "closed": "Closed",
-        "rejected": "Rejected"
+        "rejected": "Rejected",
+        "duplicate": "Duplicate"
       },
       "noStatuses": "No grievances to show by status yet.",
       "escalatedCaption": "Triggered by SLA breach",
@@ -703,6 +762,8 @@
     "noSignInMethod": "No sign-in method is configured. Contact an administrator."
   },
   "attachmentViewer": {
+    "playRecording": "Play recording",
+    "voiceNote": "Voice recording",
     "loadingPreview": "Loading preview",
     "previewUnavailable": "Preview unavailable",
     "previewLoadFailed": "Could not load this file right now.",
@@ -710,12 +771,72 @@
     "scanInfected": "This file failed the malware scan and cannot be opened.",
     "scanFailed": "The malware scan could not be completed, so this file cannot be opened."
   },
+  "duplicates": {
+    "chipPossible": "Possible duplicate of {ticket}",
+    "chipConfirmed": "Duplicate of {ticket}",
+    "actionReview": "Review",
+    "flaggedTitle": "Possible duplicate",
+    "flaggedIntro": "This looks to be a duplicate of ‘{ticket}’. Review and decide.",
+    "matchLevel": "Match: {level}",
+    "levelHigh": "High",
+    "levelMedium": "Medium",
+    "mainTicket": "Main ticket",
+    "status": "Status",
+    "categoryAndType": "Category and type",
+    "description": "Description",
+    "details": "Details",
+    "detailsUnavailable": "Details of the earlier ticket are not available to you.",
+    "whatMatched": "What matched",
+    "sameFarmer": "Same farmer",
+    "sameCategory": "Same category",
+    "sameType": "Same type",
+    "confirmButton": "Confirm as duplicate",
+    "dismissButton": "Not a duplicate",
+    "cannotReview": "You can see this flag but cannot rule on it.",
+    "confirmTitle": "Confirm as duplicate",
+    "confirmSubmit": "Confirm duplicate",
+    "dismissTitle": "Keep as a normal grievance",
+    "dismissBody": "The flag is removed and this grievance is handled as usual.",
+    "dismissSubmit": "Not a duplicate",
+    "mainTicketRequired": "Enter the main ticket.",
+    "mainTicketSame": "The main ticket must be a different ticket.",
+    "effectsTitle": "What happens next",
+    "effectStatus": "The status becomes Duplicate.",
+    "effectMessage": "A message is added: all further handling happens on the main ticket.",
+    "effectReadOnly": "This ticket becomes read-only. This cannot be undone.",
+    "noteLabel": "Note (optional)",
+    "cancel": "Cancel",
+    "close": "Close",
+    "saveFailed": "The ruling could not be saved. Please try again.",
+    "bannerTitle": "This ticket is a duplicate",
+    "bannerBody": "All further handling happens on the main ticket {ticket}.",
+    "openMain": "Open main ticket"
+  },
   "grievanceList": {
-    "searchPlaceholder": "Search by ticket number, submitter name, or grievance type..."
+    "metricsPrevious": "Previous cards",
+    "metricsNext": "Next cards",
+    "searchPlaceholder": "Search by ticket number, submitter name, or grievance type...",
+    "actionView": "View",
+    "actionEdit": "Edit",
+    "actionReview": "Review",
+    "possibleDuplicateOf": "Possible duplicate of {ticket}",
+    "duplicateOf": "Duplicate of {ticket}",
+    "closesOn": "Closes {date}",
+    "slaDueToday": "Due today",
+    "slaDueSoon": "{days, plural, one {# day left} other {# days left}}",
+    "slaOverdue": "{days, plural, one {Breached # day ago} other {Breached # days ago}}"
   },
   "validation": {
+    "required": "required",
     "characterCount": "{count} / {max}",
     "tooLong": "Must be {max} characters or fewer.",
     "charactersRemaining": "{count, plural, one {# character remaining} other {# characters remaining}}"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "body": "This page ran into a problem and could not be shown. Your work elsewhere is not affected.",
+    "reference": "Reference: {id}",
+    "retry": "Try again",
+    "home": "Go to dashboard"
   }
 }

@@ -3,14 +3,12 @@
 import { type ComponentType } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, ShieldCheck } from 'lucide-react';
-import { errorIdFor, FieldError } from '@/components/ui/FieldError';
 import { Spinner } from '@/components/ui/Spinner';
-import { AnimatedSelect } from '@/components/submitter-identity/SI-Dropdown';
 import { IndividualFarmerForm } from '@/components/submitter-identity/SI-IndividualFarmerForm';
 import { OrganisationSignupForm } from '@/components/submitter-identity/SI-OrganisationSignupForm';
 import { WoredaKebeleForm } from '@/components/submitter-identity/SI-WoredaKebeleForm';
 import type { SIFormProps } from '@/components/submitter-identity/SI-types';
-import { onboardsOrganisationAfterSignIn, submitterTypeOptions } from '@/components/submitter-identity/fields';
+import { onboardsOrganisationAfterSignIn } from '@/components/submitter-identity/fields';
 
 // Deliberately no entry for `development_agent`: an agent files for other
 // people and enters *their* details when filing each grievance, so registration
@@ -31,11 +29,10 @@ const SUBMITTER_TYPE_FORMS: Record<string, ComponentType<SIFormProps>> = {
 
 export interface ProfileStepProps {
   submitterType: string;
-  onSubmitterTypeChange: (value: string) => void;
   identityValues: Record<string, string>;
   setIdentityValue: (key: string, value: string) => void;
   hiddenFields: string[];
-  /** Inline validation messages by field key — `submitterType` for the dropdown, the rest for the identity form. */
+  /** Inline validation messages by identity-form field key. */
   errors: Record<string, string>;
   /** Called with a field's key when it loses focus, so the form can validate it. */
   onFieldBlur: (key: string) => void;
@@ -62,7 +59,6 @@ export interface ProfileStepProps {
  */
 export function ProfileStep({
   submitterType,
-  onSubmitterTypeChange,
   identityValues,
   setIdentityValue,
   hiddenFields,
@@ -84,22 +80,6 @@ export function ProfileStep({
       <div className="text-center space-y-2">
         <h3 className="text-2xl font-bold text-gray-900">{t('title')}</h3>
         <p className="text-gray-500 font-medium">{t('subtitle')}</p>
-      </div>
-
-      <div>
-        <label htmlFor="register-submitter-type" className="block text-sm font-semibold text-gray-800 mb-2">{t('submitterTypeLabel')}</label>
-        <AnimatedSelect
-          id="register-submitter-type"
-          options={submitterTypeOptions}
-          placeholder={t('submitterTypePlaceholder')}
-          value={submitterType}
-          onChange={onSubmitterTypeChange}
-          invalid={!!errors.submitterType}
-          describedBy={errors.submitterType ? errorIdFor('register-submitter-type') : undefined}
-        />
-        {errors.submitterType && (
-          <FieldError id={errorIdFor('register-submitter-type')}>{errors.submitterType}</FieldError>
-        )}
       </div>
 
       {IdentityForm && (

@@ -31,10 +31,9 @@ export interface SubmitGrievanceResult {
   sla_due_date?: string | null;
   possible_duplicates?: string[];
   area_path_code?: string | null;
-  attachments?: number;
+  /** The files stored with the case (sent along with it as multipart), each with its scan status. */
+  attachments?: unknown[];
   duplicate_submission?: boolean;
-  /** Set client-side when the case was filed but its staged attachments failed to upload. */
-  attachment_upload_failed?: boolean;
 }
 
 /**
@@ -49,12 +48,35 @@ export function buildSubmitGrievancePayload(input: BuildSubmitFieldsInput): Subm
   };
 }
 
-/** POST /api/v1/grievances — files the case and returns its ticket number. Authenticated submitters only. */
-export async function submitGrievance(payload: SubmitGrievancePayload): Promise<SubmitGrievanceResult> {
-  return fetchApi<SubmitGrievanceResult>('/api/v1/grievances', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+/** Rendering a file upload can take longer than a JSON call on a slow connection. */
+const SUBMIT_WITH_FILES_TIMEOUT_MS = 60_000;
+
+/**
+ * POST /api/v1/grievances — files the case and returns its ticket number. Authenticated submitters only.
+ *
+ * With files (a voice recording, supporting documents) the request is multipart: the fields go as form
+ * fields and each file under `file`, so the backend attaches them to the case's submission entry — which
+ * is where officers see them, next to the description. The backend checks the files before it files the
+ * case, so a refused file refuses the whole submission instead of leaving a case without its evidence.
+ */
+export async function submitGrievance(payload: SubmitGrievancePayload, files: File[] = []): Promise<SubmitGrievanceResult> {
+  if (files.length === 0) {
+    return fetchApi<SubmitGrievanceResult>('/api/v1/grievances', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  const form = new FormData();
+  for (const [key, value] of Object.entries(payload)) {
+    if (value !== undefined && value !== null) form.append(key, String(value));
+  }
+  for (const file of files) form.append('file', file);
+  return fetchApi<SubmitGrievanceResult>(
+    '/api/v1/grievances',
+    { method: 'POST', body: form },
+    SUBMIT_WITH_FILES_TIMEOUT_MS
+  );
 }
 
 /**

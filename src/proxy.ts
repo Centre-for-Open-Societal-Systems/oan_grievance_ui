@@ -59,7 +59,7 @@ function buildCsp(nonce: string): string {
     `media-src 'self' blob:`,
     `frame-src 'self' blob:`,
     `font-src 'self'`,
-    `connect-src 'self'${realtimeConnectSrc()}`,
+    `connect-src 'self'${realtimeConnectSrc()}${isDev ? ' ws: wss:' : ''}`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
@@ -187,6 +187,8 @@ export async function proxy(request: NextRequest) {
   // the only line that consumes it.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
+  // Lets the root layout tell a protected screen from a public one (initialUser.ts).
+  requestHeaders.set('x-pathname', pathname);
   requestHeaders.set('Content-Security-Policy', csp);
 
   return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
@@ -202,6 +204,6 @@ export const config = {
   // whose pathname happens to contain a dot (an email-shaped segment, a
   // dotted ID), silently skipping the auth check for them.
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff|woff2|ttf|eot)$).*)',
+    '/((?!api|_next|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff|woff2|ttf|eot)$).*)',
   ],
 };

@@ -2,15 +2,16 @@
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
-import { Pencil, FileText, X, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, Pencil, FileText, X, Loader2, AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NotificationTemplate, PlaceholderItem, UpdateNotificationTemplatePayload, FlatRecipientOption } from './types';
-import { TemplateBody } from './TemplateBody';
+import { TemplateBody, TemplateText } from './TemplateBody';
 
 interface NotificationRowProps {
     notification: NotificationTemplate;
     isLast?: boolean;
-    onUpdate?: (templateName: string, payload: UpdateNotificationTemplatePayload) => Promise<void>;
+    canEdit: boolean;
+    onUpdate: (templateName: string, payload: UpdateNotificationTemplatePayload) => Promise<void>;
     placeholders?: PlaceholderItem[];
     recipientOptions?: FlatRecipientOption[];
 }
@@ -38,8 +39,9 @@ function formatEventTitle(name: string, event: string): string {
     return event.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function NotificationRow({ notification, isLast, onUpdate, placeholders, recipientOptions = [] }: NotificationRowProps) {
+export function NotificationRow({ notification, isLast, canEdit, onUpdate, placeholders, recipientOptions = [] }: NotificationRowProps) {
     const t = useTranslations('admin.notifications');
+    const OpenIcon = canEdit ? Pencil : Eye;
     const [isExpanded, setIsExpanded] = useState(false);
     const [isActive, setIsActive] = useState(notification.enabled);
     const [subject, setSubject] = useState(notification.subject || '');
@@ -74,7 +76,6 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders, 
 
     const handleToggleActive = async (newVal: boolean) => {
         setIsActive(newVal);
-        if (!onUpdate) return;
         setIsToggling(true);
         try {
             await onUpdate(notification.name, { enabled: newVal });
@@ -87,10 +88,6 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders, 
     };
 
     const handleSave = async () => {
-        if (!onUpdate) {
-            setIsExpanded(false);
-            return;
-        }
         setIsSaving(true);
         setError(null);
         try {
@@ -184,134 +181,159 @@ export function NotificationRow({ notification, isLast, onUpdate, placeholders, 
 
                 {/* Actions */}
                 <div className="flex items-center gap-3 shrink-0 ml-2">
-                    <label className="relative inline-flex items-center cursor-pointer" title={isActive ? t('disableRule') : t('enableRule')}>
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={isActive}
-                            disabled={isToggling}
-                            onChange={(e) => handleToggleActive(e.target.checked)}
-                        />
-                        <div className={`w-10 h-5 rounded-full transition-colors duration-200 ease-in-out ${isActive ? 'bg-[#16A34A]' : 'bg-gray-300'} ${isToggling ? 'opacity-50' : ''}`}></div>
-                        <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-all duration-200 ease-in-out transform shadow-sm ${isActive ? 'translate-x-5' : ''}`}></div>
-                    </label>
+                    {canEdit && (
+                        <label className="relative inline-flex items-center cursor-pointer" title={isActive ? t('disableRule') : t('enableRule')}>
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={isActive}
+                                disabled={isToggling}
+                                onChange={(e) => handleToggleActive(e.target.checked)}
+                            />
+                            <div className={`w-10 h-5 rounded-full transition-colors duration-200 ease-in-out ${isActive ? 'bg-[#16A34A]' : 'bg-gray-300'} ${isToggling ? 'opacity-50' : ''}`}></div>
+                            <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-all duration-200 ease-in-out transform shadow-sm ${isActive ? 'translate-x-5' : ''}`}></div>
+                        </label>
+                    )}
                     <button
                         type="button"
                         onClick={() => setIsExpanded(!isExpanded)}
                         className={`relative w-8 h-8 rounded-lg border flex items-center justify-center transition-all duration-200 active:scale-95 ${isExpanded ? 'bg-[#F7F8FA] border-gray-300' : 'bg-white hover:bg-gray-50 border-gray-200'}`}
-                        title={isExpanded ? t('closeEditor') : t('editTemplate')}
+                        title={canEdit ? (isExpanded ? t('closeEditor') : t('editTemplate')) : (isExpanded ? t('closeTemplate') : t('viewTemplate'))}
                     >
                         <X className={`absolute w-4 h-4 text-gray-500 transition-all duration-200 ${isExpanded ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'}`} />
-                        <Pencil className={`absolute w-3.5 h-3.5 text-gray-500 transition-all duration-200 ${!isExpanded ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 rotate-90 scale-50'}`} />
+                        <OpenIcon className={`absolute w-3.5 h-3.5 text-gray-500 transition-all duration-200 ${!isExpanded ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 rotate-90 scale-50'}`} />
                     </button>
                 </div>
             </div>
 
-            {/* Expanded Editor */}
+            {/* Expanded panel: editor, or a read-only view of the same template */}
             {isExpanded && (
                 <div className="border-t border-gray-200">
                     <div className="p-6 bg-gray-50/50">
-                        {error && (
-                            <div className="mb-5 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs font-medium">
-                                <AlertCircle className="w-4 h-4 shrink-0" />
-                                <span>{error}</span>
+                        {!canEdit && (
+                            <div className="flex flex-col gap-5">
+                                <div>
+                                    <h4 className="text-[13px] font-medium text-gray-500 mb-1">{t('recipient')}</h4>
+                                    <p className="text-[14px] text-gray-800">{displayRecipientLabel}</p>
+                                </div>
+                                {notification.channel === 'Email' && (
+                                    <div>
+                                        <h4 className="text-[13px] font-medium text-gray-500 mb-1">{t('emailSubject')}</h4>
+                                        <TemplateText value={notification.subject || ''} placeholders={placeholders} />
+                                    </div>
+                                )}
+                                <div>
+                                    <h4 className="text-[13px] font-medium text-gray-500 mb-1">{t('templateBody')}</h4>
+                                    <TemplateText value={notification.body || ''} placeholders={placeholders} />
+                                </div>
                             </div>
                         )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            {notification.channel === 'Email' && (
-                                <div className="md:col-span-2">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="block text-[13px] font-medium text-gray-500">
-                                            {t('emailSubject')} <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-[11px] text-gray-400">{t('insert')}</span>
-                                            {['{ticket_number}', '{status}'].map((token) => (
-                                                <button
-                                                    key={token}
-                                                    type="button"
-                                                    disabled={isSaving}
-                                                    onClick={() => setSubject((prev) => (prev ? `${prev} ${token}` : token))}
-                                                    className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-50"
-                                                    title={t('insertSubject', { token })}
-                                                >
-                                                    {token}
-                                                </button>
-                                            ))}
-                                        </div>
+                        {canEdit && (
+                            <>
+                                {error && (
+                                    <div className="mb-5 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs font-medium">
+                                        <AlertCircle className="w-4 h-4 shrink-0" />
+                                        <span>{error}</span>
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={subject}
-                                        onChange={(e) => setSubject(e.target.value)}
-                                        className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-[14px] text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A]"
-                                    />
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                    {notification.channel === 'Email' && (
+                                        <div className="md:col-span-2">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="block text-[13px] font-medium text-gray-500">
+                                                    {t('emailSubject')} <span className="text-red-500">*</span>
+                                                </label>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[11px] text-gray-400">{t('insert')}</span>
+                                                    {['{ticket_number}', '{status}'].map((token) => (
+                                                        <button
+                                                            key={token}
+                                                            type="button"
+                                                            disabled={isSaving}
+                                                            onClick={() => setSubject((prev) => (prev ? `${prev} ${token}` : token))}
+                                                            className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-50"
+                                                            title={t('insertSubject', { token })}
+                                                        >
+                                                            {token}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={subject}
+                                                onChange={(e) => setSubject(e.target.value)}
+                                                className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-[14px] text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A]"
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-500 mb-2">{t('channel')}</label>
+                                        <span className={`inline-flex px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border ${notification.channel === 'SMS' ? 'bg-[#FFF7D8] border-[#FEE685] text-[#BB4D00]' : 'bg-[#EFF6FF] border-[#C9E0FF] text-[#1447E6]'}`}>
+                                            {notification.channel}
+                                        </span>
+                                    </div>
                                 </div>
-                            )}
 
-                            <div>
-                                <label className="block text-[13px] font-medium text-gray-500 mb-2">{t('channel')}</label>
-                                <span className={`inline-flex px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border ${notification.channel === 'SMS' ? 'bg-[#FFF7D8] border-[#FEE685] text-[#BB4D00]' : 'bg-[#EFF6FF] border-[#C9E0FF] text-[#1447E6]'}`}>
-                                    {notification.channel}
-                                </span>
-                            </div>
-                        </div>
+                                <div className="mb-6">
+                                    <label className="block text-[13px] font-medium text-gray-500 mb-2">
+                                        {t('recipient')}
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {recipientOptions.map((opt) => {
+                                            const isSelected = selectedRecipientId === opt.id;
+                                            return (
+                                                <button
+                                                    key={opt.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedRecipientId(opt.id)}
+                                                    className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${isSelected
+                                                        ? 'bg-[#DCFCE7] text-[#008236] border-[#99E8B5]'
+                                                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
 
-                        <div className="mb-6">
-                            <label className="block text-[13px] font-medium text-gray-500 mb-2">
-                                {t('recipient')}
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                                {recipientOptions.map((opt) => {
-                                    const isSelected = selectedRecipientId === opt.id;
-                                    return (
-                                        <button
-                                            key={opt.id}
-                                            type="button"
-                                            onClick={() => setSelectedRecipientId(opt.id)}
-                                            className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${isSelected
-                                                ? 'bg-[#DCFCE7] text-[#008236] border-[#99E8B5]'
-                                                : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
-                                        >
-                                            {opt.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <TemplateBody value={body} onChange={setBody} disabled={isSaving} placeholders={placeholders} />
-
+                                <TemplateBody value={body} onChange={setBody} disabled={isSaving} placeholders={placeholders} />
+                            </>
+                        )}
                     </div>
-                    <div className="bg-white p-4 px-6 border-t border-gray-200 flex justify-end items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={handleCancel}
-                            disabled={isSaving}
-                            className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                        >
-                            {t('cancel')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-[#16A34A] rounded-lg hover:bg-[#10883c] transition-colors disabled:opacity-50"
-                        >
-                            {isSaving ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span>{t('saving')}</span>
-                                </>
-                            ) : (
-                                <>
-                                    <FileText className="w-4 h-4" />
-                                    <span>{t('saveTemplate')}</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
+                    {canEdit && (
+                        <div className="bg-white p-4 px-6 border-t border-gray-200 flex justify-end items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={handleCancel}
+                                disabled={isSaving}
+                                className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                {t('cancel')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-[#16A34A] rounded-lg hover:bg-[#10883c] transition-colors disabled:opacity-50"
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>{t('saving')}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <FileText className="w-4 h-4" />
+                                        <span>{t('saveTemplate')}</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

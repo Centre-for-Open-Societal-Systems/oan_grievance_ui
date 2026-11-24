@@ -12,7 +12,18 @@ import { ApiError } from '@/lib/api/fetchApi';
 // than that on a slow connection — this app targets Ethiopia OpenAgriNet,
 // not a fast/reliable link — so uploads get a longer allowance instead of
 // aborting a request the backend would otherwise have accepted.
-const UPLOAD_TIMEOUT_MS = 60_000;
+export const UPLOAD_TIMEOUT_MS = 60_000;
+
+/** Builds a multipart body from scalar fields plus the repeated `files` part, skipping unset fields. */
+export function toMultipartBody(fields: Record<string, string | number | boolean | null | undefined>, files: File[]): FormData {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined || value === null) continue;
+    form.append(key, String(value));
+  }
+  for (const file of files) form.append('files', file);
+  return form;
+}
 
 /**
  * Mirrors the backend's Grievance Attachment `scan_status` field exactly

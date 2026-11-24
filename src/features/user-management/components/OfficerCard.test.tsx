@@ -9,7 +9,6 @@ const BASE_OFFICER: Officer = {
   name: 'Tigist Alemu',
   status: 'Active',
   roleTitle: 'Inputs Quality Grievance Officer',
-  designation: 'Inputs Quality Grievance Officer',
   department: 'Inputs Supply & Distribution Agency',
   email: 'tigist.alemu@isda.gov.et',
   phone: '+251911234567',

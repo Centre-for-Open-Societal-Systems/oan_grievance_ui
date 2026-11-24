@@ -185,12 +185,17 @@ describe('resolveInitialSubmitterType', () => {
 });
 
 describe('resolveInitialSubmissionChannel', () => {
-  it("maps the account's channel name onto the option value the channel dropdown uses", () => {
-    const channelFor = (submission_channel: string) => resolveInitialSubmissionChannel({ ...FULL_USER, submission_channel });
+  it("maps the account's channel name onto the option value the channel dropdown uses, for a type that may choose", () => {
+    const channelFor = (submission_channel: string) =>
+      resolveInitialSubmissionChannel({ ...FULL_USER, type: 'Cooperative', submitter_type: 'Cooperative', submission_channel });
     expect(channelFor('Web Portal')).toBe('web');
     expect(channelFor('Mobile App')).toBe('mobile');
     expect(channelFor('IVR Helpline')).toBe('ivr');
     expect(channelFor('Development Agent Assisted')).toBe('field_officer');
+  });
+
+  it('is the web portal for an individual farmer, whatever channel the profile was registered through', () => {
+    expect(resolveInitialSubmissionChannel({ ...FULL_USER, submission_channel: 'IVR Helpline' })).toBe('web');
   });
 
   it('falls back to Web Portal only when the account has no channel', () => {

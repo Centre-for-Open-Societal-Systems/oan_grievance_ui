@@ -58,6 +58,12 @@ export interface AuthState {
   user: User | null;
   status: AuthStatus;
   error: string | null;
+  /**
+   * Whether this app's idle clock applies, when the server already knew it
+   * (a seeded session is always a local one). Absent otherwise: the idle timer
+   * then asks `/api/auth/me`.
+   */
+  idleManaged?: boolean;
 }
 
 export const loginThunk = createAsyncThunk<
@@ -120,6 +126,7 @@ const authSlice = createSlice({
       state.user = null;
       state.status = 'idle';
       state.error = null;
+      delete state.idleManaged;
     },
     clearAuthError(state) {
       state.error = null;
@@ -162,6 +169,7 @@ export const { logout, clearAuthError } = authSlice.actions;
 
 export const selectUser = (state: RootState) => state.auth.user;
 export const selectAuthStatus = (state: RootState) => state.auth.status;
+export const selectIdleManaged = (state: RootState) => state.auth.idleManaged;
 export const selectAuthError = (state: RootState) => state.auth.error;
 export const selectIsAuthenticated = (state: RootState) => state.auth.user !== null;
 

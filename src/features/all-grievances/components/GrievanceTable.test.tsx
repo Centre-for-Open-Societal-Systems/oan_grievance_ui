@@ -107,6 +107,41 @@ describe('GrievanceTable', () => {
     expect(onViewGrievance).toHaveBeenCalledWith(mockGrievances[0]);
   });
 
+  it("shows View instead of Edit when the backend says the viewer cannot act", () => {
+    const { container } = renderIntl(
+      <GrievanceTable
+        {...defaultProps}
+        grievances={[
+          { ...mockGrievances[0]!, status: "In Progress", canAct: false },
+          { ...mockGrievances[1]!, status: "Require More Info", canAct: true },
+        ]}
+      />
+    );
+    const view = within(container);
+    expect(view.getAllByRole("button", { name: /^view$/i }).length).toBe(1);
+    expect(view.getAllByRole("button", { name: /^edit$/i }).length).toBe(1);
+  });
+
+  it('flags a case about to breach with a badge and a coloured row, and leaves a breached one plain', () => {
+    const day = 86_400_000;
+    const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * day).toISOString();
+    const { container } = renderIntl(
+      <GrievanceTable
+        {...defaultProps}
+        grievances={[
+          { ...mockGrievances[0]!, id: 'a', ticketId: 'T-SOON', status: 'In Progress', slaDueAt: iso(2) },
+          { ...mockGrievances[1]!, id: 'b', ticketId: 'T-LATE', status: 'In Progress', slaDueAt: iso(-3) },
+        ]}
+      />
+    );
+    const view = within(container);
+
+    expect(view.getByText(/days? left|Due today/)).toBeTruthy();
+    expect(view.getByText(/Breached 3 days ago/)).toBeTruthy();
+    expect(view.getByText('T-SOON').closest('tr')?.className).toMatch(/bg-(amber|orange)-50/);
+    expect(view.getByText('T-LATE').closest('tr')?.className).not.toMatch(/bg-(amber|orange|red)-50/);
+  });
+
   it('renders empty state when there are no records', () => {
     const { container } = renderIntl(
       <GrievanceTable {...defaultProps} grievances={[]} totalItems={0} totalPages={0} />
@@ -125,5 +160,58 @@ describe('GrievanceTable', () => {
 
     fireEvent.click(view.getByRole('button', { name: /try again/i }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('GrievanceTable: duplicates', () => {
+  const props = {
+    searchTerm: '',
+    setSearchTerm: vi.fn(),
+    currentPage: 1,
+    setCurrentPage: vi.fn(),
+    rowsPerPage: 10,
+    setRowsPerPage: vi.fn(),
+    totalItems: 2,
+    totalPages: 1,
+    isLoading: false,
+    error: null,
+    onRetry: vi.fn(),
+    onViewGrievance: vi.fn(),
+    onOpenAdvancedFilters: vi.fn(),
+    statusOptions: [],
+    categoryOptions: [],
+    selectedStatuses: [],
+    selectedCategories: [],
+    onStatusChange: vi.fn(),
+    onCategoryChange: vi.fn(),
+    onClearFilters: vi.fn(),
+  };
+
+  it('marks a flagged case with a Review action and a chip naming the earlier ticket', () => {
+    const { container } = renderIntl(
+      <GrievanceTable
+        {...(props as unknown as React.ComponentProps<typeof GrievanceTable>)}
+        grievances={[{ ...mockGrievances[0]!, possibleDuplicateOf: 'GRV-2026-0099', canAct: true }]}
+      />
+    );
+    const view = within(container);
+
+    expect(view.getByText('Possible duplicate of GRV-2026-0099')).toBeInTheDocument();
+    expect(view.getByRole('button', { name: /^review$/i })).toBeInTheDocument();
+    expect(view.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
+  });
+
+  it('marks a confirmed duplicate with its main ticket and only lets it be viewed', () => {
+    const { container } = renderIntl(
+      <GrievanceTable
+        {...(props as unknown as React.ComponentProps<typeof GrievanceTable>)}
+        grievances={[{ ...mockGrievances[0]!, status: 'Duplicate', duplicateOf: 'GRV-2026-0099', canAct: true }]}
+      />
+    );
+    const view = within(container);
+
+    expect(view.getByText('Duplicate of GRV-2026-0099')).toBeInTheDocument();
+    expect(view.getByRole('button', { name: /^view$/i })).toBeInTheDocument();
+    expect(view.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
   });
 });

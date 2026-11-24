@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import messages from '../../../../messages/en.json';
 import { DashboardOverview } from './DashboardOverview';
@@ -55,15 +55,15 @@ const fullCharts: Partial<DashboardCharts> = {
 };
 
 describe('DashboardOverview', () => {
-  it('shows the KPI values, the sections and the escalated banner from the statistics', () => {
+  it('shows the KPI values, the sections and the escalated banner from the statistics', async () => {
     renderOverview(ready(fullCharts));
 
     expect(screen.getByText('1,128')).toBeTruthy();
     expect(screen.getByText('40')).toBeTruthy();
     expect(screen.getByText('48')).toBeTruthy();
     expect(screen.getByText('Inputs')).toBeTruthy();
-    expect(screen.getByText('monthly chart')).toBeTruthy();
-    expect(screen.getByText('status chart')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('monthly chart')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('status chart')).toBeTruthy());
     expect(screen.getByText('recent grievances')).toBeTruthy();
     expect(screen.getByText('1 escalated grievance')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
@@ -91,12 +91,12 @@ describe('DashboardOverview', () => {
     expect(screen.queryByText('Awaiting Action')).toBeNull();
   });
 
-  it('shows "unavailable" for a chart that failed in the place of the chart, and retries from it', () => {
+  it('shows "unavailable" for a chart that failed in the place of the chart, and retries from it', async () => {
     const retry = renderOverview(ready({ ...fullCharts, grvByCategory: null, grvMonthlyTrend: null }));
 
     expect(screen.queryByText('monthly chart')).toBeNull();
     expect(screen.queryByText('By Service Category')).toBeNull();
-    expect(screen.getByText('status chart')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('status chart')).toBeTruthy());
     const buttons = screen.getAllByRole('button', { name: 'Retry' });
     expect(buttons).toHaveLength(2);
 

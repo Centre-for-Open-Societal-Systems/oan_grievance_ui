@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { FileText, Clock, CheckCircle2, AlertTriangle, Copy } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { KpiCard, KpiMetric } from "../types";
 import { CARD_HOVER, CARD_WHITE } from "./cardStyles";
@@ -9,6 +9,7 @@ const ICONS: Record<KpiMetric, React.ReactNode> = {
   total: <FileText className="w-8 h-8 text-blue-600 stroke-[2] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />,
   awaiting_action: <Clock className="w-8 h-8 text-amber-500 stroke-[2] transition-transform duration-500 ease-in-out group-hover:rotate-[180deg]" />,
   resolved: <CheckCircle2 className="w-8 h-8 text-emerald-500 stroke-[2] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />,
+  duplicates: <Copy className="w-8 h-8 text-slate-600 stroke-[2] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />,
   escalated: <AlertTriangle className="w-8 h-8 text-purple-600 stroke-[2] transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1" />,
 };
 
@@ -17,6 +18,7 @@ const BACKGROUNDS: Record<KpiMetric, string> = {
   awaiting_action: "bg-amber-50",
   resolved: "bg-emerald-50",
   escalated: "bg-purple-50",
+  duplicates: "bg-slate-100",
 };
 
 /**
@@ -65,7 +67,13 @@ export function KpiCards({ data: kpis }: { data: KpiCard[] }) {
   const format = useFormatter();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    // Five cards when the service sends the duplicates count, four on an older one: the
+    // columns follow the count so neither leaves an orphan card or an empty slot.
+    <div
+      className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${
+        kpis.length >= 5 ? "lg:grid-cols-3 xl:grid-cols-5" : "lg:grid-cols-4"
+      }`}
+    >
       {kpis.map((card) => (
         <div
           key={card.metric}

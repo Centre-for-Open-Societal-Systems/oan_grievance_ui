@@ -17,6 +17,14 @@ export const env = {
   },
 
   /**
+   * What the backend serves the app's `/api/...` paths under. Default `/api`, Frappe's own
+   * path. Empty behind the OAN APISIX gateway, which serves `/v1/...` and rewrites to Frappe.
+   */
+  get API_PATH_PREFIX(): string {
+    return (process.env.API_PATH_PREFIX ?? '/api').replace(/\/+$/, '');
+  },
+
+  /**
    * The grievance service's socket.io endpoint (AsyncAPI `servers`), e.g.
    * `wss://grievance.openagrinet.org` plus the Frappe site the socket's
    * namespace is named after. Optional: when either is unset realtime is off
@@ -44,3 +52,10 @@ export const env = {
     };
   },
 };
+
+/** Backend URL of an app path such as `/api/v1/auth/login`: its `/api` becomes API_PATH_PREFIX. */
+export function backendUrl(path: string): string {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  const mapped = p === '/api' || p.startsWith('/api/') ? `${env.API_PATH_PREFIX}${p.slice('/api'.length)}` : p;
+  return `${env.AUTH_API_BASE_URL}${mapped}`;
+}

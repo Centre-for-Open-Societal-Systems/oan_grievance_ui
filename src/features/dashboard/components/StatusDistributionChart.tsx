@@ -17,6 +17,8 @@ const STATUS_MESSAGE_KEYS: Record<string, string> = {
   assigned: "assigned",
   "in progress": "inProgress",
   "more info needed": "moreInfoNeeded",
+  duplicate: "duplicate",
+  duplicates: "duplicate",
   resolved: "resolved",
   closed: "closed",
   rejected: "rejected",

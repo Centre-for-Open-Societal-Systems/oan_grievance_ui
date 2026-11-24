@@ -24,6 +24,14 @@ export interface AnimatedSelectProps {
   invalid?: boolean;
   /** Whether the selection can be cleared (the × button and the placeholder row). Turn off for a required field. Defaults to on. */
   clearable?: boolean;
+  /**
+   * Called with what the person has typed to search (`''` once they stop). For a list that is
+   * only part of the whole, so the search can be asked of the server: the options are still
+   * also filtered by the typed text here.
+   */
+  onQueryChange?: (query: string) => void;
+  /** A line under the options, e.g. to say the list was cut short. */
+  note?: string;
 }
 
 /**
@@ -43,6 +51,8 @@ export function AnimatedSelect({
   describedBy,
   invalid,
   clearable = true,
+  onQueryChange,
+  note,
 }: AnimatedSelectProps) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
@@ -83,6 +93,10 @@ export function AnimatedSelect({
           );
         })
       : options;
+
+  useEffect(() => {
+    onQueryChange?.(isTyping ? typedQuery.trim() : "");
+  }, [isTyping, typedQuery, onQueryChange]);
 
   // Close and reset typing on click outside
   useEffect(() => {
@@ -236,14 +250,14 @@ export function AnimatedSelect({
 
   return (
     <div
-      className={`relative w-full text-sm ${disabled ? "opacity-60" : ""}`}
+      className="relative w-full text-sm"
       ref={wrapperRef}
     >
       {/* Combobox Input Trigger */}
       <div
         className={`w-full relative flex items-center border rounded-lg transition-all duration-200 shadow-sm ${
           disabled
-            ? "bg-gray-50 border-gray-200 cursor-not-allowed text-gray-400"
+            ? "bg-gray-100 border-gray-300 cursor-not-allowed text-gray-700"
             : isOpen
             ? "bg-white border-[#0b8535] ring-2 ring-[#0b8535]/20"
             : "bg-white border-gray-300 hover:border-gray-400"
@@ -274,7 +288,7 @@ export function AnimatedSelect({
           spellCheck={false}
           className={`w-full py-2.5 pl-4 pr-14 rounded-lg text-sm bg-transparent outline-none transition-colors ${
             disabled
-              ? "cursor-not-allowed text-gray-400"
+              ? "cursor-not-allowed text-gray-700"
               : !searchable
               ? "cursor-pointer text-gray-800"
               : "cursor-text text-gray-800"
@@ -365,6 +379,7 @@ export function AnimatedSelect({
               })
             )}
           </ul>
+          {note && <p className="px-4 py-2 text-xs text-gray-500 border-t border-gray-100">{note}</p>}
         </div>
       )}
     </div>

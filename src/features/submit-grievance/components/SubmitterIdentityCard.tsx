@@ -12,8 +12,11 @@ import { CooperativeFPOForm } from "@/components/submitter-identity/SI-Cooperati
 import { NGOForm } from "@/components/submitter-identity/SI-NGOForm";
 import { WoredaKebeleForm } from "@/components/submitter-identity/SI-WoredaKebeleForm";
 import { DevelopmentAgentForm } from "@/components/submitter-identity/SI-DevelopmentAgentForm";
+import { FarmerLookup } from "./FarmerLookup";
+import type { FarmerAreas } from "../matchFarmerAreas";
 import { useIdentityErrors } from "@/components/submitter-identity/useIdentityErrors";
 import { DEFAULT_SUBMISSION_CHANNEL } from "@/lib/validation/registerSubmitter";
+import { SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
 
 interface SubmitterIdentityCardProps {
   onNext?: () => void;
@@ -25,11 +28,15 @@ interface SubmitterIdentityCardProps {
   setIdentityValue: (key: string, value: string) => void;
   /** The account's type is fixed (a registered NGO / FPO files as itself), so the dropdown is shown but not editable. */
   submitterTypeLocked?: boolean;
+  /** An individual farmer files through the web portal, so the channel is shown but not editable. */
+  isSubmissionChannelLocked?: boolean;
   /** Field keys the identity provider owns for this account: shown, not editable. */
   readOnlyFields?: string[];
   /** The account's own submitter type and channel names (from /auth/me), shown while the options list is unavailable. */
   profileSubmitterType?: string;
   profileSubmissionChannel?: string;
+  /** Called with the areas a looked-up farmer's registry location matched. */
+  onFarmerAreas?: (areas: FarmerAreas) => void;
 }
 
 /**
@@ -57,9 +64,11 @@ export function SubmitterIdentityCard({
   identityValues,
   setIdentityValue,
   submitterTypeLocked = false,
+  isSubmissionChannelLocked = false,
   readOnlyFields,
   profileSubmitterType,
   profileSubmissionChannel,
+  onFarmerAreas,
 }: SubmitterIdentityCardProps) {
   const dispatch = useAppDispatch();
   const dynamicSubmitterTypes = useAppSelector(selectSubmitterTypeOptions);
@@ -100,11 +109,20 @@ export function SubmitterIdentityCard({
   // Inline errors: the two dropdowns ("submitterType", "submissionChannel")
   // and the identity form's own fields share one set of messages, so the same
   // rules apply the same way here as on the register profile step.
+  // A field the submitter cannot edit (an individual farmer's own details, or what the identity provider
+  // supplied) is never required or checked: there is nothing they could do about it.
   const identity = useIdentityErrors({
     submitterType,
     values: identityValues,
+    hiddenFields: readOnlyFields,
     requiredMessage: t("fieldRequired"),
   });
+
+  // Nothing on the form is marked required when the submitter cannot edit any of it (an individual farmer).
+  const nothingToFill =
+    submitterTypeLocked &&
+    isSubmissionChannelLocked &&
+    (SI_FIELDS_BY_TYPE[submitterType] ?? []).every((field) => !field.required || readOnlyFields?.includes(field.key));
 
   const handleSubmitterTypeChange = (value: string) => {
     setSubmitterType(value);
@@ -130,8 +148,16 @@ export function SubmitterIdentityCard({
 
   const handleNext = () => {
     const valid = identity.validateAll([
-      { key: "submitterType", id: "submitter-type", message: submitterType ? null : t("fieldRequired") },
-      { key: "submissionChannel", id: "submission-channel", message: submissionChannel ? null : t("fieldRequired") },
+      {
+        key: "submitterType",
+        id: "submitter-type",
+        message: submitterType || submitterTypeLocked ? null : t("fieldRequired"),
+      },
+      {
+        key: "submissionChannel",
+        id: "submission-channel",
+        message: submissionChannel || isSubmissionChannelLocked ? null : t("fieldRequired"),
+      },
     ]);
     if (valid) onNext?.();
   };
@@ -171,7 +197,7 @@ export function SubmitterIdentityCard({
           {/* Submitter Type */}
           <div>
             <label htmlFor="submitter-type" className="block text-sm font-semibold text-gray-800 mb-2">
-              Submitter Type <span className="text-red-500">*</span>
+              Submitter Type {!submitterTypeLocked && <span className="text-red-500">*</span>}
             </label>
             <AnimatedSelect
               id="submitter-type"
@@ -192,7 +218,7 @@ export function SubmitterIdentityCard({
           {/* Submission Channel */}
           <div>
             <label htmlFor="submission-channel" className="block text-sm font-semibold text-gray-800 mb-2">
-              Submission Channel <span className="text-red-500">*</span>
+              Submission Channel {!isSubmissionChannelLocked && <span className="text-red-500">*</span>}
             </label>
             <AnimatedSelect
               id="submission-channel"
@@ -200,6 +226,7 @@ export function SubmitterIdentityCard({
               placeholder="Select Submission Channel"
               value={submissionChannel}
               onChange={handleChannelChange}
+              disabled={isSubmissionChannelLocked}
               clearable={false}
               invalid={!!identity.errors.submissionChannel}
               describedBy={identity.errors.submissionChannel ? errorIdFor("submission-channel") : undefined}
@@ -225,7 +252,16 @@ export function SubmitterIdentityCard({
         {(submitterType === "cooperative" || submitterType === "fpo") && <CooperativeFPOForm {...identityForm} />}
         {submitterType === "ngo" && <NGOForm {...identityForm} />}
         {submitterType === "woreda_kebele" && <WoredaKebeleForm {...identityForm} />}
-        {submitterType === "development_agent" && <DevelopmentAgentForm {...identityForm} />}
+        {submitterType === "development_agent" && (
+          <DevelopmentAgentForm
+            {...identityForm}
+            faydaAddon={<FarmerLookup
+                faydaId={identityValues.faydaId ?? ""}
+                setIdentityValue={handleIdentityValue}
+                onFarmerAreas={onFarmerAreas}
+              />}
+          />
+        )}
       </div>
 
       {/* Card Footer */}
@@ -233,7 +269,11 @@ export function SubmitterIdentityCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center text-sm text-gray-600">
             <Info className="w-4 h-4 text-blue-600 mr-1.5" />
-            <span>All fields marked <span className="text-red-500">*</span> are required</span>
+            {nothingToFill ? (
+              <span>{t("readOnlyNote")}</span>
+            ) : (
+              <span>All fields marked <span className="text-red-500">*</span> are required</span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <button

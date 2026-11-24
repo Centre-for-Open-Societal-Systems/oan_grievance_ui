@@ -117,10 +117,11 @@ interface ResponseFormProps {
   actions: GrievanceAvailableAction[];
   /** True until the timeline (and so the action list) has loaded. */
   isLoadingActions: boolean;
-  onExecuteAction?: (payload: GrievanceActionPayload) => Promise<unknown>;
+  onExecuteAction?: (payload: GrievanceActionPayload, files?: File[]) => Promise<unknown>;
   onAddNote?: (note: string, isInternal: boolean) => Promise<unknown>;
   /** Uploads supporting documents to the case before the response is sent. */
-  onUploadFiles?: (files: File[]) => Promise<unknown>;
+  /** Shows the supporting-documents picker; the files travel with the action request. */
+  acceptsFiles?: boolean;
   isSubmitting?: boolean;
   isTerminal?: boolean;
   caseStatus?: string;
@@ -133,7 +134,7 @@ export function ResponseForm({
   isLoadingActions,
   onExecuteAction,
   onAddNote,
-  onUploadFiles,
+  acceptsFiles,
   isSubmitting: isExecuting = false,
   isTerminal = false,
   caseStatus,
@@ -141,8 +142,7 @@ export function ResponseForm({
   const t = useTranslations('responseForm');
   const tDocs = useTranslations('supportingDocuments');
   const [files, setFiles] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const isSubmitting = isExecuting || isUploading;
+  const isSubmitting = isExecuting;
   const [activeTab, setActiveTab] = useState<'response' | 'internal'>('response');
 
   const [action, setAction] = useState('');
@@ -233,6 +233,10 @@ export function ResponseForm({
 
   if (!canManageCase) return null;
 
+  // The backend offers actions only to the officer the case is assigned to (or
+  // their supervisor), so a viewer with none has no response to give here.
+  if (!isLoadingActions && !isTerminal && actions.length === 0) return null;
+
   if (isTerminal) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col gap-2">
@@ -252,20 +256,6 @@ export function ResponseForm({
     setSubmitError(null);
     setSubmitSuccess(null);
 
-    // Upload first so the documents are on the case when the response lands.
-    if (files.length > 0 && onUploadFiles) {
-      setIsUploading(true);
-      try {
-        await onUploadFiles(files);
-        setFiles([]);
-      } catch (err) {
-        setSubmitError(getErrorMessage(err, tDocs('uploadFailed')));
-        return;
-      } finally {
-        setIsUploading(false);
-      }
-    }
-
     try {
       // Sent as two parts composed under standard headings as the reason.
       await onExecuteAction({
@@ -273,7 +263,8 @@ export function ResponseForm({
         template: template || null,
         reason: composeResponseBody({ actionTaken, resolutionSummary }),
         internal_notes: internalNotesResponse.trim() || null,
-      });
+      }, files);
+      setFiles([]);
       setAction('');
       setTemplate('');
       setActionTaken('');
@@ -396,7 +387,7 @@ export function ResponseForm({
               ></textarea>
               <CharacterCounter id="response-summary-count" count={resolutionSummary.length} max={RESPONSE_TEXT_MAX_LENGTH} className="mt-1 text-right" />
             </div>
-            {onUploadFiles && (
+            {acceptsFiles && (
               <SupportingDocumentsField
                 files={files}
                 onChange={(next) => {

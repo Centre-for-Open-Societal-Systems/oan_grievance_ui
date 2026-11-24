@@ -30,9 +30,8 @@ export interface CaseActionsPanelProps {
   actions: GrievanceAvailableAction[];
   caseStatus?: string;
   isSubmitting: boolean;
-  onExecute: (payload: GrievanceActionPayload) => Promise<unknown>;
+  onExecute: (payload: GrievanceActionPayload, files?: File[]) => Promise<unknown>;
   /** Uploads supporting documents to the case before the action runs. */
-  onUploadFiles: (files: File[]) => Promise<unknown>;
 }
 
 const isCloseAction = (a: GrievanceAvailableAction | null | undefined): boolean => {
@@ -90,7 +89,7 @@ export const createCaseActionSchema = ({
  * reopening as a link. Whether a reason is required comes from the
  * action's `requires_reason`.
  */
-export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute, onUploadFiles }: CaseActionsPanelProps) {
+export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute }: CaseActionsPanelProps) {
   const t = useTranslations("caseActions");
   const tDocs = useTranslations("supportingDocuments");
   const reasonId = useId();
@@ -102,7 +101,6 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
   const [reason, setReason] = useState("");
   const [rating, setRating] = useState<number | null>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ reason?: string; rating?: string }>({});
@@ -121,7 +119,7 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
   const needsRating = selected ? (selected.requires_rating ?? isCloseAction(selected)) : false;
   const takesFiles = !!selected && !needsRating;
   const reasonRequired = selected?.requires_reason ?? true;
-  const busy = isSubmitting || isUploading;
+  const busy = isSubmitting;
 
   const trimmedLength = reason.trim().length;
   const caseActionSchema = createCaseActionSchema({
@@ -201,21 +199,11 @@ export function CaseActionsPanel({ actions, caseStatus, isSubmitting, onExecute,
     setError(null);
     setSuccess(null);
     try {
-      // Upload first so the officer has the documents when the case returns to them.
-      if (takesFiles && files.length > 0) {
-        setIsUploading(true);
-        try {
-          await onUploadFiles(files);
-        } finally {
-          setIsUploading(false);
-        }
-        setFiles([]);
-      }
       await onExecute({
         action: parsed.data.action,
         reason: parsed.data.reason?.trim() ?? "",
         rating: needsRating ? (parsed.data.rating ?? null) : null,
-      });
+      }, takesFiles ? files : undefined);
       setSuccess(t("success", { action: selected.label }));
       setSelectedAction(null);
       setReason("");

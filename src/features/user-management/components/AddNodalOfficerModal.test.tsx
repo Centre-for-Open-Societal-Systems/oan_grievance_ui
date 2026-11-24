@@ -1,7 +1,9 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { Provider } from 'react-redux';
+import en from '../../../../messages/en.json';
 import { makeStore } from '@/store';
 import { AddNodalOfficerModal } from './AddNodalOfficerModal';
 import { createOfficer } from '../api/officerApi';
@@ -14,6 +16,7 @@ vi.mock('../api/officerApi', () => ({
   fetchOfficerCandidates: vi.fn().mockResolvedValue({ candidates: [] }),
   fetchCategoryAssignments: vi.fn().mockResolvedValue({ assignments: [], pagination: {} }),
   fetchOfficers: vi.fn().mockResolvedValue({ officers: [], pagination: { total_count: 0 } }),
+  fetchServiceCategoryNames: vi.fn().mockResolvedValue(['Inputs', 'Markets']),
 }));
 
 vi.mock('@/features/metadata/api/metadataApi', async (importOriginal) => ({
@@ -42,6 +45,7 @@ function renderModal(props: Partial<Parameters<typeof AddNodalOfficerModal>[0]> 
   const onClose = vi.fn();
 
   render(
+    <NextIntlClientProvider locale="en" messages={en}>
     <Provider store={store}>
       <AddNodalOfficerModal
         isOpen={true}
@@ -53,6 +57,7 @@ function renderModal(props: Partial<Parameters<typeof AddNodalOfficerModal>[0]> 
         {...props}
       />
     </Provider>
+    </NextIntlClientProvider>
   );
 
   return { store, onCreated, onClose };
@@ -81,7 +86,6 @@ describe('AddNodalOfficerModal for Category Admins', () => {
           level: 'L3',
           full_name: 'Abebe Bikila',
           email: 'abebe@example.et',
-          designation: null,
           department: null,
           service_categories: ['Inputs'],
         })

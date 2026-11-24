@@ -179,6 +179,24 @@ export async function fetchCategoryAssignments(
   });
 }
 
+/**
+ * Names of the active service categories, in display order. `hasDesk: true` keeps only those
+ * with an active desk (what an officer or reviewer can be placed on); omit it for every
+ * category, which is what a category admin may be assigned.
+ *
+ * Corresponding REST endpoint: GET /api/v1/service-categories
+ */
+export async function fetchServiceCategoryNames(
+  params: { hasDesk?: boolean } = {},
+  options: RequestOptions = {}
+): Promise<string[]> {
+  const data = await fetchApi<{ service_categories: { category_name: string }[] }>(
+    `/api/v1/service-categories${buildQuery({ is_active: true, has_desk: params.hasDesk, page_size: 100 })}`,
+    { method: 'GET', signal: options.signal }
+  );
+  return (data?.service_categories ?? []).map((category) => category.category_name);
+}
+
 /** Service object matching the OAN A2C enterprise standard */
 export const officerService = {
   listOfficers: fetchOfficers,

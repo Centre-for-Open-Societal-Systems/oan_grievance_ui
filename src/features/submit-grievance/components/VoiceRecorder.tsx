@@ -183,21 +183,34 @@ export function VoiceRecorder({
 
   return (
     <div>
-      <div className="relative">
-        {children}
+      {children}
+
+      {/* A labelled bar rather than a small icon in the textarea's corner: speaking is an equal way to
+          describe the grievance, and for many farmers the easier one, so it has to be seen. */}
+      <div
+        className={`mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 ${
+          recordingNow ? "border-red-300 bg-red-50" : "border-dashed border-[#0b8535]/40 bg-green-50/60"
+        }`}
+      >
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+          <Mic className="mt-0.5 h-5 w-5 shrink-0 text-[#0b8535]" aria-hidden="true" />
+          <p className="text-sm text-gray-700">
+            <span className="font-bold text-gray-900">{t("callout")}</span> {t("hint")}
+          </p>
+        </div>
         <button
           type="button"
           onClick={recordingNow ? stop : start}
           disabled={phase === "processing" || phase === "starting" || blocked}
-          aria-label={recordingNow ? t("stop") : recording ? t("recordAgain") : t("record")}
-          title={blocked && disabledReason ? disabledReason : t("hint")}
-          className={`absolute bottom-3 right-3 p-2 rounded-full border transition-colors focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+          title={blocked && disabledReason ? disabledReason : undefined}
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${
             recordingNow
-              ? "bg-red-600 border-red-600 text-white hover:bg-red-700 focus:ring-red-300"
-              : "bg-white border-gray-300 text-[#0b8535] hover:bg-gray-50 focus:ring-[#0b8535]/30"
+              ? "bg-red-600 hover:bg-red-700 focus:ring-red-300"
+              : "bg-[#16A34A] hover:bg-[#10883c] focus:ring-[#0b8535]/40"
           }`}
         >
-          {recordingNow ? <Square className="w-4 h-4" aria-hidden="true" /> : <Mic className="w-4 h-4" aria-hidden="true" />}
+          {recordingNow ? <Square className="h-4 w-4" aria-hidden="true" /> : <Mic className="h-4 w-4" aria-hidden="true" />}
+          {recordingNow ? t("stop") : recording ? t("recordAgain") : t("record")}
         </button>
       </div>
 

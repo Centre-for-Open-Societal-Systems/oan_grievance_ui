@@ -47,3 +47,16 @@ export function markAllNotificationsRead(): Promise<unknown> {
     body: JSON.stringify({ all: true, read: true }),
   });
 }
+
+/** DELETE /api/v1/notifications/:id — deletes one of the caller's notifications. */
+export function deleteNotification(id: string): Promise<unknown> {
+  return fetchApi<unknown>(`/api/v1/notifications/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/** DELETE /api/v1/notifications with `all: true` — clears the whole inbox. */
+export function deleteAllNotifications(): Promise<unknown> {
+  return fetchApi<unknown>('/api/v1/notifications', {
+    method: 'DELETE',
+    body: JSON.stringify({ all: true }),
+  });
+}

@@ -7,7 +7,7 @@ export type {
   MonthlyTrendRow,
 } from './schemas';
 
-export type KpiMetric = 'total' | 'awaiting_action' | 'resolved' | 'escalated';
+export type KpiMetric = 'total' | 'awaiting_action' | 'resolved' | 'escalated' | 'duplicates';
 
 /** `percentage` and `number` deltas read "+N from…", `alert` is the escalated card's fixed SLA caption. */
 export type KpiKind = 'percentage' | 'number' | 'alert';

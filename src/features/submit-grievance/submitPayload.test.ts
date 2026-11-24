@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSubmitFields, resolveContactEmail, resolveContactMobile, resolveSubmitterName } from "./submitPayload";
+import { buildSubmitFields, resolveContactEmail, resolveContactPhone, resolveSubmitterName } from "./submitPayload";
 
 describe("resolveSubmitterName", () => {
   it("prefers the type-specific identity field over the account's own profile", () => {
@@ -37,20 +37,21 @@ describe("resolveSubmitterName", () => {
   });
 });
 
-describe("resolveContactMobile / resolveContactEmail", () => {
+describe("resolveContactPhone / resolveContactEmail", () => {
   it("never fall back to the agent's own phone/email for a Development Agent", () => {
     expect(
-      resolveContactMobile({ submitterType: "development_agent", identityValues: {}, userMobile: "0911000000" })
-    ).toBe("");
+      resolveContactPhone({ submitterType: "development_agent", identityValues: {}, userMobile: "0911000000" })
+    ).toEqual({ country_code: "+251", phone_number: "" });
     expect(resolveContactEmail({ submitterType: "development_agent", identityValues: {}, userEmail: "agent@example.com" })).toBe(
       ""
     );
   });
 
   it("do fall back to the account's own phone/email for a self-submitting type", () => {
-    expect(resolveContactMobile({ submitterType: "individual", identityValues: {}, userMobile: "0911000000" })).toBe(
-      "+251911000000"
-    );
+    expect(resolveContactPhone({ submitterType: "individual", identityValues: {}, userMobile: "0911000000" })).toEqual({
+      country_code: "+251",
+      phone_number: "0911000000",
+    });
     expect(resolveContactEmail({ submitterType: "individual", identityValues: {}, userEmail: "me@example.com" })).toBe(
       "me@example.com"
     );
@@ -65,7 +66,6 @@ describe("buildSubmitFields", () => {
       submission_channel: "",
       submitter_type: "",
       submitter_name: "",
-      contact_mobile: "",
       country_code: "+251",
       phone_number: "",
       contact_email: "",

@@ -69,7 +69,7 @@ describe('VoiceRecorder — microphone handling', () => {
     recorderBehaviour = 'throw';
     renderRecorder();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Record voice note' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('We could not start the recording');
     expect(track.stop).toHaveBeenCalled();
@@ -78,11 +78,11 @@ describe('VoiceRecorder — microphone handling', () => {
   it('tells a blocked microphone apart from a missing one', async () => {
     getUserMedia.mockRejectedValueOnce(new DOMException('denied', 'NotAllowedError'));
     renderRecorder();
-    fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Record voice note' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Microphone access was blocked');
 
     getUserMedia.mockRejectedValueOnce(new DOMException('none', 'NotFoundError'));
-    fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Record voice note' }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('No microphone was found'));
   });
 
@@ -91,7 +91,7 @@ describe('VoiceRecorder — microphone handling', () => {
     getUserMedia.mockReturnValue(new Promise<MediaStream>((resolve) => (grant = resolve)));
     renderRecorder();
 
-    const button = screen.getByRole('button', { name: 'Record' });
+    const button = screen.getByRole('button', { name: 'Record voice note' });
     fireEvent.click(button);
     fireEvent.click(button);
 
@@ -106,7 +106,7 @@ describe('VoiceRecorder — microphone handling', () => {
     getUserMedia.mockReturnValue(new Promise<MediaStream>((resolve) => (grant = resolve)));
     const view = renderRecorder();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Record voice note' }));
     view.unmount();
     await act(async () => grant(stream));
 
@@ -118,7 +118,7 @@ describe('VoiceRecorder — microphone handling', () => {
     getUserMedia.mockResolvedValue(stream);
     const view = renderRecorder();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Record voice note' }));
     await screen.findByRole('button', { name: 'Stop recording' });
     view.unmount();
 
@@ -128,7 +128,7 @@ describe('VoiceRecorder — microphone handling', () => {
   it('cannot start a recording while blocked (e.g. the case is at its attachment limit)', () => {
     renderRecorder({ disabled: true, disabledReason: 'Remove a file first.' });
 
-    const button = screen.getByRole('button', { name: 'Record' });
+    const button = screen.getByRole('button', { name: 'Record voice note' });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('title', 'Remove a file first.');
   });
@@ -149,7 +149,7 @@ describe('VoiceRecorder — microphone handling', () => {
     );
     const view = render(element(first));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Record voice note' }));
     await screen.findByRole('button', { name: 'Stop recording' });
     view.rerender(element(latest));
     fireEvent.click(screen.getByRole('button', { name: 'Stop recording' }));
@@ -163,7 +163,7 @@ describe('VoiceRecorder — microphone handling', () => {
     renderRecorder();
 
     expect(screen.getByLabelText('Description')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Record' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Record voice note' })).not.toBeInTheDocument();
     expect(screen.getByText('Voice recording is not supported in this browser.')).toBeInTheDocument();
   });
 });

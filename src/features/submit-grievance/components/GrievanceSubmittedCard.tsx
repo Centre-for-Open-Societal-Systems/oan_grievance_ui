@@ -86,12 +86,6 @@ export function GrievanceSubmittedCard({
             : "Your grievance has been registered. Acknowledgement sent via SMS/email."}
         </p>
 
-        {result.attachment_upload_failed && (
-          <p role="alert" className="mb-5 max-w-[340px] rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Your grievance was filed, but your attachments could not be uploaded. Add them from the case page.
-          </p>
-        )}
-
         {/* Ticket Number Box */}
         <div className="bg-[#F1F5F9] rounded-xl p-5 mb-5 min-w-[340px] border border-gray-100 animate-slide-up delay-400 shadow-inner">
           <p className="text-[11px] font-semibold text-gray-400 tracking-widest mb-1.5 uppercase">

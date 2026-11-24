@@ -11,7 +11,7 @@ export const FIELDS = [
   { key: "email", label: "Farmer's Contact Email ID", required: false },
 ];
 
-export function DevelopmentAgentForm({ values, setValue, hiddenFields = [], errors, onFieldBlur }: SIFormProps) {
+export function DevelopmentAgentForm({ values, setValue, hiddenFields = [], errors, onFieldBlur, faydaAddon }: SIFormProps) {
   const field = { values, setValue, errors, onFieldBlur };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -23,7 +23,10 @@ export function DevelopmentAgentForm({ values, setValue, hiddenFields = [], erro
         placeholder="Enter Full name"
       />
 
-      <SIIdField {...field} name="faydaId" label="Fayda ID" required placeholder="Enter 16-digit Fayda ID" />
+      <div>
+        <SIIdField {...field} name="faydaId" label="Fayda ID" required placeholder="Enter 16-digit Fayda ID" />
+        {faydaAddon}
+      </div>
 
       {/* Info Message Box */}
       <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3.5 flex items-start gap-2.5 shadow-sm">

@@ -25,7 +25,6 @@ describe('buildSubmitGrievancePayload', () => {
       submission_channel: 'Web Portal',
       submitter_type: 'Individual Farmer',
       submitter_name: 'Abebe Bikila',
-      contact_mobile: '+251911223344',
       country_code: '+251',
       phone_number: '0911223344',
       contact_email: 'abebe@example.com',
@@ -64,7 +63,9 @@ describe('buildSubmitGrievancePayload', () => {
   it("sends the submitter's own identity — never reaches the backend any other way for a represented submission", () => {
     const payload = buildSubmitGrievancePayload(BASE_INPUT);
     expect(payload.submitter_name).toBe('Abebe Bikila');
-    expect(payload.contact_mobile).toBe('+251911223344');
+    expect(payload.country_code).toBe('+251');
+    expect(payload.phone_number).toBe('0911223344');
+    expect(payload).not.toHaveProperty('contact_mobile');
     expect(payload.contact_email).toBe('abebe@example.com');
   });
 
@@ -108,6 +109,27 @@ describe('submitGrievance', () => {
     expect(String(url)).toContain('/api/proxy/api/v1/grievances');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual(payload);
+  });
+
+  it('sends the fields and the files as multipart when files come with the grievance', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { ticket_number: 'B00100012', status: 'Submitted' }, status: 'success' }),
+    } as Response);
+
+    const payload = { ...buildSubmitGrievancePayload(BASE_INPUT), can_request_more_info: 0 };
+    const voice = new File(['x'], 'voice.mp3', { type: 'audio/mpeg' });
+    await submitGrievance(payload, [voice]);
+
+    const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    const form = init.body as FormData;
+    expect(form).toBeInstanceOf(FormData);
+    expect(form.get('client_submission_uuid')).toBe(BASE_INPUT.clientSubmissionUuid);
+    expect(form.get('consent_given')).toBe('1');
+    expect(form.get('can_request_more_info')).toBe('0');
+    expect(form.get('administrative_area')).toBe(payload.administrative_area ?? null);
+    expect(form.getAll('file')).toHaveLength(1);
   });
 
   it('surfaces the backend per-field messages when validation fails', async () => {
