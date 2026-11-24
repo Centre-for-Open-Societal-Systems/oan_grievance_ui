@@ -120,14 +120,20 @@ def retag(promote, repository, source_tag, tag):
 	base = ["aws", "ecr", "--region", found.group("region")]
 	name = ["--repository-name", found.group("name")]
 	manifest = promote.run(
-		base + ["batch-get-image"] + name
-		+ ["--image-ids", "imageTag=" + source_tag, "--query", "images[0].imageManifest", "--output", "text"]
+		[
+			*base,
+			"batch-get-image",
+			*name,
+			"--image-ids", "imageTag=" + source_tag,
+			"--query", "images[0].imageManifest",
+			"--output", "text",
+		]
 	).rstrip("\n")
 	if not manifest or manifest == "None":
 		raise ValueError("%s has no image tagged %s" % (repository, source_tag))
 	result = subprocess.run(
-		base + ["put-image"] + name + ["--image-tag", tag, "--image-manifest", manifest],
-		stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True,
+		[*base, "put-image", *name, "--image-tag", tag, "--image-manifest", manifest],
+		capture_output=True, text=True,
 	)
 	if result.returncode and "ImageAlreadyExistsException" not in result.stderr:
 		raise ValueError("%s: could not add tag %s: %s" % (repository, tag, result.stderr.strip()[:300]))
