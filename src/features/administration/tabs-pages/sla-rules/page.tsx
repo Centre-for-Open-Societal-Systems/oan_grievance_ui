@@ -9,16 +9,38 @@ import { useIsReviewOfficer } from '@/features/auth/hooks/useIsReviewOfficer';
 import { fetchGrievanceTypes, fetchServiceCategories } from '../category-sla-configuration/api/taxonomyApi';
 import type { GrievanceTypeRecord, ServiceCategoryRecord } from '../category-sla-configuration/components/taxonomyTypes';
 import { createSlaRule, deleteSlaRule, fetchSlaRules, MAX_PAGE_SIZE, updateSlaRule } from './api/slaRulesApi';
+
+const PAGE_SIZE = 20;
 import { SlaRuleFormModal } from './components/SlaRuleFormModal';
-import type { SlaRule } from './components/types';
+import type { Pagination, SlaRule, UpdateSlaRulePayload } from './components/types';
 
 interface RoleLevelRecord {
   level_code: string;
   level_name: string;
 }
 
-/** `null` = form closed, `'new'` = adding, a rule = editing it. */
-type FormState = null | 'new' | SlaRule;
+/** `null` = form closed, `'new'` = adding, a cluster = editing it. */
+type FormState = null | 'new' | Cluster;
+
+/**
+ * Rules that differ only by grievance type are one cluster: the form adds them together, so the
+ * list shows and edits them together. Order of first appearance is kept.
+ */
+type Cluster = [SlaRule, ...SlaRule[]];
+
+function clusterRules(rules: SlaRule[]): Cluster[] {
+  const clusters = new Map<string, Cluster>();
+  for (const rule of rules) {
+    const { name: _name, grievance_type: _type, modified: _modified, ...shared } = rule;
+    const key = JSON.stringify(shared);
+    const existing = clusters.get(key);
+    if (existing) existing.push(rule);
+    else clusters.set(key, [rule]);
+  }
+  return [...clusters.values()];
+}
+
+const clusterId = (cluster: Cluster) => cluster.map((rule) => rule.name).join(',');
 
 /** "10/1 to 4/30", or "All year" when the rule has no window. */
 function windowText(rule: SlaRule, allYear: string): string {
@@ -35,6 +57,8 @@ export default function SlaRulesPage() {
   const [roleLevels, setRoleLevels] = useState<RoleLevelRecord[]>([]);
   const [rules, setRules] = useState<SlaRule[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -69,11 +93,12 @@ export default function SlaRulesPage() {
   useEffect(() => {
     const controller = new AbortController();
     fetchSlaRules(
-      { page_size: MAX_PAGE_SIZE, service_category: selectedCategory || undefined },
+      { page, page_size: PAGE_SIZE, service_category: selectedCategory || undefined },
       { signal: controller.signal }
     )
       .then((data) => {
         setRules(data?.rules ?? []);
+        setPagination(data?.pagination ?? null);
         setError(null);
       })
       .catch((err) => {
@@ -83,7 +108,7 @@ export default function SlaRulesPage() {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [selectedCategory, reloadKey, t]);
+  }, [selectedCategory, page, reloadKey, t]);
 
   const categoryOptions = useMemo(
     () => categories.map((c) => ({ value: c.category_name, label: c.category_name })),
@@ -97,15 +122,46 @@ export default function SlaRulesPage() {
   const typeNames = useMemo(() => new Map(types.map((type) => [type.grievance_type_id, type.type_name])), [types]);
   const levelNames = useMemo(() => new Map(roleLevels.map((l) => [l.level_code, l.level_name])), [roleLevels]);
 
-  const handleDelete = async (ruleId: string) => {
+  const clusters = useMemo(() => clusterRules(rules), [rules]);
+
+  const handleDelete = async (cluster: Cluster) => {
     setActionError(null);
     try {
-      await deleteSlaRule(ruleId);
+      for (const rule of cluster) await deleteSlaRule(rule.name);
       setConfirmDelete(null);
       reload();
     } catch (err) {
       setConfirmDelete(null);
       setActionError(err instanceof Error && err.message ? err.message : t('deleteFailed'));
+      reload();
+    }
+  };
+
+  /** Brings a cluster to the types picked: rules of kept types change, new types get one, dropped types lose theirs. */
+  const handleUpdate = async (cluster: SlaRule[], { grievance_types: picked, ...shared }: UpdateSlaRulePayload & { grievance_types: string[] }) => {
+    const first = cluster[0];
+    if (!first) return;
+    try {
+      if (first.is_base) {
+        await updateSlaRule(first.name, shared);
+        return;
+      }
+      const keep = cluster.filter((rule) => (picked.length ? picked.includes(rule.grievance_type ?? '') : !rule.grievance_type));
+      const kept = new Set(keep.map((rule) => rule.grievance_type));
+      const toAdd = picked.length ? picked.filter((type) => !kept.has(type)) : kept.size ? [] : [null];
+      if (toAdd.length) {
+        const { grievance_type: _ignored, ...scope } = shared;
+        await createSlaRule({
+          ...Object.fromEntries(Object.entries(scope).filter(([, value]) => value !== null)),
+          ...(picked.length && { grievance_types: toAdd as string[] }),
+          service_category: first.service_category,
+          sla_days: shared.sla_days ?? first.sla_days,
+        });
+      }
+      for (const rule of keep) await updateSlaRule(rule.name, shared);
+      for (const rule of cluster) if (!keep.includes(rule)) await deleteSlaRule(rule.name);
+    } finally {
+      reload();
     }
   };
 
@@ -123,6 +179,7 @@ export default function SlaRulesPage() {
               value={selectedCategory}
               onChange={(e) => {
                 setIsLoading(true);
+                setPage(1);
                 setSelectedCategory(e.target.value);
               }}
               className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white text-gray-900"
@@ -172,8 +229,11 @@ export default function SlaRulesPage() {
                 </tr>
               </thead>
               <tbody>
-                {rules.map((rule) => (
-                  <tr key={rule.name} className="border-b border-gray-100 align-top">
+                {clusters.map((cluster) => {
+                  const rule = cluster[0];
+                  const id = clusterId(cluster);
+                  return (
+                  <tr key={id} className="border-b border-gray-100 align-top">
                     <td className="py-3 pr-4 font-medium text-gray-900">{rule.service_category}</td>
                     <td className="py-3 pr-4 text-gray-700">
                       {rule.rule_label ?? '—'}
@@ -182,20 +242,28 @@ export default function SlaRulesPage() {
                       )}
                     </td>
                     <td className="py-3 pr-4 text-gray-700">{rule.role_level ? (levelNames.get(rule.role_level) ?? rule.role_level) : t('wholeCase')}</td>
-                    <td className="py-3 pr-4 text-gray-700">{rule.grievance_type ? (typeNames.get(rule.grievance_type) ?? rule.grievance_type) : t('everyType')}</td>
+                    <td className="py-3 pr-4 text-gray-700">{rule.grievance_type ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {cluster.map((member) => (
+                          <span key={member.name} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                            {typeNames.get(member.grievance_type ?? '') ?? member.grievance_type}
+                          </span>
+                        ))}
+                      </div>
+                    ) : t('everyType')}</td>
                     <td className="py-3 pr-4 text-gray-700">{rule.administrative_area ?? t('everywhere')}</td>
                     <td className="py-3 pr-4 text-gray-700 whitespace-nowrap">{windowText(rule, t('allYear'))}</td>
                     <td className="py-3 pr-4 font-semibold text-gray-900">{rule.sla_days}</td>
                     <td className="py-3 pr-4 text-gray-700">{rule.is_urgent ? t('yes') : t('no')}</td>
                     {canManage && (
                       <td className="py-3 whitespace-nowrap text-right">
-                        <button type="button" aria-label={t('edit')} onClick={() => setForm(rule)} className="p-2 rounded-full text-gray-500 hover:bg-gray-100">
+                        <button type="button" aria-label={t('edit')} onClick={() => setForm(cluster)} className="p-2 rounded-full text-gray-500 hover:bg-gray-100">
                           <Pencil className="w-4 h-4" />
                         </button>
                         {!rule.is_base &&
-                          (confirmDelete === rule.name ? (
+                          (confirmDelete === id ? (
                             <span className="inline-flex items-center gap-2 ml-2">
-                              <button type="button" onClick={() => void handleDelete(rule.name)} className="px-3 py-1.5 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700">
+                              <button type="button" onClick={() => void handleDelete(cluster)} className="px-3 py-1.5 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700">
                                 {t('delete')}
                               </button>
                               <button type="button" onClick={() => setConfirmDelete(null)} className="px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50">
@@ -203,23 +271,48 @@ export default function SlaRulesPage() {
                               </button>
                             </span>
                           ) : (
-                            <button type="button" aria-label={t('delete')} onClick={() => setConfirmDelete(rule.name)} className="p-2 rounded-full text-red-500 hover:bg-red-50">
+                            <button type="button" aria-label={t('delete')} onClick={() => setConfirmDelete(id)} className="p-2 rounded-full text-red-500 hover:bg-red-50">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           ))}
                       </td>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {pagination && pagination.total_pages > 1 && (
+          <div className="flex items-center justify-between pt-2 text-sm text-gray-600">
+            <span>{t('pageOf', { page: pagination.page, pages: pagination.total_pages, total: pagination.total_count })}</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={!pagination.has_prev}
+                onClick={() => { setIsLoading(true); setPage((p) => p - 1); }}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              >
+                {t('previous')}
+              </button>
+              <button
+                type="button"
+                disabled={!pagination.has_next}
+                onClick={() => { setIsLoading(true); setPage((p) => p + 1); }}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              >
+                {t('next')}
+              </button>
+            </div>
           </div>
         )}
       </div>
 
       {canManage && form && (
         <SlaRuleFormModal
-          rule={form === 'new' ? null : form}
+          rules={form === 'new' ? null : form}
           defaultCategory={selectedCategory}
           serviceCategories={categoryOptions}
           roleLevels={levelOptions}
@@ -228,10 +321,7 @@ export default function SlaRulesPage() {
             await createSlaRule(payload);
             reload();
           }}
-          onUpdate={async (ruleId, payload) => {
-            await updateSlaRule(ruleId, payload);
-            reload();
-          }}
+          onUpdate={handleUpdate}
           onClose={() => setForm(null)}
         />
       )}

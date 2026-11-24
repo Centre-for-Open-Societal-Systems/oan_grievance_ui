@@ -4,6 +4,7 @@ import type {
   SlaRuleData,
   SlaRuleListData,
   SlaRuleListParams,
+  SlaRulesCreatedData,
   UpdateSlaRulePayload,
 } from '../components/types';
 
@@ -37,12 +38,12 @@ export function fetchSlaRules(params: SlaRuleListParams = {}, options: RequestOp
 }
 
 /**
- * A category's first rule must be its base rule (no level, type, area or window).
+ * Makes one rule per grievance type sent. A category's first rule must be its base rule (no level, type, area or window).
  *
  * Corresponding REST endpoint: POST /api/v1/sla-rules
  */
-export function createSlaRule(payload: CreateSlaRulePayload): Promise<SlaRuleData> {
-  return fetchApi<SlaRuleData>('/api/v1/sla-rules', {
+export function createSlaRule(payload: CreateSlaRulePayload): Promise<SlaRulesCreatedData> {
+  return fetchApi<SlaRulesCreatedData>('/api/v1/sla-rules', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

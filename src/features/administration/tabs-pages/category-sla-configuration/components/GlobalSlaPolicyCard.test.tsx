@@ -8,12 +8,12 @@ import { GlobalSlaPolicyCard } from './GlobalSlaPolicyCard';
 
 const fetchGlobalSlaPolicy = vi.hoisted(() =>
   vi.fn().mockResolvedValue({
-    policy: { max_deferral_days: 30, auto_escalation_threshold: 100, requires_supervisor_approval: true },
+    policy: { max_deferral_days: 30, requires_supervisor_approval: true },
   })
 );
 const updateGlobalSlaPolicy = vi.hoisted(() =>
   vi.fn().mockResolvedValue({
-    policy: { max_deferral_days: 30, auto_escalation_threshold: 100, requires_supervisor_approval: false },
+    policy: { max_deferral_days: 30, requires_supervisor_approval: false },
   })
 );
 vi.mock('../api/slaSettingsApi', () => ({ fetchGlobalSlaPolicy, updateGlobalSlaPolicy }));
@@ -59,10 +59,10 @@ describe('GlobalSlaPolicyCard', () => {
   it('reports the max SLA deferral days when it loads and again after a save, so the category bars can follow', async () => {
     const onChange = vi.fn();
     fetchGlobalSlaPolicy.mockResolvedValueOnce({
-      policy: { max_deferral_days: 9, auto_escalation_threshold: 100, requires_supervisor_approval: true },
+      policy: { max_deferral_days: 9, requires_supervisor_approval: true },
     });
     updateGlobalSlaPolicy.mockResolvedValueOnce({
-      policy: { max_deferral_days: 12, auto_escalation_threshold: 100, requires_supervisor_approval: true },
+      policy: { max_deferral_days: 12, requires_supervisor_approval: true },
     });
     renderCard(onChange);
 

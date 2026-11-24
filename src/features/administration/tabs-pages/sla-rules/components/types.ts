@@ -70,9 +70,16 @@ type SlaRuleScope = Partial<
   >
 >;
 
-export interface CreateSlaRulePayload extends SlaRuleScope {
+export interface SlaRulesCreatedData {
+  /** One rule per grievance type sent, in the order sent. */
+  rules: SlaRule[];
+}
+
+export interface CreateSlaRulePayload extends Omit<SlaRuleScope, 'grievance_type'> {
   /** Id, name or code of the category. */
   service_category: string;
+  /** One rule is made per type, all sharing the other fields. Omitted: one rule for every type. */
+  grievance_types?: string[];
   sla_days: number;
   is_urgent?: boolean;
 }

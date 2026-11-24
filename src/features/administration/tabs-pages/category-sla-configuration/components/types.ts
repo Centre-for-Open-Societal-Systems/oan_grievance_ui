@@ -4,7 +4,6 @@ export interface SlaCategory {
     categoryColor: string; // e.g. "bg-green-100 text-green-700"
     /** The category's base SLA rule days; null when it has none. */
     slaDays: number | null;
-    progressPercentage?: number;
 }
 
 /** Chip colours, handed out to categories in list order. */

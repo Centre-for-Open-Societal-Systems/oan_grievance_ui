@@ -18,8 +18,7 @@ export function fetchGlobalSlaPolicy(options: RequestOptions = {}): Promise<Glob
 }
 
 /**
- * Partial update. A new threshold applies to cases whose escalation is armed
- * afterwards; a new deferral setting applies to the next deferral request.
+ * Partial update. A new deferral setting applies to the next deferral request.
  *
  * Corresponding REST endpoint: PATCH /api/v1/sla-policy
  */

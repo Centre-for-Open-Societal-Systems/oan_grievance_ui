@@ -129,14 +129,6 @@ export function SlaCategoryCard({
                     </div>
 
                     <div className="flex flex-col gap-0.5 flex-1 w-full min-w-0">
-                        <div className="flex items-center gap-3">
-                            <div className="h-1.5 bg-gray-100 rounded-full flex-1 overflow-hidden">
-                                <div
-                                    className="h-full bg-[#16A34A] rounded-full"
-                                    style={{ width: `${categoryData.progressPercentage ?? 0}%` }}
-                                ></div>
-                            </div>
-                        </div>
                         <div className='flex justify-end'>
                             <span className="text-xs font-semibold text-gray-700">{categoryData.slaDays == null ? t('noBaseRule') : t('baseDays', { days: categoryData.slaDays })}</span>
                         </div>

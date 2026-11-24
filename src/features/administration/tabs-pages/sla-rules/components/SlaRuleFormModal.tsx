@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { SlaAreaSelect } from './SlaAreaSelect';
 import type { CreateSlaRulePayload, SlaRule, UpdateSlaRulePayload } from './types';
 
 export interface SelectOption {
@@ -16,15 +17,16 @@ export interface GrievanceTypeOption extends SelectOption {
 }
 
 export interface SlaRuleFormModalProps {
-  /** The rule being edited; absent when adding one. */
-  rule?: SlaRule | null;
+  /** The cluster being edited (rules that differ only by grievance type); absent when adding. */
+  rules?: SlaRule[] | null;
   /** The category the list is filtered to; preselected when adding. */
   defaultCategory?: string;
   serviceCategories: SelectOption[];
   roleLevels: SelectOption[];
   grievanceTypes: GrievanceTypeOption[];
   onCreate: (payload: CreateSlaRulePayload) => Promise<unknown>;
-  onUpdate: (ruleId: string, payload: UpdateSlaRulePayload) => Promise<unknown>;
+  /** `grievance_types` is the cluster's new set of types; empty means every type. */
+  onUpdate: (rules: SlaRule[], payload: UpdateSlaRulePayload & { grievance_types: string[] }) => Promise<unknown>;
   onClose: () => void;
 }
 
@@ -40,7 +42,7 @@ const wholeOrNull = (text: string): number | null => (text.trim() === '' ? null 
  * refuses to narrow it.
  */
 export function SlaRuleFormModal({
-  rule,
+  rules,
   defaultCategory = '',
   serviceCategories,
   roleLevels,
@@ -50,6 +52,7 @@ export function SlaRuleFormModal({
   onClose,
 }: SlaRuleFormModalProps) {
   const t = useTranslations('admin.slaRules');
+  const rule = rules?.[0] ?? null;
   const isEdit = !!rule;
   const lockScope = !!rule?.is_base;
   const titleId = useId();
@@ -57,7 +60,9 @@ export function SlaRuleFormModal({
   const [serviceCategory, setServiceCategory] = useState(rule?.service_category ?? defaultCategory);
   const [ruleLabel, setRuleLabel] = useState(rule?.rule_label ?? '');
   const [roleLevel, setRoleLevel] = useState(rule?.role_level ?? '');
-  const [grievanceType, setGrievanceType] = useState(rule?.grievance_type ?? '');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(
+    () => (rules ?? []).flatMap((r) => (r.grievance_type ? [r.grievance_type] : []))
+  );
   const [area, setArea] = useState(rule?.administrative_area ?? '');
   const [window, setWindow] = useState({
     startMonth: String(rule?.start_month ?? ''),
@@ -106,8 +111,7 @@ export function SlaRuleFormModal({
     const scope = {
       rule_label: ruleLabel.trim() || null,
       role_level: roleLevel || null,
-      grievance_type: grievanceType || null,
-      administrative_area: area.trim() || null,
+      administrative_area: area || null,
       start_month: startMonth,
       start_day: startDay,
       end_month: endMonth,
@@ -116,11 +120,22 @@ export function SlaRuleFormModal({
     setIsSaving(true);
     setError(null);
     try {
-      if (rule) {
-        await onUpdate(rule.name, lockScope ? { sla_days: days, is_urgent: isUrgent } : { ...scope, sla_days: days, is_urgent: isUrgent });
+      if (rules && rule) {
+        await onUpdate(
+          rules,
+          lockScope
+            ? { sla_days: days, is_urgent: isUrgent, grievance_types: [] }
+            : { ...scope, sla_days: days, is_urgent: isUrgent, grievance_types: selectedTypes }
+        );
       } else {
         const defined = Object.fromEntries(Object.entries(scope).filter(([, value]) => value !== null));
-        await onCreate({ ...defined, service_category: serviceCategory, sla_days: days, is_urgent: isUrgent });
+        await onCreate({
+          ...defined,
+          ...(selectedTypes.length > 0 && { grievance_types: selectedTypes }),
+          service_category: serviceCategory,
+          sla_days: days,
+          is_urgent: isUrgent,
+        });
       }
       onClose();
     } catch (err) {
@@ -172,14 +187,14 @@ export function SlaRuleFormModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-800">
-              {t('serviceCategory')} <span className="text-red-500">*</span>
+              <span>{t('serviceCategory')} <span className="text-red-500">*</span></span>
               <select
                 ref={firstFieldRef}
                 value={serviceCategory}
                 disabled={isEdit}
                 onChange={(e) => {
                   setServiceCategory(e.target.value);
-                  setGrievanceType('');
+                  setSelectedTypes([]);
                 }}
                 className={inputClass}
               >
@@ -205,20 +220,35 @@ export function SlaRuleFormModal({
               </select>
             </label>
 
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-800">
-              {t('grievanceType')}
-              <select value={grievanceType} disabled={lockScope} onChange={(e) => setGrievanceType(e.target.value)} className={inputClass}>
-                <option value="">{t('everyType')}</option>
-                {typeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
+            <fieldset className="flex flex-col gap-1.5 sm:col-span-2" disabled={lockScope}>
+              <legend className="text-sm font-medium text-gray-800 mb-1.5">{t('grievanceTypes')}</legend>
+              <p className="text-xs text-gray-500">{t('grievanceTypesHint')}</p>
+              <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-300 p-2 flex flex-col gap-1">
+                {typeOptions.length === 0 ? (
+                  <span className="text-sm text-gray-500 px-1">{t('noTypes')}</span>
+                ) : (
+                  typeOptions.map((option) => (
+                    <label key={option.value} className="flex items-center gap-2 text-sm text-gray-800 px-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedTypes.includes(option.value)}
+                        onChange={(e) =>
+                          setSelectedTypes((prev) => (e.target.checked ? [...prev, option.value] : prev.filter((v) => v !== option.value)))
+                        }
+                        className="h-4 w-4 accent-[#16A34A]"
+                      />
+                      {option.label}
+                    </label>
+                  ))
+                )}
+              </div>
+            </fieldset>
 
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-800 sm:col-span-2">
-              {t('administrativeArea')}
-              <input value={area} disabled={lockScope} onChange={(e) => setArea(e.target.value)} placeholder={t('everywhere')} className={inputClass} />
-            </label>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <span className="text-sm font-medium text-gray-800">{t('administrativeArea')}</span>
+              <p className="text-xs text-gray-500">{t('areaHint')}</p>
+              <SlaAreaSelect value={area} disabled={lockScope} onChange={setArea} className={inputClass} />
+            </div>
           </div>
 
           <fieldset className="flex flex-col gap-2" disabled={lockScope}>
@@ -234,7 +264,7 @@ export function SlaRuleFormModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
             <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-800">
-              {t('slaDays')} <span className="text-red-500">*</span>
+              <span>{t('slaDays')} <span className="text-red-500">*</span></span>
               <input type="number" min={1} value={slaDays} onChange={(e) => setSlaDays(e.target.value)} className={inputClass} />
             </label>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-800 pb-2.5">

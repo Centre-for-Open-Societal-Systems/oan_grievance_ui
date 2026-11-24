@@ -12,7 +12,6 @@ const baseCategory: SlaCategory = {
   category: 'Credit',
   categoryColor: 'bg-yellow-100 text-yellow-700',
   slaDays: 7,
-  progressPercentage: 23,
 };
 
 afterEach(() => {

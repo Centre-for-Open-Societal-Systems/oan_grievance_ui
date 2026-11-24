@@ -30,7 +30,6 @@ export function GlobalSlaPolicyCard({
 }) {
     const t = useTranslations('admin.slaPolicy');
     const [maxDeferralDays, setMaxDeferralDays] = useState('');
-    const [threshold, setThreshold] = useState('');
     const [deferralPolicy, setDeferralPolicy] = useState<DeferralApproval>('l2_approval');
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -44,7 +43,6 @@ export function GlobalSlaPolicyCard({
         fetchGlobalSlaPolicy({ signal: controller.signal })
             .then((data) => {
                 setMaxDeferralDays(String(data.policy.max_deferral_days));
-                setThreshold(String(data.policy.auto_escalation_threshold));
                 setDeferralPolicy(approvalFromBoolean(data.policy.requires_supervisor_approval));
                 setLoaded(true);
                 onMaxDeferralDaysChange?.(data.policy.max_deferral_days);
@@ -74,29 +72,22 @@ export function GlobalSlaPolicyCard({
                 .string()
                 .trim()
                 .refine((v) => /^[1-9]\d*$/.test(v), t('deferralDaysInvalid')),
-            threshold: z
-                .string()
-                .trim()
-                .refine((v) => /^[1-9]\d*$/.test(v) && Number(v) <= 100, t('thresholdInvalid')),
         });
-        const parsed = schema.safeParse({ maxDeferralDays, threshold });
+        const parsed = schema.safeParse({ maxDeferralDays });
         if (!parsed.success) {
             const firstIssue = parsed.error.issues[0];
             setMessage({ kind: 'error', text: firstIssue?.message ?? t('saveFailed') });
             return;
         }
         const days = Number(maxDeferralDays);
-        const percent = Number(threshold);
         setIsSaving(true);
         setMessage(null);
         try {
             const data = await updateGlobalSlaPolicy({
                 max_deferral_days: days,
-                auto_escalation_threshold: percent,
                 requires_supervisor_approval: booleanFromApproval(deferralPolicy),
             });
             setMaxDeferralDays(String(data.policy.max_deferral_days));
-            setThreshold(String(data.policy.auto_escalation_threshold));
             setDeferralPolicy(approvalFromBoolean(data.policy.requires_supervisor_approval));
             onMaxDeferralDaysChange?.(data.policy.max_deferral_days);
             setMessage({ kind: 'success', text: t('saved') });
@@ -157,20 +148,6 @@ export function GlobalSlaPolicyCard({
                             className={inputClass}
                         />
                         <p className="text-xs text-gray-500 mt-1">{t('maxDeferralHint')}</p>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="sla-threshold" className="text-sm font-medium text-gray-800">{t('thresholdLabel')}</label>
-                        <input
-                            id="sla-threshold"
-                            type="text"
-                            inputMode="numeric"
-                            value={threshold}
-                            disabled={!editable}
-                            onChange={(e) => setThreshold(e.target.value)}
-                            className={inputClass}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">{t('thresholdHint')}</p>
                     </div>
                 </div>
 
