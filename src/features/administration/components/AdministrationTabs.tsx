@@ -1,4 +1,4 @@
-import { GitBranch, Mail, FileText } from 'lucide-react';
+import { GitBranch, Mail, FileText, Timer } from 'lucide-react';
 
 interface AdministrationTabsProps {
   activeTab: string;
@@ -8,6 +8,7 @@ interface AdministrationTabsProps {
 export function AdministrationTabs({ activeTab, onTabChange }: AdministrationTabsProps) {
   const tabs = [
     { name: 'Category & SLA Configuration', icon: GitBranch, active: activeTab === 'Category & SLA Configuration' },
+    { name: 'SLA Rules', icon: Timer, active: activeTab === 'SLA Rules' },
     { name: 'Notification Config', icon: Mail, active: activeTab === 'Notification Config' },
     { name: 'Response Templates', icon: FileText, active: activeTab === 'Response Templates' },
   ];

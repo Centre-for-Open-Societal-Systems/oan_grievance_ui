@@ -10,6 +10,9 @@ export function TopHeader({ activeTab }: TopHeaderProps) {
     case 'Category & SLA Configuration':
       description = 'Manage grievance categories, SLA timelines, auto-escalation, and notification rules in one place.';
       break;
+    case 'SLA Rules':
+      description = 'Set the SLA days of each category: its base rule, and the rules for a level, type, area or season.';
+      break;
     case 'Notification Config':
       description = 'Configure notification triggers, recipients, and message templates for grievance updates.';
       break;

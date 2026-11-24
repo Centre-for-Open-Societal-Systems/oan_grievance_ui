@@ -7,15 +7,18 @@ import { AdministrationTabs } from './components/AdministrationTabs';
 import CategorySlaConfigurationPage from './tabs-pages/category-sla-configuration/page';
 import NotificationConfigPage from './tabs-pages/notification-config/page';
 import ResponseTemplatesPage from './tabs-pages/response-templates/page';
+import SlaRulesPage from './tabs-pages/sla-rules/page';
 
 const TAB_SLUG_MAP: Record<string, string> = {
     'category-sla': 'Category & SLA Configuration',
+    'sla-rules': 'SLA Rules',
     'notification-config': 'Notification Config',
     'response-templates': 'Response Templates',
 };
 
 const TAB_NAME_TO_SLUG: Record<string, string> = {
     'Category & SLA Configuration': 'category-sla',
+    'SLA Rules': 'sla-rules',
     'Notification Config': 'notification-config',
     'Response Templates': 'response-templates',
 };
@@ -60,6 +63,8 @@ export default function AdministrationPage() {
 
             {activeTab === 'Category & SLA Configuration' ? (
                 <CategorySlaConfigurationPage />
+            ) : activeTab === 'SLA Rules' ? (
+                <SlaRulesPage />
             ) : activeTab === 'Notification Config' ? (
                 <NotificationConfigPage />
             ) : activeTab === 'Response Templates' ? (
