@@ -30,18 +30,14 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    // Which environment this branch deploys to. Anything else (e.g. PR builds) only runs
-                    // checkout + install/test; the build/push/deploy stages below are skipped for it.
+                    // The develop branch builds and deploys here. staging builds nothing: its stages at the end promote
+                    // what develop built from the same source tree to the QA cluster. Anything else (e.g. PR builds)
+                    // only runs checkout + install/test.
                     // "/" has no landing page and redirects to /login, so verify /login directly.
                     def targets = [
                         develop: [
                             namespace: 'develop',
                             verifyUrl: 'https://grievance.development.oanstaging.com/login'
-                        ],
-                        staging: [
-                            namespace: 'staging',
-                            // CONFIRM: kubectl get ingress -n staging (UI host)
-                            verifyUrl: 'https://grievance-staging.oanstaging.com/login'
                         ]
                     ]
                     def target = targets[env.BRANCH_NAME]
@@ -72,7 +68,7 @@ pipeline {
         }
 
         stage('Build image') {
-            when { anyOf { branch 'develop'; branch 'staging' } }
+            when { branch 'develop' }
             steps {
                 // Dockerfile lives at the repo root
                 sh '''
@@ -85,7 +81,7 @@ pipeline {
         }
 
         stage('Push image') {
-            when { anyOf { branch 'develop'; branch 'staging' } }
+            when { branch 'develop' }
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
@@ -102,7 +98,7 @@ pipeline {
         }
 
         stage('Deploy (kubectl)') {
-            when { anyOf { branch 'develop'; branch 'staging' } }
+            when { branch 'develop' }
             steps {
                 withCredentials([sshUserPrivateKey(
                     credentialsId: 'grievance-dev-ssh-key',   // grievance.pem
@@ -145,7 +141,7 @@ ENDSSH
         }
 
         stage('Verify') {
-            when { anyOf { branch 'develop'; branch 'staging' } }
+            when { branch 'develop' }
             steps {
                 sh '''
                     for i in $(seq 1 10); do
@@ -194,16 +190,23 @@ ENDSSH
             }
         }
 
+        // staging: `promote` instead of `package`: develop's chart for this source tree, its image tagged for staging.
         stage('Package chart') {
-            when { branch 'develop' }
+            when { anyOf { branch 'develop'; branch 'staging' } }
             steps {
                 script {
+                    env.IMMUTABLE_TAG    = sh(returnStdout: true, script: 'python3 ci/package_chart.py version').trim()
                     env.IMAGE_TAG        = env.IMMUTABLE_TAG
                     env.SOURCE_COMMIT    = sh(returnStdout: true, script: 'git rev-parse --verify HEAD').trim()
                     env.COMMIT_SUBJECT   = sh(returnStdout: true, script: 'git log -1 --pretty=%s').trim()
                     env.IMAGE_REPOSITORY = "${env.IMAGE_REGISTRY}/${env.ECR_REPO}"
                 }
-                sh 'python3 ci/package_chart.py package'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-ecr-creds'
+                ]]) {
+                    sh "python3 ci/package_chart.py ${env.BRANCH_NAME == 'staging' ? 'promote' : 'package'}"
+                }
                 // The deploy stage runs on the VPN deploy agent, which gets the archive from here.
                 stash name: 'built-chart', includes: 'built-chart/**'
             }
@@ -228,8 +231,46 @@ ENDSSH
             }
         }
 
+        stage('staging → QA cluster (helm)') {
+            when { beforeAgent true; branch 'staging' }
+            agent { label 'oan-ci-deploy' }   // VPN agent with helm and kubectl; must reach the QA API
+            options { timeout(time: 15, unit: 'MINUTES') }
+            steps {
+                checkout scm
+                sh 'rm -rf built-chart'
+                unstash 'built-chart'
+                withCredentials([file(credentialsId: 'oan-qa-kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh '''#!/usr/bin/env bash
+                        set -euo pipefail
+                        DEPLOY_ENV=staging \
+                        IMAGE_REPOSITORY="${IMAGE_REGISTRY}/${ECR_REPO}" \
+                        IMMUTABLE_TAG="${IMMUTABLE_TAG}" \
+                        bash ci/deploy-helm-dev.sh
+                    '''
+                }
+            }
+        }
+
+        stage('Verify (staging)') {
+            when { beforeAgent true; branch 'staging' }
+            agent { label 'oan-ci-deploy' }
+            steps {
+                sh '''
+                    url="https://grievance.qa.oanstaging.com/login"
+                    for i in $(seq 1 10); do
+                        code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "$url" || true)
+                        echo "attempt $i: $url -> $code"
+                        [ "$code" = "200" ] && exit 0
+                        sleep 6
+                    done
+                    echo "grievance-ui did not return 200 at $url"
+                    exit 1
+                '''
+            }
+        }
+
         stage('Publish chart') {
-            when { branch 'develop' }
+            when { anyOf { branch 'develop'; branch 'staging' } }
             steps {
                 // UNSTABLE, not failed: the image is already deployed.
                 catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {

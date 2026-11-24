@@ -3,8 +3,9 @@
 Run by the Jenkins stages "Package chart" and "Publish chart" of every develop build:
 
     package_chart.py version   prints the chart version, which is also the image tag of the build:
-                               0.0.1-develop.<BUILD_NUMBER>, e.g. 0.0.1-develop.57 (develop only)
+                               0.0.1-develop.<BUILD_NUMBER>, e.g. 0.0.1-develop.57 (develop or staging)
     package_chart.py package   writes built-chart/oan-grievance-ui-<version>.tgz
+    package_chart.py promote   staging only: the develop chart of this source tree with its image also tagged <version>-staging.N
     package_chart.py publish   adds that archive to repository/develop/ of oan-helm
 
 The Chart.yaml annotations and the publisher come from scripts/ci of oan-helm, so this chart is listed like the registry
@@ -61,9 +62,9 @@ def load_generic(work):
 
 def chart_version(env):
 	"""0.0.1-develop.<BUILD_NUMBER>, the only develop version publish_chart.py puts in repository/develop/."""
-	if env["BRANCH_NAME"] != "develop":
-		raise ValueError("only develop packages the chart, not %s" % env["BRANCH_NAME"])
-	return "0.0.1-develop.%s" % env["BUILD_NUMBER"]
+	if env["BRANCH_NAME"] not in ("develop", "staging"):
+		raise ValueError("only develop and staging package the chart, not %s" % env["BRANCH_NAME"])
+	return "0.0.1-%s.%s" % (env["BRANCH_NAME"], env["BUILD_NUMBER"])
 
 
 def version_build(env, work):
@@ -95,7 +96,7 @@ def package_build(env, work):
 				"oan.org/source-subject": env.get("COMMIT_SUBJECT", "")[:200],
 				"oan.org/release-name": "grievance-ui",
 				"oan.org/release-namespace": "grievance",
-				"oan.org/values-overlay": "helm/environments/dev/oan-grievance-ui.yaml",
+				"oan.org/values-overlay": "helm/environments/%s/oan-grievance-ui.yaml" % deploy_env(env),
 			},
 		),
 		encoding="utf-8",
@@ -107,10 +108,93 @@ def package_build(env, work):
 	return 0
 
 
+def deploy_env(env):
+	return {"develop": "dev", "staging": "staging"}[env["BRANCH_NAME"]]
+
+
+def retag(promote, repository, source_tag, tag):
+	"""Add `tag` to the ECR image that has `source_tag`. The manifest is the same, so the image cannot change."""
+	found = promote.ECR.match(repository)
+	if found is None:
+		raise ValueError("%s is not an ECR repository" % repository)
+	base = ["aws", "ecr", "--region", found.group("region")]
+	name = ["--repository-name", found.group("name")]
+	manifest = promote.run(
+		base + ["batch-get-image"] + name
+		+ ["--image-ids", "imageTag=" + source_tag, "--query", "images[0].imageManifest", "--output", "text"]
+	).rstrip("\n")
+	if not manifest or manifest == "None":
+		raise ValueError("%s has no image tagged %s" % (repository, source_tag))
+	result = subprocess.run(
+		base + ["put-image"] + name + ["--image-tag", tag, "--image-manifest", manifest],
+		stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True,
+	)
+	if result.returncode and "ImageAlreadyExistsException" not in result.stderr:
+		raise ValueError("%s: could not add tag %s: %s" % (repository, tag, result.stderr.strip()[:300]))
+
+
+def promote_build(env, work):
+	"""staging: the develop chart built from this very source tree, its image also tagged with the staging version.
+
+	Nothing is rebuilt: staging only runs what develop built. Needs the aws CLI with ECR access; DRY_RUN=1 tags nothing."""
+	load_generic(work)  # puts oan-helm's scripts/ci on sys.path
+	import promote_chart as promote  # oan-helm's, fetched above
+	import package_chart as generic
+
+	version = chart_version(env)
+	if env["IMAGE_TAG"] != version:
+		raise ValueError("image tag %s is not the chart version %s" % (env["IMAGE_TAG"], version))
+	tree = run(["git", "rev-parse", "HEAD^{tree}"]).strip()
+	source = promote.channel()
+	index = urllib.request.urlopen(source + "index.yaml", timeout=60).read().decode("utf-8")
+
+	def tree_of(commit):
+		try:
+			return run(["git", "rev-parse", commit + "^{tree}"]).strip()
+		except subprocess.CalledProcessError:
+			return None
+
+	entry = promote.built_from_tree(promote.index_entries(index, CHART), tree, tree_of)
+	archive = work / "develop.tgz"
+	promote.download("%s%s-%s.tgz" % (source, CHART, entry["version"]), archive, entry["digest"])
+	with tarfile.open(str(archive)) as bundle:
+		bundle.extractall(str(work))
+	chart = work / CHART
+	print("%s:%s -> %s" % (env["IMAGE_REPOSITORY"], entry["version"], version))
+	if env.get("DRY_RUN") != "1":
+		retag(promote, env["IMAGE_REPOSITORY"], entry["version"], version)
+	values = chart / "values.yaml"
+	values.write_text(
+		generic.set_image(values.read_text(encoding="utf-8"), "ui.image", env["IMAGE_REPOSITORY"], version),
+		encoding="utf-8",
+	)
+	metadata = chart / "Chart.yaml"
+	text = re.sub(
+		r"(?m)^\s*oan\.org/(source-commit|source-subject|release-name|release-namespace|values-overlay):.*\n",
+		"", metadata.read_text(encoding="utf-8"),
+	)
+	metadata.write_text(
+		generic.annotate(text, {
+			"oan.org/promoted-from": entry["version"],
+			"oan.org/source-commit": env["SOURCE_COMMIT"],
+			"oan.org/source-subject": env.get("COMMIT_SUBJECT", "")[:200],
+			"oan.org/release-name": "grievance-ui",
+			"oan.org/release-namespace": "grievance",
+			"oan.org/values-overlay": "helm/environments/staging/oan-grievance-ui.yaml",
+		}),
+		encoding="utf-8",
+	)
+	shutil.rmtree(str(OUTPUT), ignore_errors=True)
+	OUTPUT.mkdir()
+	run(["helm", "package", str(chart), "--version", version, "--destination", str(OUTPUT)])
+	print("packaged %s-%s.tgz" % (CHART, version))
+	return 0
+
+
 def published_commit(env, name):
-	"""oan.org/source-commit of the archive already in repository/develop/ of oan-helm, or None."""
+	"""oan.org/source-commit of the archive already in repository/<channel>/ of oan-helm, or None."""
 	request = urllib.request.Request(
-		"https://api.github.com/repos/%s/contents/repository/develop/%s" % (OAN_HELM_SLUG, name),
+		"https://api.github.com/repos/%s/contents/repository/%s/%s" % (OAN_HELM_SLUG, env["BRANCH_NAME"], name),
 		headers={
 			"Accept": "application/vnd.github.raw",
 			"Authorization": "Bearer " + env.get("GH_TOKEN", ""),
@@ -154,7 +238,7 @@ def main(argv=None, env=None):
 	env = dict(os.environ if env is None else env)
 	actions = {"version": version_build, "package": package_build, "publish": publish_build}
 	if len(argv) != 1 or argv[0] not in actions:
-		print("usage: package_chart.py version|package|publish")
+		print("usage: package_chart.py version|package|promote|publish")
 		return 1
 	work = Path(tempfile.mkdtemp(prefix="grievance-ui-chart-"))
 	try:
