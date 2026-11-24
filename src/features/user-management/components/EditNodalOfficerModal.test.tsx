@@ -117,6 +117,16 @@ describe('EditNodalOfficerModal', () => {
     expect(updateOfficer).not.toHaveBeenCalled();
   });
 
+  it('does not save while a chosen category has not been added with +', async () => {
+    renderModal();
+    fireEvent.click(await screen.findByRole('button', { name: 'Service Category' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Markets' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    expect(await screen.findByText('Press + to add the chosen category.')).toBeInTheDocument();
+    expect(updateOfficer).not.toHaveBeenCalled();
+  });
+
   it('adds a category from the dropdowns and saves it with the existing ones', async () => {
     renderModal();
     fireEvent.click(await screen.findByRole('button', { name: 'Service Category' }));

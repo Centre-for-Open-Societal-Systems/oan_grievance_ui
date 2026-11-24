@@ -41,11 +41,14 @@ export function CategoryCoverageField({
   const t = useTranslations('userManagement.add');
   const [pendingCategory, setPendingCategory] = useState('');
   const [pendingTypes, setPendingTypes] = useState<string[]>([]);
-  const { options: typeList, isLoading: isTypesLoading } = useGrievanceTypeOptions(pendingCategory);
+  const { options: typeList, isLoading: isTypesLoading, isError: isTypesError } = useGrievanceTypeOptions(pendingCategory);
 
   useEffect(() => {
     onPendingChange?.(!!pendingCategory);
   }, [pendingCategory, onPendingChange]);
+
+  // Gone with the form (a different person, a closed popup): nothing is pending any more.
+  useEffect(() => () => onPendingChange?.(false), [onPendingChange]);
 
   const changeCategory = (category: string) => {
     setPendingCategory(category);
@@ -96,7 +99,7 @@ export function CategoryCoverageField({
               onChange={setPendingTypes}
               disabled={!pendingCategory}
               placeholder={!pendingCategory ? t('typesWaiting') : isTypesLoading ? t('typesLoading') : t('typesPlaceholder')}
-              emptyLabel={t('typesNone')}
+              emptyLabel={isTypesError ? t('typesFailed') : t('typesNone')}
               summarize={(count) => t('typesSelected', { count })}
             />
           </div>
@@ -111,6 +114,10 @@ export function CategoryCoverageField({
             <Plus size={18} aria-hidden="true" />
           </button>
         </div>
+      )}
+
+      {coverage.some((entry) => entry.types.length > 0) && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{t('typesNotSaved')}</p>
       )}
 
       {coverage.length > 0 && (

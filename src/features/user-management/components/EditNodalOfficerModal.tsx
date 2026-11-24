@@ -62,7 +62,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
     isOpen && !!supervisorLevel,
     supervisorLevel,
     location?.parentPath ?? undefined,
-    false,
+    true,
     coverage.map((entry) => entry.category)
   );
   const { designations } = useDesignations(isOpen && !isReviewer, level);
@@ -72,7 +72,8 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
   const { options: categoryList, isLoading: isCategoriesLoading } = useServiceCategoryOptions(undefined);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [status, setStatus] = useState<string>(officer?.status ?? 'Active');
-  const [reportsTo, setReportsTo] = useState(officer?.reportsTo ?? '');
+  // Only a supervisor the admin picks here is sent; the current one is otherwise left as it is.
+  const [reportsTo, setReportsTo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -112,19 +113,26 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
     setTempPasswordError(null);
     try {
       await resetTemporaryPassword(officer.id, { temporary_password: newTempPassword });
-      setPasswordIssuedMessage('New temporary password issued. The officer must set their own before signing in.');
+      setPasswordIssuedMessage(t('passwordIssued'));
       onSaved();
     } catch (err) {
-      setTempPasswordError(err instanceof ApiError ? err.message : 'Failed to issue a new temporary password. Please try again.');
+      setTempPasswordError(err instanceof ApiError ? err.message : t('passwordIssueFailed'));
     } finally {
       setIsSubmittingPassword(false);
     }
   };
 
   const handleSave = async () => {
-    if (coverage.length === 0) {
+    if (coverage.length === 0 || hasPendingCategory) {
       setCategoriesError(hasPendingCategory ? t('categoryNotAdded') : t('categoriesRequired'));
       document.getElementById(CATEGORIES_ID)?.focus();
+      return;
+    }
+
+    const supervisorChosen = !!supervisorLevel && !!reportsTo;
+    if (supervisorChosen && !supervisorOptions.some((option) => option.value === reportsTo)) {
+      // Picked, then the area or categories changed (or the list is still loading): do not drop it silently.
+      setFormError(t('supervisorUnavailable'));
       return;
     }
 
@@ -138,13 +146,12 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
         status: status as OfficerBackendStatus,
         // The service places an officer on whole categories; the type picks only narrow what the admin intended.
         service_categories: coverage.map((entry) => entry.category),
-        // Only a supervisor the list still offers: one who no longer covers the categories or area would be refused.
-        ...(supervisorLevel && supervisorOptions.some((option) => option.value === reportsTo) ? { reports_to: reportsTo } : {}),
+        ...(supervisorChosen ? { reports_to: reportsTo } : {}),
       });
       onSaved();
       onClose();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : 'Failed to update officer. Please try again.');
+      setFormError(err instanceof ApiError ? err.message : t('updateFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -160,7 +167,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
         className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-visible flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
       >
         <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-          <h2 id="edit-nodal-officer-title" className="text-xl font-bold text-gray-900">Edit {tabLabel ?? 'Officer'}</h2>
+          <h2 id="edit-nodal-officer-title" className="text-xl font-bold text-gray-900">{t('editTitle', { tab: tabLabel ?? t('officerFallback') })}</h2>
           <button type="button" onClick={onClose} disabled={isSubmitting} className="text-gray-400 hover:text-red-500 transition-all duration-300 p-1.5 rounded-full hover:bg-red-50 hover:rotate-90 hover:scale-110 disabled:opacity-50">
             <X size={20} />
           </button>
@@ -213,24 +220,31 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
 
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-gray-900">
-                  Status <RequiredMark />
+                  {t('statusLabel')} <RequiredMark />
                 </label>
                 <AnimatedSelect
                   options={isReviewer ? REVIEWER_STATUS_OPTIONS : OFFICER_STATUS_OPTIONS}
                   value={status}
                   onChange={setStatus}
-                  placeholder="Select Status"
+                  placeholder={t('statusPlaceholder')}
                 />
               </div>
 
               {supervisorLevel && (
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-gray-900">Reports To ({supervisorLabel ?? 'supervisor'})</label>
+                  <label htmlFor="edit-officer-reports-to" className="text-sm font-bold text-gray-900">{t('reportsTo', { supervisor: supervisorLabel ?? '' })}</label>
                   <AnimatedSelect
+                    id="edit-officer-reports-to"
                     options={supervisorOptions}
                     value={supervisorOptions.some((option) => option.value === reportsTo) ? reportsTo : ''}
                     onChange={setReportsTo}
-                    placeholder="Leave blank to keep current"
+                    placeholder={
+                      !location?.area
+                        ? t('reportsToKeep', { current: officer.reportsToName || officer.reportsTo || '' })
+                        : coverage.length === 0
+                          ? t('reportsToNeedsCategories')
+                          : t('reportsToPlaceholder')
+                    }
                   />
                 </div>
               )}
@@ -267,11 +281,11 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
               {!isIssuingPassword ? (
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-gray-900">Sign-in</span>
+                    <span className="text-sm font-bold text-gray-900">{t('signIn')}</span>
                     <span className="text-xs text-gray-500">
                       {officer.mustChangePassword
-                        ? 'Awaiting first sign-in — the officer still holds a temporary password.'
-                        : 'Officer has set their own password.'}
+                        ? t('awaitingFirstSignInNote')
+                        : t('ownPasswordSet')}
                     </span>
                   </div>
                   <button
@@ -280,12 +294,12 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
                     className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-white transition-colors"
                   >
                     <KeyRound size={14} />
-                    Issue New Temporary Password
+                    {t('issueNewPassword')}
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-gray-900">New Temporary Password</label>
+                  <label className="text-sm font-bold text-gray-900">{t('newTempPasswordLabel')}</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
@@ -295,7 +309,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
                         setTempPasswordError(null);
                       }}
                       aria-invalid={tempPasswordError ? true : undefined}
-                      placeholder="At least 8 characters, a letter and a number"
+                      placeholder={t('tempPasswordPlaceholder')}
                       className={`flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-700 placeholder:text-gray-400 transition-colors bg-white ${INVALID_INPUT_STYLES}`}
                     />
                     <button
@@ -304,7 +318,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
                         setNewTempPassword(generateRandomPassword());
                         setTempPasswordError(null);
                       }}
-                      aria-label="Generate a new password"
+                      aria-label={t('generatePassword')}
                       className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-white hover:text-gray-700 transition-colors"
                     >
                       <RefreshCw size={16} />
@@ -312,7 +326,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
                     <button
                       type="button"
                       onClick={() => void copyNewPassword(newTempPassword)}
-                      aria-label="Copy password"
+                      aria-label={t('copyPassword')}
                       className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-white hover:text-gray-700 transition-colors"
                     >
                       {isPasswordCopied ? <Check size={16} className="text-[#16A34A]" /> : <Copy size={16} />}
@@ -321,7 +335,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
                   {tempPasswordError && <p className="text-xs text-red-600">{tempPasswordError}</p>}
                   {passwordIssuedMessage && <p className="text-xs text-[#16A34A] font-medium">{passwordIssuedMessage}</p>}
                   <p className="text-xs text-gray-400">
-                    This ends the officer&apos;s current sessions. Tell them the new password directly — it isn&apos;t emailed.
+                    {t('passwordNote')}
                   </p>
                   <div className="flex justify-end gap-2 mt-1">
                     <button
@@ -329,7 +343,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
                       onClick={() => setIsIssuingPassword(false)}
                       className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-white rounded-lg border border-gray-200 transition-colors"
                     >
-                      {passwordIssuedMessage ? 'Close' : 'Cancel'}
+                      {passwordIssuedMessage ? t('close') : t('cancel')}
                     </button>
                     {!passwordIssuedMessage && (
                       <button
@@ -338,7 +352,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
                         disabled={isSubmittingPassword}
                         className="px-4 py-2 text-xs font-bold text-white bg-[#16A34A] hover:bg-[#15803d] rounded-lg transition-colors disabled:opacity-60"
                       >
-                        {isSubmittingPassword ? 'Issuing…' : 'Issue Password'}
+                        {isSubmittingPassword ? t('issuing') : t('issuePassword')}
                       </button>
                     )}
                   </div>
@@ -349,7 +363,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
 
           <div className="px-8 py-5 flex justify-end gap-4 mt-4 border-t border-gray-100">
             <button type="button" onClick={onClose} disabled={isSubmitting} className="px-8 py-2.5 border border-[#1e293b] text-[#1e293b] rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50">
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -357,7 +371,7 @@ export function EditNodalOfficerModal({ isOpen, onClose, officer, role, level, s
               className="px-6 py-2.5 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-colors disabled:opacity-60"
             >
               <Save size={18} />
-              {isSubmitting ? 'Saving…' : 'Save Changes'}
+              {isSubmitting ? t('saving') : t('saveChanges')}
             </button>
           </div>
         </form>

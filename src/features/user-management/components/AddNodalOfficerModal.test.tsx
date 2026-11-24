@@ -181,6 +181,27 @@ describe('AddNodalOfficerModal', () => {
     expect(createOfficer).not.toHaveBeenCalled();
   });
 
+  it('does not save while a chosen category has not been added with +, even if another was', async () => {
+    renderModal({ level: 'department_head' });
+    await pickUser();
+    await addCategory('Inputs');
+    fireEvent.click(await screen.findByRole('button', { name: 'Service Category' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Markets' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(await screen.findByText('Press + to add the chosen category.')).toBeInTheDocument();
+    expect(createOfficer).not.toHaveBeenCalled();
+  });
+
+  it('says plainly that picked grievance types are not saved', async () => {
+    renderModal({ level: 'department_head' });
+    await pickUser();
+    expect(screen.queryByText(/not saved yet/)).toBeNull();
+
+    await addCategory('Inputs', ['Seed quality']);
+    expect(screen.getByText(/Grievance types are not saved yet/)).toBeInTheDocument();
+  });
+
   it('does not submit until a user is chosen', async () => {
     const { onCreated } = renderModal();
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));

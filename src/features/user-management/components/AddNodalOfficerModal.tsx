@@ -116,6 +116,8 @@ export function AddNodalOfficerModal({
       setDesignation('');
       setLocation(NO_CHOICE);
       setReportsTo('');
+      setCoverage([]);
+      setHasPendingCategory(false);
     }
   };
 
@@ -135,7 +137,7 @@ export function AddNodalOfficerModal({
     const found: Partial<Record<FormField, string>> = {};
     if (!user) found.user = t('userRequired');
     if (user && needsLocation && !location.area) found.location = t('locationRequired');
-    if (user && coverage.length === 0) {
+    if (user && (coverage.length === 0 || hasPendingCategory)) {
       found.serviceCategories = hasPendingCategory ? t('categoryNotAdded') : t('categoriesRequired');
     }
     if (Object.keys(found).length > 0) {
