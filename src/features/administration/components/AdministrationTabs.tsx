@@ -7,7 +7,7 @@ interface AdministrationTabsProps {
 
 export function AdministrationTabs({ activeTab, onTabChange }: AdministrationTabsProps) {
   const tabs = [
-    { name: 'Category & SLA Configuration', icon: GitBranch, active: activeTab === 'Category & SLA Configuration' },
+    { name: 'Category Configuration', icon: GitBranch, active: activeTab === 'Category Configuration' },
     { name: 'SLA Rules', icon: Timer, active: activeTab === 'SLA Rules' },
     { name: 'Notification Config', icon: Mail, active: activeTab === 'Notification Config' },
     { name: 'Response Templates', icon: FileText, active: activeTab === 'Response Templates' },
