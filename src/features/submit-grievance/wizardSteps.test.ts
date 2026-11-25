@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FARMER_LOCKED_CATEGORY,
   FARMER_LOCKED_DETAILS,
   firstIncompleteStep,
   getDetailsErrors,
@@ -41,8 +40,6 @@ describe('an individual farmer, whose details are read-only', () => {
   const EMPTY_FARMER: WizardFields = {
     ...COMPLETE,
     identityValues: {},
-    serviceCategory: '',
-    grievanceType: '',
     region: null,
     zone: null,
     woreda: null,
@@ -58,8 +55,8 @@ describe('an individual farmer, whose details are read-only', () => {
     expect(firstIncompleteStep({ ...EMPTY_FARMER, description: '' })).toBe(2);
   });
 
-  it('is still held on the location when only category and type are locked (a profile with no area)', () => {
-    expect(firstIncompleteStep({ ...EMPTY_FARMER, lockedDetailsFields: FARMER_LOCKED_CATEGORY })).toBe(2);
+  it('is still held on the location when it is not locked (a profile with no area)', () => {
+    expect(firstIncompleteStep({ ...EMPTY_FARMER, lockedDetailsFields: [] })).toBe(2);
   });
 
   it('is still held for the same fields when they are not read-only', () => {
@@ -70,7 +67,7 @@ describe('an individual farmer, whose details are read-only', () => {
 
 describe('getDetailsErrors', () => {
   it('does not require a locked field', () => {
-    const fields = { serviceCategory: '', grievanceType: '', region: null, zone: null, woreda: null, description: '' };
+    const fields = { serviceCategory: 'Inputs', grievanceType: 'GTYPE-00001', region: null, zone: null, woreda: null, description: '' };
     expect(Object.keys(getDetailsErrors(fields, undefined, false, FARMER_LOCKED_DETAILS))).toEqual(['description']);
   });
 

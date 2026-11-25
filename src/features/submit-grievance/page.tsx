@@ -22,7 +22,7 @@ import {
 } from "./initialIdentity";
 import { buildSubmitFields } from "./submitPayload";
 import { getFieldError, SI_FIELDS_BY_TYPE } from "@/components/submitter-identity/fields";
-import { FARMER_LOCKED_CATEGORY, FARMER_LOCKED_LOCATION, firstIncompleteStep, type WizardStep } from "./wizardSteps";
+import { FARMER_LOCKED_LOCATION, firstIncompleteStep, type WizardStep } from "./wizardSteps";
 import { loadSubmitterProfile } from "@/lib/submitterProfile";
 import { organisationKindOf } from "@/lib/organisationKind";
 import type { WizardAttachment } from "@/lib/attachments";
@@ -195,7 +195,7 @@ export default function SubmitGrievancePage() {
   // location while leaving it incomplete, and the farmer could not fix it.
   const locationLocked = isFarmer && Boolean(profileArea) && Boolean(region && zone && woreda);
   const lockedDetailsFields = isFarmer
-    ? [...FARMER_LOCKED_CATEGORY, ...(locationLocked ? FARMER_LOCKED_LOCATION : [])]
+    ? [...(locationLocked ? FARMER_LOCKED_LOCATION : [])]
     : undefined;
 
   // The step shown is the URL's, clamped to the furthest one the wizard's
@@ -369,7 +369,6 @@ export default function SubmitGrievancePage() {
             setDesiredOutcome={setDesiredOutcome}
             serviceProvider={serviceProvider}
             setServiceProvider={setServiceProvider}
-            isFarmer={isFarmer}
             locationLocked={locationLocked}
             attachments={attachments}
             setAttachments={setAttachments}
