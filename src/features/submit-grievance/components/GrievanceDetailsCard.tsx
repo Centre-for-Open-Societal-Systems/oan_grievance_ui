@@ -33,7 +33,6 @@ import { VoiceRecorder } from "./VoiceRecorder";
 import { ServiceProviderCombobox } from "./ServiceProviderCombobox";
 import type { ServiceProviderRef } from "../api/serviceProviderApi";
 import {
-  FARMER_LOCKED_CATEGORY,
   FARMER_LOCKED_LOCATION,
   getDescriptionError,
   getDetailsErrors,
@@ -81,8 +80,6 @@ interface GrievanceDetailsCardProps {
   /** The store, cooperative, bank or market the grievance is about — optional. Chosen from the directory; its ID is sent as `associated_service_provider`. */
   serviceProvider: ServiceProviderRef | null;
   setServiceProvider: (value: ServiceProviderRef | null) => void;
-  /** An individual farmer: the case is filed under "Other", so category and type are read-only and not required. */
-  isFarmer?: boolean;
   /** The location came from the account's own profile, so the location fields are read-only and not required. */
   locationLocked?: boolean;
   // The staged attachment list — owned by page.tsx, not local state here, so
@@ -124,7 +121,6 @@ export function GrievanceDetailsCard({
   setDesiredOutcome,
   serviceProvider,
   setServiceProvider,
-  isFarmer = false,
   locationLocked = false,
   attachments,
   setAttachments,
@@ -215,7 +211,7 @@ export function GrievanceDetailsCard({
       { serviceCategory, grievanceType, region, zone, woreda, description },
       detailsMessages,
       hasVoiceNote,
-      [...(isFarmer ? FARMER_LOCKED_CATEGORY : []), ...(locationLocked ? FARMER_LOCKED_LOCATION : [])]
+      locationLocked ? FARMER_LOCKED_LOCATION : []
     );
 
     fieldErrors.setAll(errors);
@@ -281,13 +277,6 @@ export function GrievanceDetailsCard({
   // (a recording can finish before they do), then this is cleared.
   const wantsOtherFill = useRef(false);
   const otherType = otherTypes.find((o) => o.label.toLowerCase() === "other")?.value;
-
-  // A farmer's grievance is always filed under the catch-all "Other" category and type, which routes to manual triage.
-  useEffect(() => {
-    if (!isFarmer || !otherCategory || !otherType) return;
-    if (serviceCategory !== otherCategory) setServiceCategory(otherCategory);
-    if (grievanceType !== otherType) setGrievanceType(otherType);
-  }, [isFarmer, otherCategory, otherType, serviceCategory, grievanceType, setServiceCategory, setGrievanceType]);
 
   const fillOther = () => {
     if (!otherCategory || !otherType) return;
@@ -381,14 +370,12 @@ export function GrievanceDetailsCard({
             {/* Service Category */}
             <div>
               <label htmlFor="service-category" className="block text-sm font-semibold text-gray-800 mb-2">
-                Service Category {!isFarmer && <span className="text-red-500">*</span>}
+                Service Category <span className="text-red-500">*</span>
               </label>
               <AnimatedSelect
                 id="service-category"
                 options={dynamicServiceCategories}
                 placeholder="Select category"
-                disabled={isFarmer}
-                clearable={!isFarmer}
                 value={serviceCategory}
                 onChange={(cat) => {
                   setServiceCategory(cat);
@@ -406,14 +393,13 @@ export function GrievanceDetailsCard({
             {/* Grievance Type */}
             <div>
               <label htmlFor="grievance-type" className="block text-sm font-semibold text-gray-800 mb-2">
-                Grievance Type {!isFarmer && <span className="text-red-500">*</span>}
+                Grievance Type <span className="text-red-500">*</span>
               </label>
               <AnimatedSelect
                 id="grievance-type"
                 options={dynamicGrievanceTypes}
                 placeholder={serviceCategory ? "Select grievance type" : t("selectCategoryFirst")}
-                disabled={isFarmer || !serviceCategory}
-                clearable={!isFarmer}
+                disabled={!serviceCategory}
                 value={grievanceType}
                 onChange={(type) => {
                   setGrievanceType(type);

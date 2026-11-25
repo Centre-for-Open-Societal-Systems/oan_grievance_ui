@@ -59,7 +59,6 @@ interface Initial {
   woreda?: AreaRef;
   description?: string;
   /** An individual farmer: category, type and location are read-only. */
-  isFarmer?: boolean;
   /** The farmer's profile supplied the location, so it is read-only too. */
   locationLocked?: boolean;
   attachmentFileName?: string;
@@ -128,7 +127,6 @@ function Harness({ initial, onNext }: { initial: Initial; onNext: () => void }) 
       setDesiredOutcome={setDesiredOutcome}
       serviceProvider={serviceProvider}
       setServiceProvider={setServiceProvider}
-      isFarmer={initial.isFarmer}
       locationLocked={initial.locationLocked}
       attachments={attachments}
       setAttachments={setAttachments}
@@ -322,21 +320,18 @@ describe('Step 2 — an individual farmer', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { areas: [], count: 0 } }) } as Response);
   });
 
-  it('files under Other, with category and type read-only and not marked required', async () => {
-    renderStep({ isFarmer: true, ...AREAS, description: DESCRIPTION });
+  it('lets the farmer choose the category, and requires it, rather than defaulting to Other', () => {
+    renderStep({ ...AREAS, locationLocked: true, description: DESCRIPTION });
 
-    await waitFor(() => expect((byId('service-category') as HTMLInputElement).value).toBe('Other'));
-    expect((byId('grievance-type') as HTMLInputElement).value).toBe('Other');
-
-    expect(byId('service-category')).toBeDisabled();
-    expect(byId('grievance-type')).toBeDisabled();
+    expect((byId('service-category') as HTMLInputElement).value).toBe('');
+    expect(byId('service-category')).not.toBeDisabled();
     for (const label of ['Service Category', 'Grievance Type']) {
-      expect(screen.getByText(label, { selector: 'label' }).textContent).not.toContain('*');
+      expect(screen.getByText(label, { selector: 'label' }).textContent).toContain('*');
     }
   });
 
   it('shows the location read-only and not required when the profile supplied it', async () => {
-    renderStep({ isFarmer: true, locationLocked: true, ...AREAS, description: DESCRIPTION });
+    renderStep({ locationLocked: true, ...AREAS, description: DESCRIPTION });
 
     for (const id of ['grievance-region', 'grievance-zone', 'grievance-woreda', 'grievance-kebele']) {
       expect(byId(id)).toBeDisabled();
@@ -347,8 +342,7 @@ describe('Step 2 — an individual farmer', () => {
   });
 
   it('lets the farmer pick a location, and requires one, when the profile has none', async () => {
-    const { onNext } = renderStep({ isFarmer: true, description: DESCRIPTION });
-    await waitFor(() => expect((byId('service-category') as HTMLInputElement).value).toBe('Other'));
+    const { onNext } = renderStep({ description: DESCRIPTION });
 
     expect(byId('grievance-region')).not.toBeDisabled();
     saveAndContinue();
@@ -358,7 +352,7 @@ describe('Step 2 — an individual farmer', () => {
   });
 
   it('still asks for the description', () => {
-    const { onNext } = renderStep({ isFarmer: true, locationLocked: true, ...AREAS });
+    const { onNext } = renderStep({ locationLocked: true, ...AREAS });
 
     saveAndContinue();
 

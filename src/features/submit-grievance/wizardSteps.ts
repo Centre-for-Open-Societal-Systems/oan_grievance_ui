@@ -34,8 +34,6 @@ export function getDescriptionError(value: string, messages: DetailsMessages = D
   return null;
 }
 
-/** An individual farmer's grievance is filed under "Other", so category and type are read-only. */
-export const FARMER_LOCKED_CATEGORY: readonly DetailsField[] = ["serviceCategory", "grievanceType"];
 
 /**
  * The location, read-only for a farmer whose profile supplies it. Only then: the backend refuses a grievance
@@ -44,7 +42,7 @@ export const FARMER_LOCKED_CATEGORY: readonly DetailsField[] = ["serviceCategory
 export const FARMER_LOCKED_LOCATION: readonly DetailsField[] = ["region", "zone", "woreda"];
 
 /** What an individual farmer cannot change on Step 2. A field nobody can edit is never required. */
-export const FARMER_LOCKED_DETAILS: readonly DetailsField[] = [...FARMER_LOCKED_CATEGORY, ...FARMER_LOCKED_LOCATION];
+export const FARMER_LOCKED_DETAILS: readonly DetailsField[] = [...FARMER_LOCKED_LOCATION];
 
 /**
  * Step 2's field errors — what its Next button shows, and what `firstIncompleteStep` checks.
