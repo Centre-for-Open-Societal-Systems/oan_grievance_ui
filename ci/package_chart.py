@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OAN_HELM = "https://github.com/Centre-for-Open-Societal-Systems/oan-helm.git"
-OAN_HELM_REF = "main"
+OAN_HELM_REF = "9e65eb8d78801c14d023355cdfc0cae730267423"
 
 CONFIG = {
     "chart": "oan-grievance-ui",
