@@ -6,9 +6,11 @@ interface OfficerCardProps {
   onEdit: (officer: Officer) => void;
   /** False hides the Edit button — for a read-only role (Review Officer) the backend refuses the write anyway. */
   canEdit?: boolean;
+  /** The kind of area this tab's officers are assigned to (Kebele, Woreda, Zone, Region); the card labels it that way. */
+  areaLevel?: string;
 }
 
-export function OfficerCard({ officer, onEdit, canEdit = true }: OfficerCardProps) {
+export function OfficerCard({ officer, onEdit, canEdit = true, areaLevel = 'Region' }: OfficerCardProps) {
   const statusStyle = STATUS_STYLES[officer.status];
   const rate = Math.min(100, Math.max(0, officer.resolutionRate));
   const barColor = rate >= 75 ? 'bg-[#16A34A]' : rate >= 50 ? 'bg-amber-500' : 'bg-red-500';
@@ -60,7 +62,7 @@ export function OfficerCard({ officer, onEdit, canEdit = true }: OfficerCardProp
         </div>
         <div className="flex items-center gap-2">
           <MapPin size={13} className="flex-shrink-0 text-gray-400" />
-          <span>Region: {officer.region}</span>
+          <span>{areaLevel}: {officer.region}</span>
         </div>
         {officer.designation && (
           <div className="flex items-center gap-2 min-w-0">

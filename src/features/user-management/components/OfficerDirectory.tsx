@@ -195,7 +195,7 @@ export function OfficerDirectory() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {displayedOfficers.map((officer) => (
-            <OfficerCard key={officer.id} officer={officer} onEdit={setEditingOfficer} canEdit={canManage} />
+            <OfficerCard key={officer.id} officer={officer} onEdit={setEditingOfficer} canEdit={canManage} areaLevel={activeTabConfig.areaLevel} />
           ))}
         </div>
       )}
