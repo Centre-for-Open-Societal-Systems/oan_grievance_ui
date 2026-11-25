@@ -109,6 +109,10 @@ pipeline {
                     credentialsId: 'aws-ecr-creds'
                 ]]) {
                     script {
+                        if (env.BRANCH_NAME == 'develop') {
+                            // The chart pins the image by digest, which the staging promotion needs to tag the same image.
+                            env.IMAGE_DIGEST = sh(returnStdout: true, script: 'aws ecr describe-images --region "$AWS_REGION" --repository-name "$ECR_REPO" --image-ids imageTag="$IMMUTABLE_TAG" --query "imageDetails[0].imageDigest" --output text').trim()
+                        }
                         if (env.BRANCH_NAME == 'staging') {
                             // The workspace holds the staging branch only; promote needs the develop commits the chart index names.
                             withCredentials([gitUsernamePassword(credentialsId: scm.userRemoteConfigs[0].credentialsId, gitToolName: 'Default')]) {

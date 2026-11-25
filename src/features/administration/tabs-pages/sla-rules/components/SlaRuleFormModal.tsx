@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { X } from 'lucide-react';
+import { Save } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { Field, FormShell, inputClass } from '../../category-sla-configuration/components/FormShell';
 import { SlaAreaSelect } from './SlaAreaSelect';
 import type { CreateSlaRulePayload, SlaRule, UpdateSlaRulePayload } from './types';
 
@@ -30,9 +32,6 @@ export interface SlaRuleFormModalProps {
   onClose: () => void;
 }
 
-const inputClass =
-  'w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 disabled:bg-gray-50 disabled:text-gray-500';
-
 /** A window field is blank (all year) or a whole number; `NaN` marks one that is neither. */
 const wholeOrNull = (text: string): number | null => (text.trim() === '' ? null : /^\d+$/.test(text.trim()) ? Number(text) : NaN);
 
@@ -55,7 +54,6 @@ export function SlaRuleFormModal({
   const rule = rules?.[0] ?? null;
   const isEdit = !!rule;
   const lockScope = !!rule?.is_base;
-  const titleId = useId();
   const firstFieldRef = useRef<HTMLSelectElement>(null);
   const [serviceCategory, setServiceCategory] = useState(rule?.service_category ?? defaultCategory);
   const [ruleLabel, setRuleLabel] = useState(rule?.rule_label ?? '');
@@ -75,18 +73,8 @@ export function SlaRuleFormModal({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Held in a ref so an inline `onClose` doesn't re-run the mount effect and steal focus.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  });
   useEffect(() => {
     firstFieldRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCloseRef.current();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
   const typeOptions = grievanceTypes.filter((type) => type.serviceCategory === serviceCategory);
@@ -146,49 +134,33 @@ export function SlaRuleFormModal({
   };
 
   const windowField = (key: keyof typeof window, label: string) => (
-    <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-      {label}
-      <input
-        inputMode="numeric"
-        value={window[key]}
-        disabled={lockScope}
-        onChange={(e) => setWindow((prev) => ({ ...prev, [key]: e.target.value }))}
-        className={inputClass}
-      />
-    </label>
+    <Field label={label}>
+      {(id) => (
+        <input
+          id={id}
+          inputMode="numeric"
+          value={window[key]}
+          disabled={lockScope}
+          onChange={(e) => setWindow((prev) => ({ ...prev, [key]: e.target.value }))}
+          className={inputClass()}
+        />
+      )}
+    </Field>
   );
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 id={titleId} className="text-lg font-bold text-gray-900">
-            {isEdit ? t('editTitle') : t('addTitle')}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('close')}
-            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-          >
-            <X className="w-5 h-5" aria-hidden="true" />
-          </button>
-        </div>
+    <FormShell title={isEdit ? t('editTitle') : t('addTitle')} closeLabel={t('close')} onClose={onClose} wide>
+      <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-6" noValidate>
+        {error && <ErrorAlert>{error}</ErrorAlert>}
+        {lockScope && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{t('baseRuleNote')}</p>
+        )}
 
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4" noValidate>
-          {error && <ErrorAlert>{error}</ErrorAlert>}
-          {lockScope && <p className="text-xs text-gray-500">{t('baseRuleNote')}</p>}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-800">
-              <span>{t('serviceCategory')} <span className="text-red-500">*</span></span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+          <Field label={t('serviceCategory')} required>
+            {(id) => (
               <select
+                id={id}
                 ref={firstFieldRef}
                 value={serviceCategory}
                 disabled={isEdit}
@@ -196,93 +168,95 @@ export function SlaRuleFormModal({
                   setServiceCategory(e.target.value);
                   setSelectedTypes([]);
                 }}
-                className={inputClass}
+                className={inputClass()}
               >
                 <option value="">{t('selectCategory')}</option>
                 {serviceCategories.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-            </label>
+            )}
+          </Field>
 
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-800">
-              {t('ruleLabel')}
-              <input value={ruleLabel} maxLength={140} disabled={lockScope} onChange={(e) => setRuleLabel(e.target.value)} className={inputClass} />
-            </label>
+          <Field label={t('ruleLabel')}>
+            {(id) => (
+              <input id={id} value={ruleLabel} maxLength={140} disabled={lockScope} onChange={(e) => setRuleLabel(e.target.value)} className={inputClass()} />
+            )}
+          </Field>
 
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-800">
-              {t('roleLevel')}
-              <select value={roleLevel} disabled={lockScope} onChange={(e) => setRoleLevel(e.target.value)} className={inputClass}>
+          <Field label={t('roleLevel')}>
+            {(id) => (
+              <select id={id} value={roleLevel} disabled={lockScope} onChange={(e) => setRoleLevel(e.target.value)} className={inputClass()}>
                 <option value="">{t('wholeCase')}</option>
                 {roleLevels.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-            </label>
+            )}
+          </Field>
 
-            <fieldset className="flex flex-col gap-1.5 sm:col-span-2" disabled={lockScope}>
-              <legend className="text-sm font-medium text-gray-800 mb-1.5">{t('grievanceTypes')}</legend>
-              <p className="text-xs text-gray-500">{t('grievanceTypesHint')}</p>
-              <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-300 p-2 flex flex-col gap-1">
-                {typeOptions.length === 0 ? (
-                  <span className="text-sm text-gray-500 px-1">{t('noTypes')}</span>
-                ) : (
-                  typeOptions.map((option) => (
-                    <label key={option.value} className="flex items-center gap-2 text-sm text-gray-800 px-1">
-                      <input
-                        type="checkbox"
-                        checked={selectedTypes.includes(option.value)}
-                        onChange={(e) =>
-                          setSelectedTypes((prev) => (e.target.checked ? [...prev, option.value] : prev.filter((v) => v !== option.value)))
-                        }
-                        className="h-4 w-4 accent-[#16A34A]"
-                      />
-                      {option.label}
-                    </label>
-                  ))
-                )}
-              </div>
-            </fieldset>
-
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <span className="text-sm font-medium text-gray-800">{t('administrativeArea')}</span>
-              <p className="text-xs text-gray-500">{t('areaHint')}</p>
-              <SlaAreaSelect value={area} disabled={lockScope} onChange={setArea} className={inputClass} />
-            </div>
-          </div>
-
-          <fieldset className="flex flex-col gap-2" disabled={lockScope}>
-            <legend className="text-sm font-medium text-gray-800 mb-1">{t('window')}</legend>
-            <p className="text-xs text-gray-500">{t('windowHint')}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {windowField('startMonth', t('startMonth'))}
-              {windowField('startDay', t('startDay'))}
-              {windowField('endMonth', t('endMonth'))}
-              {windowField('endDay', t('endDay'))}
+          <fieldset className="flex flex-col gap-1.5 sm:col-span-2" disabled={lockScope}>
+            <legend className="text-sm font-semibold text-gray-700 mb-1">{t('grievanceTypes')}</legend>
+            <p className="text-xs text-gray-500">{t('grievanceTypesHint')}</p>
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-300 p-2 flex flex-col gap-1">
+              {typeOptions.length === 0 ? (
+                <span className="text-sm text-gray-500 px-1">{t('noTypes')}</span>
+              ) : (
+                typeOptions.map((option) => (
+                  <label key={option.value} className="flex items-center gap-2 text-sm text-gray-800 px-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedTypes.includes(option.value)}
+                      onChange={(e) =>
+                        setSelectedTypes((prev) => (e.target.checked ? [...prev, option.value] : prev.filter((v) => v !== option.value)))
+                      }
+                      className="h-4 w-4 accent-[#16A34A]"
+                    />
+                    {option.label}
+                  </label>
+                ))
+              )}
             </div>
           </fieldset>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-800">
-              <span>{t('slaDays')} <span className="text-red-500">*</span></span>
-              <input type="number" min={1} value={slaDays} onChange={(e) => setSlaDays(e.target.value)} className={inputClass} />
-            </label>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-800 pb-2.5">
-              <input type="checkbox" checked={isUrgent} onChange={(e) => setIsUrgent(e.target.checked)} className="h-4 w-4 accent-[#16A34A]" />
-              {t('urgent')}
-            </label>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-sm font-semibold text-gray-700">{t('administrativeArea')}</span>
+            <p className="text-xs text-gray-500">{t('areaHint')}</p>
+            <SlaAreaSelect value={area} disabled={lockScope} onChange={setArea} className={inputClass()} />
           </div>
+        </div>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-              {t('cancel')}
-            </button>
-            <button type="submit" disabled={isSaving} className="px-6 py-2.5 text-sm font-bold text-white bg-[#16A34A] rounded-lg hover:bg-[#10883c] disabled:opacity-50">
-              {isEdit ? t('save') : t('add')}
-            </button>
+        <fieldset className="rounded-lg border border-gray-200 bg-gray-50/60 p-4 flex flex-col gap-3" disabled={lockScope}>
+          <legend className="px-1 text-sm font-semibold text-gray-700">{t('window')}</legend>
+          <p className="text-xs text-gray-500">{t('windowHint')}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {windowField('startMonth', t('startMonth'))}
+            {windowField('startDay', t('startDay'))}
+            {windowField('endMonth', t('endMonth'))}
+            {windowField('endDay', t('endDay'))}
           </div>
-        </form>
-      </div>
-    </div>
+        </fieldset>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 items-end">
+          <Field label={t('slaDays')} required>
+            {(id) => (
+              <input id={id} type="number" min={1} value={slaDays} onChange={(e) => setSlaDays(e.target.value)} className={inputClass()} />
+            )}
+          </Field>
+          <label className="flex items-center gap-2 h-[42px] text-sm font-semibold text-gray-700 cursor-pointer w-max">
+            <input type="checkbox" checked={isUrgent} onChange={(e) => setIsUrgent(e.target.checked)} className="h-4 w-4 accent-[#16A34A]" />
+            {t('urgent')}
+          </label>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <Button type="button" variant="outline" onClick={onClose} className="text-gray-700">{t('cancel')}</Button>
+          <Button type="submit" isLoading={isSaving}>
+            <Save className="w-4 h-4 mr-2" aria-hidden="true" />
+            {isEdit ? t('save') : t('add')}
+          </Button>
+        </div>
+      </form>
+    </FormShell>
   );
 }
