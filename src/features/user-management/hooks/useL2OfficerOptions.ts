@@ -23,7 +23,9 @@ export function useL2OfficerOptions(
   requireArea = false,
   /** The categories the new officer covers: a supervisor must sit on each (the service refuses one who does not). Waits for at least one when `requireCategories` is set. */
   categories: string[] = [],
-  requireCategories = false
+  requireCategories = false,
+  /** Only officers of this department. */
+  department?: string
 ): { options: OfficerOption[]; isLoading: boolean } {
   const [options, setOptions] = useState<OfficerOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +46,7 @@ export function useL2OfficerOptions(
     Promise.all(
       wanted.map((service_category) =>
         fetchOfficers(
-          { level, status: 'Active', region: areaId || undefined, service_category, page: 1, page_size: 100 },
+          { level, status: 'Active', region: areaId || undefined, department: department || undefined, service_category, page: 1, page_size: 100 },
           { signal: controller.signal }
         )
       )
@@ -65,7 +67,7 @@ export function useL2OfficerOptions(
       });
 
     return () => controller.abort();
-  }, [enabled, level, areaId, requireArea, categoryKey, hasCategories, requireCategories]);
+  }, [enabled, level, areaId, requireArea, categoryKey, hasCategories, requireCategories, department]);
 
   const waiting = (requireArea && !areaId) || (requireCategories && !hasCategories);
   return { options: waiting ? [] : options, isLoading };

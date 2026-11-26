@@ -14,12 +14,16 @@ import { AreaSelect, type AreaChoice } from './AreaSelect';
 import { CategoryCoverageField, type CategoryCoverage } from './CategoryCoverageField';
 import { UserSearchField } from './UserSearchField';
 import { createOfficer } from '../api/officerApi';
+import { useDepartmentOptions } from '../hooks/useDepartmentOptions';
 import { useDesignations } from '../hooks/useDesignations';
 import { useL2OfficerOptions } from '../hooks/useL2OfficerOptions';
 import { useServiceCategoryOptions } from '../hooks/useServiceCategoryOptions';
 import type { OfficerBackendStatus, OfficerCandidate, OfficerLevel, OfficerRole } from '../types';
 
 type FormField = 'user' | 'location' | 'serviceCategories';
+
+/** The select's value for "no department": the desks that belong to none. */
+const NO_DEPARTMENT = '';
 
 const FIELD_IDS: Record<FormField, string> = {
   user: 'add-officer-user',
@@ -66,6 +70,7 @@ export function AddNodalOfficerModal({
 
   const [user, setUser] = useState<OfficerCandidate | null>(null);
   const [designation, setDesignation] = useState('');
+  const [department, setDepartment] = useState(NO_DEPARTMENT);
   const [location, setLocation] = useState<AreaChoice>(NO_CHOICE);
   const [reportsTo, setReportsTo] = useState('');
   const [coverage, setCoverage] = useState<CategoryCoverage[]>([]);
@@ -82,14 +87,17 @@ export function AddNodalOfficerModal({
     location.parentPath ?? undefined,
     true,
     coverage.map((entry) => entry.category),
-    true
+    true,
+    department || undefined
   );
-  // Every category there is, whether or not it has a desk yet.
-  const { options: categoryList, isLoading: isCategoriesLoading } = useServiceCategoryOptions(undefined);
+  const { options: departmentList } = useDepartmentOptions(isOpen && !!user);
+  // Every category there is, whether or not it has a desk yet; once a department is chosen, only the ones it has a desk for.
+  const { options: categoryList, isLoading: isCategoriesLoading } = useServiceCategoryOptions(undefined, department || undefined);
 
   const resetForm = () => {
     setUser(null);
     setDesignation('');
+    setDepartment(NO_DEPARTMENT);
     setLocation(NO_CHOICE);
     setReportsTo('');
     setCoverage([]);
@@ -114,11 +122,22 @@ export function AddNodalOfficerModal({
     if (!candidate) {
       // What was chosen below belonged to that person.
       setDesignation('');
+      setDepartment(NO_DEPARTMENT);
       setLocation(NO_CHOICE);
       setReportsTo('');
       setCoverage([]);
       setHasPendingCategory(false);
     }
+  };
+
+  const changeDepartment = (next: string) => {
+    if (next === department) return;
+    setDepartment(next);
+    // The categories, and the supervisors who sit on them, belong to the department they were picked under.
+    setCoverage([]);
+    setReportsTo('');
+    setHasPendingCategory(false);
+    setErrors((prev) => ({ ...prev, serviceCategories: undefined }));
   };
 
   const changeLocation = (choice: AreaChoice) => {
@@ -155,7 +174,7 @@ export function AddNodalOfficerModal({
         role,
         full_name: user.full_name,
         level: isReviewer ? null : level,
-        department: null,
+        department: department || null,
         email: user.email,
         // The service places an officer on whole categories; the type picks only narrow what the admin intended.
         service_categories: coverage.map((entry) => entry.category),
@@ -235,6 +254,20 @@ export function AddNodalOfficerModal({
                     </div>
                   )}
 
+                  <div className="flex flex-col gap-2 md:col-span-2">
+                    <label htmlFor="add-officer-department" className="text-sm font-bold text-gray-900">
+                      {t('department')}
+                    </label>
+                    <AnimatedSelect
+                      id="add-officer-department"
+                      options={[{ value: NO_DEPARTMENT, label: t('departmentPlaceholder') }, ...departmentList]}
+                      value={department}
+                      onChange={changeDepartment}
+                      placeholder={t('departmentPlaceholder')}
+                    />
+                    <p className="text-xs text-gray-500">{department ? t('departmentCategoriesHint') : t('departmentOptionalHint')}</p>
+                  </div>
+
                   {needsLocation && areaLevel && (
                     <div className="flex flex-col gap-2 md:col-span-2">
                       <label htmlFor={FIELD_IDS.location} className="text-sm font-bold text-gray-900">
@@ -264,6 +297,7 @@ export function AddNodalOfficerModal({
                     {t('serviceCategories')} <RequiredMark />
                   </span>
                   <CategoryCoverageField
+                    key={department || 'no-department'}
                     idPrefix="add-officer"
                     coverage={coverage}
                     onChange={changeCoverage}

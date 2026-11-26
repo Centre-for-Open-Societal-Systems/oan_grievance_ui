@@ -6,6 +6,7 @@ import { Provider } from 'react-redux';
 import en from '../../../../messages/en.json';
 import { makeStore } from '@/store';
 import { AddNodalOfficerModal } from './AddNodalOfficerModal';
+import { fetchGrievanceOptions } from '@/features/metadata/api/metadataApi';
 import { createOfficer, fetchOfficerCandidates } from '../api/officerApi';
 
 const CANDIDATE = { name: 'abebe@example.et', full_name: 'Abebe Bikila', email: 'abebe@example.et', phone: '+251911000000', delegated: false };
@@ -146,6 +147,35 @@ describe('AddNodalOfficerModal', () => {
 
     expect(onCreated).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('offers a department, takes the categories from it, and sends it with the officer', async () => {
+    renderModal({ level: 'department_head' });
+    await pickUser();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Department' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Ministry of Agriculture' }));
+
+    // The categories now come from that department's own desks.
+    await waitFor(() => expect(fetchGrievanceOptions).toHaveBeenCalledWith({ department: 'DEP-1' }, expect.anything()));
+    await addCategory('Inputs');
+    expect(screen.getByText('Inputs')).toBeInTheDocument();
+
+    // A different department makes the picked categories stale.
+    fireEvent.click(screen.getByRole('button', { name: 'Department' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'No department' }));
+    expect(screen.queryByRole('button', { name: 'Remove Inputs' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Department' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Ministry of Agriculture' }));
+    await addCategory('Markets');
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    await waitFor(() =>
+      expect(createOfficer).toHaveBeenCalledWith(
+        expect.objectContaining({ department: 'DEP-1', service_categories: ['Markets'] })
+      )
+    );
   });
 
   it('lets the admin add several categories, each narrowed to some grievance types', async () => {
