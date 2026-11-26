@@ -16,6 +16,7 @@ import {
   formatAttachmentSize,
   scanStatusBadge,
 } from "./attachmentDisplay";
+import { attachmentTarget, useAttachmentSource } from "../attachmentSource";
 
 /** The types the viewer can show inline; anything else is not worth downloading just to say "unavailable". */
 function isPreviewableType(mimeType: string): boolean {
@@ -29,6 +30,7 @@ interface DocumentViewerPopupProps {
 
 export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopupProps): ReactElement {
   const t = useTranslations("attachmentViewer");
+  const source = useAttachmentSource();
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const isClean = attachment.scan_status === SCAN_STATUS.CLEAN;
@@ -53,7 +55,7 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
     if (!previewable) return;
     let cancelled = false;
     let objectUrl: string | null = null;
-    Promise.resolve(fetchAttachmentBlobUrl(attachment.name, false))
+    Promise.resolve(fetchAttachmentBlobUrl(attachmentTarget(source, attachment.name), false))
       .then((url) => {
         if (cancelled) {
           if (url) URL.revokeObjectURL(url);
@@ -70,7 +72,7 @@ export function DocumentViewerPopup({ attachment, onClose }: DocumentViewerPopup
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [attachment.name, previewable]);
+  }, [attachment.name, previewable, source]);
   const current = previewable && preview?.name === attachment.name ? preview : null;
   const previewUrl = current?.url ?? null;
   const previewFailed = current?.failed ?? false;

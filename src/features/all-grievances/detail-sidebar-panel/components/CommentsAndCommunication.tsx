@@ -22,6 +22,7 @@ import {
 import type { Grievance, GrievanceTimelineData, TimelineEntry, TimelineEventItem } from '../../types';
 import { audioAttachments, VoiceNotePlayer } from './VoiceNotePlayer';
 import { normalizeTimelineEntry, getInitials, type FormattedTimelineEvent, type TimelineContext } from '../../utils/mapGrievance';
+import { useAttachmentSource } from '../attachmentSource';
 
 interface CommentsAndCommunicationProps {
   canManageCase: boolean;
@@ -42,6 +43,7 @@ export function CommentsAndCommunication({
 }: CommentsAndCommunicationProps) {
   const canSeeInternal = canManageCase;
   const t = useTranslations('commentsAndCommunication');
+  const attachmentSource = useAttachmentSource();
   const [expandedMsgs, setExpandedMsgs] = useState<Record<string, boolean>>({});
 
   // Combine and normalize events from timelineData (or fallback to initial grievance submission if empty)
@@ -333,7 +335,9 @@ export function CommentsAndCommunication({
                                     e.stopPropagation();
                                     const attId = att.name || att.id;
                                     if (attId) {
-                                      const viewUrl = `/api/proxy/api/v1/attachments/${encodeURIComponent(attId)}/view`;
+                                      const viewUrl = attachmentSource.viewUrl
+                                        ? attachmentSource.viewUrl(attId)
+                                        : `/api/proxy/api/v1/attachments/${encodeURIComponent(attId)}/view`;
                                       window.open(viewUrl, '_blank', 'noopener,noreferrer');
                                     } else if (att.file_url) {
                                       const proxyUrl = att.file_url.startsWith('/api/proxy')

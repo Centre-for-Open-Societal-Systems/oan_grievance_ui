@@ -6,6 +6,7 @@ import { Mic, Play } from "lucide-react";
 import { fetchAttachmentBlobUrl, SCAN_STATUS } from "@/lib/attachments";
 import { logger } from "@/lib/logger";
 import type { GrievanceTimelineAttachment } from "../../types";
+import { attachmentTarget, useAttachmentSource } from "../attachmentSource";
 
 /** The case's voice recordings: audio attachments, which the submitter's recording is stored as. */
 export function audioAttachments(
@@ -22,6 +23,7 @@ export function audioAttachments(
  */
 export function VoiceNotePlayer({ attachment }: { attachment: GrievanceTimelineAttachment }): ReactElement {
   const t = useTranslations("attachmentViewer");
+  const source = useAttachmentSource();
   // `audioAttachments` only passes attachments that have one of the two, so the fallback is never used.
   const id = attachment.name || attachment.id || "";
   const isClean = attachment.scan_status === SCAN_STATUS.CLEAN;
@@ -37,7 +39,7 @@ export function VoiceNotePlayer({ attachment }: { attachment: GrievanceTimelineA
     if (!isClean || !requested) return;
     let cancelled = false;
     let objectUrl: string | null = null;
-    Promise.resolve(fetchAttachmentBlobUrl(id, false))
+    Promise.resolve(fetchAttachmentBlobUrl(attachmentTarget(source, id), false))
       .then((url) => {
         if (cancelled) {
           if (url) URL.revokeObjectURL(url);
@@ -54,7 +56,7 @@ export function VoiceNotePlayer({ attachment }: { attachment: GrievanceTimelineA
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [id, isClean, requested]);
+  }, [id, isClean, requested, source]);
 
   const current = isClean && requested && loaded?.id === id ? loaded : null;
   const playerUrl = current?.url ?? null;

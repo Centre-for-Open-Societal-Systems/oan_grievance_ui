@@ -244,7 +244,8 @@ export function getAttachmentViewUrl(attachment: string, download = false): stri
  * URL for download or inline preview.
  */
 export async function fetchAttachmentBlobUrl(attachmentOrUrl: string, download = true): Promise<string> {
-  const url = attachmentOrUrl.startsWith('/api/proxy')
+  // `/api/guest/` is the link-and-PIN view's own route to a file (STG-518), already complete.
+  const url = attachmentOrUrl.startsWith('/api/proxy') || attachmentOrUrl.startsWith('/api/guest/')
     ? attachmentOrUrl
     : attachmentOrUrl.startsWith('/')
       ? `/api/proxy${attachmentOrUrl}`

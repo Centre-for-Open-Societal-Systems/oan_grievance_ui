@@ -14,8 +14,13 @@ function findMatchingRoute(pathname: string, routes: readonly string[]): string 
   return routes.find((route) => matchesRoute(pathname, route));
 }
 
-/** The only public routes. Everything else is a dashboard screen that needs a session. */
-export const PUBLIC_ROUTES = ['/login', '/register', '/reset-password'];
+/**
+ * The only public routes. Everything else is a dashboard screen that needs a session.
+ * `/g` is a sensitive anonymous case opened by its link and PIN (STG-518): the link and PIN are
+ * the credential, checked by the backend, not a session here.
+ */
+export const GUEST_CASE_ROUTE = '/g';
+export const PUBLIC_ROUTES = ['/login', '/register', '/reset-password', GUEST_CASE_ROUTE];
 
 export function isPublicRoute(pathname: string): boolean {
   return findMatchingRoute(pathname, PUBLIC_ROUTES) !== undefined;
@@ -27,8 +32,10 @@ export function isPublicRoute(pathname: string): boolean {
  * session away from. A password-reset link can land on someone who's still
  * signed in elsewhere (or in another tab) — they need to reach the reset
  * form itself, not get redirected back to their dashboard before it renders.
+ * A case link is the same: a submitter who has a login gets it too and may use it while
+ * signed in; a redirect would also drop the token, which lives in the URL fragment.
  */
-const PUBLIC_ROUTES_ALLOWED_WHEN_AUTHENTICATED = ['/reset-password'];
+const PUBLIC_ROUTES_ALLOWED_WHEN_AUTHENTICATED = ['/reset-password', GUEST_CASE_ROUTE];
 
 export function isPublicRouteAllowedWhenAuthenticated(pathname: string): boolean {
   return findMatchingRoute(pathname, PUBLIC_ROUTES_ALLOWED_WHEN_AUTHENTICATED) !== undefined;

@@ -1006,5 +1006,55 @@
       "areaListCut": "የመጀመሪያዎቹ ውጤቶች ብቻ ናቸው። ለማጥበብ ይተይቡ።",
       "noDesignations": "ለዚህ ደረጃ እስካሁን ምንም የሥራ ድርሻ አልተገለጸም"
     }
+  },
+  "guestAccess": {
+    "pin": {
+      "title": "View your grievance",
+      "ticket": "Grievance {ticket}",
+      "pinLabel": "PIN",
+      "pinHint": "Enter the PIN from the SMS or email you received.",
+      "submit": "View grievance",
+      "verifying": "Checking…",
+      "invalid": "Check the SMS/Email for the correct PIN.",
+      "locked": "Too many wrong PINs. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+      "closed": "This grievance is closed, so this link no longer works.",
+      "noLink": "This link is incomplete. Open the link from your SMS or email again.",
+      "rateLimited": "Too many attempts. Wait a few minutes and try again.",
+      "unavailable": "Viewing a grievance by link is not available right now. Try again later.",
+      "network": "Could not reach the server. Check your connection and try again.",
+      "unknown": "Something went wrong. Try again.",
+      "sessionEnded": "Your session ended. Enter your PIN again to continue.",
+      "signedOut": "You have left your grievance. Enter your PIN to open it again."
+    },
+    "case": {
+      "title": "Grievance {ticket}",
+      "expectedBy": "Expected response by {date}",
+      "done": "Done",
+      "loading": "Loading your grievance…",
+      "loadFailed": "Could not load your grievance.",
+      "retry": "Try again"
+    },
+    "reply": {
+      "title": "Reply",
+      "placeholder": "Write your reply or add information…",
+      "send": "Send reply",
+      "failed": "Your reply could not be sent. Try again.",
+      "filesRejected": "Some files were not added. Check their type, size and number."
+    },
+    "idle": {
+      "title": "Still there?",
+      "body": "For your security, your session ends in {countdown} unless you stay.",
+      "stay": "Stay signed in",
+      "done": "Done"
+    }
+  },
+  "guestLinkToast": {
+    "title": "Your grievance link and PIN",
+    "linkLabel": "Link",
+    "pinLabel": "PIN",
+    "copyLink": "Copy link",
+    "copyPin": "Copy PIN",
+    "close": "Close",
+    "warning": "Save both now: they are not shown again. Anyone with the link and PIN can view this grievance, so keep them private."
   }
 }
