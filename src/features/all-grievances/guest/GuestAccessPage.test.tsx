@@ -81,6 +81,7 @@ describe('GuestAccessPage', () => {
   it('shows the case read-only once the PIN is right', async () => {
     renderPage();
     await openCase();
+    expect(screen.getByRole('note')).toHaveTextContent('can be viewed here but not edited');
     expect(viewGuestCase).toHaveBeenCalledWith('3001002A0', TOKEN, '482913');
     expect(screen.getByText('Grievance 3-001-002A-0')).toBeInTheDocument();
     expect(screen.getByText('In Progress')).toBeInTheDocument();

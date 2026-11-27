@@ -59,6 +59,10 @@ export function GuestCaseView({ data, refreshing, refreshError, onRefresh, onDon
         </div>
       </header>
 
+      <p role="note" className="mx-6 mt-4 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-800">
+        {t('readOnlyNote')}
+      </p>
+
       {refreshError ? (
         <p role="alert" className="mx-6 mt-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
           {refreshError}

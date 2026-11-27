@@ -322,6 +322,12 @@ export function ReviewAndSubmitCard({
                 {t('anonymousLabel')}
               </span>
             </label>
+            {/* An anonymous case is followed by link and PIN, read-only (STG-518): nothing can be added later. */}
+            {isAnonymous && (
+              <p role="note" className="mt-2 ml-8 text-xs text-amber-700">
+                {t('anonymousNoEditNote')}
+              </p>
+            )}
           </div>
 
           {/* Contactability */}
