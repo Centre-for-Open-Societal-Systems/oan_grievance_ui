@@ -92,7 +92,7 @@ export function GuestCaseView({ data, refreshing, refreshError, onRefresh, onDon
                       <span className="block truncate text-sm font-semibold text-gray-900">
                         {file.file_name || file.name}
                       </span>
-                      <span className="text-xs text-gray-500">{formatAttachmentSize(file.size_bytes ?? 0)}</span>
+                      <span className="text-xs text-gray-500">{formatAttachmentSize(file.file_size ?? 0)}</span>
                     </span>
                   </li>
                 ))}

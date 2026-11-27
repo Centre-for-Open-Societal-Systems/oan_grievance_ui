@@ -6,7 +6,7 @@ describe('guestTimelineData', () => {
     ticket_number: '3-001-002A-0',
     status: 'In Progress',
     description: 'The fertiliser never arrived.',
-    attachments: [{ name: 'att-1', file_name: 'receipt.jpg', size_bytes: 2048, scan_status: 'Clean' }],
+    attachments: [{ name: 'att-1', file_name: 'receipt.jpg', file_size: 2048, scan_status: 'Clean' }],
     timeline: [
       {
         entry_type: 'message',
