@@ -672,7 +672,10 @@
       "daysInvalid": "SLA days must be a whole number, 1 or more",
       "windowInvalid": "Give all four season fields as whole numbers, or leave them all blank",
       "saveFailed": "The rule could not be saved. Please try again.",
-      "deleteFailed": "The rule could not be deleted."
+      "deleteFailed": "The rule could not be deleted.",
+      "areaLoadFailed": "Could not load this list.",
+      "areaTruncated": "Showing the first {count}.",
+      "areaLookupFailed": "This rule's area ({area}) could not be shown. It is kept unless you pick another."
     }
   },
   "supportingDocuments": {

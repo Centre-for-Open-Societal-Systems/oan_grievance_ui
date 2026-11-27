@@ -1,10 +1,14 @@
 import { fetchApi } from '@/lib/api';
 import type {
   CreateSlaRulePayload,
+  SlaRuleClusterData,
+  SlaRuleClusterListData,
+  SlaRuleClusterListParams,
   SlaRuleData,
   SlaRuleListData,
   SlaRuleListParams,
   SlaRulesCreatedData,
+  UpdateSlaRuleClusterPayload,
   UpdateSlaRulePayload,
 } from '../components/types';
 
@@ -12,7 +16,7 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
-/** The service's largest page; the admin list reads one page of it. */
+/** The service's largest page. */
 export const MAX_PAGE_SIZE = 100;
 
 function query(params: object): string {
@@ -34,6 +38,45 @@ export function fetchSlaRules(params: SlaRuleListParams = {}, options: RequestOp
   return fetchApi<SlaRuleListData>(`/api/v1/sla-rules${query(params)}`, {
     method: 'GET',
     signal: options.signal,
+  });
+}
+
+/**
+ * The rules grouped into clusters; a page counts clusters, so a cluster is never split across pages.
+ *
+ * Corresponding REST endpoint: GET /api/v1/sla-rules/clusters
+ */
+export function fetchSlaRuleClusters(
+  params: SlaRuleClusterListParams = {},
+  options: RequestOptions = {}
+): Promise<SlaRuleClusterListData> {
+  return fetchApi<SlaRuleClusterListData>(`/api/v1/sla-rules/clusters${query(params)}`, {
+    method: 'GET',
+    signal: options.signal,
+  });
+}
+
+/**
+ * Changes every rule of the cluster `ruleId` belongs to, in one transaction: kept types' rules
+ * change, new types get a rule, dropped types lose theirs.
+ *
+ * Corresponding REST endpoint: PATCH /api/v1/sla-rules/clusters/:rule_id
+ */
+export function updateSlaRuleCluster(ruleId: string, payload: UpdateSlaRuleClusterPayload): Promise<SlaRuleClusterData> {
+  return fetchApi<SlaRuleClusterData>(`/api/v1/sla-rules/clusters/${encodeURIComponent(ruleId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Deletes every rule of the cluster `ruleId` belongs to, in one transaction.
+ *
+ * Corresponding REST endpoint: DELETE /api/v1/sla-rules/clusters/:rule_id
+ */
+export function deleteSlaRuleCluster(ruleId: string): Promise<SlaRuleClusterData> {
+  return fetchApi<SlaRuleClusterData>(`/api/v1/sla-rules/clusters/${encodeURIComponent(ruleId)}`, {
+    method: 'DELETE',
   });
 }
 

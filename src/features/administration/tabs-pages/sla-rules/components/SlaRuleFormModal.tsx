@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { Field, FormShell, inputClass } from '../../category-sla-configuration/components/FormShell';
 import { SlaAreaSelect } from './SlaAreaSelect';
-import type { CreateSlaRulePayload, SlaRule, UpdateSlaRulePayload } from './types';
+import type { CreateSlaRulePayload, SlaRule, UpdateSlaRuleClusterPayload } from './types';
 
 export interface SelectOption {
   value: string;
@@ -28,7 +28,7 @@ export interface SlaRuleFormModalProps {
   grievanceTypes: GrievanceTypeOption[];
   onCreate: (payload: CreateSlaRulePayload) => Promise<unknown>;
   /** `grievance_types` is the cluster's new set of types; empty means every type. */
-  onUpdate: (rules: SlaRule[], payload: UpdateSlaRulePayload & { grievance_types: string[] }) => Promise<unknown>;
+  onUpdate: (rules: SlaRule[], payload: UpdateSlaRuleClusterPayload & { grievance_types: string[] }) => Promise<unknown>;
   onClose: () => void;
 }
 
