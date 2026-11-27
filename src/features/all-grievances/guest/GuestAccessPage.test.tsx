@@ -1,27 +1,22 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import en from '../../../../messages/en.json';
 import { GuestApiError, type GuestCase } from './guestApi';
 import { GuestAccessPage } from './GuestAccessPage';
 
-const api = vi.hoisted(() => ({
-  verifyGuestAccess: vi.fn(),
-  fetchGuestCase: vi.fn(),
-  postGuestReply: vi.fn(),
-  endGuestSession: vi.fn(),
-  keepGuestSessionAlive: vi.fn(),
-}));
-vi.mock('./guestApi', async (original) => ({ ...(await original<typeof import('./guestApi')>()), ...api }));
+const viewGuestCase = vi.hoisted(() => vi.fn());
+vi.mock('./guestApi', async (original) => ({ ...(await original<typeof import('./guestApi')>()), viewGuestCase }));
 
+const TOKEN = 'Xk3pQ9vT2mLr8WzA1bNc4e';
 const CASE: GuestCase = {
   ticket_number: '3-001-002A-0',
   status: 'In Progress',
   description: 'The fertiliser never arrived at our kebele.',
   sla: { sla_due_date: '2027-01-10T12:00:00+03:00' },
-  attachments: [],
+  attachments: [{ name: 'att-1', file_name: 'receipt.jpg', size_bytes: 2048, scan_status: 'Clean' }],
   timeline: [
     {
       id: 'TL-1',
@@ -41,7 +36,7 @@ function renderPage() {
   );
 }
 
-async function signIn() {
+async function openCase() {
   fireEvent.change(await screen.findByLabelText('PIN'), { target: { value: '482913' } });
   fireEvent.click(screen.getByRole('button', { name: 'View grievance' }));
   await screen.findByText('We are looking into it.');
@@ -49,17 +44,13 @@ async function signIn() {
 
 describe('GuestAccessPage', () => {
   beforeEach(() => {
-    window.history.replaceState(null, '', '/g/3001002A0#k=Xk3pQ9vT2mLr8WzA1bNc4e');
-    api.verifyGuestAccess.mockResolvedValue({ ticket_number: '3-001-002A-0', idle_timeout_seconds: 900 });
-    api.fetchGuestCase.mockResolvedValue(CASE);
-    api.keepGuestSessionAlive.mockResolvedValue({ idle_timeout_seconds: 900 });
-    api.endGuestSession.mockResolvedValue(undefined);
+    window.history.replaceState(null, '', `/g/3001002A0#k=${TOKEN}`);
+    viewGuestCase.mockResolvedValue(CASE);
   });
 
   afterEach(() => {
     cleanup();
-    vi.useRealTimers();
-    Object.values(api).forEach((fn) => fn.mockReset());
+    viewGuestCase.mockReset();
   });
 
   it('takes the token out of the address bar and shows only the PIN screen first', async () => {
@@ -67,85 +58,58 @@ describe('GuestAccessPage', () => {
     expect(await screen.findByLabelText('PIN')).toBeInTheDocument();
     expect(window.location.hash).toBe('');
     expect(window.location.pathname).toBe('/g/3001002A0');
-    expect(api.fetchGuestCase).not.toHaveBeenCalled();
+    expect(viewGuestCase).not.toHaveBeenCalled();
     expect(screen.queryByText(CASE.description!)).toBeNull();
   });
 
-  it('opens the case once the PIN is verified, with the link token it read', async () => {
+  it('shows the case read-only once the PIN is right', async () => {
     renderPage();
-    await signIn();
-    expect(api.verifyGuestAccess).toHaveBeenCalledWith('3001002A0', 'Xk3pQ9vT2mLr8WzA1bNc4e', '482913');
+    await openCase();
+    expect(viewGuestCase).toHaveBeenCalledWith('3001002A0', TOKEN, '482913');
     expect(screen.getByText('Grievance 3-001-002A-0')).toBeInTheDocument();
     expect(screen.getByText('In Progress')).toBeInTheDocument();
-    // Staff-only panels are not part of the guest view.
+    // Files are named, not opened.
+    expect(screen.getByText('receipt.jpg')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /receipt\.jpg/ })).toBeNull();
+    // Nothing to write or act on, and no staff panels.
+    expect(screen.queryByRole('textbox')).toBeNull();
     expect(screen.queryByText(/Case Management/i)).toBeNull();
     expect(screen.queryByText(/Submitter Details/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /Export/i })).toBeNull();
   });
 
-  it('sends a reply with the session and shows the case again', async () => {
-    api.postGuestReply.mockResolvedValue({ name: 'TL-2' });
+  it('refreshes by sending the token and PIN again, kept in memory', async () => {
     renderPage();
-    await signIn();
-    fireEvent.change(screen.getByLabelText('Reply'), { target: { value: 'Here is the receipt.' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Send reply' }));
-    await waitFor(() => expect(api.postGuestReply).toHaveBeenCalledWith('Here is the receipt.', []));
-    await waitFor(() => expect(api.fetchGuestCase).toHaveBeenCalledTimes(2));
+    await openCase();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(viewGuestCase).toHaveBeenCalledTimes(2));
+    expect(viewGuestCase).toHaveBeenLastCalledWith('3001002A0', TOKEN, '482913');
   });
 
-  it('goes back to the PIN screen when the session ends, keeping the reply being typed', async () => {
-    api.postGuestReply.mockRejectedValue(new GuestApiError('GUEST_SESSION_EXPIRED', 401));
+  it('keeps the case on screen when a refresh only fails to connect', async () => {
     renderPage();
-    await signIn();
-    fireEvent.change(screen.getByLabelText('Reply'), { target: { value: 'Half a reply' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Send reply' }));
-    expect(await screen.findByText('Your session ended. Enter your PIN again to continue.')).toBeInTheDocument();
-
-    await signIn();
-    expect(screen.getByLabelText('Reply')).toHaveValue('Half a reply');
+    await openCase();
+    viewGuestCase.mockRejectedValueOnce(new GuestApiError('NETWORK', 0));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not refresh');
+    expect(screen.getByText('We are looking into it.')).toBeInTheDocument();
   });
 
-  it('says the case is closed when the session ends because of it', async () => {
-    api.fetchGuestCase.mockRejectedValue(new GuestApiError('GUEST_ACCESS_CLOSED', 410));
+  it('says the case is closed when a refresh finds it closed', async () => {
     renderPage();
-    fireEvent.change(await screen.findByLabelText('PIN'), { target: { value: '482913' } });
-    fireEvent.click(screen.getByRole('button', { name: 'View grievance' }));
+    await openCase();
+    viewGuestCase.mockRejectedValueOnce(new GuestApiError('GUEST_ACCESS_CLOSED', 410));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(await screen.findByText(/This grievance is closed/)).toBeInTheDocument();
     expect(screen.queryByLabelText('PIN')).toBeNull();
   });
 
-  it('ends the session on the server when the guest chooses Done', async () => {
+  it('forgets the PIN when the guest chooses Done', async () => {
     renderPage();
-    await signIn();
+    await openCase();
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-    expect(api.endGuestSession).toHaveBeenCalled();
     expect(await screen.findByText(/You have left your grievance/)).toBeInTheDocument();
-  });
-
-  it('warns a minute before the idle limit and returns to the PIN screen when it lapses', async () => {
-    // Installed before the page mounts, so its clock and interval are the fake ones.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    renderPage();
-    await signIn();
-    await act(async () => {
-      vi.advanceTimersByTime(14 * 60_000 + 1_000);
-    });
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('Still there?');
-    await act(async () => {
-      vi.advanceTimersByTime(60_000);
-    });
-    expect(screen.getByText('Your session ended. Enter your PIN again to continue.')).toBeInTheDocument();
-  });
-
-  it('keeps the session alive when the guest stays', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    renderPage();
-    await signIn();
-    await act(async () => {
-      vi.advanceTimersByTime(14 * 60_000 + 1_000);
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Stay signed in' }));
-    expect(api.keepGuestSessionAlive).toHaveBeenCalled();
-    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.getByLabelText('PIN')).toHaveValue('');
+    expect(screen.queryByText('We are looking into it.')).toBeNull();
   });
 });

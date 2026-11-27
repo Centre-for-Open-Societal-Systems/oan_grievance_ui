@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/Button';
 import { Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useId, useState, type FormEvent } from 'react';
-import { GUEST_ERROR, GuestApiError, verifyGuestAccess, type GuestErrorCode, type GuestVerifyData } from './guestApi';
+import { GUEST_ERROR, GuestApiError, viewGuestCase, type GuestCase, type GuestErrorCode } from './guestApi';
 
-/** Why the screen is shown again after a session: it ran out, or the guest chose Done. */
-export type PinNotice = 'sessionEnded' | 'signedOut' | null;
+/** Why the screen is shown again: the guest chose Done. */
+export type PinNotice = 'signedOut' | null;
 
 export interface PinScreenProps {
   /** The ticket number as the link carries it. */
@@ -17,7 +17,8 @@ export interface PinScreenProps {
   notice?: PinNotice;
   /** Set when the case was found closed; the screen then only says so. */
   closed?: boolean;
-  onVerified: (data: GuestVerifyData) => void;
+  /** The case, and the PIN it was opened with, which the page keeps in memory to refresh with. */
+  onVerified: (data: GuestCase, pin: string) => void;
 }
 
 /** 3001002A0 -> 3-001-002A-0, as the SMS prints it. Anything else is shown as it came. */
@@ -71,9 +72,10 @@ export function PinScreen({ ticket, token, notice = null, closed = false, onVeri
     setVerifying(true);
     setFailure(null);
     try {
-      const data = await verifyGuestAccess(ticket, token, pin.trim());
+      const entered = pin.trim();
+      const data = await viewGuestCase(ticket, token, entered);
       setPin('');
-      onVerified(data);
+      onVerified(data, entered);
     } catch (error) {
       setFailure(
         error instanceof GuestApiError

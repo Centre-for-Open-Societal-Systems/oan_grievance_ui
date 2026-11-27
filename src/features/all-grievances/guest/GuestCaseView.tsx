@@ -1,139 +1,103 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
-import { AlertCircle, Loader2, LogOut } from 'lucide-react';
+import { FileText, LogOut, Paperclip, RefreshCw } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AttachmentSourceContext, type AttachmentSource } from '../detail-sidebar-panel/attachmentSource';
-import { AttachmentsList } from '../detail-sidebar-panel/components/AttachmentsList';
+import { useMemo } from 'react';
+import { formatAttachmentSize } from '../detail-sidebar-panel/components/attachmentDisplay';
 import { CommentsAndCommunication } from '../detail-sidebar-panel/components/CommentsAndCommunication';
-import { fetchGuestCase, GuestApiError, guestAttachmentViewUrl, type GuestCase, type GuestErrorCode } from './guestApi';
+import type { GuestCase } from './guestApi';
 import { guestTimelineData } from './guestCaseData';
-import { GuestIdleWarning } from './GuestIdleWarning';
-import { GuestReplyForm, type GuestReplyDraft } from './GuestReplyForm';
 import { displayTicket } from './PinScreen';
-import { useGuestIdleTimer } from './useGuestIdleTimer';
-
-const GUEST_ATTACHMENTS: AttachmentSource = { viewUrl: guestAttachmentViewUrl };
 
 export interface GuestCaseViewProps {
-  idleSeconds: number;
-  draft: GuestReplyDraft;
-  onDraftChange: (draft: GuestReplyDraft) => void;
-  /** The session ended (idle, absolute limit, or the case closed): back to the PIN screen. */
-  onSessionEnded: (code: GuestErrorCode) => void;
-  /** The guest chose Done; the session has been ended on the server. */
+  data: GuestCase;
+  refreshing: boolean;
+  /** Set when a refresh failed for a reason that leaves the case on screen (a network error). */
+  refreshError: string | null;
+  onRefresh: () => void;
+  /** Forget the PIN and the case and go back to the PIN screen. */
   onDone: () => void;
 }
 
 /**
- * The case, as its submitter opened it by link and PIN (STG-518): the case panel's own timeline
- * and attachments, in guest mode, plus a reply form. No case management, submitter details,
- * duplicate review, reassignment or deferral, export or internal notes: the backend sends none
- * of what they show, and they are not mounted here.
+ * The case, as its submitter opened it by link and PIN (STG-518). Read-only: the case panel's own
+ * timeline of public entries, and the names of the files on them, which cannot be opened here.
+ * No reply, actions, case management, submitter details or internal notes.
  */
-export function GuestCaseView({ idleSeconds, draft, onDraftChange, onSessionEnded, onDone }: GuestCaseViewProps) {
+export function GuestCaseView({ data, refreshing, refreshError, onRefresh, onDone }: GuestCaseViewProps) {
   const t = useTranslations('guestAccess.case');
   const format = useFormatter();
-  const [data, setData] = useState<GuestCase | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const handleFailure = useCallback(
-    (failure: unknown) => {
-      if (failure instanceof GuestApiError && failure.endsSession) {
-        onSessionEnded(failure.code);
-        return;
-      }
-      setError(t('loadFailed'));
-    },
-    [onSessionEnded, t]
-  );
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setData(await fetchGuestCase());
-    } catch (failure) {
-      handleFailure(failure);
-    } finally {
-      setLoading(false);
-    }
-  }, [handleFailure]);
-
-  useEffect(() => {
-    // The first load of the case; later ones follow a reply or a retry.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
-  }, [load]);
-
-  const { warning, secondsRemaining, stayActive } = useGuestIdleTimer({ idleSeconds, onExpire: onSessionEnded });
-  const timelineData = useMemo(() => (data ? guestTimelineData(data) : null), [data]);
-  const dueDate = data?.sla?.sla_due_date ? new Date(data.sla.sla_due_date) : null;
+  const timelineData = useMemo(() => guestTimelineData(data), [data]);
+  const dueDate = data.sla?.sla_due_date ? new Date(data.sla.sla_due_date) : null;
 
   return (
-    <AttachmentSourceContext.Provider value={GUEST_ATTACHMENTS}>
-      <main className="min-h-screen bg-[#F8F9FA]">
-        <header className="flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-4">
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-bold text-gray-900">
-              {t('title', { ticket: displayTicket(data?.ticket_number ?? '') })}
-            </h1>
-            {data ? (
-              <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
-                  {data.status}
-                </span>
-                {dueDate && !Number.isNaN(dueDate.getTime()) ? (
-                  <span>{t('expectedBy', { date: format.dateTime(dueDate, { dateStyle: 'medium' }) })}</span>
-                ) : null}
-              </p>
+    <main className="min-h-screen bg-[#F8F9FA]">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-4">
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-bold text-gray-900">
+            {t('title', { ticket: displayTicket(data.ticket_number) })}
+          </h1>
+          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+              {data.status}
+            </span>
+            {dueDate && !Number.isNaN(dueDate.getTime()) ? (
+              <span>{t('expectedBy', { date: format.dateTime(dueDate, { dateStyle: 'medium' }) })}</span>
             ) : null}
-          </div>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="ghost" onClick={onRefresh} isLoading={refreshing}>
+            <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+            {t('refresh')}
+          </Button>
           <Button type="button" variant="outline" onClick={onDone}>
             <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
             {t('done')}
           </Button>
-        </header>
+        </div>
+      </header>
 
-        {loading && !data ? (
-          <div role="status" className="flex items-center justify-center gap-2 py-24 text-sm text-gray-500">
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-            {t('loading')}
+      {refreshError ? (
+        <p role="alert" className="mx-6 mt-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+          {refreshError}
+        </p>
+      ) : null}
+
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 p-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <CommentsAndCommunication canManageCase={false} timelineData={timelineData} />
+        </div>
+        <section className="flex flex-col overflow-hidden rounded-xl border border-[#F1F3F4] bg-white shadow-sm">
+          <h2 className="flex items-center gap-3 border-b border-gray-200 p-5 text-xl font-bold text-[#141F2B]">
+            <Paperclip className="h-5 w-5 text-indigo-600" strokeWidth={2.5} aria-hidden="true" />
+            {t('files')}
+          </h2>
+          <div className="px-5 py-3">
+            {data.attachments.length === 0 ? (
+              <p className="py-4 text-sm text-gray-500">{t('noFiles')}</p>
+            ) : (
+              <ul>
+                {data.attachments.map((file) => (
+                  <li key={file.name} className="flex items-center gap-3 border-b border-gray-100 py-3 last:border-b-0">
+                    <span className="shrink-0 rounded-lg bg-indigo-50 p-2 text-indigo-600">
+                      <FileText className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-gray-900">
+                        {file.file_name || file.name}
+                      </span>
+                      <span className="text-xs text-gray-500">{formatAttachmentSize(file.size_bytes ?? 0)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="pt-2 text-xs text-gray-500">{t('filesNote')}</p>
           </div>
-        ) : error && !data ? (
-          <div role="alert" className="mx-auto mt-16 flex max-w-md flex-col items-center gap-3 text-center">
-            <AlertCircle className="h-8 w-8 text-red-500" aria-hidden="true" />
-            <p className="text-sm font-medium text-red-800">{error}</p>
-            <Button type="button" variant="outline" onClick={() => void load()}>
-              {t('retry')}
-            </Button>
-          </div>
-        ) : (
-          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 p-6 lg:grid-cols-3">
-            <div className="flex flex-col gap-6 lg:col-span-2">
-              <CommentsAndCommunication
-                canManageCase={false}
-                timelineData={timelineData}
-                isLoading={loading}
-                error={error}
-                onRetry={() => void load()}
-              />
-              <GuestReplyForm
-                draft={draft}
-                onDraftChange={onDraftChange}
-                onSent={() => void load()}
-                onSessionEnded={(failure) => onSessionEnded(failure.code)}
-              />
-            </div>
-            <div className="flex flex-col gap-6">
-              <AttachmentsList attachments={timelineData?.attachments} isLoading={loading && !data} error={null} />
-            </div>
-          </div>
-        )}
-      </main>
-      {warning ? <GuestIdleWarning secondsRemaining={secondsRemaining} onStay={stayActive} onDone={onDone} /> : null}
-    </AttachmentSourceContext.Provider>
+        </section>
+      </div>
+    </main>
   );
 }

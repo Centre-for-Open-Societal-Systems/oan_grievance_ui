@@ -1,29 +1,31 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
-import { endGuestSession, GUEST_ERROR, type GuestErrorCode, type GuestVerifyData } from './guestApi';
+import { GUEST_ERROR, GuestApiError, viewGuestCase, type GuestCase } from './guestApi';
 import { GuestCaseView } from './GuestCaseView';
-import type { GuestReplyDraft } from './GuestReplyForm';
 import { readLinkToken, stripLinkToken } from './linkToken';
 import { PinScreen, type PinNotice } from './PinScreen';
 
 type Phase =
   | { kind: 'reading' }
   | { kind: 'pin'; notice: PinNotice; closed: boolean }
-  | { kind: 'case'; idleSeconds: number };
+  | { kind: 'case'; data: GuestCase; pin: string };
 
 /**
  * `/g/<ticket>#k=<token>`: a sensitive anonymous case opened by its link and PIN (STG-518).
  *
- * The token is read from the fragment once and taken out of the address bar at once; it is kept
- * only in memory, so after a session ends the PIN can be entered again without the link, but a
- * reload needs the link from the SMS or email. A reply being typed lives here too, so it survives
- * the session ending.
+ * Read-only and stateless: each view sends the ticket, token and PIN to the backend again. The
+ * token is read from the fragment once and taken out of the address bar at once; it and the PIN
+ * are kept in memory only, so Refresh works without the link while the page is open, a reload
+ * needs the link from the SMS or email again, and Done forgets the PIN.
  */
 export function GuestAccessPage({ ticket }: { ticket: string }) {
+  const t = useTranslations('guestAccess.case');
   const [token, setToken] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: 'reading' });
-  const [draft, setDraft] = useState<GuestReplyDraft>({ body: '', files: [] });
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   useEffect(() => {
     // The fragment exists only in the browser: the server never sees it, so it is read here.
@@ -35,29 +37,46 @@ export function GuestAccessPage({ ticket }: { ticket: string }) {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  const onVerified = useCallback((data: GuestVerifyData) => {
-    setPhase({ kind: 'case', idleSeconds: data.idle_timeout_seconds });
-  }, []);
-
-  const onSessionEnded = useCallback((code: GuestErrorCode) => {
-    setPhase({ kind: 'pin', notice: 'sessionEnded', closed: code === GUEST_ERROR.CLOSED });
+  const onVerified = useCallback((data: GuestCase, pin: string) => {
+    setRefreshError(null);
+    setPhase({ kind: 'case', data, pin });
   }, []);
 
   const onDone = useCallback(() => {
-    void endGuestSession();
-    setDraft({ body: '', files: [] });
+    setRefreshError(null);
     setPhase({ kind: 'pin', notice: 'signedOut', closed: false });
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    if (phase.kind !== 'case' || !token) return;
+    setRefreshing(true);
+    setRefreshError(null);
+    try {
+      const data = await viewGuestCase(ticket, token, phase.pin);
+      setPhase({ kind: 'case', data, pin: phase.pin });
+    } catch (error) {
+      const code = error instanceof GuestApiError ? error.code : GUEST_ERROR.UNKNOWN;
+      if (code === GUEST_ERROR.NETWORK || code === GUEST_ERROR.UNKNOWN || code === GUEST_ERROR.RATE_LIMITED) {
+        // Nothing about the link changed: keep the case on screen and say the refresh failed.
+        setRefreshError(t('refreshFailed'));
+      } else {
+        // Closed, locked or no longer valid: the PIN screen says which.
+        setPhase({ kind: 'pin', notice: null, closed: code === GUEST_ERROR.CLOSED });
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [phase, ticket, token, t]);
 
   if (phase.kind === 'reading') return null;
 
   if (phase.kind === 'case') {
     return (
       <GuestCaseView
-        idleSeconds={phase.idleSeconds}
-        draft={draft}
-        onDraftChange={setDraft}
-        onSessionEnded={onSessionEnded}
+        data={phase.data}
+        refreshing={refreshing}
+        refreshError={refreshError}
+        onRefresh={() => void onRefresh()}
         onDone={onDone}
       />
     );

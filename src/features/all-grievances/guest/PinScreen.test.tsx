@@ -7,8 +7,10 @@ import en from '../../../../messages/en.json';
 import { GuestApiError } from './guestApi';
 import { displayTicket, PinScreen, type PinScreenProps } from './PinScreen';
 
-const verifyGuestAccess = vi.hoisted(() => vi.fn());
-vi.mock('./guestApi', async (original) => ({ ...(await original<typeof import('./guestApi')>()), verifyGuestAccess }));
+const viewGuestCase = vi.hoisted(() => vi.fn());
+vi.mock('./guestApi', async (original) => ({ ...(await original<typeof import('./guestApi')>()), viewGuestCase }));
+
+const CASE = { ticket_number: '3-001-002A-0', status: 'Submitted', attachments: [], timeline: [] };
 
 function renderPin(props: Partial<PinScreenProps> = {}) {
   const onVerified = vi.fn();
@@ -28,7 +30,7 @@ function enterPin(pin: string) {
 describe('PinScreen', () => {
   afterEach(() => {
     cleanup();
-    verifyGuestAccess.mockReset();
+    viewGuestCase.mockReset();
   });
 
   it('shows the ticket and asks for the PIN only', () => {
@@ -37,16 +39,16 @@ describe('PinScreen', () => {
     expect(screen.getByLabelText('PIN')).toHaveAttribute('inputmode', 'numeric');
   });
 
-  it('verifies the link token and PIN and hands the session on', async () => {
-    verifyGuestAccess.mockResolvedValue({ ticket_number: '3-001-002A-0', idle_timeout_seconds: 900 });
+  it('opens the case with the link token and PIN and hands both on', async () => {
+    viewGuestCase.mockResolvedValue(CASE);
     const { onVerified } = renderPin();
     enterPin('482913');
-    await waitFor(() => expect(onVerified).toHaveBeenCalledWith({ ticket_number: '3-001-002A-0', idle_timeout_seconds: 900 }));
-    expect(verifyGuestAccess).toHaveBeenCalledWith('3001002A0', 'Xk3pQ9vT2mLr8WzA1bNc4e', '482913');
+    await waitFor(() => expect(onVerified).toHaveBeenCalledWith(CASE, '482913'));
+    expect(viewGuestCase).toHaveBeenCalledWith('3001002A0', 'Xk3pQ9vT2mLr8WzA1bNc4e', '482913');
   });
 
   it('says to check the message for a wrong PIN', async () => {
-    verifyGuestAccess.mockRejectedValue(new GuestApiError('GUEST_ACCESS_INVALID', 401));
+    viewGuestCase.mockRejectedValue(new GuestApiError('GUEST_ACCESS_INVALID', 401));
     renderPin();
     enterPin('000000');
     expect(await screen.findByRole('alert')).toHaveTextContent('Check the SMS/Email for the correct PIN.');
@@ -54,14 +56,14 @@ describe('PinScreen', () => {
   });
 
   it('says how long a locked link stays locked', async () => {
-    verifyGuestAccess.mockRejectedValue(new GuestApiError('GUEST_ACCESS_LOCKED', 429, 600));
+    viewGuestCase.mockRejectedValue(new GuestApiError('GUEST_ACCESS_LOCKED', 429, 600));
     renderPin();
     enterPin('000000');
     expect(await screen.findByRole('alert')).toHaveTextContent('Try again in 10 minutes.');
   });
 
   it('says a closed case can no longer be opened and offers no PIN field', async () => {
-    verifyGuestAccess.mockRejectedValue(new GuestApiError('GUEST_ACCESS_CLOSED', 410));
+    viewGuestCase.mockRejectedValue(new GuestApiError('GUEST_ACCESS_CLOSED', 410));
     renderPin();
     enterPin('482913');
     expect(await screen.findByRole('alert')).toHaveTextContent('This grievance is closed');
@@ -69,7 +71,7 @@ describe('PinScreen', () => {
   });
 
   it('reports a network failure', async () => {
-    verifyGuestAccess.mockRejectedValue(new GuestApiError('NETWORK', 0));
+    viewGuestCase.mockRejectedValue(new GuestApiError('NETWORK', 0));
     renderPin();
     enterPin('482913');
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach the server');
@@ -79,12 +81,12 @@ describe('PinScreen', () => {
     renderPin({ token: null });
     expect(screen.getByRole('alert')).toHaveTextContent('This link is incomplete');
     expect(screen.queryByLabelText('PIN')).toBeNull();
-    expect(verifyGuestAccess).not.toHaveBeenCalled();
+    expect(viewGuestCase).not.toHaveBeenCalled();
   });
 
-  it('explains why it is shown again after a session ended', () => {
-    renderPin({ notice: 'sessionEnded' });
-    expect(screen.getByRole('status')).toHaveTextContent('Your session ended.');
+  it('says why it is shown again after Done', () => {
+    renderPin({ notice: 'signedOut' });
+    expect(screen.getByRole('status')).toHaveTextContent('You have left your grievance.');
   });
 });
 
