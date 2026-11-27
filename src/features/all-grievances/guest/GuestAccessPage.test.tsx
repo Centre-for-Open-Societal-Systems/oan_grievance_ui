@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
@@ -60,6 +61,21 @@ describe('GuestAccessPage', () => {
     expect(window.location.pathname).toBe('/g/3001002A0');
     expect(viewGuestCase).not.toHaveBeenCalled();
     expect(screen.queryByText(CASE.description!)).toBeNull();
+  });
+
+  it('keeps the link token when effects run twice, as React StrictMode does in development', async () => {
+    render(
+      <StrictMode>
+        <NextIntlClientProvider locale="en" messages={en}>
+          <GuestAccessPage ticket="3001002A0" />
+        </NextIntlClientProvider>
+      </StrictMode>
+    );
+    expect(await screen.findByLabelText('PIN')).toBeInTheDocument();
+    expect(screen.queryByText(/This link is incomplete/)).toBeNull();
+    expect(window.location.hash).toBe('');
+    await openCase();
+    expect(viewGuestCase).toHaveBeenCalledWith('3001002A0', TOKEN, '482913');
   });
 
   it('shows the case read-only once the PIN is right', async () => {

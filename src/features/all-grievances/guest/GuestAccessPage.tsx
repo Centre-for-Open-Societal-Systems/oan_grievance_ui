@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { GUEST_ERROR, GuestApiError, viewGuestCase, type GuestCase } from './guestApi';
 import { GuestCaseView } from './GuestCaseView';
 import { readLinkToken, stripLinkToken } from './linkToken';
@@ -26,15 +26,19 @@ export function GuestAccessPage({ ticket }: { ticket: string }) {
   const [phase, setPhase] = useState<Phase>({ kind: 'reading' });
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  // The link's token, read from the fragment exactly once. Held in a ref so a second run of the
+  // effect (React StrictMode runs effects twice in development) finds it here instead of reading
+  // the fragment again after it was already stripped.
+  const linkToken = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     // The fragment exists only in the browser: the server never sees it, so it is read here.
-    const fromLink = readLinkToken(window.location.hash);
-    if (window.location.hash) stripLinkToken();
-    /* eslint-disable react-hooks/set-state-in-effect -- the fragment is read once, after mount */
-    setToken(fromLink);
+    if (linkToken.current === undefined) {
+      linkToken.current = readLinkToken(window.location.hash);
+      if (window.location.hash) stripLinkToken();
+    }
+    setToken(linkToken.current);
     setPhase({ kind: 'pin', notice: null, closed: false });
-    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   const onVerified = useCallback((data: GuestCase, pin: string) => {

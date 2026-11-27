@@ -1,5 +1,7 @@
 import { GuestAccessPage } from '@/features/all-grievances/guest/GuestAccessPage';
+import { parseGuestTicket } from '@/features/all-grievances/guest/guestTicket';
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
 export const metadata: Metadata = {
   title: 'Your Grievance | Grievance Management Portal',
@@ -10,5 +12,8 @@ export const metadata: Metadata = {
 
 export default async function GuestCase({ params }: { params: Promise<{ ticket: string }> }) {
   const { ticket } = await params;
-  return <GuestAccessPage ticket={decodeURIComponent(ticket)} />;
+  // A segment that does not decode, or is not shaped like a ticket number, is not a case link.
+  const parsed = parseGuestTicket(ticket);
+  if (!parsed) notFound();
+  return <GuestAccessPage ticket={parsed} />;
 }

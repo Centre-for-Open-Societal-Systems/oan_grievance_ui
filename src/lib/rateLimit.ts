@@ -169,4 +169,9 @@ export const RATE_LIMITS = {
   // log line, so a shared "unknown" bucket gets a modest ceiling; the client
   // also caps itself per page.
   clientLog: limitFromEnv('CLIENT_LOG', 120, 60_000),
+  // A sensitive anonymous case viewed by its link and PIN (`/api/guest/grievance`). Keyed by IP
+  // and ticket, like login's IP and username, so a shared "unknown" bucket still separates cases.
+  // Each view resends the PIN; the backend adds its own lockout and per-IP and per-ticket ceilings,
+  // this stops a burst of guesses a hop earlier.
+  guestView: limitFromEnv('GUEST_VIEW', 10, 60_000),
 } as const;
