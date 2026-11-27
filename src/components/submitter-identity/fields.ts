@@ -96,7 +96,7 @@ export function getMissingRequiredFields(
 // A signed-in account's own `fayda_id` (see initialIdentity.ts, which prefills
 // this field from it) comes back from oan_auth_service in its own issued
 // shape, e.g. "ET-FAYDA-344012394" — never raw digits. Without this, every
-// returning user's genuine, already-verified Fayda ID fails FAYDA_PATTERN the
+// returning user's genuine, already-verified Fayda ID fails FAYDA_ID_PATTERN the
 // moment Step 1 renders, blocking a grievance they never touched this field
 // for. Requires at least one letter (unlike REGISTRATION_PATTERN) so this
 // stays an escape hatch for the backend's own issued shape and doesn't also
