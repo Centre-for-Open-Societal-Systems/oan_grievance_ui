@@ -17,7 +17,7 @@ const CASE: GuestCase = {
   status: 'In Progress',
   description: 'The fertiliser never arrived at our kebele.',
   sla: { sla_due_date: '2027-01-10T12:00:00+03:00' },
-  attachments: [{ name: 'att-1', file_name: 'receipt.jpg', size_bytes: 2048, scan_status: 'Clean' }],
+  attachments: [{ name: 'att-1', file_name: 'receipt.jpg', file_size: 2048, scan_status: 'Clean' }],
   timeline: [
     {
       id: 'TL-1',
@@ -87,6 +87,7 @@ describe('GuestAccessPage', () => {
     expect(screen.getByText('In Progress')).toBeInTheDocument();
     // Files are named, not opened.
     expect(screen.getByText('receipt.jpg')).toBeInTheDocument();
+    expect(screen.getByText('2.0 KB')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /receipt\.jpg/ })).toBeNull();
     // Nothing to write or act on, and no staff panels.
     expect(screen.queryByRole('textbox')).toBeNull();

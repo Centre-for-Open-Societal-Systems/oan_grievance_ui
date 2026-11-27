@@ -42,7 +42,7 @@ const attachmentSchema = z.object({
   name: z.string(),
   file_name: z.string().nullish(),
   mime_type: z.string().nullish(),
-  size_bytes: z.number().nullish(),
+  file_size: z.number().nullish(),
   document_type: z.string().nullish(),
   scan_status: z.string().nullish(),
   creation: z.string().nullish(),
