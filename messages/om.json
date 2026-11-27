@@ -223,7 +223,8 @@
       "anonymousLabel": "Maqaa koo osoo hin ibsin dhiyeessi — maqaa fi odeeffannoo quunnamtii koo ogeessota komii kana qabatan irraa dhoksi.",
       "canRequestMoreInfoLabel": "Ogeessonni komii kanaan wal-qabatee odeeffannoo dabalataa argachuuf na quunnamuu danda'u.",
       "canRequestMoreInfoWarning": "Odeeffannoon quunnamtii keessanii hin kuufamu. Ogeessonni isin quunnamuu hin danda'an, komii kanaan wal-qabatee beeksisni isiniif hin dhufu.",
-      "voiceDescription": "Waraabbiin sagalee waliin hidhameera"
+      "voiceDescription": "Waraabbiin sagalee waliin hidhameera",
+      "anonymousNoEditNote": "Kindly ensure all requisite information is shared to ensure the grievance can be addressed. You will not be able to edit it further."
     },
     "identityStep": {
       "readOnlyNote": "Odeeffannoon kun akaawuntii keessan irraa fudhatame; as keessatti jijjiiruun hin danda’amu.",
@@ -1006,5 +1007,44 @@
       "areaListCut": "Bu'aawwan jalqabaa qofa agarsiisaa jira. Gabaabsuuf barreessi.",
       "noDesignations": "Ramaddiin hojii sadarkaa kanaaf ammaaf hin ibsamne"
     }
+  },
+  "guestAccess": {
+    "pin": {
+      "title": "View your grievance",
+      "ticket": "Grievance {ticket}",
+      "pinLabel": "PIN",
+      "pinHint": "Enter the PIN from the SMS or email you received.",
+      "submit": "View grievance",
+      "verifying": "Checking…",
+      "invalid": "Check the SMS/Email for the correct PIN.",
+      "locked": "Too many wrong PINs. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+      "closed": "This grievance is closed, so this link no longer works.",
+      "noLink": "This link is incomplete. Open the link from your SMS or email again.",
+      "rateLimited": "Too many attempts. Wait a few minutes and try again.",
+      "unavailable": "Viewing a grievance by link is not available right now. Try again later.",
+      "network": "Could not reach the server. Check your connection and try again.",
+      "unknown": "Something went wrong. Try again.",
+      "signedOut": "You have left your grievance. Enter your PIN to open it again."
+    },
+    "case": {
+      "title": "Grievance {ticket}",
+      "expectedBy": "Expected response by {date}",
+      "refresh": "Refresh",
+      "refreshFailed": "Could not refresh. Check your connection and try again.",
+      "done": "Done",
+      "files": "Files",
+      "noFiles": "No files on this grievance.",
+      "filesNote": "Files are listed here but cannot be opened from this link.",
+      "readOnlyNote": "This grievance can be viewed here but not edited."
+    }
+  },
+  "guestLinkToast": {
+    "title": "Your grievance link and PIN",
+    "linkLabel": "Link",
+    "pinLabel": "PIN",
+    "copyLink": "Copy link",
+    "copyPin": "Copy PIN",
+    "close": "Close",
+    "warning": "Save both now: they are not shown again. Anyone with the link and PIN can view this grievance, so keep them private."
   }
 }

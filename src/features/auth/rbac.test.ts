@@ -10,6 +10,7 @@ import {
   isOfficerOrAdmin,
   isProtectedRoute,
   isPublicRoute,
+  isPublicRouteAllowedWhenAuthenticated,
   ROLES,
 } from './rbac';
 
@@ -25,6 +26,14 @@ describe('isPublicRoute / isProtectedRoute', () => {
 
   it('does not treat a route that merely starts with the same characters as public', () => {
     expect(isPublicRoute('/login-history')).toBe(false);
+  });
+
+  it('treats a case link (/g/<ticket>) as public, and open to a signed-in visitor too', () => {
+    expect(isPublicRoute('/g/3001002A0')).toBe(true);
+    expect(isPublicRouteAllowedWhenAuthenticated('/g/3001002A0')).toBe(true);
+    // Only the /g segment: the grievance screens stay protected.
+    expect(isPublicRoute('/grievances')).toBe(false);
+    expect(isPublicRoute('/g-anything')).toBe(false);
   });
 
   it('is the exact inverse of isProtectedRoute', () => {

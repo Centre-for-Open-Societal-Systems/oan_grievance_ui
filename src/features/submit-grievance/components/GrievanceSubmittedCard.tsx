@@ -1,6 +1,7 @@
 import { FileText, KeyRound, List, Plus } from "lucide-react";
 import Link from "next/link";
 import type { SubmitGrievanceResult } from "../api/submitGrievanceApi";
+import { GuestLinkToast } from "./GuestLinkToast";
 
 interface GrievanceSubmittedCardProps {
   /** What the backend returned for the case just filed. */
@@ -172,6 +173,10 @@ export function GrievanceSubmittedCard({
           Submit Another Grievance
         </button>
       </div>
+      {/* TEMPORARY (STG-518): only while SMS and email are not delivering the link and PIN. */}
+      {result.guest_access ? (
+        <GuestLinkToast link={result.guest_access.link} pin={result.guest_access.pin} />
+      ) : null}
     </div>
   );
 }

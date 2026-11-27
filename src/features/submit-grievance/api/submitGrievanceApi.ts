@@ -39,6 +39,12 @@ export interface SubmitGrievanceResult {
    * one case: it is shown once here and sent by SMS, never stored in the portal.
    */
   status_pin?: string | null;
+  /**
+   * TEMPORARY (STG-518), while SMS and email are not delivering: the link and PIN of a sensitive anonymous
+   * case, for the submitter who filed it themselves. Sent only while the backend's
+   * `guest_access_show_on_submit` is on; shown once in a toast, never stored.
+   */
+  guest_access?: { link: string; pin: string } | null;
 }
 
 /**

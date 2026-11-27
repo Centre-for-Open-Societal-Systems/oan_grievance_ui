@@ -117,6 +117,18 @@ describe('Review step → POST /api/v1/grievances', () => {
     expect(body).toMatchObject({ is_anonymous: 1 });
   });
 
+  it('asks for everything up front when filing anonymously, as the case cannot be edited later', () => {
+    renderCard();
+    const note = /Kindly ensure all requisite information is shared/;
+    expect(screen.queryByText(note)).toBeNull();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /submit anonymously/i }));
+    expect(screen.getByRole('note')).toHaveTextContent('You will not be able to edit it further.');
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /submit anonymously/i }));
+    expect(screen.queryByText(note)).toBeNull();
+  });
+
   it('sends the staged files with the grievance in one multipart request', async () => {
     const fetchMock = mockFetch(200, { data: { ticket_number: 'B00100013', status: 'Submitted' }, status: 'success' });
     const voice = new File(['x'], 'voice-grievance-1.mp3', { type: 'audio/mpeg' });
