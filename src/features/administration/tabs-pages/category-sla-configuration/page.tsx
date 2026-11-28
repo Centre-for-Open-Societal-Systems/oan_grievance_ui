@@ -18,7 +18,6 @@ import { fetchSlaRules } from '../sla-rules/api/slaRulesApi';
 import { AddCategoryModal } from './components/AddCategoryModal';
 import { GlobalSlaPolicyCard } from './components/GlobalSlaPolicyCard';
 import { SlaCategoryCard } from './components/SlaCategoryCard';
-import { slaBarPercent, slaBarReferenceDays } from './components/slaBar';
 import type { GrievanceTypeRecord, ServiceCategoryRecord } from './components/taxonomyTypes';
 import { CATEGORY_COLORS, type SlaCategory } from './components/types';
 
@@ -29,15 +28,13 @@ import { CATEGORY_COLORS, type SlaCategory } from './components/types';
 function toSlaCategory(
     category: ServiceCategoryRecord,
     colorIndex: number,
-    baseDays: number | null,
-    barReferenceDays: number
+    baseDays: number | null
 ): SlaCategory {
     return {
         id: category.category_name,
         category: category.category_name,
         categoryColor: CATEGORY_COLORS[colorIndex % CATEGORY_COLORS.length] ?? '',
         slaDays: baseDays,
-        progressPercentage: slaBarPercent(baseDays ?? 0, barReferenceDays),
     };
 }
 
@@ -55,10 +52,6 @@ export default function CategorySlaConfigurationPage() {
     const [reloadKey, setReloadKey] = useState(0);
     const [isAdding, setIsAdding] = useState(false);
     const [notice, setNotice] = useState<string | null>(null);
-    // The Global SLA Policy's "Max SLA Deferral (days)": each category bar shows its SLA against it.
-    // Until it loads (or if it can't) the bars use a 30-day scale.
-    const [globalSlaDays, setGlobalSlaDays] = useState<number | null>(null);
-    const barReferenceDays = slaBarReferenceDays(globalSlaDays);
 
     const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
@@ -91,9 +84,9 @@ export default function CategorySlaConfigurationPage() {
             categories
                 .filter((category) => category.is_active)
                 .map((category, index) =>
-                    toSlaCategory(category, index, baseDays.get(category.category_name) ?? null, barReferenceDays)
+                    toSlaCategory(category, index, baseDays.get(category.category_name) ?? null)
                 ),
-        [categories, baseDays, barReferenceDays]
+        [categories, baseDays]
     );
 
     const typesByCategory = useMemo(() => {
@@ -133,7 +126,7 @@ export default function CategorySlaConfigurationPage() {
             <div className="flex-1 overflow-y-auto p-6 flex flex-col [scrollbar-color:#16A34A_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#16A34A] [&::-webkit-scrollbar-thumb]:rounded-full">
 
                 {/* Section 1: Global SLA Policy — GlobalSlaPolicyCard carries its own heading. */}
-                <GlobalSlaPolicyCard canManage={canManage} onMaxDeferralDaysChange={setGlobalSlaDays} />
+                <GlobalSlaPolicyCard canManage={canManage} />
 
                 {notice && (
                     <div
